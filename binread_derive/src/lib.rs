@@ -12,6 +12,8 @@ use attributes::{Attributes, parse_attr_setting_group, AttrSetting, SpanError};
 mod actions;
 use actions::{Action, WriteInstructions};
 
+mod binwrite_endian;
+
 use proc_macro2::{TokenStream as TokenStream2, Span};
 use std::result::Result;
 

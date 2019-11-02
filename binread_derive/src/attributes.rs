@@ -1,7 +1,7 @@
 use syn::*;
 use proc_macro2::*;
 use quote::quote;
-use binwrite::Endian;
+use crate::binwrite_endian::Endian;
 use std::result::Result;
 
 #[derive(Clone, Debug)]
