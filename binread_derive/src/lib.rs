@@ -130,6 +130,15 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
                                         }
                                     };
 
+                                    let align_before =
+                                        gen_options.align_before
+                                                .map(usize::from)
+                                                .map(gen_align_code);
+                                    let align_after =
+                                        gen_options.align_after
+                                                .map(usize::from)
+                                                .map(gen_align_code);
+
                                     let pad_before =
                                         gen_options.pad_before
                                                 .map(usize::from)
@@ -155,6 +164,7 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
 
                                     quote!{
                                         {
+                                            #align_before
                                             #pad_before
                                             #writer_option
                                             #function(
@@ -163,6 +173,7 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
                                                 &options
                                             )?;
                                             #pad_after
+                                            #align_after
                                         }
                                     }
                                 })
@@ -200,7 +211,7 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
     })
 }
 
-fn gen_pad_code(padding: usize) -> TokenStream2 {
+fn gen_align_code(padding: usize) -> TokenStream2 {
     quote!{
         {
             let current = ::std::io::Seek::seek(
@@ -209,6 +220,18 @@ fn gen_pad_code(padding: usize) -> TokenStream2 {
             )? as usize;
             ::binwrite::BinWrite::write_options(
                 &vec![0u8; (#padding - (current % #padding)) % #padding][..],
+                writer,
+                &options
+            )?;
+        }
+    }
+}
+
+fn gen_pad_code(padding: usize) -> TokenStream2 {
+    quote!{
+        {
+            ::binwrite::BinWrite::write_options(
+                &vec![0u8; #padding][..],
                 writer,
                 &options
             )?;

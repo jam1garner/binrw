@@ -10,6 +10,8 @@ pub enum AttrSetting {
     Endian(Endian),
     With(TokenStream),
     Preprocessor(TokenStream),
+    AlignBefore(usize),
+    AlignAfter(usize),
     PadBefore(usize),
     PadAfter(usize),
 }
@@ -26,6 +28,33 @@ impl SpanError {
             span,
             error: error
         }
+    }
+}
+
+fn get_literal_from_token(span: Span, token: Option<TokenTree>) -> Result<usize, SpanError> {
+    match token {
+        Some(TokenTree::Literal(lit)) => {
+            match Lit::new(lit.clone()) {
+                Lit::Int(lit) =>
+                    usize::from_str_radix(
+                        lit.base10_digits(),
+                        10
+                    ).or(
+                        Err(SpanError::new(
+                            lit.span(),
+                            "Invalid digit".into()
+                        ))
+                    ),
+                _ => Err(SpanError::new(
+                        lit.span(),
+                        "Invalid literal type, expected Integer".into()
+                    ))
+            }
+        }
+        _ => Err(SpanError::new(
+                span,
+                "Invalid contents of pad".into()
+            ))
     }
 }
 
@@ -50,7 +79,6 @@ impl AttrSetting {
                             Ok(Self::Ignore)
                         }
                         func @ _ => {
-                            println!("{}", func);
                             Ok(
                                 Self::With(
                                     Self::get_function_path(func)
@@ -83,6 +111,17 @@ impl AttrSetting {
                     name @ "pad" | name @ "pad_after" => {
                         let token = stream.clone().into_iter().nth(0);
 
+                        let pad = get_literal_from_token(id.span(), token)?;
+
+                        Ok(match name {
+                            "pad" => Self::PadBefore(pad),
+                            "pad_after" => Self::PadAfter(pad),
+                            _ => unreachable!()
+                        })
+                    }
+                    name @ "align" | name @ "align_after" => {
+                        let token = stream.clone().into_iter().nth(0);
+
                         let pad = match token {
                             Some(TokenTree::Literal(lit)) => {
                                 match Lit::new(lit.clone()) {
@@ -109,9 +148,9 @@ impl AttrSetting {
                         };
 
                         Ok(match name {
-                            "pad" => Self::PadBefore(pad),
-                            "pad_after" => Self::PadAfter(pad),
-                            _ => panic!()
+                            "align" => Self::AlignBefore(pad),
+                            "align_after" => Self::AlignAfter(pad),
+                            _ => unreachable!()
                         })
                     }
                     name @ _ => Err(SpanError::new(

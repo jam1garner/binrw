@@ -42,7 +42,7 @@ struct Test {
     #[binwrite(ignore)]
     this_will_be_ignored: u32,
 
-    #[binwrite(pad(0x8), cstr, pad_after(0x10))]
+    #[binwrite(align(0x8), cstr, align_after(0x10))]
     test: String,
 
     tuple_test: (u32, String, u8),
