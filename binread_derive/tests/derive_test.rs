@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use binwrite::*;
 use binwrite_derive::*;
 
@@ -43,6 +44,8 @@ struct Test {
 
     #[binwrite(pad(0x8), cstr, pad_after(0x10))]
     test: String,
+
+    tuple_test: (u32, String, u8),
 }
 
 #[test]
@@ -56,6 +59,7 @@ fn main() {
         val_u8: 0x69,
         this_will_be_ignored: 0x42042000,
         test: "this_is_test".to_string(),
+        tuple_test: (0xBADF00D5, "tuple test".into(), 0x33)
     };
     
     test.write(&mut bytes).unwrap();

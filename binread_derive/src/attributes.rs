@@ -121,7 +121,7 @@ impl AttrSetting {
                 }
             }
             AttrType::Assignment {
-                id, value
+                id, ..
             } => {
                 Err(SpanError::new(
                     id.span(),
