@@ -1,5 +1,5 @@
 use super::attributes::AttrSetting;
-use binwrite::WriterOption;
+use binwrite::Endian;
 use proc_macro2::TokenStream;
 use std::num::NonZeroUsize;
 
@@ -15,20 +15,28 @@ pub struct GenOptions {
     pub preprocessor: Option<TokenStream>,
 }
 
-pub struct WriteInstructions(pub Action, pub WriterOption, pub GenOptions);
+#[derive(Default)]
+pub struct OptionalWriterOption {
+    pub endian: Option<Endian>
+}
 
-impl From<&Vec<AttrSetting>> for WriteInstructions {
-    fn from(settings: &Vec<AttrSetting>) -> WriteInstructions {
+pub struct WriteInstructions(pub Action, pub OptionalWriterOption, pub GenOptions);
+
+impl WriteInstructions {
+    pub fn try_from(settings: &Vec<AttrSetting>) -> Option<WriteInstructions> {
         let mut action: Action = Action::Default;
-        let mut writer_option = WriterOption::default();
+        let mut writer_option = OptionalWriterOption::default();
         let mut gen_options = GenOptions::default();
         for setting in settings.iter() {
             match setting {
                 AttrSetting::Endian(endian) => {
-                    writer_option.endian = *endian;
+                    writer_option.endian = Some(*endian);
                 }
                 AttrSetting::With(writer_func) => {
                     action = Action::CutomerWriter(writer_func.clone());
+                }
+                AttrSetting::Preprocessor(preprocessor) => {
+                    gen_options.preprocessor = Some(preprocessor.clone());
                 }
                 AttrSetting::PadBefore(pad) => {
                     gen_options.pad_before = NonZeroUsize::new(*pad);
@@ -36,8 +44,12 @@ impl From<&Vec<AttrSetting>> for WriteInstructions {
                 AttrSetting::PadAfter(pad) => {
                     gen_options.pad_after = NonZeroUsize::new(*pad);
                 }
+                AttrSetting::Ignore => {
+                    None?
+                }
             }
         }
-        WriteInstructions(action, writer_option, gen_options)
+        
+        Some(WriteInstructions(action, writer_option, gen_options))
     }
 }

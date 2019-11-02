@@ -2,16 +2,35 @@ use syn::*;
 use proc_macro2::*;
 use quote::quote;
 use binwrite::Endian;
+use std::result::Result;
 
+#[derive(Clone, Debug)]
 pub enum AttrSetting {
+    Ignore,
     Endian(Endian),
     With(TokenStream),
+    Preprocessor(TokenStream),
     PadBefore(usize),
     PadAfter(usize),
 }
 
+#[derive(Debug, Clone)]
+pub struct SpanError {
+    pub span: Span,
+    pub error: String,
+}
+
+impl SpanError {
+    pub fn new(span: Span, error: String) -> Self {
+        SpanError {
+            span,
+            error: error
+        }
+    }
+}
+
 impl AttrSetting {
-    fn try_from_attr_type(attr: &AttrType) -> Option<Self> {
+    fn try_from_attr_type(attr: &AttrType) -> Result<Self, SpanError> {
         match attr {
             AttrType::EnableDisable {
                 id, enable
@@ -19,24 +38,36 @@ impl AttrSetting {
                 if *enable {
                     match &id.to_string()[..] {
                         "big" => {
-                            Some(Self::Endian(Endian::Big))
+                            Ok(Self::Endian(Endian::Big))
                         }
                         "little" => {
-                            Some(Self::Endian(Endian::Little))
+                            Ok(Self::Endian(Endian::Little))
                         }
                         "native" => {
-                            Some(Self::Endian(Endian::Native))
+                            Ok(Self::Endian(Endian::Native))
+                        }
+                        "ignore" => {
+                            Ok(Self::Ignore)
                         }
                         func @ _ => {
-                            Some(
+                            println!("{}", func);
+                            Ok(
                                 Self::With(
-                                    Self::get_function_path(func)?
+                                    Self::get_function_path(func)
+                                        .ok_or(
+                                            SpanError::new(
+                                                id.span(),
+                                                format!("Property not supported")
+                                            ))?
                                 )
                             )
                         }
                     }
                 } else {
-                    None
+                    Err(SpanError::new(
+                        id.span(),
+                        format!("Disabling of {} not supported", id.to_string())
+                    ))
                 }
             }
             AttrType::Function {
@@ -44,35 +75,58 @@ impl AttrSetting {
             } => {
                 match &id.to_string()[..] {
                     "with" => {
-                        Some(Self::With(stream.clone()))
+                        Ok(Self::With(stream.clone()))
+                    }
+                    "preprocessor" => {
+                        Ok(Self::Preprocessor(stream.clone()))
                     }
                     name @ "pad" | name @ "pad_after" => {
                         let token = stream.clone().into_iter().nth(0);
 
                         let pad = match token {
                             Some(TokenTree::Literal(lit)) => {
-                                match Lit::new(lit) {
-                                    Lit::Int(lit) => usize::from_str_radix(
-                                                        lit.base10_digits(),
-                                                        10
-                                                    ).ok()?,
-                                    _ => None?
+                                match Lit::new(lit.clone()) {
+                                    Lit::Int(lit) =>
+                                        usize::from_str_radix(
+                                            lit.base10_digits(),
+                                            10
+                                        ).or(
+                                            Err(SpanError::new(
+                                                lit.span(),
+                                                "Invalid digit".into()
+                                            ))
+                                        )?,
+                                    _ => Err(SpanError::new(
+                                            lit.span(),
+                                            "Invalid literal type, expected Integer".into()
+                                        ))?
                                 }
                             }
-                            _ => None?
+                            _ => Err(SpanError::new(
+                                    id.span(),
+                                    "Invalid contents of pad".into()
+                                ))?
                         };
 
-                        Some(match name {
+                        Ok(match name {
                             "pad" => Self::PadBefore(pad),
                             "pad_after" => Self::PadAfter(pad),
                             _ => panic!()
                         })
                     }
-                    _ => None
+                    name @ _ => Err(SpanError::new(
+                            id.span(),
+                            format!("Function \"{}\" not supported", name)
+                        ))?
                 }
             }
-            _ => {
-                None
+            AttrType::Assignment {
+                id, value
+            } => {
+                Err(SpanError::new(
+                    id.span(),
+                    format!("Setting \"{}\" not supported", id.to_string())
+                ))?
             }
         }
     }
@@ -104,48 +158,59 @@ impl Attributes {
 }
 
 impl Iterator for Attributes {
-    type Item = (Ident, Vec<AttrSetting>);
+    type Item = Result<(Ident, Vec<AttrSetting>), SpanError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let (id, attrs) = self.items.get(self.current)?;
         self.current += 1;
 
 
-        let attrs = attrs
+        let attrs: Result<(Ident, Vec<AttrSetting>), SpanError> = try {
+            (
+                id.clone(), 
+                attrs
                     .iter()
-                    .map(|attr|{
-                        let attr = attr.tokens.clone();
-
-                        parse_attr_setting_group(attr)
-                    })
+                    .map(|attr| parse_attr_setting_group(attr.tokens.clone()))
+                    .collect::<Result<Vec<_>, SpanError>>()?
+                    .into_iter()
                     .flatten()
-                    .collect();
+                    .collect()
+            )
+        };
 
 
-        Some((id.clone(), attrs))
+        Some(attrs)
     }
 }
 
-fn parse_attr_setting_group(attr: TokenStream) -> Vec<AttrSetting> {
+pub fn parse_attr_setting_group(attr: TokenStream) -> Result<Vec<AttrSetting>, SpanError> {
     let attr = attr.into_iter().nth(0).unwrap();
     match attr {
         TokenTree::Group(group) => {
             if let Delimiter::Parenthesis = group.delimiter() {
-                return comma_split_token_stream(group.stream())
-                        .iter()
-                        .map(AttrType::try_parse)
-                        .collect::<Option<Vec<_>>>()
-                        .expect("Failed to convert to AttrType")
-                        .iter()
-                        .map(AttrSetting::try_from_attr_type)
-                        .collect::<Option<Vec<_>>>()
-                        .expect("Failed to convert to AttrSetting")
+                comma_split_token_stream(group.stream())
+                    .iter()
+                    .map(AttrType::try_parse)
+                    .collect::<Option<Vec<_>>>()
+                    .expect("Failed to convert to AttrType")
+                    .iter()
+                    .map(AttrSetting::try_from_attr_type)
+                    .collect::<Result<Vec<_>, SpanError>>()
+            } else {
+                Err(SpanError::new(
+                    group.span(),
+                    "Unsupported delimeter. Use parenthesis.".into()
+                ))
             }
         },
-        _ => {}
+        _ => {
+            Err(SpanError::new(
+                attr.span(),
+                "Unsupported attribute formatting.".into()
+            ))
+        }
     }
 
-    vec![]
 }
 
 fn comma_split_token_stream(tokens: TokenStream) -> Vec<Vec<TokenTree>> {
@@ -246,6 +311,27 @@ fn try_parse_enable_attr(input: &Vec<TokenTree>) -> Option<AttrType> {
     None
 }
 
+pub fn filter_single_attrs(attrs: &Vec<Attribute>) -> Option<Vec<Attribute>> {
+    let attrs = attrs
+        .iter()
+        .filter_map(|attr|
+            if let Some(ident) = attr.path.get_ident() {
+                if ident.to_string() == "binwrite" {
+                    Some(attr.clone())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+         )
+         .collect::<Vec<_>>();
+    if attrs.is_empty() {
+        None
+    } else {
+        Some(attrs)
+    }
+}
 
 fn filter_attrs(fields: Fields) -> Vec<(Ident, Vec<Attribute>)> {
     fields
@@ -254,27 +340,7 @@ fn filter_attrs(fields: Fields) -> Vec<(Ident, Vec<Attribute>)> {
             Some(
                 (
                     field.ident.clone()?,
-                    {
-                        let a = field.attrs
-                            .iter()
-                            .filter_map(|attr|
-                                if let Some(ident) = attr.path.get_ident() {
-                                    if ident.to_string() == "binwrite" {
-                                        Some(attr.clone())
-                                    } else {
-                                        None
-                                    }
-                                } else {
-                                    None
-                                }
-                             )
-                             .collect::<Vec<_>>();
-                        if a.is_empty() {
-                            None
-                        } else {
-                            Some(a)
-                        }
-                    }.unwrap_or_default()
+                    filter_single_attrs(&field.attrs).unwrap_or_default()
                 )
             )
         })

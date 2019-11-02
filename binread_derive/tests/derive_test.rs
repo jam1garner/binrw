@@ -17,7 +17,12 @@ mod vec_with_len {
     }
 }
 
+fn add_one(test: u8) -> u8 {
+    test + 1
+}
+
 #[derive(BinWrite)]
+#[binwrite(little)]
 struct Test {
     magic: [char; 4],
     
@@ -30,7 +35,11 @@ struct Test {
     #[binwrite(little)]
     val_little: u32,
     
+    #[binwrite(preprocessor(add_one))]
     val_u8: u8,
+
+    #[binwrite(ignore)]
+    this_will_be_ignored: u32,
 
     #[binwrite(pad(0x8), cstr, pad_after(0x10))]
     test: String,
@@ -45,6 +54,7 @@ fn main() {
         val_big: 0x1234_5678,
         val_little: 0x1234_5678,
         val_u8: 0x69,
+        this_will_be_ignored: 0x42042000,
         test: "this_is_test".to_string(),
     };
     
