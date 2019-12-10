@@ -15,6 +15,7 @@ pub struct GenOptions {
     pub align_before: Option<NonZeroUsize>,
     pub align_after: Option<NonZeroUsize>,
     pub preprocessor: Option<TokenStream>,
+    pub postprocessor: Option<TokenStream>,
 }
 
 #[derive(Default)]
@@ -25,7 +26,7 @@ pub struct OptionalWriterOption {
 pub struct WriteInstructions(pub Action, pub OptionalWriterOption, pub GenOptions);
 
 impl WriteInstructions {
-    pub fn try_from(settings: &Vec<AttrSetting>) -> Option<WriteInstructions> {
+    pub fn try_from(settings: &[AttrSetting]) -> Option<WriteInstructions> {
         let mut action: Action = Action::Default;
         let mut writer_option = OptionalWriterOption::default();
         let mut gen_options = GenOptions::default();
@@ -39,6 +40,9 @@ impl WriteInstructions {
                 }
                 AttrSetting::Preprocessor(preprocessor) => {
                     gen_options.preprocessor = Some(preprocessor.clone());
+                }
+                AttrSetting::Postprocessor(preprocessor) => {
+                    gen_options.postprocessor = Some(preprocessor.clone());
                 }
                 AttrSetting::AlignBefore(pad) => {
                     gen_options.align_before = NonZeroUsize::new(*pad);

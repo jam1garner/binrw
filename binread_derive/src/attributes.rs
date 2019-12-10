@@ -10,6 +10,7 @@ pub enum AttrSetting {
     Endian(Endian),
     With(TokenStream),
     Preprocessor(TokenStream),
+    Postprocessor(TokenStream),
     AlignBefore(usize),
     AlignAfter(usize),
     PadBefore(usize),
@@ -26,7 +27,7 @@ impl SpanError {
     pub fn new(span: Span, error: String) -> Self {
         SpanError {
             span,
-            error: error
+            error
         }
     }
 }
@@ -39,7 +40,7 @@ fn get_literal_from_token(span: Span, token: Option<TokenTree>) -> Result<usize,
                     usize::from_str_radix(
                         lit.base10_digits(),
                         10
-                    ).or(
+                    ).or_else(|_|
                         Err(SpanError::new(
                             lit.span(),
                             "Invalid digit".into()
@@ -78,14 +79,14 @@ impl AttrSetting {
                         "ignore" => {
                             Ok(Self::Ignore)
                         }
-                        func @ _ => {
+                        func => {
                             Ok(
                                 Self::With(
                                     Self::get_function_path(func)
-                                        .ok_or(
+                                        .ok_or_else(||
                                             SpanError::new(
                                                 id.span(),
-                                                format!("Property not supported")
+                                                "Property not supported".into()
                                             ))?
                                 )
                             )
@@ -108,6 +109,9 @@ impl AttrSetting {
                     "preprocessor" => {
                         Ok(Self::Preprocessor(stream.clone()))
                     }
+                    "postprocessor" => {
+                        Ok(Self::Postprocessor(stream.clone()))
+                    }
                     name @ "pad" | name @ "pad_after" => {
                         let token = stream.clone().into_iter().nth(0);
 
@@ -129,22 +133,22 @@ impl AttrSetting {
                                         usize::from_str_radix(
                                             lit.base10_digits(),
                                             10
-                                        ).or(
+                                        ).or_else(|_|
                                             Err(SpanError::new(
                                                 lit.span(),
                                                 "Invalid digit".into()
                                             ))
                                         )?,
-                                    _ => Err(SpanError::new(
+                                    _ => return Err(SpanError::new(
                                             lit.span(),
                                             "Invalid literal type, expected Integer".into()
-                                        ))?
+                                        ))
                                 }
                             }
-                            _ => Err(SpanError::new(
+                            _ => return Err(SpanError::new(
                                     id.span(),
                                     "Invalid contents of pad".into()
-                                ))?
+                                ))
                         };
 
                         Ok(match name {
@@ -153,10 +157,10 @@ impl AttrSetting {
                             _ => unreachable!()
                         })
                     }
-                    name @ _ => Err(SpanError::new(
+                    name => Err(SpanError::new(
                             id.span(),
                             format!("Function \"{}\" not supported", name)
-                        ))?
+                        ))
                 }
             }
             AttrType::Assignment {
@@ -165,7 +169,7 @@ impl AttrSetting {
                 Err(SpanError::new(
                     id.span(),
                     format!("Setting \"{}\" not supported", id.to_string())
-                ))?
+                ))
             }
         }
     }
@@ -196,29 +200,29 @@ impl Attributes {
     }
 }
 
+pub type AttrResult = Result<(Ident, Vec<AttrSetting>), SpanError>;
+
 impl Iterator for Attributes {
-    type Item = Result<(Ident, Vec<AttrSetting>), SpanError>;
+    type Item = AttrResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (id, attrs) = self.items.get(self.current)?;
-        self.current += 1;
-
-
-        let attrs: Result<(Ident, Vec<AttrSetting>), SpanError> = try {
-            (
-                id.clone(), 
+        self.items
+            .get(self.current)
+            .cloned()
+            .map(|(id, attrs)|{
+                self.current += 1;
                 attrs
                     .iter()
                     .map(|attr| parse_attr_setting_group(attr.tokens.clone()))
-                    .collect::<Result<Vec<_>, SpanError>>()?
-                    .into_iter()
-                    .flatten()
-                    .collect()
-            )
-        };
-
-
-        Some(attrs)
+                    .collect::<Result<Vec<_>, SpanError>>()
+                    .map(|attr| (
+                        id.clone(),
+                        attr.into_iter()
+                            .map(Vec::into_iter)
+                            .flatten()
+                            .collect()
+                    ))
+            })
     }
 }
 
@@ -228,7 +232,7 @@ pub fn parse_attr_setting_group(attr: TokenStream) -> Result<Vec<AttrSetting>, S
         TokenTree::Group(group) => {
             if let Delimiter::Parenthesis = group.delimiter() {
                 comma_split_token_stream(group.stream())
-                    .iter()
+                    .into_iter()
                     .map(AttrType::try_parse)
                     .collect::<Option<Vec<_>>>()
                     .expect("Failed to convert to AttrType")
@@ -252,18 +256,19 @@ pub fn parse_attr_setting_group(attr: TokenStream) -> Result<Vec<AttrSetting>, S
 
 }
 
-fn comma_split_token_stream(tokens: TokenStream) -> Vec<Vec<TokenTree>> {
-    tokens.clone()
-          .into_iter()
-          .collect::<Vec<_>>()[..]
-          .split(|token| {
-              match token {
-                  TokenTree::Punct(punct) => punct.as_char() == ',',
-                  _ => false
-              }
-          })
-          .map(Vec::from)
-          .collect()
+fn comma_split_token_stream(tokens: TokenStream) -> Vec<TokenStream> {
+    tokens.into_iter()
+        .collect::<Vec<_>>()[..]
+        .split(|token| {
+            match token {
+                TokenTree::Punct(punct) => punct.as_char() == ',',
+                _ => false
+            }
+        })
+        .map(IntoIterator::into_iter)
+        .map(Iterator::cloned)
+        .map(Iterator::collect::<TokenStream>)
+        .collect()
 }
 
 #[derive(Debug)]
@@ -283,14 +288,15 @@ enum AttrType {
 }
 
 impl AttrType {
-    pub fn try_parse(tokens: &Vec<TokenTree>) -> Option<Self> {
-        try_parse_func_attr(tokens)
-            .or_else(||try_parse_assign_attr(tokens))
-            .or_else(||try_parse_enable_attr(tokens))
+    pub fn try_parse(tokens: TokenStream) -> Option<Self> {
+        let tokens = tokens.into_iter().collect::<Vec<_>>();
+        try_parse_func_attr(&tokens)
+            .or_else(||try_parse_assign_attr(&tokens))
+            .or_else(||try_parse_enable_attr(&tokens))
     }
 }
 
-fn try_parse_func_attr(input: &Vec<TokenTree>) -> Option<AttrType> {
+fn try_parse_func_attr(input: &[TokenTree]) -> Option<AttrType> {
     if input.len() == 2 {
         if let TokenTree::Ident(id) = &input[0] {
             if let TokenTree::Group(group) = &input[1] {
@@ -307,7 +313,7 @@ fn try_parse_func_attr(input: &Vec<TokenTree>) -> Option<AttrType> {
     None
 }
 
-fn try_parse_assign_attr(input: &Vec<TokenTree>) -> Option<AttrType> {
+fn try_parse_assign_attr(input: &[TokenTree]) -> Option<AttrType> {
     if input.len() == 3 {
         if let TokenTree::Ident(id) = &input[0] {
             if let TokenTree::Punct(punct) = &input[1] {
@@ -326,7 +332,7 @@ fn try_parse_assign_attr(input: &Vec<TokenTree>) -> Option<AttrType> {
     None
 }
 
-fn try_parse_enable_attr(input: &Vec<TokenTree>) -> Option<AttrType> {
+fn try_parse_enable_attr(input: &[TokenTree]) -> Option<AttrType> {
     if input.len() == 2 {
         if let TokenTree::Punct(punct) = &input[0] {
             if let TokenTree::Ident(id) = &input[1] {
@@ -350,12 +356,12 @@ fn try_parse_enable_attr(input: &Vec<TokenTree>) -> Option<AttrType> {
     None
 }
 
-pub fn filter_single_attrs(attrs: &Vec<Attribute>) -> Option<Vec<Attribute>> {
+pub fn filter_single_attrs(attrs: &[Attribute]) -> Option<Vec<Attribute>> {
     let attrs = attrs
         .iter()
         .filter_map(|attr|
             if let Some(ident) = attr.path.get_ident() {
-                if ident.to_string() == "binwrite" {
+                if *ident == "binwrite" {
                     Some(attr.clone())
                 } else {
                     None

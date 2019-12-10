@@ -1,4 +1,3 @@
-#![feature(try_blocks)]
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
@@ -7,7 +6,7 @@ use syn::*;
 use syn::spanned::Spanned;
 
 mod attributes;
-use attributes::{Attributes, parse_attr_setting_group, AttrSetting, SpanError};
+use attributes::{Attributes, parse_attr_setting_group, AttrSetting, SpanError, AttrResult};
 
 mod actions;
 use actions::{Action, WriteInstructions};
@@ -47,6 +46,96 @@ fn parse_attr_setting_group_pair_span(attr: &Attribute) -> Result<Vec<(Span, Att
         )
 }
 
+fn some_func(id: Ident, attrs: Vec<AttrSetting>) -> Option<TokenStream2> {
+    let WriteInstructions(action, writer_option, gen_options)
+        = WriteInstructions::try_from(&attrs)?;
+
+    let writer_option = writer_option_to_tokens(&writer_option);
+
+    let function = match action {
+        Action::Default => {
+            quote!{::binwrite::BinWrite::write_options}
+        }
+        Action::CutomerWriter(write_func) => {
+            write_func
+        }
+    };
+
+    let align_before =
+        gen_options.align_before
+                .map(usize::from)
+                .map(gen_align_code);
+    let align_after =
+        gen_options.align_after
+                .map(usize::from)
+                .map(gen_align_code);
+
+    let pad_before =
+        gen_options.pad_before
+                .map(usize::from)
+                .map(gen_pad_code); 
+    let pad_after =
+        gen_options.pad_after
+                .map(usize::from)
+                .map(gen_pad_code); 
+
+    let value =
+        match gen_options.preprocessor {
+            Some(preprocessor) => {
+                quote!{
+                    &((#preprocessor)(self.#id))
+                }
+            }
+            None => {
+                quote!{
+                    &self.#id
+                }
+            }
+        };
+
+    let write_value =
+        match gen_options.postprocessor {
+            Some(postprocessor) => {
+                quote!{
+                    {
+                        let mut _cursor = ::std::io::Cursor::new(::std::vec::Vec::<u8>::new());
+                        #function(
+                            #value,
+                            &mut _cursor,
+                            &options
+                        )?;
+
+                        ::binwrite::BinWrite::write_options(
+                            &(#postprocessor)(_cursor.into_inner()),
+                            writer,
+                            &options
+                        )?;
+                    }
+                }
+            }
+            None => {
+                quote!{
+                    #function(
+                        #value,
+                        writer,
+                        &options
+                    )?;
+                }
+            }
+        };
+
+    Some(quote!{
+        {
+            #align_before
+            #pad_before
+            #writer_option
+            #write_value
+            #pad_after
+            #align_after
+        }
+    })
+}
+
 #[proc_macro_derive(BinWrite, attributes(binwrite))]
 pub fn derive_binwrite(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -56,32 +145,30 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
     let global_attrs = 
         match attributes::filter_single_attrs(&input.attrs)
             .map(|attrs: Vec<Attribute>|{
-                let tokens: Result<Vec<TokenStream2>, SpanError> = try {
-                    attrs.iter()
-                        .map(parse_attr_setting_group_pair_span)
-                        .collect::<Result<Vec<_>, SpanError>>()?
-                        .into_iter()
-                        .flatten()
-                        .map(|(span, attr)| -> Result<TokenStream2, SpanError> {
-                            match attr {
-                                AttrSetting::Endian(endian) => {
-                                    let endian: String = (&endian).into();
-                                    let endian = format_ident!("{}", endian);
-                                    Ok(quote!{
-                                        options.endian = ::binwrite::Endian::#endian;
-                                    })
-                                }
-                                _ => {
-                                    Err(SpanError::new(
-                                        span,
-                                        "Propety not supported at struct level".into()
-                                    ))
-                                }
-                            }
-                        })
-                        .collect::<Result<Vec<TokenStream2>, SpanError>>()?
-                };
-                tokens.map(|tokens| quote!{
+            attrs.iter()
+                .map(parse_attr_setting_group_pair_span)
+                .collect::<Result<Vec<_>, SpanError>>()?
+                .into_iter()
+                .flatten()
+                .map(|(span, attr)| -> Result<TokenStream2, SpanError> {
+                    match attr {
+                        AttrSetting::Endian(endian) => {
+                            let endian: String = (&endian).into();
+                            let endian = format_ident!("{}", endian);
+                            Ok(quote!{
+                                options.endian = ::binwrite::Endian::#endian;
+                            })
+                        }
+                        _ => {
+                            Err(SpanError::new(
+                                span,
+                                "Propety not supported at struct level".into()
+                            ))
+                        }
+                    }
+                })
+                .collect::<Result<Vec<TokenStream2>, SpanError>>()
+                .map(|tokens| quote!{
                     let mut options = options.clone();
                     #(#tokens);*
                 })
@@ -113,75 +200,14 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
 
     let attrs = Attributes::from_fields(fields);
     let instructions = attrs
-                            .map(|attr_result| -> Result<Option<TokenStream2>, SpanError> {
+                            .map(|attr_result: AttrResult| -> Result<Option<TokenStream2>, SpanError> {
                                 let (id, attrs) = attr_result?;
-                                Ok(try {
-                                    let WriteInstructions(action, writer_option, gen_options)
-                                            = WriteInstructions::try_from(&attrs)?;
-
-                                    let writer_option = writer_option_to_tokens(&writer_option);
-
-                                    let function = match action {
-                                        Action::Default => {
-                                            quote!{::binwrite::BinWrite::write_options}
-                                        }
-                                        Action::CutomerWriter(write_func) => {
-                                            write_func.into()
-                                        }
-                                    };
-
-                                    let align_before =
-                                        gen_options.align_before
-                                                .map(usize::from)
-                                                .map(gen_align_code);
-                                    let align_after =
-                                        gen_options.align_after
-                                                .map(usize::from)
-                                                .map(gen_align_code);
-
-                                    let pad_before =
-                                        gen_options.pad_before
-                                                .map(usize::from)
-                                                .map(gen_pad_code); 
-                                    let pad_after =
-                                        gen_options.pad_after
-                                                .map(usize::from)
-                                                .map(gen_pad_code); 
-
-                                    let value =
-                                        match gen_options.preprocessor {
-                                            Some(preprocessor) => {
-                                                quote!{
-                                                    &#preprocessor(self.#id)
-                                                }
-                                            }
-                                            None => {
-                                                quote!{
-                                                    &self.#id
-                                                }
-                                            }
-                                        };
-
-                                    quote!{
-                                        {
-                                            #align_before
-                                            #pad_before
-                                            #writer_option
-                                            #function(
-                                                #value,
-                                                writer,
-                                                &options
-                                            )?;
-                                            #pad_after
-                                            #align_after
-                                        }
-                                    }
-                                })
+                                Ok(some_func(id, attrs))
                             })
                             .collect::<Result<Vec<Option<TokenStream2>>, SpanError>>();
 
-    let instructions = match instructions {
-        Ok(instructions) => instructions,
+    let instructions: Vec<_> = match instructions {
+        Ok(instructions) => instructions.into_iter().flatten().collect(),
         Err(SpanError{
             span, error
         }) => {
@@ -193,7 +219,7 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
         }
     };
 
-    let instructions = quote!{#(#instructions);*};
+    let instructions = quote!{#(#instructions)*};
 
     TokenStream::from(quote! {
         impl ::binwrite::BinWrite for #name {
@@ -213,17 +239,15 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
 
 fn gen_align_code(padding: usize) -> TokenStream2 {
     quote!{
-        {
-            let current = ::std::io::Seek::seek(
-                writer,
-                ::std::io::SeekFrom::Current(0)
-            )? as usize;
-            ::binwrite::BinWrite::write_options(
-                &vec![0u8; (#padding - (current % #padding)) % #padding][..],
-                writer,
-                &options
-            )?;
-        }
+        let current = ::std::io::Seek::seek(
+            writer,
+            ::std::io::SeekFrom::Current(0)
+        )? as usize;
+        ::binwrite::BinWrite::write_options(
+            &vec![0u8; (#padding - (current % #padding)) % #padding][..],
+            writer,
+            &options
+        )?;
     }
 }
 

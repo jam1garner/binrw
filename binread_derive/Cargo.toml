@@ -1,6 +1,6 @@
 [package]
 name = "binwrite_derive"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["jam1garner <jam1.mcleod@hotmail.com>"]
 edition = "2018"
 description = "Derive macro for binwrite"
@@ -16,5 +16,6 @@ quote = "^1.0.2"
 proc-macro2 = "^1.0.6"
 
 [dev-dependencies]
-binwrite = ">=0.1.1"
+binwrite = "0.1"
+crc = "1.8.1"
 

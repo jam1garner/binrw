@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 use binwrite::*;
-use binwrite_derive::*;
+use binwrite_derive::BinWrite;
+use std::ops::Add;
+use crc::crc32::checksum_ieee as crc32;
 
 // Easy to add, reusable components
 // vec_with_len::write uses the format of:
@@ -18,8 +20,8 @@ mod vec_with_len {
     }
 }
 
-fn add_one(test: u8) -> u8 {
-    test + 1
+pub fn add<T: Add<Output = T> + Copy>(lhs: T) -> impl Fn(T) -> T {
+    move |rhs| lhs + rhs
 }
 
 #[derive(BinWrite)]
@@ -36,13 +38,15 @@ struct Test {
     #[binwrite(little)]
     val_little: u32,
     
-    #[binwrite(preprocessor(add_one))]
+    #[binwrite(preprocessor(add(2)))]
     val_u8: u8,
 
     #[binwrite(ignore)]
     this_will_be_ignored: u32,
 
-    #[binwrite(align(0x8), cstr, align_after(0x10))]
+    #[binwrite(align(0x8), cstr, align_after(0x10), postprocessor(|v: Vec<u8>|{
+        (crc32(&v[..]), v)
+    }))]
     test: String,
 
     tuple_test: (u32, String, u8),
@@ -67,6 +71,36 @@ fn main() {
     println!("\n\nResult:");
     hex::print_bytes(&bytes);
     println!("\n\n\n");
+
+    let mut bytes = vec![];
+    let test2 = Test2 {
+        field2: 3,
+        body: "test".to_string()
+    };
+
+    test2.write(&mut bytes).unwrap();
+    
+    println!("\n\nResult:");
+    hex::print_bytes(&bytes);
+    println!("\n\n\n");
+}
+
+#[derive(BinWrite)]
+#[binwrite(big)]
+struct Test2 {
+    // this field comes after the magic and crc32 and before the body of the file
+    #[binwrite(ignore)]
+    field2: u32,
+
+    #[binwrite(postprocessor(|body: Vec<u8>|{
+        (
+            "MAG0", // File magic
+            crc32(&body[..]),
+            self.field2,
+            body
+        )
+    }))]
+    body: String
 }
 
 
