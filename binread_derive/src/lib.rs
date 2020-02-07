@@ -141,6 +141,7 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident.clone();
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl(); 
 
     let global_attrs = 
         match attributes::filter_single_attrs(&input.attrs)
@@ -222,7 +223,7 @@ pub fn derive_binwrite(input: TokenStream) -> TokenStream {
     let instructions = quote!{#(#instructions)*};
 
     TokenStream::from(quote! {
-        impl ::binwrite::BinWrite for #name {
+        impl #impl_generics ::binwrite::BinWrite for #name #ty_generics #where_clause {
             fn write_options<W: ::std::io::Write>(&self, writer: &mut W, options: &::binwrite::WriterOption) -> ::std::io::Result<()> {
                 let mut _writer = ::binwrite::write_track::WriteTrack::new(writer);
                 let writer = &mut _writer;
