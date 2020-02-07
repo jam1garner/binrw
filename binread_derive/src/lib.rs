@@ -83,7 +83,7 @@ fn some_func(id: Ident, attrs: Vec<AttrSetting>) -> Option<TokenStream2> {
         match gen_options.preprocessor {
             Some(preprocessor) => {
                 quote!{
-                    &((#preprocessor)(self.#id))
+                    &((#preprocessor)(&self.#id))
                 }
             }
             None => {
