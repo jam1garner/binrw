@@ -1,0 +1,159 @@
+use super::*;
+
+#[cfg(feature = "std")]
+use std::{
+    ffi::CString,
+};
+
+use core::num::{NonZeroU8, NonZeroU16};
+
+#[cfg(feature = "std")]
+impl BinRead for CString {
+    type Args = ();
+
+    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> 
+    {
+        <Vec<NonZeroU8>>::read_options(reader, options, args)
+            .map(|bytes| bytes.into())
+    }
+}
+
+impl BinRead for Vec<NonZeroU8> {
+    type Args = ();
+
+    fn read_options<R: Read + Seek>(reader: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self>
+    {
+        reader
+            .iter_bytes()
+            .take_while(|x| if let Ok(0) = x { false } else { true })
+            .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
+            .collect()
+    }
+}
+
+#[derive(Clone, PartialEq, Default)]
+pub struct NullString(Vec<u8>);
+
+#[derive(Clone, PartialEq, Default)]
+pub struct NullWideString(Vec<u16>);
+
+impl NullString {
+    pub fn into_string(self) -> String {
+        String::from_utf8_lossy(&self.0).into()
+    }
+
+    pub fn into_string_lossless(self) -> Result<String, alloc::string::FromUtf8Error> {
+        String::from_utf8(self.0)
+    }
+}
+
+impl NullWideString {
+    pub fn into_string(self) -> String {
+        String::from_utf16_lossy(&self.0)
+    }
+
+    pub fn into_string_lossless(self) -> Result<String, alloc::string::FromUtf16Error> {
+        String::from_utf16(&self.0)
+    }
+}
+
+impl Into<NullWideString> for Vec<NonZeroU16> {
+    fn into(self) -> NullWideString {
+        let vals: Vec<u16> = self.into_iter().map(|x| x.get()).collect();
+        NullWideString(vals)
+    }
+}
+
+impl Into<NullString> for Vec<NonZeroU8> {
+    fn into(self) -> NullString {
+        let vals: Vec<u8> = self.into_iter().map(|x| x.get()).collect();
+        NullString(vals)
+    }
+}
+
+impl BinRead for Vec<NonZeroU16> {
+    type Args = ();
+
+    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args)
+        -> BinResult<Self>
+    {
+        let mut values = vec![];
+
+        loop {
+            let val = <u16>::read_options(reader, options, ())?;
+            if val == 0 {
+                return Ok(values)
+            }
+            values.push(unsafe { NonZeroU16::new_unchecked(val) });
+        }
+    }
+}
+
+impl BinRead for NullWideString {
+    type Args = ();
+
+    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
+        -> BinResult<Self>
+    {
+        #[cfg(feature = "debug_template")]
+        let mut options = options.clone();
+
+        #[cfg(feature = "debug_template")] {
+            let pos = reader.seek(SeekFrom::Current(0)).unwrap();
+
+            if !options.dont_output_to_template {
+                binary_template::write_named(
+                    options.endian,
+                    pos,
+                    "wstring",
+                    &options.variable_name
+                        .map(ToString::to_string)
+                        .unwrap_or_else(|| binary_template::get_next_var_name())
+                );
+            
+            }
+            options.dont_output_to_template = true;
+        }
+        <Vec<NonZeroU16>>::read_options(reader, &options, args)
+            .map(|chars| chars.into())
+    }
+}
+
+impl BinRead for NullString {
+    type Args = ();
+
+    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
+        -> BinResult<Self>
+    {
+        #[cfg(feature = "debug_template")] {
+            let pos = reader.seek(SeekFrom::Current(0)).unwrap();
+
+            if !options.dont_output_to_template {
+                binary_template::write_named(
+                    options.endian,
+                    pos,
+                    "string",
+                    &options.variable_name
+                            .map(ToString::to_string)
+                            .unwrap_or_else(|| binary_template::get_next_var_name())
+                );
+            }
+        }
+        <Vec<NonZeroU8>>::read_options(reader, options, args)
+            .map(|chars| chars.into())
+    }
+}
+
+use core::fmt;
+
+impl fmt::Debug for NullString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "NullString({:?})", self.clone().into_string())
+    }
+}
+
+impl fmt::Debug for NullWideString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "NullWideString({:?})", self.clone().into_string())
+    }
+}
