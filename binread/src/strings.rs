@@ -7,6 +7,7 @@ use std::{
 
 use core::num::{NonZeroU8, NonZeroU16};
 
+/*
 #[cfg(feature = "std")]
 impl BinRead for CString {
     type Args = ();
@@ -16,7 +17,7 @@ impl BinRead for CString {
         <Vec<NonZeroU8>>::read_options(reader, options, args)
             .map(|bytes| bytes.into())
     }
-}
+}*/
 
 impl BinRead for Vec<NonZeroU8> {
     type Args = ();
