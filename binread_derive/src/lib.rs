@@ -26,6 +26,7 @@ fn generate_derive(input: DeriveInput, code: codegen::GeneratedCode) -> TokenStr
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     quote!(
+        #[allow(warnings)]
         impl #impl_generics #TRAIT_NAME for #name #ty_generics #where_clause {
             type Args = #arg_type;
 
