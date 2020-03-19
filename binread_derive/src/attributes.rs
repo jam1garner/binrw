@@ -1,7 +1,7 @@
 use syn::*;
 use proc_macro2::*;
 use quote::quote;
-use crate::binwrite_endian::Endian;
+use crate::binread_endian::Endian;
 use std::result::Result;
 
 #[derive(Clone, Debug)]
@@ -177,9 +177,9 @@ impl AttrSetting {
     fn get_function_path(name: &str) -> Option<TokenStream> {
         Some(
             match name {
-                "cstr" => quote!{::binwrite::writers::null_terminated_string},
-                "utf16" => quote!{::binwrite::writers::utf16_null_string},
-                "utf16_null" => quote!{::binwrite::writers::utf16_string},
+                "cstr" => quote!{::binread::writers::null_terminated_string},
+                "utf16" => quote!{::binread::writers::utf16_null_string},
+                "utf16_null" => quote!{::binread::writers::utf16_string},
                 _ => None?
             }
         )
@@ -361,7 +361,7 @@ pub fn filter_single_attrs(attrs: &[Attribute]) -> Option<Vec<Attribute>> {
         .iter()
         .filter_map(|attr|
             if let Some(ident) = attr.path.get_ident() {
-                if *ident == "binwrite" {
+                if *ident == "binread" {
                     Some(attr.clone())
                 } else {
                     None

@@ -1,5 +1,5 @@
 use super::attributes::AttrSetting;
-use crate::binwrite_endian::Endian;
+use crate::binread_endian::Endian;
 use proc_macro2::TokenStream;
 use std::num::NonZeroUsize;
 
