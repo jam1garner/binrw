@@ -1,121 +1,47 @@
-use darling::{FromField, FromDeriveInput, FromVariant, util::SpannedValue};
+mod parser;
+mod spanned_value;
+mod top_level_attrs;
+mod field_level_attrs;
+pub(crate) use top_level_attrs::TopLevelAttrs;
+pub(crate) use field_level_attrs::FieldLevelAttrs;
+pub(crate) use spanned_value::SpannedValue;
+
+use darling::{FromField, FromDeriveInput, FromVariant};
 use proc_macro2::TokenStream;
 use crate::compiler_error::SpanError;
 use syn::{Ident, Lit, NestedMeta, Path, Type, Field, Meta, Expr, spanned::Spanned};
 use quote::ToTokens;
-
-#[derive(FromDeriveInput, FromVariant, Debug, Clone)]
-#[darling(attributes(br, binread))]
-pub struct TopLevelAttrs {
-    // ======================
-    //  Top-Only Attributes
-    // ======================
-    #[darling(default)]
-    pub import: Imports,
-
-    #[darling(default)]
-    pub return_all_errors: SpannedValue<bool>,
-
-    #[darling(default)]
-    pub return_unexpected_error: SpannedValue<bool>,
-
-    // ======================
-    //  All-level attributes
-    // ======================
-    // endian
-    #[darling(default)]
-    pub little: SpannedValue<bool>,
-    #[darling(default)]
-    pub big: SpannedValue<bool>,
-    
-    // assertions/error handling
-    #[darling(multiple, map = "to_assert")]
-    pub assert: Vec<Assert>,
-    
-    #[darling(default, map = "to_tokens")]
-    pub magic: Option<TokenStream>,
-}
-
-#[derive(FromField, Debug)]
-#[darling(attributes(br, binread))]
-pub struct FieldLevelAttrs {
-    // ======================
-    //    Field-level only
-    // ======================
-    #[darling(default)]
-    pub args: PassedValues,
-    #[darling(default, map = "to_tokens")]
-    pub map: Option<TokenStream>,
-    #[darling(default)]
-    pub ignore: bool,
-    #[darling(default)]
-    pub default: bool,
-    #[darling(default, map = "to_tokens")]
-    pub calc: Option<TokenStream>,
-    #[darling(default, map = "to_tokens")]
-    pub count: Option<TokenStream>,
-    #[darling(default, map = "to_tokens")]
-    pub offset: Option<TokenStream>,
-    #[darling(default, map = "to_tokens", rename = "if")]
-    pub if_cond: Option<TokenStream>,
-    #[darling(default)]
-    pub deref_now: bool,
-    #[darling(default)]
-    pub postprocess_now: bool,
-    #[darling(default)]
-    pub restore_position: bool,
-
-    // ======================
-    //  All-level attributes
-    // ======================
-    // endian
-    #[darling(default)]
-    pub little: SpannedValue<bool>,
-    #[darling(default)]
-    pub big: SpannedValue<bool>,
-    #[darling(default, map = "to_tokens")]
-    pub is_big: Option<TokenStream>,
-    #[darling(default, map = "to_tokens")]
-    pub is_little: Option<TokenStream>,
-    
-    // assertions/error handling
-    #[darling(multiple, map = "to_assert")]
-    pub assert: Vec<Assert>,
-    
-    // TODO: this
-    #[darling(default)]
-    pub magic: Option<Lit>,
-
-    #[darling(default, map = "to_tokens")]
-    pub pad_before: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
-    pub pad_after: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
-    pub align_before: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
-    pub align_after: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
-    pub seek_before: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
-    pub pad_size_to: Option<TokenStream>,
-
-    // parsing
-    #[darling(default)]
-    pub parse_with: Option<Path>
-}
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub struct Assert(pub TokenStream, pub Option<TokenStream>);
 
-use std::str::FromStr;
-
 #[derive(Debug)]
 struct MultiformExpr(TokenStream);
+
+pub struct ParseField(Field);
+
+#[derive(Debug, Default, Clone)]
+pub struct PassedValues(Vec<TokenStream>);
+
+impl PassedValues {
+    pub fn iter(&self) -> impl Iterator<Item = &TokenStream> {
+        self.0.iter()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Imports(pub Vec<Ident>, pub Vec<Type>);
+
+impl Imports {
+    pub fn idents<'a>(&'a self) -> impl Iterator<Item=&'a Ident> {
+        self.0.iter()
+    }
+    
+    pub fn types<'a>(&'a self) -> impl Iterator<Item=&'a Type> {
+        self.1.iter()
+    }
+}
 
 impl darling::FromMeta for MultiformExpr {
     fn from_list(items: &[NestedMeta]) -> Result<Self, darling::Error> {
@@ -151,39 +77,23 @@ impl darling::FromMeta for MultiformExpr {
     }
 }
 
-/*
-*/
-
 fn to_tokens(string: Option<MultiformExpr>) -> Option<TokenStream> {
     string.map(|MultiformExpr(tokens)| tokens)
 }
 
 fn to_assert(s: Strs) -> Assert {
-        match s {
-            s if !s.is_list() => Assert(TokenStream::from_str(&s.single()).unwrap(), None),
-            _ => {
-                if let &[assertion, err] = &s.multiple()[..] {
-                    Assert(
-                        TokenStream::from_str(assertion).unwrap(),
-                        Some(TokenStream::from_str(err).unwrap())
-                    )
-                } else {
-                    panic!("Bad format for assert")
-                }
+    match s {
+        s if !s.is_list() => Assert(TokenStream::from_str(&s.single()).unwrap(), None),
+        _ => {
+            if let &[assertion, err] = &s.multiple()[..] {
+                Assert(
+                    TokenStream::from_str(assertion).unwrap(),
+                    Some(TokenStream::from_str(err).unwrap())
+                )
+            } else {
+                panic!("Bad format for assert")
             }
         }
-}
-
-impl TopLevelAttrs {
-    pub fn finalize(self) -> Result<Self, SpanError> {
-        if *self.big && *self.little {
-            SpanError::err(
-                self.big.span().join(self.little.span()).unwrap(),
-                "Cannot set endian to both big and little endian"
-            )?;
-        }
-
-        Ok(self)
     }
 }
 
@@ -217,14 +127,6 @@ impl Strs {
             false
         }
     }
-
-    fn len(&self) -> usize {
-        if let WrappedStrList(x) = self {
-            x.len()
-        } else {
-            1
-        }
-    }
 }
 
 impl darling::FromMeta for Strs {
@@ -256,25 +158,6 @@ impl darling::FromMeta for Strs {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct Imports(pub Vec<Ident>, pub Vec<Type>);
-
-pub struct ParseField(Field);
-
-impl Imports {
-    pub fn idents<'a>(&'a self) -> impl Iterator<Item=&'a Ident> {
-        self.0.iter()
-    }
-    
-    pub fn types<'a>(&'a self) -> impl Iterator<Item=&'a Type> {
-        self.1.iter()
-    }
-    
-    pub fn pairs<'a>(&'a self) -> impl Iterator<Item=(&'a Ident, &'a Type)> {
-        self.0.iter().zip(self.1.iter())
-    }
-}
-
 impl syn::parse::Parse for ParseField {
     fn parse(input: syn::parse::ParseStream) -> Result<Self, syn::Error> {
         Ok(Self(Field::parse_named(input)?))
@@ -301,9 +184,6 @@ impl darling::FromMeta for Imports {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct PassedValues(Vec<TokenStream>);
-
 impl darling::FromMeta for PassedValues {
     fn from_list(items: &[NestedMeta]) -> Result<Self, darling::Error> {
         Ok(PassedValues(items.into_iter().map(|item|{
@@ -316,11 +196,5 @@ impl darling::FromMeta for PassedValues {
                 _ => Err(darling::Error::custom("Passed values can only contains Paths and literals"))?
             })
         }).collect::<Result<_, _>>()?))
-    }
-}
-
-impl PassedValues {
-    pub fn iter(&self) -> impl Iterator<Item = &TokenStream> {
-        self.0.iter()
     }
 }

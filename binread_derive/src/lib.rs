@@ -10,11 +10,11 @@ use syn::{
 };
 
 mod codegen;
-mod sanitization;
+mod meta_attrs;
 mod binread_endian;
-#[macro_use] mod compiler_error;
+mod compiler_error;
 
-use sanitization::*;
+use codegen::sanitization::*;
 use proc_macro2::{TokenStream as TokenStream2, Span};
 use compiler_error::{CompileError, SpanError};
 
@@ -64,9 +64,9 @@ pub fn derive_binread(input: TokenStream) -> TokenStream {
                         compile_error!(#error)
                     }
                 }
-                CompileError::Darling(darling_err) => {
-                    darling_err.write_errors()
-                }
+                CompileError::Darling(darling_err) => darling_err.write_errors(),
+                CompileError::Syn(syn_err) => syn_err.to_compile_error()
+                
             };
             generate_derive(input, codegen::GeneratedCode::new(
                 quote!(todo!()),

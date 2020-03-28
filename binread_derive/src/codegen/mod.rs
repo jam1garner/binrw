@@ -1,12 +1,14 @@
-mod meta_attrs;
+pub(crate) mod sanitization;
 mod read_options;
 mod after_parse;
 mod arg_type;
-use meta_attrs::*;
 
-use proc_macro2::TokenStream;
-use crate::compiler_error::{CompileError, SpanError};
 use darling::FromDeriveInput;
+use proc_macro2::TokenStream;
+use crate::{
+    meta_attrs::TopLevelAttrs,
+    compiler_error::{CompileError, SpanError}
+};
 
 pub fn generate(input: &syn::DeriveInput) -> Result<GeneratedCode, CompileError> {
     if let syn::Data::Union(ref union) = input.data {

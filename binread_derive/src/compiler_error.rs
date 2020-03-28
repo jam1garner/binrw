@@ -3,13 +3,15 @@ use proc_macro2::Span;
 #[derive(Debug)]
 pub enum CompileError {
     SpanError(SpanError),
-    Darling(darling::Error)
+    Darling(darling::Error),
+    Syn(syn::Error),
 }
 
 #[derive(Debug)]
 pub struct SpanError(pub Span, pub String);
 
 impl SpanError {
+    #[allow(dead_code)]
     pub fn new<E: Into<String>>(span: Span, err: E) -> Self {
         SpanError(span, err.into())
     }
@@ -22,6 +24,12 @@ impl SpanError {
 impl From<darling::Error> for CompileError {
     fn from(err: darling::Error) -> Self {
         CompileError::Darling(err)
+    }
+}
+
+impl From<syn::Error> for CompileError {
+    fn from(err: syn::Error) -> Self {
+        CompileError::Syn(err)
     }
 }
 

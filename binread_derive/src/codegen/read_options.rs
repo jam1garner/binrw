@@ -1,10 +1,17 @@
-use proc_macro2::TokenStream;
-use super::{TopLevelAttrs, FieldLevelAttrs, Assert};
-use crate::{CompileError, compiler_error::SpanError};
-use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Expr, Field, Variant};
-use quote::{quote, format_ident, ToTokens};
-use crate::sanitization::*;
 use std::iter;
+use crate::{
+    meta_attrs::{
+        TopLevelAttrs,
+        FieldLevelAttrs,
+        Assert
+    },
+    codegen::sanitization::*,
+    compiler_error::SpanError,
+    CompileError
+};
+use proc_macro2::TokenStream;
+use quote::{quote, format_ident, ToTokens};
+use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Expr, Field, Variant};
 use darling::{FromField, FromVariant};
 
 pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> Result<TokenStream, CompileError> {
