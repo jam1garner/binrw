@@ -173,3 +173,15 @@ pub fn identity_after_parse<PostprocessFn, Reader, ValueType, ArgType>(
     after_parse_fn(&mut item, reader, ro, args, ao)?;
     Ok(item)
 }
+
+impl Error {
+    /// Gets a custom error of type T from the Error. Returns `None` if the error type is not
+    /// custom or if the contained error is not of the desired type.
+    pub fn custom_err<T: Any>(&self) -> Option<&T> {
+        if let Error::Custom { err, ..} = self {
+            err.downcast_ref()
+        } else {
+            None
+        }
+    }
+}
