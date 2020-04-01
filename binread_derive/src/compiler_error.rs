@@ -3,7 +3,6 @@ use proc_macro2::Span;
 #[derive(Debug)]
 pub enum CompileError {
     SpanError(SpanError),
-    Darling(darling::Error),
     Syn(syn::Error),
 }
 
@@ -16,14 +15,8 @@ impl SpanError {
         SpanError(span, err.into())
     }
 
-    pub fn err<E: Into<String>>(span: Span, err: E) -> Result<(), Self> {
+    pub fn err<K, E: Into<String>>(span: Span, err: E) -> Result<K, Self> {
         Err(SpanError(span, err.into()))
-    }
-}
-
-impl From<darling::Error> for CompileError {
-    fn from(err: darling::Error) -> Self {
-        CompileError::Darling(err)
     }
 }
 

@@ -25,9 +25,10 @@ macro_rules! parse_any {
                 )*
                 x.map_err(|_: syn::Error|{
                     input.error(concat!(
-                        "Cannot parse, expected one of the following:",
+                        "Cannot parse, expected one of the following: ",
                         stringify!($variant1)
-                        $(,
+                        $(
+                            ,", ",
                             stringify!($variantn)
                         )*
                     ))

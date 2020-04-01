@@ -1,75 +1,189 @@
 use super::*;
-use super::parser::FieldLevelAttr;
+use super::parser::{FieldLevelAttr, MetaAttrList};
+use crate::CompileError;
 
-#[derive(FromField, Debug)]
-#[darling(attributes(br, binread))]
-pub struct FieldLevelAttrs {
+#[derive(Debug, Default)]
+pub(crate) struct FieldLevelAttrs {
     // ======================
     //    Field-level only
     // ======================
-    #[darling(default)]
     pub args: PassedValues,
-    #[darling(default, map = "to_tokens")]
     pub map: Option<TokenStream>,
-    #[darling(default)]
     pub ignore: bool,
-    #[darling(default)]
     pub default: bool,
-    #[darling(default, map = "to_tokens")]
     pub calc: Option<TokenStream>,
-    #[darling(default, map = "to_tokens")]
     pub count: Option<TokenStream>,
-    #[darling(default, map = "to_tokens")]
     pub offset: Option<TokenStream>,
-    #[darling(default, map = "to_tokens", rename = "if")]
     pub if_cond: Option<TokenStream>,
-    #[darling(default)]
     pub deref_now: bool,
-    #[darling(default)]
     pub postprocess_now: bool,
-    #[darling(default)]
     pub restore_position: bool,
 
     // ======================
     //  All-level attributes
     // ======================
     // endian
-    #[darling(default)]
     pub little: SpannedValue<bool>,
-    #[darling(default)]
     pub big: SpannedValue<bool>,
-    #[darling(default, map = "to_tokens")]
     pub is_big: Option<TokenStream>,
-    #[darling(default, map = "to_tokens")]
     pub is_little: Option<TokenStream>,
     
     // assertions/error handling
-    #[darling(multiple, map = "to_assert")]
     pub assert: Vec<Assert>,
     
     // TODO: this
-    #[darling(default)]
     pub magic: Option<Lit>,
-
-    #[darling(default, map = "to_tokens")]
     pub pad_before: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
     pub pad_after: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
     pub align_before: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
     pub align_after: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
     pub seek_before: Option<TokenStream>,
-
-    #[darling(default, map = "to_tokens")]
     pub pad_size_to: Option<TokenStream>,
 
     // parsing
-    #[darling(default)]
-    pub parse_with: Option<Path>
+    pub parse_with: Option<TokenStream>
+}
+
+macro_rules! get_fla_type {
+    ($tla:ident.$variant:ident) => {
+        $tla.iter()
+            .filter_map(|x|{
+                if let FieldLevelAttr::$variant(x) = x {
+                    Some(x)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+}
+
+type FlaList = MetaAttrList<FieldLevelAttr>;
+
+impl FieldLevelAttrs {
+    pub fn from_field(field: &syn::Field) -> Result<Self, CompileError> {
+        let attrs: Vec<FieldLevelAttr> =
+            field.attrs
+                .iter()
+                .map(flas_from_attribute)
+                .collect::<Result<Vec<FlaList>, CompileError>>()?
+                .into_iter()
+                .map(|x| x.0.into_iter())
+                .flatten()
+                .collect();
+
+        // bool type
+        let big = first_span_true(get_fla_type!(attrs.Big));
+        let little = first_span_true(get_fla_type!(attrs.Little));
+        let default = !get_fla_type!(attrs.Default).is_empty();
+        let ignore = !get_fla_type!(attrs.Ignore).is_empty();
+        let deref_now = !get_fla_type!(attrs.DerefNow).is_empty();
+        let restore_position = !get_fla_type!(attrs.RestorePosition).is_empty();
+        let postprocess_now = !get_fla_type!(attrs.PostProcessNow).is_empty();
+
+        // func assignment type
+        let map = get_fla_type!(attrs.Map);
+        let parse_with = get_fla_type!(attrs.ParseWith);
+
+        // lit assignment type
+        let magic = get_fla_type!(attrs.Magic);
+
+        // args type
+        let args = get_fla_type!(attrs.Args);
+        let asserts = get_fla_type!(attrs.Assert);
+
+        // expr type
+        let calc = get_fla_type!(attrs.Calc);
+        let count = get_fla_type!(attrs.Count);
+        let is_little = get_fla_type!(attrs.IsLittle);
+        let is_big = get_fla_type!(attrs.IsBig);
+        let offset = get_fla_type!(attrs.Offset);
+        let if_cond = get_fla_type!(attrs.If);
+
+        let pad_before = get_fla_type!(attrs.PadBefore);
+        let pad_after = get_fla_type!(attrs.PadAfter);
+        let align_before = get_fla_type!(attrs.AlignBefore);
+        let align_after = get_fla_type!(attrs.AlignAfter);
+        let seek_before = get_fla_type!(attrs.SeekBefore);
+        let pad_size_to = get_fla_type!(attrs.PadSizeTo);
+
+        macro_rules! only_first {
+            ($($a:ident),*) => {
+                $(
+                    let $a = get_only_first(
+                        &$a,
+                        concat!("Conflicting instances of ", stringify!($a))
+                    )?.map(|x| x.get());
+                )*
+            }
+        }
+
+        only_first!(
+            pad_before, pad_after, align_before, align_after, seek_before, pad_size_to,
+            calc, count, is_little, is_big, offset, if_cond, map, magic, parse_with, args
+        );
+
+        let assert = vec![];
+        let args = args.unwrap_or_default();
+        
+        Ok(Self {
+            little,
+            big,
+            ignore,
+            default,
+            deref_now,
+            postprocess_now,
+            restore_position,
+            
+            calc,
+            count,
+            offset,
+            if_cond,
+            is_big,
+            is_little,
+            pad_before,
+            pad_after,
+            align_before,
+            align_after,
+            seek_before,
+            pad_size_to,
+
+            parse_with,
+            map,
+            args,
+            assert,
+            magic,
+        })
+    }
+}
+
+fn get_only_first<'a, S: Spanned>(list: &'a Vec<S>, msg: &str) -> Result<Option<&'a S>, CompileError> {
+    if list.len() > 1 {
+        let mut spans = list.iter().map(Spanned::span);
+
+        let first = spans.next().unwrap();
+        let span = spans.fold(first, |x, y| x.join(y).unwrap());
+
+        return Err(CompileError::SpanError(SpanError::new(
+            span,
+            msg
+        )));
+    }
+    
+    Ok(list.get(0))
+}
+
+fn first_span_true<S: Spanned>(vals: Vec<S>) -> SpannedValue<bool> {
+    if let Some(val) = vals.get(0) {
+        SpannedValue::new(
+            true,
+            val.span()
+        )
+    } else {
+        Default::default()
+    }
+}
+
+fn flas_from_attribute(attr: &syn::Attribute) -> Result<FlaList, CompileError> {
+    Ok(syn::parse2(attr.tokens.clone())?)
 }

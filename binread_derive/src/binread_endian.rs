@@ -1,4 +1,5 @@
-#[derive(Clone, Copy, Debug)]
+/// An enum to represent the endianess to read
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Endian {
     Big,
     Little,

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod parsing_tests;
-mod meta_types;
+pub(crate) mod meta_types;
 mod keywords;
 
 use keywords as kw;

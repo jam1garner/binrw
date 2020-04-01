@@ -1,4 +1,7 @@
 use super::*;
+use proc_macro2::Span;
+use syn::spanned::Spanned;
+use super::super::PassedValues;
 
 /// MetaExpr represents a key/expr pair
 /// Takes two forms:
@@ -89,5 +92,56 @@ impl<Keyword: Parse> Parse for MetaLit<Keyword> {
             ident,
             lit
         })
+    }
+}
+
+use quote::ToTokens;
+
+impl<Keyword: Parse> ToTokens for MetaLit<Keyword> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.lit.to_tokens(tokens);
+    }
+}
+
+impl<Keyword: Parse, ItemType: Parse> ToTokens for MetaList<Keyword, ItemType> {
+    fn to_tokens(&self, _tokens: &mut proc_macro2::TokenStream) {}
+}
+
+impl<Keyword: Parse> ToTokens for MetaExpr<Keyword> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.expr.to_tokens(tokens);
+    }
+}
+
+impl<Keyword: Parse> ToTokens for MetaFunc<Keyword> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match &self.func {
+            MetaFuncExpr::Path(p) => p.to_tokens(tokens),
+            MetaFuncExpr::Closure(c) => c.to_tokens(tokens)
+        }
+    }
+}
+
+impl<Keyword: Parse> MetaExpr<Keyword> {
+    pub fn get(&self) -> proc_macro2::TokenStream {
+        (&self.expr).into_token_stream()
+    }
+}
+
+impl<Keyword: Parse> MetaFunc<Keyword> {
+    pub fn get(&self) -> proc_macro2::TokenStream {
+        self.into_token_stream()
+    }
+}
+
+impl<Keyword: Parse> MetaLit<Keyword> {
+    pub fn get(&self) -> Lit {
+        self.lit.clone()
+    }
+}
+
+impl<Keyword: Parse> MetaList<Keyword, Expr> {
+    pub fn get(&self) -> PassedValues {
+        PassedValues(self.fields.iter().map(ToTokens::into_token_stream).collect())
     }
 }

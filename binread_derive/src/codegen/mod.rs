@@ -3,7 +3,6 @@ mod read_options;
 mod after_parse;
 mod arg_type;
 
-use darling::FromDeriveInput;
 use proc_macro2::TokenStream;
 use crate::{
     meta_attrs::TopLevelAttrs,

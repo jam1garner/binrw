@@ -64,7 +64,6 @@ pub fn derive_binread(input: TokenStream) -> TokenStream {
                         compile_error!(#error)
                     }
                 }
-                CompileError::Darling(darling_err) => darling_err.write_errors(),
                 CompileError::Syn(syn_err) => syn_err.to_compile_error()
                 
             };

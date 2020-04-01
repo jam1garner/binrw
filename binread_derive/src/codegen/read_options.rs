@@ -12,7 +12,6 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
 use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Expr, Field, Variant};
-use darling::{FromField, FromVariant};
 
 pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> Result<TokenStream, CompileError> {
     match &input.data {
@@ -67,7 +66,7 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Res
             en.variants.iter().map(|variant|{
                 let name = variant.ident.to_string();
                 quote!{
-                    #error_basket.push((#name, #last_attempt.unwrap_err()));
+                    #error_basket.push((#name, #last_attempt.err().unwrap()));
                     #seek_trait::seek(#reader, #seek_from::Start(#last_pos))?;
                 }
             }).collect::<Vec<_>>(),
@@ -784,8 +783,8 @@ fn generate_skips(field_attrs: &[FieldLevelAttrs]) -> Skips {
             let align = closure_wrap(align);
             quote!{{
                 let align = #align as usize;
-                let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0)) as usize;
-                let align = ((pos - (pos % align)) % align) as i64;
+                let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error? as usize;
+                let align = ((align - (pos % align)) % align) as i64;
                 #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(align))#handle_error?;
             }}
         }));
@@ -816,8 +815,8 @@ fn generate_skips(field_attrs: &[FieldLevelAttrs]) -> Skips {
             let align = closure_wrap(align);
             quote!{{
                 let align = #align as usize;
-                let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0)) as usize;
-                let align = ((pos - (pos % align)) % align) as i64;
+                let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error? as usize;
+                let align = ((align - (pos % align)) % align) as i64;
                 #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(align))#handle_error?;
             }}
         }));

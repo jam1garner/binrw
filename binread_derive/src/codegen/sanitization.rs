@@ -39,7 +39,7 @@ pub static AFTER_OPTS: IdentStr = IdentStr("__binread_generated_var_after_option
 pub static DEFAULT: IdentStr = IdentStr("core::default::Default::default");
 
 pub static ASSERT_MAGIC: IdentStr = from_crate!(error::magic);
-pub static ASSERT_EQ: IdentStr = from_crate!(error::assert_eq);
+//pub static ASSERT_EQ: IdentStr = from_crate!(error::assert_eq);
 pub static ASSERT: IdentStr = from_crate!(error::assert);
 
 pub static WRITE_START_STRUCT: IdentStr = from_crate!(binary_template::write_start_struct);
