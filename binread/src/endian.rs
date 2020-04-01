@@ -1,13 +1,18 @@
-#[allow(unused_imports)]
-use super::*;
+//! An enum to represent what endianness to read as
 
-/// An enum to represent what endianness to write with
+/// An enum to represent what endianness to read as
 #[derive(Clone, Copy, Debug)]
 pub enum Endian {
     Big,
     Little,
     Native,
 }
+
+pub use Endian::{
+    Big as BE,
+    Little as LE,
+    Native as NE
+};
 
 impl Into<String> for &Endian {
     fn into(self) -> String {

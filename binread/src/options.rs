@@ -1,5 +1,6 @@
 use super::*;
 
+/// Runtime-configured options for reading the type using [`BinRead`](BinRead)
 #[non_exhaustive]
 #[derive(Default, Clone, Copy)]
 pub struct ReadOptions {
@@ -12,8 +13,7 @@ pub struct ReadOptions {
     pub variable_name: Option<&'static str>,
 }
 
-pub type Imports = Vec<Option<Box<dyn Any>>>;
-
+/// Runtime-configured options for what to do with the type after the parent has been parsed
 #[non_exhaustive]
 #[derive(Default, Clone, Copy)]
 pub struct AfterParseOptions {

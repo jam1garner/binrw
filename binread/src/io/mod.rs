@@ -1,3 +1,5 @@
+//! A swappable version of [std::io](std::io) that works in `no_std + alloc` environments.
+//! If the feature flag `std` is enabled (as it is by default), this will just re-export types from `std::io`.
 pub mod prelude;
 pub mod cursor;
 pub mod error;
@@ -14,7 +16,7 @@ pub use std::io::Result;
 #[cfg(not(feature = "std"))]
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// A simplified version of std::io::Read for use in no_std environments
+/// A simplified version of [std::io::Read](std::io::Read) for use in no_std environments
 pub trait Read {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize>;
 
