@@ -10,12 +10,9 @@ readme = "README.md"
 documentation = "https://docs.rs/binread"
 
 [dependencies]
-binread_derive = { git = "https://github.com/jam1garner/binread_derive" }
+#binread_derive = { git = "https://github.com/jam1garner/binread_derive" }
+binread_derive = { path = "../binread_derive" }
 lazy_static = { version = "1.4" , optional=true }
-#rustversion = "1.0"
-
-[build-dependencies]
-rustc_version = "0.2"
 
 [features]
 default = ["std"]

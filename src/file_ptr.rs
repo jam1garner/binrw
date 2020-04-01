@@ -1,5 +1,65 @@
+//! A wrapper type for representing a layer of indirection within a file.
+//! 
+//! A `FilePtr<P, T>` is composed of two types: a pointer type `P` and a value type `T` where
+//! the pointer type describes and offset to read the value type from. Once read from the file
+//! it can be dereferenced to yeild the value it points to.
+//! 
+//! ## Example
+//! ```rust
+//! use binread::{prelude::*, io::Cursor, FilePtr};
+//!
+//! #[derive(BinRead)]
+//! struct Test {
+//!     pointer: FilePtr<u32, u8> 
+//! }
+//! 
+//! fn main() {
+//!     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
+//!     assert_eq!(test.pointer.ptr, 8);
+//!     assert_eq!(*test.pointer, 0xFF);
+//! }
+//! ```
+//! 
+//! Example data mapped out:
+//! ```hex
+//!           [pointer]           [value]
+//! 00000000: 0000 0008 0000 0000 ff                   ............
+//! ```
+//! 
+//! Use `offset` to change what the pointer is relative to (default: beginning of reader).
 use super::*;
+use std::fmt;
+use core::ops::{Deref, DerefMut};
 
+/// A wrapper type for representing a layer of indirection within a file.
+/// 
+/// A `FilePtr<P, T>` is composed of two types: a pointer type `P` and a value type `T` where
+/// the pointer type describes and offset to read the value type from. Once read from the file
+/// it can be dereferenced to yeild the value it points to.
+/// 
+/// ## Example
+/// ```rust
+/// use binread::{prelude::*, io::Cursor, FilePtr};
+///
+/// #[derive(BinRead)]
+/// struct Test {
+///     pointer: FilePtr<u32, u8> 
+/// }
+/// 
+/// fn main() {
+///     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
+///     assert_eq!(test.pointer.ptr, 8);
+///     assert_eq!(*test.pointer, 0xFF);
+/// }
+/// ```
+/// 
+/// Example data mapped out:
+/// ```hex
+///           [pointer]           [value]
+/// 00000000: 0000 0008 0000 0000 ff                   ............
+/// ```
+/// 
+/// Use `offset` to change what the pointer is relative to (default: beginning of reader).
 pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
     pub ptr: Ptr,
     pub value: Option<BR>
@@ -62,6 +122,7 @@ impl<Ptr: IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
     }
 }
 
+/// Used to allow any convert any type castable to i64 into a [`SeekFrom::Current`](io::SeekFrom::Current)
 pub trait IntoSeekFrom: Copy {
     fn into_seek_from(self) -> SeekFrom;
 }
@@ -80,8 +141,8 @@ macro_rules! impl_into_seek_from {
 
 impl_into_seek_from!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
-use core::ops::{Deref, DerefMut};
-
+/// ## Panics
+/// Will panic if the FilePtr has not been read yet using [`BinRead::after_parse`](BinRead::after_parse)
 impl<Ptr: IntoSeekFrom, BR: BinRead> Deref for FilePtr<Ptr, BR> {
     type Target = BR;
 
@@ -93,6 +154,8 @@ impl<Ptr: IntoSeekFrom, BR: BinRead> Deref for FilePtr<Ptr, BR> {
     }
 }
 
+/// ## Panics
+/// Will panic if the FilePtr has not been read yet using [`BinRead::after_parse`](BinRead::after_parse)
 impl<Ptr: IntoSeekFrom, BR: BinRead> DerefMut for FilePtr<Ptr, BR> {
     fn deref_mut(&mut self) -> &mut BR {
         match self.value.as_mut() {
@@ -101,8 +164,6 @@ impl<Ptr: IntoSeekFrom, BR: BinRead> DerefMut for FilePtr<Ptr, BR> {
         }
     }
 }
-
-use std::fmt;
 
 impl<Ptr, BR> fmt::Debug for FilePtr<Ptr, BR>
     where Ptr: BinRead<Args = ()> + IntoSeekFrom,

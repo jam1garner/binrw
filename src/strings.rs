@@ -1,9 +1,9 @@
 use super::*;
 
-#[cfg(feature = "std")]
-use std::{
-    ffi::CString,
-};
+// #[cfg(feature = "std")]
+// use std::{
+//     ffi::CString,
+// };
 
 use core::num::{NonZeroU8, NonZeroU16};
 
@@ -32,11 +32,19 @@ impl BinRead for Vec<NonZeroU8> {
     }
 }
 
+/// A null terminated UTF-8 string designed to make reading any null-terminated data easier.
+/// 
+/// **Note:** Does not include the null.
 #[derive(Clone, PartialEq, Default)]
-pub struct NullString(Vec<u8>);
+pub struct NullString(pub Vec<u8>);
 
+/// A null terminated UTF-16 string designed to make reading any 16 bit wide null-terminated data easier.
+/// 
+/// **Note:** Does not include the null.
+/// 
+/// **Note:** This is endian dependent on a per-character basis. Will read `u16`s until a `0u16` is found. 
 #[derive(Clone, PartialEq, Default)]
-pub struct NullWideString(Vec<u16>);
+pub struct NullWideString(pub Vec<u16>);
 
 impl NullString {
     pub fn into_string(self) -> String {
@@ -69,6 +77,18 @@ impl Into<NullString> for Vec<NonZeroU8> {
     fn into(self) -> NullString {
         let vals: Vec<u8> = self.into_iter().map(|x| x.get()).collect();
         NullString(vals)
+    }
+}
+
+impl Into<Vec<u16>> for NullWideString {
+    fn into(self) -> Vec<u16> {
+        self.0
+    }
+}
+
+impl Into<Vec<u8>> for NullString {
+    fn into(self) -> Vec<u8> {
+        self.0
     }
 }
 
@@ -156,5 +176,21 @@ impl fmt::Debug for NullString {
 impl fmt::Debug for NullWideString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "NullWideString({:?})", self.clone().into_string())
+    }
+}
+
+impl std::ops::Deref for NullString {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for NullWideString {
+    type Target = Vec<u16>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
