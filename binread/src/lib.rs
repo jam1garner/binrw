@@ -25,7 +25,7 @@
 //! 
 //! # The Basics
 //! 
-//! At the core of `binread` is the [`BinRead`](trait BinRead) trait. It defines how to read
+//! At the core of `binread` is the [`BinRead`](BinRead) trait. It defines how to read
 //! a type from bytes and is already implemented for most primitives and simple collections.
 //! 
 //! ```rust
