@@ -174,6 +174,21 @@ pub fn identity_after_parse<PostprocessFn, Reader, ValueType, ArgType>(
     Ok(item)
 }
 
+pub fn read_options_then_after_parse<Args, T, R>(
+    reader: &mut R,
+    ro: &ReadOptions,
+    args: T::Args,
+    ao: &AfterParseOptions
+) -> BinResult<T>
+    where Args: Clone + 'static,
+          T: BinRead<Args = Args>,
+          R: Read + Seek,
+{
+    let mut val = T::read_options(reader, ro, args.clone())?;
+    val.after_parse(reader, ro, args, ao)?;
+    Ok(val)
+}
+
 impl Error {
     /// Gets a custom error of type T from the Error. Returns `None` if the error type is not
     /// custom or if the contained error is not of the desired type.
