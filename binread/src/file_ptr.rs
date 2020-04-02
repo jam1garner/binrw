@@ -65,6 +65,12 @@ pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
     pub value: Option<BR>
 }
 
+pub type FilePtr8<T> = FilePtr<u8, T>;
+pub type FilePtr16<T> = FilePtr<u16, T>;
+pub type FilePtr32<T> = FilePtr<u32, T>;
+pub type FilePtr64<T> = FilePtr<u64, T>;
+pub type FilePtr128<T> = FilePtr<u128, T>;
+
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
     type Args = BR::Args;
     

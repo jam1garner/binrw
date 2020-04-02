@@ -11,8 +11,8 @@
 //! | [import](#arguments) | top-level | Define the arguments for parsing the given type
 //! | [args](#arguments) | fields | Pass a set of arguments.
 //! | [default](#default) | fields | Set a field to the default value for the type
-//! | [ignore](#ignore) | fields | Ignore this field while reading
-//! | [postprocess_now](#postprocessing) | fields | Immediately run `after_parse` after reading
+//! | [ignore](#default) | fields | An alias for `default`
+//! | [postprocess_now](#postprocessing) | fields | Immediately run [`after_parse`](crate::BinRead::after_parse) after reading
 //! | [deref_now](#postprocessing) | fields | Alias for postprocess_now
 //! | [restore_position](#restore-position) | fields | Restore the reader position after reading the field
 //! | [map](#map) | fields | Read a type from the reader and then apply a function to map it to the type to store in the struct
@@ -29,6 +29,7 @@
 //! | [align_after](#padding-and-alignment) | fields | Skip to the next Nth byte after reading
 //! | [seek_before](#padding-and-alignment) | fields | Passes the given [`SeekFrom`](crate::io::SeekFrom) to [`Seek::seek`](crate::io::Seek::seek)
 //! | [pad_size_to](#padding-and-alignment) | fields | Ensures the cursor is at least N bytes after the starting position for this field
+//! | [return_all_errors](#enum-errors) | enum-level | Use an error handling type in which enum failures return a [`Vec`](Vec) with an error for every variant
 //! 
 //! # Byteorder
 //! 
@@ -50,7 +51,8 @@
 //! 4. Configured (i.e. what endianess was passed in)
 //! 5. Native endianess
 //!
-//! binread also offers the ability to 
+//! binread also offers the ability to conditionally set endianness for when the endianess
+//! is described within the data itself using `is_big` or `is_little`:
 //!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
@@ -151,4 +153,24 @@
 //!     test: ImportTest
 //! }
 //! ```
+//! # Default
+//! 
+//! Set the field to the default value for the type.
+//! 
+//! ```rust
+//! # use binread::{BinRead, io::Cursor};
+//! #[derive(BinRead, Debug, PartialEq)]
+//! struct Test {
+//!     #[br(default)]
+//!     path: Option<std::path::PathBuf>,
+//! }
+//! 
+//! assert_eq!(
+//!     Test::read(&mut Cursor::new(vec![])).unwrap(),
+//!     Test { path: None }
+//! );
+//! ```
+//! 
+//! # Postprocessing
+//! 
 //! 
