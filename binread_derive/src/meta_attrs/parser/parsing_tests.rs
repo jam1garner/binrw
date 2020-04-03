@@ -70,6 +70,9 @@ test_fla!(fla_assert, "assert(
 test_fla!(fla_count, "count = extra_entry_count + 1");
 test_fla!(fla_args, "args(x, (y, z), 3 + 4)");
 test_fla!(fla_default, "default");
+test_fla!(fla_try, "try");
+test_fla!(fla_offset, "offset = 3 + x");
+test_fla!(fla_offset_after, "offset_after = 3 + x");
 
 parse_ty!(meta_bool, "little", kw::little);
 parse_ty!(meta_lit, "magic = 3u8", MetaLit<kw::magic>);

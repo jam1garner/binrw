@@ -14,10 +14,12 @@ pub(crate) struct FieldLevelAttrs {
     pub calc: Option<TokenStream>,
     pub count: Option<TokenStream>,
     pub offset: Option<TokenStream>,
+    pub offset_after: Option<TokenStream>,
     pub if_cond: Option<TokenStream>,
     pub deref_now: bool,
     pub postprocess_now: bool,
     pub restore_position: bool,
+    pub do_try: bool,
 
     // ======================
     //  All-level attributes
@@ -80,6 +82,7 @@ impl FieldLevelAttrs {
         let deref_now = !get_fla_type!(attrs.DerefNow).is_empty();
         let restore_position = !get_fla_type!(attrs.RestorePosition).is_empty();
         let postprocess_now = !get_fla_type!(attrs.PostProcessNow).is_empty();
+        let do_try = !get_fla_type!(attrs.Try).is_empty();
 
         // func assignment type
         let map = get_fla_type!(attrs.Map);
@@ -90,7 +93,7 @@ impl FieldLevelAttrs {
 
         // args type
         let args = get_fla_type!(attrs.Args);
-        let asserts = get_fla_type!(attrs.Assert);
+        let _asserts = get_fla_type!(attrs.Assert);
 
         // expr type
         let calc = get_fla_type!(attrs.Calc);
@@ -98,6 +101,7 @@ impl FieldLevelAttrs {
         let is_little = get_fla_type!(attrs.IsLittle);
         let is_big = get_fla_type!(attrs.IsBig);
         let offset = get_fla_type!(attrs.Offset);
+        let offset_after = get_fla_type!(attrs.OffsetAfter);
         let if_cond = get_fla_type!(attrs.If);
 
         let pad_before = get_fla_type!(attrs.PadBefore);
@@ -120,7 +124,8 @@ impl FieldLevelAttrs {
 
         only_first!(
             pad_before, pad_after, align_before, align_after, seek_before, pad_size_to,
-            calc, count, is_little, is_big, offset, if_cond, map, magic, parse_with, args
+            calc, count, is_little, is_big, offset, offset_after, if_cond, map, magic,
+            parse_with, args
         );
 
         let assert = vec![];
@@ -134,10 +139,12 @@ impl FieldLevelAttrs {
             deref_now,
             postprocess_now,
             restore_position,
+            do_try,
             
             calc,
             count,
             offset,
+            offset_after,
             if_cond,
             is_big,
             is_little,

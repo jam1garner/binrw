@@ -49,6 +49,7 @@ parse_any!{
         DerefNow(kw::deref_now),
         RestorePosition(kw::restore_position),
         PostProcessNow(kw::postprocess_now),
+        Try(Token![try]),
 
         // func assignment type
         Map(MetaFunc<kw::map>),
@@ -67,6 +68,7 @@ parse_any!{
         IsLittle(MetaExpr<kw::is_little>),
         IsBig(MetaExpr<kw::is_big>),
         Offset(MetaExpr<kw::offset>),
+        OffsetAfter(MetaExpr<kw::offset_after>),
         If(MetaExpr<Token![if]>),
 
         PadBefore(MetaExpr<kw::pad_before>),

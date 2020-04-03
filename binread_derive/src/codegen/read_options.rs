@@ -223,13 +223,15 @@ fn generate_body(
     let repeat_opt_ident = iter::repeat(OPT);
     let default = iter::repeat(DEFAULT);
 
+    let possible_set_offset = get_possible_set_offset(&field_attrs, &name_options);
+
     let field_asserts = get_field_assertions(&field_attrs);
     let after_parse = get_after_parse_handlers(&field_attrs);
     let top_level_option = get_top_level_binread_options(&tla);
-    let new_after_options = get_after_options(&field_attrs);
     let magic_handler = get_magic_assertion(&tla);
 
     let handle_error = handle_error();
+    let possible_try_conversion = get_possible_try_conversion(&field_attrs);
 
     let repeat_handle_error = iter::repeat(&handle_error);
     let repeat_handle_error2 = iter::repeat(&handle_error);
@@ -283,13 +285,12 @@ fn generate_body(
                     let __binread__temp = #possible_some(
                         #after_parse_applier(
                             #possible_immediate_derefs,
-                            #maps(#repeat_read_method_ident(
+                            #maps(#possible_try_conversion(#repeat_read_method_ident(
                                 #repeat_reader_ident, #name_options, #name_args
-                            )#repeat_handle_error?),
+                            ))#repeat_handle_error?),
                             #repeat_reader_ident,
                             #name_options,
                             #name_args,
-                            &#new_after_options
                         )?
                     );
 
@@ -303,17 +304,23 @@ fn generate_body(
         )*
 
         #(
+            #possible_set_offset
+        )*
+
+        let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error?;
+
+        #(
             #possible_if_let {
                 #after_parse(
                     #possible_mut #name,
                     #repeat_reader_ident,
                     #name_options,
                     #name_args,
-                    &#new_after_options
                 )#repeat_handle_error2?
             };
         )*
 
+        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))#handle_error?;
     })
 }
 
@@ -322,6 +329,27 @@ enum StructType {
     Unit,
     Tuple,
     Fields
+}
+
+fn get_possible_set_offset(field_attrs: &[FieldLevelAttrs], name_options: &[Ident]) -> Vec<Option<TokenStream>> {
+    field_attrs
+        .iter()
+        .zip(name_options)
+        .map(|(field, name)|{
+            field.offset_after
+                .as_ref()
+                .map(|offset|{
+                    let offset = closure_wrap(offset);
+                    quote!{
+                        let #name = &{
+                            let mut temp = #name.clone();
+                            temp.offset = #offset;
+                            temp
+                        };
+                    }
+                })
+        })
+        .collect()
 }
 
 fn get_name_types_fields<'a, I>(fields: I) -> (Vec<Ident>, Vec<&'a Type>)
@@ -408,6 +436,7 @@ fn get_passed_args(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
 const VARIABLE_NAME: IdentStr = IdentStr("variable_name");
 const ENDIAN: IdentStr = IdentStr("endian");
 const COUNT: IdentStr = IdentStr("count");
+const OFFSET: IdentStr = IdentStr("offset");
 
 fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident)
     -> impl Iterator<Item = (IdentStr<'static>, TokenStream)>
@@ -435,6 +464,11 @@ fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident
     } else {
         None
     };
+    
+    let offset =
+        field_attrs.offset
+            .as_ref()
+            .map(|offset| (OFFSET, closure_wrap(offset)));
 
     let variable_name = if cfg!(feature = "debug_template") {
         let name = ident.to_string();
@@ -448,6 +482,7 @@ fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident
     count.into_iter()
         .chain(endian)
         .chain(variable_name)
+        .chain(offset)
 }
 
 fn get_modified_options<'a, I: IntoIterator<Item = (IdentStr<'a>, TokenStream)>>(option_pairs: I)
@@ -491,31 +526,6 @@ fn get_top_level_binread_options(tla: &TopLevelAttrs) -> TokenStream {
     };
 
     get_modified_options(endian.into_iter())
-}
-
-fn get_after_options(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
-    field_attrs
-        .into_iter()
-        .map(|field_attrs|{
-            field_attrs.offset
-                .as_ref()
-                .map(|offset|{
-                    let offset = closure_wrap(offset);
-                    quote!{
-                        {
-                            let mut temp: #AFTER_PARSE_OPTIONS = #DEFAULT;
-                            temp.offset = Some(#offset);
-                            temp
-                        }
-                    }
-                })
-                .unwrap_or_else(||{
-                    quote!{
-                        #DEFAULT()
-                    }
-                })
-        })
-        .collect()
 }
 
 fn get_magic_assertion(tla: &TopLevelAttrs) -> Option<TokenStream> {
@@ -634,7 +644,8 @@ fn get_after_parse_handlers(field_attrs: &[FieldLevelAttrs]) -> Vec<&IdentStr> {
         .iter()
         .map(|field_attrs| {
             let dont_after_parse = field_attrs.map.is_some() || field_attrs.ignore ||
-                                    field_attrs.default || field_attrs.calc.is_some();
+                        field_attrs.default || field_attrs.calc.is_some()|| field_attrs.do_try ||
+                        field_attrs.parse_with.is_some();
             if dont_after_parse {
                 &AFTER_PARSE_NOP
             } else {
@@ -851,7 +862,6 @@ fn split_by_immediate_deref<'a, 'b>(after_parse: Vec<&'a IdentStr<'a>>, field_at
 
 
 fn save_restore_position(field_attrs: &[FieldLevelAttrs]) -> (Vec<TokenStream>, Vec<TokenStream>) {
-    const SAVED_POSITION: IdentStr = IdentStr("__binread_generated_saved_position");
     let handle_error = handle_error();
     field_attrs
         .iter()
@@ -870,4 +880,21 @@ fn save_restore_position(field_attrs: &[FieldLevelAttrs]) -> (Vec<TokenStream>, 
             }
         })
         .unzip()
+}
+
+const SAVED_POSITION: IdentStr = IdentStr("__binread_generated_saved_position");
+
+fn get_possible_try_conversion(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
+    field_attrs
+        .iter()
+        .map(|field|{
+            if field.do_try {
+                quote!{
+                     #TRY_CONVERSION
+                }
+            } else {
+                quote!{}
+            }
+        })
+        .collect()
 }

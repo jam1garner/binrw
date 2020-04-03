@@ -36,6 +36,7 @@ kws!{
     restore_position,// restore_position
     postprocess_now, // postprocess_now
     offset,     // offset(expr)
+    offset_after,     // offset(expr)
     /*if,*/     // if(expr)
     
     pad_before,   // pad_before(expr)
@@ -44,5 +45,4 @@ kws!{
     align_after,  // align_after(expr)
     seek_before,  // seek_before(expr)
     pad_size_to,  // pad_size_to(expr)
-    
 }

@@ -38,7 +38,7 @@ fn generate_derive(input: DeriveInput, code: codegen::GeneratedCode) -> TokenStr
             }
 
             fn after_parse<R: #READ_TRAIT + #SEEK_TRAIT> (&mut self, #READER: &mut R,
-                #OPT : &#OPTIONS, #ARGS : Self::Args, #AFTER_OPTS : &#AFTER_PARSE_OPTIONS) 
+                #OPT : &#OPTIONS, #ARGS : Self::Args) 
                 -> #BIN_RESULT<()>
             {
                 #after_parse_impl
