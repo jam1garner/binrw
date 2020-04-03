@@ -65,15 +65,15 @@ pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
     pub value: Option<BR>
 }
 
-// Type alias for 8-bit pointers
+/// Type alias for 8-bit pointers
 pub type FilePtr8<T> = FilePtr<u8, T>;
-// Type alias for 16-bit pointers
+/// Type alias for 16-bit pointers
 pub type FilePtr16<T> = FilePtr<u16, T>;
-// Type alias for 32-bit pointers
+/// Type alias for 32-bit pointers
 pub type FilePtr32<T> = FilePtr<u32, T>;
-// Type alias for 64-bit pointers
+/// Type alias for 64-bit pointers
 pub type FilePtr64<T> = FilePtr<u64, T>;
-// Type alias for 128-bit pointers
+/// Type alias for 128-bit pointers
 pub type FilePtr128<T> = FilePtr<u128, T>;
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
@@ -127,6 +127,8 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
 }
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
+    /// Custom parser designed for use with the `parse_with` attribute ([example](crate::attribute#custom-parsers))
+    /// that reads a [`FilePtr`](FilePtr) then immediately dereferences it into an owned value
     pub fn parse<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
@@ -140,6 +142,11 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
         Ok(ptr.into_inner())
     }
 
+    /// Consume the pointer and return the inner type
+    /// 
+    /// # Panics
+    /// 
+    /// Will panic if the file pointer hasn't been properly postprocessed
     pub fn into_inner(self) -> BR {
         self.value.unwrap()
     }
