@@ -116,6 +116,7 @@ pub mod file_ptr;
 pub mod attribute;
 #[doc(hidden)] pub mod options;
 #[doc(hidden)] pub mod strings;
+#[doc(hidden)] pub mod pos_value;
 
 #[cfg(feature = "std")]
 #[cfg(feature = "debug_template")]
@@ -127,11 +128,16 @@ use core::any::{Any, TypeId};
 pub use {
     error::Error,
     endian::Endian,
-    file_ptr::FilePtr,
-    options::{
-        ReadOptions,
-        AfterParseOptions
+    pos_value::PosValue,
+    file_ptr::{
+        FilePtr,
+        FilePtr8,
+        FilePtr16,
+        FilePtr32,
+        FilePtr64,
+        FilePtr128,
     },
+    options::ReadOptions,
     strings::{
         NullString,
         NullWideString
@@ -155,7 +161,7 @@ pub trait BinRead: Sized {
     /// The type of arguments needed to be supplied in order to read this type, usually a tuple.
     /// 
     /// **NOTE:** For types that don't require any arguments, use the unit (`()`) type. This will allow [`read`](BinRead::read) to be used.
-    type Args: Any;
+    type Args: Any + Copy;
 
     /// Read the type from the reader while assuming no arguments have been passed
     /// 
@@ -178,7 +184,7 @@ pub trait BinRead: Sized {
     /// Read the type from the reader
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self>;
 
-    fn after_parse<R: Read + Seek>(&mut self, _: &mut R, _: &ReadOptions, _: Self::Args, _: &AfterParseOptions) -> BinResult<()> {
+    fn after_parse<R: Read + Seek>(&mut self, _: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<()> {
         Ok(())
     }
 

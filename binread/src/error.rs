@@ -142,7 +142,7 @@ pub fn nop3_default<T1, R: Read + Seek, D: Default>(_: &mut R, _: &ReadOptions, 
 /// A no-op replacement for [`BinRead::after_parse`](BinRead::after_parse)
 /// 
 /// **Intended for internal use only**
-pub fn nop5<T1, T2, R: Read + Seek>(_: &mut T1, _: &mut R, _: &ReadOptions, _: T2, _: &AfterParseOptions) -> BinResult<()> {
+pub fn nop5<T1, T2, R: Read + Seek>(_: &mut T1, _: &mut R, _: &ReadOptions, _: T2) -> BinResult<()> {
     Ok(())
 }
 
@@ -159,7 +159,6 @@ pub fn identity_after_parse<PostprocessFn, Reader, ValueType, ArgType>(
     reader: &mut Reader,
     ro: &ReadOptions,
     args: ArgType,
-    ao: &AfterParseOptions
 ) -> BinResult<ValueType>
     where Reader: Read + Seek,
           PostprocessFn: Fn(
@@ -167,25 +166,28 @@ pub fn identity_after_parse<PostprocessFn, Reader, ValueType, ArgType>(
               &mut Reader,
               &ReadOptions,
               ArgType,
-              &AfterParseOptions
           ) -> BinResult<()>, 
 {
-    after_parse_fn(&mut item, reader, ro, args, ao)?;
+    after_parse_fn(&mut item, reader, ro, args)?;
     Ok(item)
+}
+
+/// Conversion used internally by the `try` attribute to make parsing failures softer
+pub fn try_conversion<T>(result: BinResult<T>) -> BinResult<Option<T>> {
+    Ok(result.ok())
 }
 
 pub fn read_options_then_after_parse<Args, T, R>(
     reader: &mut R,
     ro: &ReadOptions,
     args: T::Args,
-    ao: &AfterParseOptions
 ) -> BinResult<T>
-    where Args: Clone + 'static,
+    where Args: Copy + 'static,
           T: BinRead<Args = Args>,
           R: Read + Seek,
 {
     let mut val = T::read_options(reader, ro, args.clone())?;
-    val.after_parse(reader, ro, args, ao)?;
+    val.after_parse(reader, ro, args)?;
     Ok(val)
 }
 

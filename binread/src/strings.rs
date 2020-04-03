@@ -194,3 +194,15 @@ impl std::ops::Deref for NullWideString {
         &self.0
     }
 }
+
+impl ToString for NullString {
+    fn to_string(&self) -> String {
+        core::str::from_utf8(&self).unwrap().to_string()
+    }
+}
+
+impl ToString for NullWideString {
+    fn to_string(&self) -> String {
+        String::from_utf16_lossy(self)
+    }
+}
