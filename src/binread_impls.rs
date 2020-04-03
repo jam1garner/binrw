@@ -103,11 +103,11 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
             .collect()
     }
 
-    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: Self::Args, ao: &AfterParseOptions)-> BinResult<()>
+    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: Self::Args)-> BinResult<()>
         where R: Read + Seek,
     {
         for val in self.iter_mut() {
-            val.after_parse(reader, ro, args, ao)?;
+            val.after_parse(reader, ro, args)?;
         }
 
         Ok(())
@@ -148,11 +148,11 @@ macro_rules! binread_array_impl {
                     Ok(arr)
                 }
 
-                fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args, ao: &AfterParseOptions)-> BinResult<()>
+                fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args)-> BinResult<()>
                     where R: Read + Seek,
                 {
                     for val in self.iter_mut() {
-                        val.after_parse(reader, ro, args, ao)?;
+                        val.after_parse(reader, ro, args)?;
                     }
 
                     Ok(())
@@ -180,7 +180,18 @@ macro_rules! binread_tuple_impl {
                 ))
             }
 
-            // TODO: Add after_parse impl using paste::item
+            fn after_parse<R: Read + Seek>(&mut self, reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<()> {
+                let ($type1, $(
+                    $types
+                ),*) = self;
+
+                $type1.after_parse(reader, options, ())?;
+                $(
+                    $types.after_parse(reader, options, ())?;
+                )*
+
+                Ok(())
+            }
         }
 
         binread_tuple_impl!($($types),*);

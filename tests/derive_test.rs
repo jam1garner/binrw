@@ -84,7 +84,7 @@ struct TestTupleStruct (
 #[test]
 fn test_tuple() {
     let mut test = Cursor::new(TEST_CONTENTS);
-    dbg!(TestTupleStruct::read(&mut test));
+    dbg!(TestTupleStruct::read(&mut test).unwrap());
 }
 
 #[derive(BinRead, Debug)]
@@ -100,9 +100,9 @@ enum TestEnum {
 #[test]
 fn test_enum() {
     let mut test = Cursor::new(b"\0");
-    dbg!(TestEnum::read(&mut test));
+    dbg!(TestEnum::read(&mut test).unwrap());
     let mut test = Cursor::new(b"\x01");
-    dbg!(TestEnum::read(&mut test));
+    dbg!(TestEnum::read(&mut test).unwrap_err());
     let mut test = Cursor::new(b"\x02\0\x03\0\x04");
-    dbg!(TestEnum::read(&mut test));
+    dbg!(TestEnum::read(&mut test).unwrap());
 }

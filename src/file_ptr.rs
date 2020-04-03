@@ -65,10 +65,15 @@ pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
     pub value: Option<BR>
 }
 
+// Type alias for 8-bit pointers
 pub type FilePtr8<T> = FilePtr<u8, T>;
+// Type alias for 16-bit pointers
 pub type FilePtr16<T> = FilePtr<u16, T>;
+// Type alias for 32-bit pointers
 pub type FilePtr32<T> = FilePtr<u32, T>;
+// Type alias for 64-bit pointers
 pub type FilePtr64<T> = FilePtr<u64, T>;
+// Type alias for 128-bit pointers
 pub type FilePtr128<T> = FilePtr<u128, T>;
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
@@ -106,10 +111,10 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
         })
     }
 
-    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: BR::Args, ao: &AfterParseOptions)-> BinResult<()>
+    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: BR::Args)-> BinResult<()>
         where R: Read + Seek,
     {
-        let relative_to = ao.offset;
+        let relative_to = ro.offset;
         let before = reader.seek(SeekFrom::Current(0))?;
         reader.seek(SeekFrom::Start(relative_to))?;
         reader.seek(self.ptr.into_seek_from())?;
@@ -121,10 +126,22 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     }
 }
 
-impl<Ptr: IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
-    pub fn read<R: Read + Seek>(&mut self, reader: &mut R) -> BinResult<()> {
-        self.value = Some(BR::read(reader)?);
-        Ok(())
+impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
+    pub fn parse<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: BR::Args
+    ) -> BinResult<BR>
+    {
+        let mut ptr: Self = Self::read_options(reader, options, args)?;
+        let saved_pos = reader.seek(SeekFrom::Current(0))?;
+        ptr.after_parse(reader, options, args)?;
+        reader.seek(SeekFrom::Start(saved_pos))?;
+        Ok(ptr.into_inner())
+    }
+
+    pub fn into_inner(self) -> BR {
+        self.value.unwrap()
     }
 }
 
@@ -181,5 +198,15 @@ impl<Ptr, BR> fmt::Debug for FilePtr<Ptr, BR>
         } else {
             write!(f, "UnreadPointer")
         }
+    }
+}
+
+impl<Ptr, BR> PartialEq<FilePtr<Ptr, BR>> for FilePtr<Ptr, BR> 
+    where Ptr: BinRead<Args = ()> + IntoSeekFrom,
+          BR: BinRead + PartialEq,
+{
+
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
     }
 }
