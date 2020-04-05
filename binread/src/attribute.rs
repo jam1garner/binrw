@@ -57,7 +57,6 @@
 //!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(BinRead, Debug, PartialEq)]
 //! #[br(big)]
 //! struct MyType {
@@ -68,6 +67,8 @@
 //! 
 //! # assert_eq!(MyType::read(&mut Cursor::new(b"\x03\x01\x00")).unwrap(), MyType { val: 3, other_val: 1 });
 //! ```
+//! 
+//! **Note:** `is_big` and `is_little` supports using previous fields
 //! 
 //! # Magic
 //! 
@@ -114,7 +115,6 @@
 //! **Custom Error Handling Example:**
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(Debug, PartialEq)]
 //! struct NotSmallerError(u32, u32);
 //!
@@ -131,6 +131,8 @@
 //! assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
 //! ```
 //! 
+//! **Note:** supports using previous fields
+//! 
 //! # Arguments
 //! One feature of binread is allowing arguments to be passed to the type in order to tell
 //! the type any info it needs to parse the data. To accept arguments when using the derive
@@ -140,7 +142,6 @@
 //! **Example:**
 //! ```rust
 //! # use binread::prelude::*;
-//! 
 //! #[derive(BinRead)]
 //! #[br(import(val1: u32, val2: &'static str))]
 //! struct ImportTest {
@@ -154,6 +155,8 @@
 //!     test: ImportTest
 //! }
 //! ```
+//! **Note:** supports using previous fields
+//! 
 //! # Default
 //! 
 //! Set the field to the default value for the type.
@@ -184,7 +187,6 @@
 //! 
 //! ```rust
 //! # use binread::{prelude::*, FilePtr32, NullString, io::Cursor};
-//! 
 //! #[derive(BinRead, Debug)]
 //! #[br(big, magic = b"TEST")]
 //! struct TestFile {
@@ -213,7 +215,6 @@
 //! **Example:**
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(BinRead, Debug, PartialEq)]
 //! struct MyType {
 //!     #[br(restore_position)]
@@ -235,7 +236,6 @@
 //! 
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(try)]
@@ -248,11 +248,10 @@
 //! # Map
 //! 
 //! Sometimes the form you read isn't the form you want to store. For that, you can use the `map`
-//! attribute in order to apply a mapping function to modify it before storage.
+//! attribute in order to apply a mapping function to map it to the type of the field.
 //! 
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(map = |x: u8| x.to_string())]
@@ -261,7 +260,7 @@
 //! 
 //! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().int_str, "0");
 //! ```
-//!
+//! **Note:** supports using previous fields (if you use a closure)
 //! 
 //! # Custom Parsers
 //!
@@ -271,7 +270,6 @@
 //! ```rust
 //! # use binread::{prelude::*, io::*, ReadOptions};
 //! # use std::collections::HashMap;
-//! 
 //! fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
 //!     -> BinResult<HashMap<u16, u16>>
 //! {
@@ -297,7 +295,6 @@
 //! 
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor, FilePtr32, NullString};
-//! 
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(parse_with = FilePtr32::parse)]
@@ -317,7 +314,6 @@
 //! 
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     var: u32,
@@ -327,14 +323,16 @@
 //!
 //! # assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().var_plus_3, 4);
 //! ```
+//! **Note:** supports using previous fields
 //! 
 //! # Count
 //! 
-//! The `count` attribute 
+//! The `count` attribute allows you to set the number of values to read for a [`Vec`](Vec). If
+//! you wish to use `count` with a custom parser or a type's [`BinRead`](crate::BinRead) implementation
+//! you can access it using the [`count`](crate::ReadOptions::count) field on the [`ReadOptions`](crate::ReadOptions) type.
 //! 
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
@@ -347,6 +345,7 @@
 //! #    &[1u8, 2, 3, 4]
 //! # );
 //! ```
+//! **Note:** supports using previous fields
 //! 
 //! # Offset
 //! 
@@ -357,7 +356,6 @@
 //! **Example:**
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor, FilePtr};
-//! 
 //! #[derive(BinRead, Debug, PartialEq)]
 //! struct OffsetTest {
 //!     #[br(little, offset = 4)]
@@ -374,6 +372,8 @@
 //! fields that are defined after your FilePtr. Otherwise use `offset` as `offset_after` doesn't
 //! support some features of binread due to order of execution.
 //! 
+//! **Note:** supports using previous fields
+//! 
 //! # Conditional Values
 //! 
 //! binread also provides the ability to conditionally parse an [`Option<T>`](Option) field
@@ -382,7 +382,6 @@
 //! 
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! 
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     var: u32,
@@ -398,6 +397,8 @@
 //! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, None);
 //! ```
 //! 
+//! **Note:** supports using previous fields
+//! 
 //! # Padding and Alignment
 //! 
 //! * `pad_before`/`pad_after` - skip a fixed number of bytes
@@ -408,7 +409,6 @@
 //! 
 //! ```rust
 //! # use binread::{BinRead, NullString, io::SeekFrom};
-//! 
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(align_before = 4, pad_after = 1, align_after = 4)]
@@ -421,3 +421,6 @@
 //!     end: u32,
 //! }
 //! ```
+//! 
+//! **Note:** supports using previous fields
+//! 

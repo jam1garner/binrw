@@ -38,9 +38,9 @@
 //! 
 //! However, [`read`](BinRead::read) is intentionally simple and, as a result, doesn't even
 //! allow you to configure the byte order. For that you need [`read_options`](BinRead::read_options) 
-//! which, while more powerful, isn't exactly eurgonomic.
+//! which, while more powerful, isn't exactly ergonomics.
 //! 
-//! So, as a balance between eurgonomics and configurability you have the [`BinReaderExt`](BinReaderExt)
+//! So, as a balance between ergonomics and configurability you have the [`BinReaderExt`](BinReaderExt)
 //! trait. It is an extension for readers to allow for you to directly read any BinRead types from
 //! any reader.
 //! 
@@ -57,8 +57,9 @@
 //!
 //! # Derive Macro
 //! 
-//! The real killer feature of BinRead is deriving it for your own types. This allows you to
-//! replace repetitive imperative code with declarative struct definitions.
+//! The most significant feature of binread is its ability to use the Derive macro to
+//! implement [`BinRead`](BinRead) for your own types. This allows you to replace repetitive
+//! imperative code with declarative struct definitions for your binary data parsing.
 //! 
 //! ## Basic Derive Example
 //! ```rust

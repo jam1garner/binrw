@@ -124,6 +124,7 @@ pub fn assert<R, E, A>(reader: &mut R, test: bool, message: &str, error: Option<
     }
 }
 
+#[doc(hidden)]
 /// A no-op replacement for [`BinRead::read_options`](BinRead::read_options) that returns the unit type
 /// 
 /// **Intended for internal use only**
@@ -131,6 +132,7 @@ pub fn nop3<T1, R: Read + Seek>(_: &mut R, _: &ReadOptions, _: T1) -> BinResult<
     Ok(())
 }
 
+#[doc(hidden)]
 /// A no-op replacement for [`BinRead::read_options`](BinRead::read_options) that returns the
 /// default value for the given type. Internally used for the `default` attribute.
 /// 
@@ -139,6 +141,7 @@ pub fn nop3_default<T1, R: Read + Seek, D: Default>(_: &mut R, _: &ReadOptions, 
     Ok(D::default())
 }
 
+#[doc(hidden)]
 /// A no-op replacement for [`BinRead::after_parse`](BinRead::after_parse)
 /// 
 /// **Intended for internal use only**
@@ -146,6 +149,7 @@ pub fn nop5<T1, T2, R: Read + Seek>(_: &mut T1, _: &mut R, _: &ReadOptions, _: T
     Ok(())
 }
 
+#[doc(hidden)]
 /// Functional wrapper to apply a [`BinRead::after_parse`](BinRead::after_parse) stand-in function
 /// to a value and then return the value if the [`after_parse`](BinRead::after_parse) function succeeds.
 ///

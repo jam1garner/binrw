@@ -1,6 +1,6 @@
 [package]
 name = "binread"
-version = "1.0.0-rc1"
+version = "1.0.0"
 authors = ["jam1garner <jam1.mcleod@hotmail.com>"]
 edition = "2018"
 repository = "https://github.com/jam1garner/binread"
@@ -11,7 +11,7 @@ documentation = "https://docs.rs/binread"
 
 [dependencies]
 #binread_derive = { git = "https://github.com/jam1garner/binread_derive" }
-binread_derive = { version = "1.0.0", path = "../binread_derive" }
+binread_derive = { version = "1.0", path = "../binread_derive" }
 lazy_static = { version = "1.4" , optional=true }
 
 [features]
