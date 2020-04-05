@@ -1,8 +1,8 @@
 //! A wrapper type for representing a layer of indirection within a file.
 //! 
 //! A `FilePtr<P, T>` is composed of two types: a pointer type `P` and a value type `T` where
-//! the pointer type describes and offset to read the value type from. Once read from the file
-//! it can be dereferenced to yeild the value it points to.
+//! the pointer type describes an offset to read the value type from. Once read from the file
+//! it can be dereferenced to yield the value it points to.
 //! 
 //! ## Example
 //! ```rust
