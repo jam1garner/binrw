@@ -6,7 +6,7 @@
 //! |-----------|------------------|------------
 //! | [big](#byteorder) | all | Set the endianness to big endian
 //! | [little](#byteorder) | all | Set the endianness to little endian
-//! | [magic](#magic) | top-level | At the start of parsing read a value and make sure it is equivelant to a constant value
+//! | [magic](#magic) | top-level | At the start of parsing read a value and make sure it is equivalent to a constant value
 //! | [assert](#assert) | top-level | After parsing, check if a condition is true and, optionally, return a custom error if false. Allows multiple.
 //! | [import](#arguments) | top-level | Define the arguments for parsing the given type
 //! | [args](#arguments) | fields | Pass a set of arguments.
