@@ -87,7 +87,7 @@
 //!     u32, // will be little endian
 //! );
 //! ```
-//! The order of precedence is: (from highed to lowest)
+//! The order of precedence is: (from highest to lowest)
 //! 1. Field-level
 //! 2. Variant-level (for enums)
 //! 3. Top-level
