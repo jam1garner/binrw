@@ -67,6 +67,7 @@ impl FieldLevelAttrs {
         let attrs: Vec<FieldLevelAttr> =
             field.attrs
                 .iter()
+                .filter(|x| x.path.is_ident("br") || x.path.is_ident("binread"))
                 .map(flas_from_attribute)
                 .collect::<Result<Vec<FlaList>, CompileError>>()?
                 .into_iter()
