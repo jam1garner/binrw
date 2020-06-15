@@ -65,6 +65,7 @@ impl TopLevelAttrs {
         let attrs: Vec<TopLevelAttr> =
             attrs
                 .iter()
+                .filter(|x| x.path.is_ident("br") || x.path.is_ident("binread"))
                 .map(tlas_from_attribute)
                 .collect::<Result<Vec<TlaList>, CompileError>>()?
                 .into_iter()
