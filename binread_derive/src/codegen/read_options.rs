@@ -123,6 +123,8 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
     let field_attrs = get_field_attrs(variant.fields.iter())?;
 
     let body = generate_body(&tla, &field_attrs, &name, ty)?;
+    
+    let variant_assertions = get_assertions(&tla);
 
     let build_variant = match &variant.fields {
         syn::Fields::Named(_) => quote!{ #enum_name::#variant_name { #(#name),* } },
@@ -132,6 +134,10 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
 
     Ok(quote!{
         #body
+
+        #(
+            #variant_assertions
+        )*
 
         Ok(#build_variant)
     })
@@ -162,6 +168,8 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
     if variant_level.magic.is_some() {
         out.magic = variant_level.magic;
     }
+
+    out.assert.extend_from_slice(&variant_level.assert);
 
     Ok(out)
 }
