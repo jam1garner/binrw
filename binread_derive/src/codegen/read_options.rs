@@ -123,6 +123,8 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
     let field_attrs = get_field_attrs(variant.fields.iter())?;
 
     let body = generate_body(&tla, &field_attrs, &name, ty)?;
+    
+    let variant_assertions = get_assertions(&tla);
 
     let build_variant = match &variant.fields {
         syn::Fields::Named(_) => quote!{ #enum_name::#variant_name { #(#name),* } },
@@ -132,6 +134,10 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
 
     Ok(quote!{
         #body
+
+        #(
+            #variant_assertions
+        )*
 
         Ok(#build_variant)
     })
@@ -162,6 +168,8 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
     if variant_level.magic.is_some() {
         out.magic = variant_level.magic;
     }
+
+    out.assert.extend_from_slice(&variant_level.assert);
 
     Ok(out)
 }
@@ -272,7 +280,7 @@ fn generate_body(
         #(
             #save_position
             #field_asserts
-            let #name_args = #passed_args_closure;
+            let #name_args = (#passed_args_closure).clone();
             let #name_options = #new_options;
             
             #setup_possible_if
@@ -286,11 +294,11 @@ fn generate_body(
                         #after_parse_applier(
                             #possible_immediate_derefs,
                             #maps(#possible_try_conversion(#repeat_read_method_ident(
-                                #repeat_reader_ident, #name_options, #name_args
+                                #repeat_reader_ident, #name_options, (#name_args).clone()
                             ))#repeat_handle_error?),
                             #repeat_reader_ident,
                             #name_options,
-                            #name_args,
+                            #name_args.clone(),
                         )?
                     );
 
@@ -315,7 +323,7 @@ fn generate_body(
                     #possible_mut #name,
                     #repeat_reader_ident,
                     #name_options,
-                    #name_args,
+                    (#name_args).clone(),
                 )#repeat_handle_error2?
             };
         )*
@@ -390,7 +398,7 @@ fn get_name_modified(idents: &[Ident], append: &str) -> Vec<Ident> {
     idents
         .into_iter()
         .map(|ident|{
-            format_ident!("__{}_binwrite_generated_{}", ident.to_string(), append)
+            format_ident!("__{}_binread_generated_{}", ident.to_string(), append)
         })
         .collect()
 }
