@@ -1,6 +1,6 @@
 [package]
 name = "binread"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["jam1garner <jam1.mcleod@hotmail.com>"]
 edition = "2018"
 repository = "https://github.com/jam1garner/binread"
