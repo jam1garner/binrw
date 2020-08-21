@@ -123,8 +123,7 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
     let field_attrs = get_field_attrs(variant.fields.iter())?;
 
     let body = generate_body(&tla, &field_attrs, &name, ty)?;
-    
-    let variant_assertions = get_assertions(&tla);
+    let variant_assertions = get_assertions(&tla.pre_assert);
 
     let build_variant = match &variant.fields {
         syn::Fields::Named(_) => quote!{ #enum_name::#variant_name { #(#name),* } },
@@ -169,6 +168,7 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
         out.magic = variant_level.magic;
     }
 
+    out.pre_assert.extend_from_slice(&variant_level.pre_assert);
     out.assert.extend_from_slice(&variant_level.assert);
 
     Ok(out)
@@ -183,8 +183,8 @@ fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) ->
     let read_struct_body = generate_body(tla, &field_attrs, &name, ty)?;
     
     let struct_name = input.ident.to_string();
-    let struct_assertions = get_assertions(&tla);
- 
+    let struct_assertions = get_assertions(&tla.assert);
+
     let write_start_struct = write_start_struct(&struct_name);
     let write_end_struct = write_end_struct();
 
@@ -236,7 +236,7 @@ fn generate_body(
     let field_asserts = get_field_assertions(&field_attrs);
     let after_parse = get_after_parse_handlers(&field_attrs);
     let top_level_option = get_top_level_binread_options(&tla);
-    let magic_handler = get_magic_assertion(&tla);
+    let magic_handler = get_magic_pre_assertion(&tla);
 
     let handle_error = handle_error();
     let possible_try_conversion = get_possible_try_conversion(&field_attrs);
@@ -536,21 +536,27 @@ fn get_top_level_binread_options(tla: &TopLevelAttrs) -> TokenStream {
     get_modified_options(endian.into_iter())
 }
 
-fn get_magic_assertion(tla: &TopLevelAttrs) -> Option<TokenStream> {
+fn get_magic_pre_assertion(tla: &TopLevelAttrs) -> TokenStream {
     let handle_error = handle_error();
-    tla.magic
+    let magic = tla.magic
         .as_ref()
         .map(|magic|{
             quote!{
                 #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
             }
-        })
+        });
+    let pre_asserts = get_assertions(&tla.pre_assert);
+
+    quote! {
+        #magic
+        #(#pre_asserts)*
+    }
 }
 
 
-fn get_assertions(tla: &TopLevelAttrs) -> Vec<TokenStream> {
+fn get_assertions(asserts: &[Assert]) -> Vec<TokenStream> {
     let handle_error = handle_error();
-    tla.assert
+    asserts
         .iter()
         .map(|Assert(assert, error)| {
             let error = error.as_ref().map(|err|{
