@@ -16,6 +16,7 @@ kws!{
     little,     // little
     magic,      // magic = [lit]
     assert,     // assert(expr)
+    pre_assert,     // pre_assert(expr)
 
     // top-level
     import,     // import(expr, ..)

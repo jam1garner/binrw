@@ -16,7 +16,8 @@ use syn::ExprClosure;
 use syn::punctuated::Punctuated;
 use proc_macro2::TokenStream as TokenStream2;
 
-// import, return_all_errors, return_unexpected_error, little, big, assert, magic
+// import, return_all_errors, return_unexpected_error, little, big, assert,
+// magic, pre_assert
 parse_any!{
     enum TopLevelAttr {
         // bool type
@@ -31,6 +32,7 @@ parse_any!{
         // args type
         Import(MetaList<kw::import, ImportArg>),
         Assert(MetaList<kw::assert, Expr>),
+        PreAssert(MetaList<kw::pre_assert, Expr>),
     }
 }
 
