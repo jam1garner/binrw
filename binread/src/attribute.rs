@@ -377,6 +377,22 @@
 //! #    &[1u8, 2, 3, 4]
 //! # );
 //! ```
+//! 
+//! You can even combine `count` with [`FilePtr`](crate::FilePtr) to read a [`Vec`](Vec) at a particular offset.
+//! ```rust
+//! # use binread::{prelude::*, io::Cursor, FilePtr};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     size: u32,
+//!     #[br(count = size)]
+//!     data: FilePtr<u32, Vec<u8>>,
+//! }
+//!
+//! # assert_eq!(
+//! #    *(Cursor::new(b"\0\0\0\x04\0\0\0\x09\0\x01\x02\x03\x04").read_be::<MyType>().unwrap().data),
+//! #    &[1u8, 2, 3, 4]
+//! # );
+//! ```
 //! **Note:** supports using previous fields
 //!
 //! # Offset
