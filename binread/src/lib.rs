@@ -95,6 +95,24 @@
 //! 5. Native endianess
 //!
 //! For a list of attributes see the [`attribute`](attribute) module
+//!
+//! ## Generics
+//! The BinRead derive macro also allows for generic parsing. That way you can build up
+//! higher-level parsers that can have their type swapped out to allow greater reuse of code.
+//! 
+//! ```rust
+//! # use binread::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct U32CountVec<T: BinRead<Args=()>> {
+//!     count: u32,
+//!     #[br(count = count)]
+//!     data: Vec<T>,
+//! }
+//! ```
+//!
+//! In order to parse generically, we have to (in some way) bound `Args`. The easiest way to do
+//! this is to bound `<T as BinRead>::Args` to `()` (no arguments), however it is also possible to
+//! either accept a specific set of arguments or be generic over the given arguments.
 #![cfg_attr(not(feature="std"), no_std)]
 
 #[cfg(feature = "std")]
