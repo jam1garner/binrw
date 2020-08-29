@@ -8,7 +8,7 @@
 //! | [little](#byteorder) | all | Set the endianness to little endian
 //! | [magic](#magic) | top-level | At the start of parsing read a value and make sure it is equivalent to a constant value
 //! | [assert](#assert) | top-level | After parsing, check if a condition is true and, optionally, return a custom error if false. Allows multiple.
-//! | [pre_assert](#preassert) | top-level, variant | Similar to assert, but checks the condition before parsing.
+//! | [pre_assert](#pre-assert) | top-level, variant | Similar to assert, but checks the condition before parsing.
 //! | [import](#arguments) | top-level | Define the arguments for parsing the given type
 //! | [args](#arguments) | fields | Pass a set of arguments.
 //! | [default](#default) | fields | Set a field to the default value for the type
@@ -143,15 +143,14 @@
 //! **Enum Handling Example:**
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
-//! #[derive(BinRead, Debug)]
-//! #[br(assert(some_val > some_smaller_val, NotSmallerError(some_val, some_smaller_val)))]
-//! #[br(import(ty: u32))]
+//! #[derive(BinRead, Debug, PartialEq)]
+//! #[br(import(ty: u8))]
 //! enum Command {
-//!     #[br(pre_assert(ty == 0))] Variant0(u16, u16)
+//!     #[br(pre_assert(ty == 0))] Variant0(u16, u16),
 //!     #[br(pre_assert(ty == 1))] Variant1(u32)
 //! }
 //!
-//! #[derive(BinRead, Debug)]
+//! #[derive(BinRead, Debug, PartialEq)]
 //! struct Message {
 //!     ty: u8,
 //!     len: u8,
@@ -159,7 +158,7 @@
 //!     data: Command
 //! }
 //!
-//! let msg = Cursor::new(b"\x{01}\x{04}\0\0\0\x{FF}").read_be::<Message>();
+//! let msg = Cursor::new(b"\x01\x04\0\0\0\xFF").read_be::<Message>();
 //! assert!(msg.is_ok());
 //! let msg = msg.unwrap();
 //! assert_eq!(msg, Message { ty: 1, len: 4, data: Command::Variant1(0xFF) });
