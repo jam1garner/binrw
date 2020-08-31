@@ -131,8 +131,10 @@ use alloc::{
 pub mod io;
 pub mod error;
 pub mod endian;
+pub mod helpers;
 pub mod file_ptr;
 pub mod attribute;
+pub mod punctuated;
 #[doc(hidden)] pub mod options;
 #[doc(hidden)] pub mod strings;
 #[doc(hidden)] pub mod pos_value;
