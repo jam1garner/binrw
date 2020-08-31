@@ -3,7 +3,8 @@ use crate::{
     meta_attrs::{
         TopLevelAttrs,
         FieldLevelAttrs,
-        Assert
+        Assert,
+        MagicType
     },
     codegen::sanitization::*,
     compiler_error::SpanError,
@@ -11,7 +12,7 @@ use crate::{
 };
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
-use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Expr, Field, Variant};
+use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Expr, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
 
 pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> Result<TokenStream, CompileError> {
     match &input.data {
@@ -19,6 +20,57 @@ pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> Result<TokenStream,
         syn::Data::Enum(en) => generate_enum(input, tla, &en),
         _ => todo!()
     }
+}
+
+fn no_variant_data(v: &Variant) -> bool {
+    if let Fields::Unit = v.fields {
+        true
+    } else {
+        false
+    }
+}
+
+fn magic_type_of(variant: &Variant) -> Option<(MagicType, TokenStream)> {
+    let tla = TopLevelAttrs::from_variant(variant).ok()?;
+
+    if !tla.pre_assert.is_empty() {
+        return None
+    }
+
+    Some((tla.magic_type?, tla.magic?))
+}
+
+fn generate_enum_match(variants: &Punctuated<Variant, Comma>) -> Option<TokenStream> {
+    let (magics, var_names) = if variants.iter().all(no_variant_data) {
+        let mut variants = variants.iter();
+        let variant = variants.next()?;
+        let (magic_type, magic) = magic_type_of(variant)?;
+        let mut magics = vec![magic];
+        let mut var_names = vec![variant.ident.clone()];
+        for v in variants {
+            let (m_ty, magic) = magic_type_of(&v)?;
+            if magic_type != m_ty {
+                return None
+            }
+            magics.push(magic);
+            var_names.push(v.ident.clone());
+        }
+
+        (magics, var_names)
+    } else {
+        return None
+    };
+
+    Some(quote!{
+        Ok(match #READ_METHOD(#READER, #OPT, ())? {
+            #(
+                #magics => Self::#var_names,
+            )*
+            _ => return Err(#BIN_ERROR::NoVariantMatch {
+                pos: #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))? as _
+            })
+        })
+    })
 }
 
 fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Result<TokenStream, CompileError> {
@@ -31,9 +83,12 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Res
         SpanError::err(en.brace_token.span, "Cannot construct an enum with no variants")?;
     }
 
+    if let Some(enum_match) = generate_enum_match(&en.variants) {
+        return Ok(enum_match)
+    }
+
     // return_all_errors is default behavior
     let return_all_errors = *tla.return_all_errors || !*tla.return_all_errors;
-
 
     let enum_name = &input.ident;
     let variant_funcs =
@@ -50,7 +105,6 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Res
                                 .iter()
                                 .map(|variant| generate_variant_impl(enum_name, tla, variant))
                                 .collect::<Result<Vec<_>, _>>()?;
-
 
     let variant_prototypes = iter::repeat(quote!{<R: #READ_TRAIT + #SEEK_TRAIT>(#READER: &mut R, #OPT: &#OPTIONS, #ARGS: <#enum_name as #TRAIT_NAME>::Args) -> #BIN_RESULT<#enum_name>});
     let last_attempt = IdentStr("__binread_generated_last_attempt");

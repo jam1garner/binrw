@@ -39,3 +39,15 @@ impl Imports {
         self.1.iter()
     }
 }
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum MagicType {
+    Str,
+    ByteStr,
+    Byte,
+    Char,
+    Int(String),
+    Float,
+    Bool,
+    Verbatim
+}

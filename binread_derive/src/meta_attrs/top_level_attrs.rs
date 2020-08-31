@@ -5,6 +5,7 @@ use syn::parse::Parse;
 use proc_macro2::Span;
 use crate::CompileError;
 use quote::ToTokens;
+use super::parser::ImportArg;
 
 #[derive(Debug, Clone)]
 pub struct TopLevelAttrs {
@@ -25,6 +26,7 @@ pub struct TopLevelAttrs {
     // assertions/error handling
     pub assert: Vec<Assert>,
     pub magic: Option<TokenStream>,
+    pub magic_type: Option<MagicType>,
     pub pre_assert: Vec<Assert>,
 }
 
@@ -105,6 +107,7 @@ impl TopLevelAttrs {
             big: first_span_true(bigs),
             little: first_span_true(littles),
             magic: magic.map(magic_to_tokens),
+            magic_type: magic.map(magic_to_type),
             import: import.map(convert_import).unwrap_or_default(),
             return_all_errors: first_span_true(return_all_errors),
             return_unexpected_error: first_span_true(return_unexpected_errors),
@@ -113,7 +116,19 @@ impl TopLevelAttrs {
     }
 }
 
-use super::parser::ImportArg;
+fn magic_to_type(magic: &&MetaLit<impl syn::parse::Parse>) -> MagicType {
+    let magic = &magic.lit;
+    match magic {
+        Lit::Str(_) => MagicType::Str,
+        Lit::ByteStr(_) => MagicType::ByteStr,
+        Lit::Byte(_) => MagicType::Byte,
+        Lit::Char(_) => MagicType::Char,
+        Lit::Int(i) => MagicType::Int(i.suffix().to_owned()),
+        Lit::Float(_) => MagicType::Float,
+        Lit::Bool(_) => MagicType::Bool,
+        Lit::Verbatim(_) => MagicType::Verbatim
+    }
+}
 
 fn magic_to_tokens(magic: &&MetaLit<impl syn::parse::Parse>) -> TokenStream {
     let magic = &magic.lit;
