@@ -13,6 +13,7 @@
 //! | [args](#arguments) | fields | Pass a set of arguments.
 //! | [default](#default) | fields | Set a field to the default value for the type
 //! | [ignore](#default) | fields | An alias for `default`
+//! | [temp](#temp) | fields | Don't store this field in the struct. Only usable with the [`derive_binread`](derive_binread) attribute macro
 //! | [postprocess_now](#postprocessing) | fields | Immediately run [`after_parse`](crate::BinRead::after_parse) after reading
 //! | [deref_now](#postprocessing) | fields | Alias for postprocess_now
 //! | [restore_position](#restore-position) | fields | Restore the reader position after reading the field
@@ -205,6 +206,38 @@
 //!     Test { path: None }
 //! );
 //! ```
+//!
+//! # Temp
+//!
+//! Variables marked with `br(temp)` will not be included in the struct itself and are merely used
+//! while parsing the type. This allows for reading data that is necessary for parsing the file,
+//! but shouldn't actually be a field of the struct.
+//!
+//! **Note:** This requires the [`derive_binread`](derive_binread) attribute in place of
+//! `derive(BinRead)` in order to allow the macro to remove the field.
+//!
+//! ```rust
+//! # use binread::{BinRead, io::Cursor, derive_binread};
+//! #[derive_binread]
+//! #[derive(Debug, PartialEq)]
+//! struct Test {
+//!     #[br(temp, big)]
+//!     len: u32,
+//!
+//!     #[br(count = len)]
+//!     data: Vec<u8>
+//! }
+//!
+//! assert_eq!(
+//!     Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap(),
+//!     Test { data: Vec::from(&b"ABCDE"[..]) }
+//! );
+//! ```
+//!
+//! This can be used in combination with [`calc`](#calculations) to allow for parsing in one form
+//! then transforming to another to actually expose from the struct. It can also be used alongside
+//! [`count`](#count) in order to reduce redundant information being stored since a `Vec` will
+//! already be storing a length and thus a count field need not be preserved.
 //!
 //! # Postprocessing
 //!
@@ -471,3 +504,6 @@
 //!
 //! **Note:** supports using previous fields
 //!
+#![allow(unused_imports)]
+
+use crate::derive_binread;
