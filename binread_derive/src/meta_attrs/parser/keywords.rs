@@ -39,6 +39,7 @@ kws!{
     offset,     // offset(expr)
     offset_after,     // offset(expr)
     /*if,*/     // if(expr)
+    temp,
     
     pad_before,   // pad_before(expr)
     pad_after,    // pad_after(expr)

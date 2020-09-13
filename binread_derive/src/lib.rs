@@ -15,6 +15,7 @@ mod binread_endian;
 mod compiler_error;
 
 use codegen::sanitization::*;
+use meta_attrs::FieldLevelAttrs;
 use proc_macro2::{TokenStream as TokenStream2, Span};
 use compiler_error::{CompileError, SpanError};
 
@@ -48,8 +49,8 @@ fn generate_derive(input: DeriveInput, code: codegen::GeneratedCode) -> TokenStr
 }
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
-pub fn derive_binread(input: TokenStream) -> TokenStream {
-    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
 
     match codegen::generate(&input) {
         Ok(code) => {
@@ -74,4 +75,70 @@ pub fn derive_binread(input: TokenStream) -> TokenStream {
             ))
         }
     }
+}
+
+fn is_temp(field: &syn::Field) -> bool {
+    FieldLevelAttrs::from_field(field)
+        .map(|attrs| attrs.temp)
+        .unwrap_or(false)
+}
+
+fn remove_br_attrs(field: &mut syn::Field) {
+    field.attrs
+        .retain(|attr| attr.path.get_ident().map(|ident| ident != "br" && ident != "binread").unwrap_or(true))
+}
+
+#[proc_macro_attribute]
+pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(input as DeriveInput);
+    
+    let derive: TokenStream2 = match codegen::generate(&input) {
+        Ok(code) => {
+            generate_derive(input.clone(), code)
+        }
+        Err(err) => {
+            let error = match err {
+                CompileError::SpanError(span_err) => {
+                    let SpanError (span, error) = span_err;
+                    let error: &str = &error;
+                    quote_spanned!{ span =>
+                        compile_error!(#error)
+                    }
+                }
+                CompileError::Syn(syn_err) => syn_err.to_compile_error()
+                
+            };
+            generate_derive(input.clone(), codegen::GeneratedCode::new(
+                quote!(todo!()),
+                error,
+                quote!(())
+            ))
+        }
+    }.into();
+
+    match input.data {
+        syn::Data::Struct(ref mut input_struct) => {
+            match input_struct.fields {
+                syn::Fields::Named(ref mut fields) => {
+                    fields.named = fields.named
+                        .clone()
+                        .into_pairs()
+                        .filter(|x| !is_temp(x.value()))
+                        .map(|mut x|{
+                            remove_br_attrs(x.value_mut());
+                            x
+                        })
+                        .collect()
+                }
+                _ => todo!("support unnamed")
+            }
+        },
+        _ => todo!("support non-struct")
+    }
+
+    quote!(
+        #input
+
+        #derive
+    ).into()
 }

@@ -52,6 +52,7 @@ parse_any!{
         RestorePosition(kw::restore_position),
         PostProcessNow(kw::postprocess_now),
         Try(Token![try]),
+        Temp(kw::temp),
 
         // func assignment type
         Map(MetaFunc<kw::map>),

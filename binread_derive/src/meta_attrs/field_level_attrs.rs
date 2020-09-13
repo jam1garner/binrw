@@ -20,6 +20,7 @@ pub(crate) struct FieldLevelAttrs {
     pub postprocess_now: bool,
     pub restore_position: bool,
     pub do_try: bool,
+    pub temp: bool,
 
     // ======================
     //  All-level attributes
@@ -84,6 +85,7 @@ impl FieldLevelAttrs {
         let restore_position = !get_fla_type!(attrs.RestorePosition).is_empty();
         let postprocess_now = !get_fla_type!(attrs.PostProcessNow).is_empty();
         let do_try = !get_fla_type!(attrs.Try).is_empty();
+        let temp = !get_fla_type!(attrs.Temp).is_empty();
 
         // func assignment type
         let map = get_fla_type!(attrs.Map);
@@ -141,6 +143,7 @@ impl FieldLevelAttrs {
             postprocess_now,
             restore_position,
             do_try,
+            temp,
             
             calc,
             count,

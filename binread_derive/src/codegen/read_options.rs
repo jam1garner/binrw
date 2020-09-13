@@ -232,7 +232,7 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
 
 fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) -> Result<TokenStream, CompileError> {
     let (field_attrs, (name, ty, struct_type))
-        = (get_struct_field_attrs(&ds)?, get_struct_names_types(&ds)?);
+        = (get_struct_field_attrs(&ds)?, get_struct_names_types(&ds));
     
     let read_struct_body = generate_body(tla, &field_attrs, &name, ty)?;
     
@@ -241,6 +241,8 @@ fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) ->
 
     let write_start_struct = write_start_struct(&struct_name);
     let write_end_struct = write_end_struct();
+
+    let name = get_struct_permenant_names(&ds);
 
     let build_struct = match struct_type {
         StructType::Fields => quote!{Ok(Self { #(#name),* })},
@@ -414,26 +416,53 @@ fn get_possible_set_offset(field_attrs: &[FieldLevelAttrs], name_options: &[Iden
         .collect()
 }
 
+fn get_permenant_names<'a, I>(fields: I) -> Vec<Ident>
+    where I: IntoIterator<Item = &'a Field>,
+{
+    fields
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, field)|
+            if FieldLevelAttrs::from_field(field).map(|x| x.temp).unwrap_or(false) {
+                None
+            } else {
+                Some(
+                    field.ident
+                        .as_ref()
+                        .map(Clone::clone)
+                        .unwrap_or_else(|| format_ident!("self_{}", i))
+                )
+            }
+        )
+        .collect()
+}
+
 fn get_name_types_fields<'a, I>(fields: I) -> (Vec<Ident>, Vec<&'a Type>)
     where I: IntoIterator<Item = &'a Field>,
 {
     fields
         .into_iter()
         .enumerate()
-        .map(|(i, field)|{
-            (
-                field.ident
-                    .as_ref()
-                    .map(Clone::clone)
-                    .unwrap_or_else(|| format_ident!("self_{}", i)),
-                &field.ty
-            )
-        })
+        .map(|(i, field)| (
+            field.ident
+                .as_ref()
+                .map(Clone::clone)
+                .unwrap_or_else(|| format_ident!("self_{}", i)),
+            &field.ty
+        ))
         .unzip()
 }
 
-fn get_struct_names_types(input: &DataStruct) -> Result<(Vec<Ident>, Vec<&Type>, StructType), CompileError> {
-    Ok(match input.fields {
+fn get_struct_permenant_names(input: &DataStruct) -> Vec<Ident> {
+    match input.fields {
+        syn::Fields::Named(ref fields) => get_permenant_names(fields.named.iter()),
+        syn::Fields::Unnamed(ref fields) => get_permenant_names(fields.unnamed.iter()),
+        syn::Fields::Unit => vec![],
+    }
+}
+
+fn get_struct_names_types(input: &DataStruct) -> (Vec<Ident>, Vec<&Type>, StructType) {
+    match input.fields {
         syn::Fields::Named(ref fields) => {
             let (names, types) = get_name_types_fields(fields.named.iter());
             (names, types, StructType::Fields)
@@ -445,7 +474,7 @@ fn get_struct_names_types(input: &DataStruct) -> Result<(Vec<Ident>, Vec<&Type>,
         syn::Fields::Unit => {
             (vec![], vec![], StructType::Unit)
         },
-    })
+    }
 }
 
 fn get_name_modified(idents: &[Ident], append: &str) -> Vec<Ident> {
