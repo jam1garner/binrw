@@ -87,8 +87,24 @@ fn is_not_binread_attr(attr: &syn::Attribute) -> bool {
     attr.path.get_ident().map(|ident| ident != "br" && ident != "binread").unwrap_or(true)
 }
 
-fn remove_br_attrs(field: &mut syn::Field) {
-    field.attrs.retain(is_not_binread_attr)
+fn remove_br_attrs(fields: &mut syn::punctuated::Punctuated<syn::Field, syn::Token![,]>) {
+    *fields = fields
+        .clone()
+        .into_pairs()
+        .filter(|x| !is_temp(x.value()))
+        .map(|mut field|{
+            field.value_mut().attrs.retain(is_not_binread_attr);
+            field
+        })
+        .collect()
+}
+
+fn remove_field_attrs(fields: &mut syn::Fields) {
+    match fields {
+        syn::Fields::Named(ref mut fields) => remove_br_attrs(&mut fields.named),
+        syn::Fields::Unnamed(ref mut fields) => remove_br_attrs(&mut fields.unnamed),
+        syn::Fields::Unit => ()
+    }
 }
 
 #[proc_macro_attribute]
@@ -121,25 +137,19 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
 
     match input.data {
         syn::Data::Struct(ref mut input_struct) => {
-            match input_struct.fields {
-                syn::Fields::Named(ref mut fields) => {
-                    fields.named = fields.named
-                        .clone()
-                        .into_pairs()
-                        .filter(|x| !is_temp(x.value()))
-                        .map(|mut x|{
-                            remove_br_attrs(x.value_mut());
-                            x
-                        })
-                        .collect()
-                }
-                _ => todo!("support unnamed")
-            }
-
-            input.attrs.retain(is_not_binread_attr)
+            input.attrs.retain(is_not_binread_attr);
+            remove_field_attrs(&mut input_struct.fields)
         },
-        _ => todo!("support non-struct")
+        syn::Data::Enum(ref mut input_enum) => {
+            for variant in input_enum.variants.iter_mut() {
+                variant.attrs.retain(is_not_binread_attr);
+                remove_field_attrs(&mut variant.fields)
+            }
+        },
+        _ => todo!("unions are not supported")
     }
+
+    input.attrs.retain(is_not_binread_attr);
 
     quote!(
         #input

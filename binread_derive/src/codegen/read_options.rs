@@ -179,6 +179,8 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
     let body = generate_body(&tla, &field_attrs, &name, ty)?;
     let variant_assertions = get_assertions(&tla.pre_assert);
 
+    let name = get_permenant_names(variant.fields.iter());
+
     let build_variant = match &variant.fields {
         syn::Fields::Named(_) => quote!{ #enum_name::#variant_name { #(#name),* } },
         syn::Fields::Unnamed(_) => quote!{ #enum_name::#variant_name (#(#name),*) },
