@@ -83,9 +83,12 @@ fn is_temp(field: &syn::Field) -> bool {
         .unwrap_or(false)
 }
 
+fn is_not_binread_attr(attr: &syn::Attribute) -> bool {
+    attr.path.get_ident().map(|ident| ident != "br" && ident != "binread").unwrap_or(true)
+}
+
 fn remove_br_attrs(field: &mut syn::Field) {
-    field.attrs
-        .retain(|attr| attr.path.get_ident().map(|ident| ident != "br" && ident != "binread").unwrap_or(true))
+    field.attrs.retain(is_not_binread_attr)
 }
 
 #[proc_macro_attribute]
@@ -132,6 +135,8 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
                 }
                 _ => todo!("support unnamed")
             }
+
+            input.attrs.retain(is_not_binread_attr)
         },
         _ => todo!("support non-struct")
     }
