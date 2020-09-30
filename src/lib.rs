@@ -252,9 +252,14 @@ pub trait BinReaderExt: Read + Seek + Sized {
             None => panic!("Must pass args, no args_default implemented")
         };
 
-        T::read_options(self, &ReadOptions{
+        let options = ReadOptions{
             endian, ..Default::default()
-        }, args)
+        };
+
+        let mut res = T::read_options(self, &options, args)?;
+        res.after_parse(self, &options, args)?;
+
+        Ok(res)
     }
 
     /// Read the given type from the reader with big endian byteorder
