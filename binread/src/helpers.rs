@@ -21,12 +21,8 @@ pub fn read_bytes<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: ()) 
         Some(x) => x,
         None => panic!("Missing count for read_bytes")
     };
-    let mut buf = Vec::with_capacity(count);
+    let mut buf = vec![0; count];
     reader.read_exact(&mut buf)?;
-
-    unsafe {
-        buf.set_len(count);
-    }
 
     Ok(buf)
 }
