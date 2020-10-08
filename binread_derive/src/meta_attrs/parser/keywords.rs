@@ -20,6 +20,7 @@ kws!{
 
     // top-level
     import,     // import(expr, ..)
+    import_tuple, // import(expr)
     return_all_errors,
     return_unexpected_error,
 
@@ -31,6 +32,7 @@ kws!{
     is_little,  // is_little = [expr]
     is_big,     // is_big = [expr]
     args,       // args(expr, ..)
+    args_tuple, // args_tuple = [expr]
     default,    // default
     ignore,     // ignore
     deref_now,  // deref_now
