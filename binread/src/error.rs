@@ -165,6 +165,28 @@ pub fn nop5<T1, T2, R: Read + Seek>(_: &mut T1, _: &mut R, _: &ReadOptions, _: T
 }
 
 #[doc(hidden)]
+/// A replacement for [`BinRead::after_parse`](BinRead::after_parse) that runs after_parse only if
+/// a value is present.
+///
+/// **Intended for internal use only**
+pub fn try_after_parse<Reader, ValueType, ArgType>(
+    item: &mut Option<ValueType>,
+    reader: &mut Reader,
+    ro: &ReadOptions,
+    args: ArgType,
+) -> BinResult<()>
+    where Reader: Read + Seek,
+          ValueType: BinRead<Args = ArgType>,
+          ArgType: Copy + 'static,
+{
+    if let Some(value) = item.as_mut() {
+        value.after_parse(reader, ro, args)?;
+    }
+
+    Ok(())
+}
+
+#[doc(hidden)]
 /// Functional wrapper to apply a [`BinRead::after_parse`](BinRead::after_parse) stand-in function
 /// to a value and then return the value if the [`after_parse`](BinRead::after_parse) function succeeds.
 ///
