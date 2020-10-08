@@ -49,6 +49,7 @@ pub static IDENTITY_FN: IdentStr = IdentStr("core::convert::identity");
 pub static READ_METHOD_NOP: IdentStr = from_crate!(error::nop3);
 pub static READ_METHOD_DEFAULT: IdentStr = from_crate!(error::nop3_default);
 pub static AFTER_PARSE_NOP: IdentStr = from_crate!(error::nop5);
+pub static AFTER_PARSE_TRY: IdentStr = from_crate!(error::try_after_parse);
 pub static AFTER_PARSE_IDENTITY: IdentStr = from_crate!(error::identity_after_parse);
 pub static TRY_CONVERSION: IdentStr = from_crate!(error::try_conversion);
 

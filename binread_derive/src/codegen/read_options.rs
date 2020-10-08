@@ -743,10 +743,12 @@ fn get_after_parse_handlers(field_attrs: &[FieldLevelAttrs]) -> Vec<&IdentStr> {
         .iter()
         .map(|field_attrs| {
             let dont_after_parse = field_attrs.map.is_some() || field_attrs.ignore ||
-                        field_attrs.default || field_attrs.calc.is_some()|| field_attrs.do_try ||
+                        field_attrs.default || field_attrs.calc.is_some() ||
                         field_attrs.parse_with.is_some();
             if dont_after_parse {
                 &AFTER_PARSE_NOP
+            } else if field_attrs.do_try {
+                &AFTER_PARSE_TRY
             } else {
                 &AFTER_PARSE
             }
