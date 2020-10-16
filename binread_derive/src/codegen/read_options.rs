@@ -4,7 +4,8 @@ use crate::{
         TopLevelAttrs,
         FieldLevelAttrs,
         Assert,
-        MagicType
+        MagicType,
+        PassedArgs
     },
     codegen::sanitization::*,
     compiler_error::SpanError,
@@ -216,7 +217,7 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
         )?
     }
 
-    if !variant_level.import.0.is_empty() {
+    if !variant_level.import.is_empty() {
         panic!("Cannot have imports at variant level");
     }
 
@@ -272,9 +273,6 @@ fn generate_body(
         tla: &TopLevelAttrs, field_attrs: &[FieldLevelAttrs], name: &Vec<Ident>, ty: Vec<&Type>
     ) -> Result<TokenStream, CompileError>
 {
-    let arg_vars: Vec<_> = tla.import.idents().collect();
-
-
     let count = name.len();
     let arg_vars = tla.import.idents();
     let name_args: Vec<Ident> = get_name_modified(&name, "args");
@@ -329,7 +327,7 @@ fn generate_body(
     let (save_position, restore_position) = save_restore_position(&field_attrs);
 
     Ok(quote!{
-        let (#(mut #arg_vars,)*) = #ARGS;
+        let #arg_vars = #ARGS;
         
         let #OPT = #top_level_option;
         
@@ -511,17 +509,22 @@ fn get_passed_args(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
     field_attrs
         .into_iter()
         .map(|field_attr| {
-            let passed_values: Vec<_> =
-                field_attr.args
-                    .iter()
-                    .map(|expr|{
-                        closure_wrap(expr)
-                    })
-                    .collect();
+            match &field_attr.args {
+                PassedArgs::List(list) => {
+                    let passed_values: Vec<_> =
+                        list.iter()
+                            .map(|expr|{
+                                closure_wrap(expr)
+                            })
+                            .collect();
 
-            quote!{
-                (#(#passed_values,)*)
+                    quote!{
+                        (#(#passed_values,)*)
+                    }
+                },
+                PassedArgs::Tuple(tok) => tok.clone()
             }
+
         })
         .collect()
 }

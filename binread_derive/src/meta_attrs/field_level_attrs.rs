@@ -7,7 +7,7 @@ pub(crate) struct FieldLevelAttrs {
     // ======================
     //    Field-level only
     // ======================
-    pub args: PassedValues,
+    pub args: PassedArgs,
     pub map: Option<TokenStream>,
     pub ignore: bool,
     pub default: bool,
@@ -96,6 +96,7 @@ impl FieldLevelAttrs {
 
         // args type
         let args = get_fla_type!(attrs.Args);
+        let args_tuple = get_fla_type!(attrs.ArgsTuple);
         let _asserts = get_fla_type!(attrs.Assert);
 
         // expr type
@@ -114,6 +115,21 @@ impl FieldLevelAttrs {
         let seek_before = get_fla_type!(attrs.SeekBefore);
         let pad_size_to = get_fla_type!(attrs.PadSizeTo);
 
+        // TODO: This is basically get_only_first but for mutually incompatible attributes. refactor?
+        if args.len() > 0 && args_tuple.len() > 0 {
+            let mut spans = args.iter()
+                .map(Spanned::span)
+                .chain(args_tuple.iter().map(Spanned::span));
+
+            let first = spans.next().unwrap();
+            let span = spans.fold(first, |x, y| x.join(y).unwrap());
+
+            return Err(CompileError::SpanError(SpanError::new(
+                span,
+                "Conflicting instances of args and args_tuple"
+            )));
+        }
+
         macro_rules! only_first {
             ($($a:ident),*) => {
                 $(
@@ -128,11 +144,16 @@ impl FieldLevelAttrs {
         only_first!(
             pad_before, pad_after, align_before, align_after, seek_before, pad_size_to,
             calc, count, is_little, is_big, offset, offset_after, if_cond, map, magic,
-            parse_with, args
+            parse_with, args, args_tuple
         );
 
         let assert = vec![];
-        let args = args.unwrap_or_default();
+
+        let args = if let Some(arg) = args_tuple {
+            PassedArgs::Tuple(arg)
+        } else {
+            PassedArgs::List(args.unwrap_or_default())
+        };
         
         Ok(Self {
             little,

@@ -15,6 +15,7 @@ use syn::{parenthesized, parse_macro_input, token, Field, Ident, Token, Lit, Pat
 use syn::ExprClosure;
 use syn::punctuated::Punctuated;
 use proc_macro2::TokenStream as TokenStream2;
+use quote::ToTokens;
 
 // import, return_all_errors, return_unexpected_error, little, big, assert,
 // magic, pre_assert
@@ -31,6 +32,7 @@ parse_any!{
 
         // args type
         Import(MetaList<kw::import, ImportArg>),
+        ImportTuple(ImportArgTuple),
         Assert(MetaList<kw::assert, Expr>),
         PreAssert(MetaList<kw::pre_assert, Expr>),
     }
@@ -63,6 +65,7 @@ parse_any!{
 
         // args type
         Args(MetaList<kw::args, Expr>),
+        ArgsTuple(MetaExpr<kw::args_tuple>),
         Assert(MetaList<kw::assert, Expr>),
 
         // expr type
@@ -105,6 +108,30 @@ impl Parse for ImportArg {
             colon: input.parse()?,
             ty: input.parse()?
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ImportArgTuple {
+    pub ident: kw::import_tuple,
+    pub parens: token::Paren,
+    pub arg: ImportArg
+}
+
+impl Parse for ImportArgTuple {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let content;
+        Ok(ImportArgTuple {
+            ident: input.parse()?,
+            parens: parenthesized!(content in input),
+            arg: content.parse()?
+        })
+    }
+}
+
+impl ToTokens for ImportArgTuple {
+    fn to_tokens(&self, _tokens: &mut TokenStream2) {
+        //self.arg.to_tokens(tokens) // TODO? I notice that MetaList doesn't do anything in its implementation
     }
 }
 

@@ -6,6 +6,7 @@ use proc_macro2::Span;
 use crate::CompileError;
 use quote::ToTokens;
 use super::parser::ImportArg;
+use crate::meta_attrs::parser::ImportArgTuple;
 
 #[derive(Debug, Clone)]
 pub struct TopLevelAttrs {
@@ -96,11 +97,29 @@ impl TopLevelAttrs {
 
         let magics = get_tla_type!(attrs.Magic);
         let imports = get_tla_type!(attrs.Import);
+        let import_tuples = get_tla_type!(attrs.ImportTuple);
         let asserts = get_tla_type!(attrs.Assert);
         let pre_asserts = get_tla_type!(attrs.PreAssert);
 
         let magic = get_only_first(&magics, "Cannot define multiple magic values")?;
+
+        // TODO: this is basically get_only_first, but for incompatible attributes
+        if imports.len() > 0 && import_tuples.len() > 0 {
+            let mut spans = imports.iter()
+                .map(Spanned::span)
+                .chain(import_tuples.iter().map(Spanned::span));
+
+            let first = spans.next().unwrap();
+            let span = spans.fold(first, |x, y| x.join(y).unwrap());
+
+            return Err(CompileError::SpanError(SpanError::new(
+                span,
+                "Cannot mix import and import_tuple"
+            )));
+        }
+
         let import = get_only_first(&imports, "Cannot define multiple sets of arguments")?;
+        let import_tuple = get_only_first(&import_tuples, "Cannot define multiple sets of tuple arguments")?;
 
         Ok(Self {
             assert: asserts.into_iter().map(convert_assert).collect::<Result<_, _>>()?,
@@ -108,7 +127,7 @@ impl TopLevelAttrs {
             little: first_span_true(littles),
             magic: magic.map(magic_to_tokens),
             magic_type: magic.map(magic_to_type),
-            import: import.map(convert_import).unwrap_or_default(),
+            import: convert_import(import, import_tuple).unwrap_or_default(),
             return_all_errors: first_span_true(return_all_errors),
             return_unexpected_error: first_span_true(return_unexpected_errors),
             pre_assert: pre_asserts.into_iter().map(convert_assert).collect::<Result<_, _>>()?,
@@ -141,15 +160,21 @@ fn magic_to_tokens(magic: &&MetaLit<impl syn::parse::Parse>) -> TokenStream {
     }
 }
 
-fn convert_import<K: Parse>(import: &&MetaList<K, ImportArg>) -> Imports {
-    let (idents, tys): (Vec<_>, Vec<_>) =
-        import.fields
-            .iter()
-            .cloned()
-            .map(|import_arg| (import_arg.ident, import_arg.ty))
-            .unzip();
+fn convert_import<K: Parse>(import: Option<&&MetaList<K, ImportArg>>, import_tuple: Option<&&ImportArgTuple>) -> Option<Imports> {
+    if let Some(tuple) = import_tuple {
+        Some(Imports::Tuple(tuple.arg.ident.clone(), tuple.arg.ty.clone()))
+    } else if let Some(list) = import {
+        let (idents, tys): (Vec<_>, Vec<_>) =
+            list.fields
+                .iter()
+                .cloned()
+                .map(|import_arg| (import_arg.ident, import_arg.ty))
+                .unzip();
 
-    Imports(idents, tys)
+        Some(Imports::List(idents, tys))
+    } else {
+        None
+    }
 }
 
 fn get_only_first<'a, S: Spanned>(list: &'a Vec<S>, msg: &str) -> Result<Option<&'a S>, CompileError> {

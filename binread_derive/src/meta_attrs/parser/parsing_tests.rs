@@ -55,6 +55,7 @@ test_tla!(parse_big, "big");
 test_tla!(parse_magic, "magic = 3u8");
 test_tla!(parse_magic_paren, "magic(2u16)");
 test_tla!(parse_import, "import(x: u32, y: &[f32])");
+test_tla!(parse_import_tuple, "import_tuple(args: (u32))");
 
 test_fla!(fla_little, "little");
 test_fla!(fla_magic, "magic = b\"TEST\"");
@@ -69,6 +70,7 @@ test_fla!(fla_assert, "assert(
 )");
 test_fla!(fla_count, "count = extra_entry_count + 1");
 test_fla!(fla_args, "args(x, (y, z), 3 + 4)");
+test_fla!(fla_args_tuple, "args_tuple = x");
 test_fla!(fla_default, "default");
 test_fla!(fla_try, "try");
 test_fla!(fla_offset, "offset = 3 + x");
