@@ -6,6 +6,7 @@
 //! |-----------|------------------|------------
 //! | [big](#byteorder) | all | Set the endianness to big endian
 //! | [little](#byteorder) | all | Set the endianness to little endian
+//! | [map](#map) | all | Read a type from the reader and then apply a function to map it to the type to store in the struct. When used at the top-level the function must return Self.
 //! | [magic](#magic) | top-level | At the start of parsing read a value and make sure it is equivalent to a constant value
 //! | [assert](#assert) | top-level | After parsing, check if a condition is true and, optionally, return a custom error if false. Allows multiple.
 //! | [pre_assert](#pre-assert) | top-level, variant | Similar to assert, but checks the condition before parsing.
@@ -18,7 +19,6 @@
 //! | [deref_now](#postprocessing) | fields | Alias for postprocess_now
 //! | [restore_position](#restore-position) | fields | Restore the reader position after reading the field
 //! | [try](#try) | fields | Attempt to parse a value and store `None` if parsing fails.
-//! | [map](#map) | fields | Read a type from the reader and then apply a function to map it to the type to store in the struct
 //! | [parse_with](#custom-parsers) | fields | Use a custom parser function for reading from a file
 //! | [calc](#calculations) | fields | Compute an expression to store. Can use previously read values.
 //! | [count](#count) | fields | Set the length for a vector
@@ -52,8 +52,7 @@
 //! 2. Variant-level (for enums)
 //! 3. Top-level
 //! 4. Configured (i.e. what endianess was passed in)
-//! 5. Native endianess
-//!
+//! 5. Native endianess 
 //! binread also offers the ability to conditionally set endianness for when the endianess
 //! is described within the data itself using `is_big` or `is_little`:
 //!
@@ -325,6 +324,45 @@
 //! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().int_str, "0");
 //! ```
 //! **Note:** supports using previous fields (if you use a closure)
+//!
+//! ## Map For Bitfields
+//!
+//! Here's an example of how a top-level `map` attribute can be used in order to handle bitfields
+//! using the [`modular-bitfield`](https://docs.rs/modular-bitfield) crate.
+//!
+//! ```rust
+//! # use binread::{prelude::*, io::Cursor};
+//! use modular_bitfield::prelude::*;
+//!
+//! // The following field is a single byte read from the Reader
+//! #[bitfield]
+//! #[derive(BinRead)]
+//! #[br(map = Self::from_bytes)]
+//! pub struct PackedData {
+//!     status: B4,
+//!     is_fast: bool,
+//!     is_static: bool,
+//!     is_alive: bool,
+//!     is_good: bool,
+//! }
+//! 
+//! // example byte: 0x53
+//! // [good] [alive] [static] [fast] [status]
+//! //   0       1       0       1      0011
+//! //
+//! //  false  true    false    true     3
+//!
+//! # let data = Cursor::new(b"\x53").read_le::<PackedData>().unwrap();
+//! # dbg!(data.is_good());
+//! # dbg!(data.is_alive());
+//! # dbg!(data.is_static());
+//! # dbg!(data.is_fast());
+//! # assert_eq!(data.is_good(), false);
+//! # assert_eq!(data.is_alive(), true);
+//! # assert_eq!(data.is_static(), false);
+//! # assert_eq!(data.is_fast(), true);
+//! # assert_eq!(data.status(), 3);
+//! ```
 //!
 //! # Custom Parsers
 //!
