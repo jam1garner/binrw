@@ -35,6 +35,7 @@ parse_any!{
         ImportTuple(ImportArgTuple),
         Assert(MetaList<kw::assert, Expr>),
         PreAssert(MetaList<kw::pre_assert, Expr>),
+        Map(MetaFunc<kw::map>),
     }
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "binread_derive"
-version = "1.3.0"
+version = "1.4.0"
 authors = ["jam1garner <jam1.mcleod@hotmail.com>"]
 edition = "2018"
 description = "Derive macro for binread"

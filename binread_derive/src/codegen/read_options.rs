@@ -16,10 +16,16 @@ use quote::{quote, format_ident, ToTokens};
 use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Expr, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
 
 pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> Result<TokenStream, CompileError> {
-    match &input.data {
-        syn::Data::Struct(ds) => generate_struct(input, tla, &ds),
-        syn::Data::Enum(en) => generate_enum(input, tla, &en),
-        _ => todo!()
+    if let Some(map) = &tla.map {
+        Ok(quote!(
+            #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
+        ))
+    } else {
+        match &input.data {
+            syn::Data::Struct(ds) => generate_struct(input, tla, &ds),
+            syn::Data::Enum(en) => generate_enum(input, tla, &en),
+            _ => todo!()
+        }
     }
 }
 

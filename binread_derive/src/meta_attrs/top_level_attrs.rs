@@ -29,6 +29,9 @@ pub struct TopLevelAttrs {
     pub magic: Option<TokenStream>,
     pub magic_type: Option<MagicType>,
     pub pre_assert: Vec<Assert>,
+
+    // other
+    pub map: Option<TokenStream>,
 }
 
 macro_rules! get_tla_type {
@@ -100,6 +103,7 @@ impl TopLevelAttrs {
         let import_tuples = get_tla_type!(attrs.ImportTuple);
         let asserts = get_tla_type!(attrs.Assert);
         let pre_asserts = get_tla_type!(attrs.PreAssert);
+        let map = get_tla_type!(attrs.Map);
 
         let magic = get_only_first(&magics, "Cannot define multiple magic values")?;
 
@@ -120,6 +124,7 @@ impl TopLevelAttrs {
 
         let import = get_only_first(&imports, "Cannot define multiple sets of arguments")?;
         let import_tuple = get_only_first(&import_tuples, "Cannot define multiple sets of tuple arguments")?;
+        let map = get_only_first(&map, "Cannot define multiple mapping functions")?;
 
         Ok(Self {
             assert: asserts.into_iter().map(convert_assert).collect::<Result<_, _>>()?,
@@ -131,6 +136,7 @@ impl TopLevelAttrs {
             return_all_errors: first_span_true(return_all_errors),
             return_unexpected_error: first_span_true(return_unexpected_errors),
             pre_assert: pre_asserts.into_iter().map(convert_assert).collect::<Result<_, _>>()?,
+            map: map.map(|x| x.to_token_stream()),
         })
     }
 }
