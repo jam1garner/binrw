@@ -10,8 +10,8 @@ struct BadDifferenceError(u16);
 #[br(big, magic = b"TEST")]
 #[br(assert(entries.len() as u32 == extra_entry_count + 1))]
 struct TestFile {
-    extra_entry_count: u32, 
-    
+    extra_entry_count: u32,
+
     #[br(count = extra_entry_count + 1, args(0x69))]
     entries: Vec<FilePtr<u32, TestEntry>>,
 
@@ -69,8 +69,8 @@ fn test_read() {
 #[derive(BinRead, Debug)]
 #[br(big, magic = b"TEST")]
 struct TestTupleStruct (
-    u32, 
-    
+    u32,
+
     #[br(count = self_0 + 1, args(0x69))]
     Vec<FilePtr<u32, TestEntry>>,
 
