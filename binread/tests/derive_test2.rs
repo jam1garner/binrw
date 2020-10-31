@@ -1,4 +1,4 @@
-use binread::{
+use binrw::{
     prelude::*,
     FilePtr,
     io::*,
