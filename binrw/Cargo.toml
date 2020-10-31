@@ -9,7 +9,7 @@ description = "A Rust crate for helping read structs from binary data using ✨m
 readme = "README.md"
 
 [dependencies]
-binrw_derive = { version = "1.3", path = "../binread_derive" }
+binrw_derive = { version = "1.3", path = "../binrw_derive" }
 lazy_static = { version = "1.4" , optional=true }
 
 [dev-dependencies]
