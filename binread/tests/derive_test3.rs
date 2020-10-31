@@ -1,4 +1,4 @@
-use binread::{BinRead, BinReaderExt, io::Cursor};
+use binrw::{BinRead, BinReaderExt, io::Cursor};
 
 #[test]
 fn generic_derive() {

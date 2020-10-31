@@ -5,7 +5,7 @@ use crate::{BinResult, ReadOptions, io::{Read, Seek}};
 ///## Example:
 ///
 /// ```rust
-/// # use binread::{BinRead, helpers::read_bytes, io::Cursor, BinReaderExt};
+/// # use binrw::{BinRead, helpers::read_bytes, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
 /// struct BunchaBytes {
 ///     #[br(count = 5)]

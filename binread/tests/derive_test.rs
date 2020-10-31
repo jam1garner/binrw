@@ -1,7 +1,7 @@
 #![allow(dead_code)]
-use binread::{BinRead, BinResult, io::{Cursor, Read, Seek, SeekFrom}, FilePtr, NullString, ReadOptions};
+use binrw::{BinRead, BinResult, io::{Cursor, Read, Seek, SeekFrom}, FilePtr, NullString, ReadOptions};
 
-use binread::BinReaderExt;
+use binrw::BinReaderExt;
 
 #[derive(Debug)]
 struct BadDifferenceError(u16);
