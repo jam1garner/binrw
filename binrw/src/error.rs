@@ -1,5 +1,6 @@
 //! Error types and internal error handling functions
 use super::*;
+use core::any::Any;
 
 /// An error while parsing a BinRead type
 #[non_exhaustive]
@@ -141,7 +142,7 @@ pub fn assert<R, E, A>(reader: &mut R, test: bool, message: &str, error: Option<
 
 #[doc(hidden)]
 /// A no-op replacement for [`BinRead::read_options`](BinRead::read_options) that returns the unit type
-/// 
+///
 /// **Intended for internal use only**
 pub fn nop3<T1, R: Read + Seek>(_: &mut R, _: &ReadOptions, _: T1) -> BinResult<()> {
     Ok(())
@@ -150,7 +151,7 @@ pub fn nop3<T1, R: Read + Seek>(_: &mut R, _: &ReadOptions, _: T1) -> BinResult<
 #[doc(hidden)]
 /// A no-op replacement for [`BinRead::read_options`](BinRead::read_options) that returns the
 /// default value for the given type. Internally used for the `default` attribute.
-/// 
+///
 /// **Intended for internal use only**
 pub fn nop3_default<T1, R: Read + Seek, D: Default>(_: &mut R, _: &ReadOptions, _: T1) -> BinResult<D> {
     Ok(D::default())
@@ -158,7 +159,7 @@ pub fn nop3_default<T1, R: Read + Seek, D: Default>(_: &mut R, _: &ReadOptions, 
 
 #[doc(hidden)]
 /// A no-op replacement for [`BinRead::after_parse`](BinRead::after_parse)
-/// 
+///
 /// **Intended for internal use only**
 pub fn nop5<T1, T2, R: Read + Seek>(_: &mut T1, _: &mut R, _: &ReadOptions, _: T2) -> BinResult<()> {
     Ok(())
@@ -192,7 +193,7 @@ pub fn try_after_parse<Reader, ValueType, ArgType>(
 ///
 /// Used by the derive macro to optionally immediately dereference/postprocess the value when
 /// first parsed. In theory should be optimized out in case of no-op.
-/// 
+///
 /// **Intended for internal use only**
 pub fn identity_after_parse<PostprocessFn, Reader, ValueType, ArgType>(
     after_parse_fn: PostprocessFn,
@@ -207,7 +208,7 @@ pub fn identity_after_parse<PostprocessFn, Reader, ValueType, ArgType>(
               &mut Reader,
               &ReadOptions,
               ArgType,
-          ) -> BinResult<()>, 
+          ) -> BinResult<()>,
 {
     after_parse_fn(&mut item, reader, ro, args)?;
     Ok(item)

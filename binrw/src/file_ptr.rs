@@ -1,64 +1,64 @@
 //! A wrapper type for representing a layer of indirection within a file.
-//! 
+//!
 //! A `FilePtr<P, T>` is composed of two types: a pointer type `P` and a value type `T` where
 //! the pointer type describes an offset to read the value type from. Once read from the file
 //! it can be dereferenced to yield the value it points to.
-//! 
+//!
 //! ## Example
 //! ```rust
 //! use binrw::{prelude::*, io::Cursor, FilePtr};
 //!
 //! #[derive(BinRead)]
 //! struct Test {
-//!     pointer: FilePtr<u32, u8> 
+//!     pointer: FilePtr<u32, u8>
 //! }
-//! 
+//!
 //! fn main() {
 //!     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
 //!     assert_eq!(test.pointer.ptr, 8);
 //!     assert_eq!(*test.pointer, 0xFF);
 //! }
 //! ```
-//! 
+//!
 //! Example data mapped out:
 //! ```hex
 //!           [pointer]           [value]
 //! 00000000: 0000 0008 0000 0000 ff                   ............
 //! ```
-//! 
+//!
 //! Use `offset` to change what the pointer is relative to (default: beginning of reader).
 use super::*;
 use std::fmt;
 use core::ops::{Deref, DerefMut};
 
 /// A wrapper type for representing a layer of indirection within a file.
-/// 
+///
 /// A `FilePtr<P, T>` is composed of two types: a pointer type `P` and a value type `T` where
 /// the pointer type describes and offset to read the value type from. Once read from the file
 /// it can be dereferenced to yeild the value it points to.
-/// 
+///
 /// ## Example
 /// ```rust
-/// use binread::{prelude::*, io::Cursor, FilePtr};
+/// use binrw::{prelude::*, io::Cursor, FilePtr};
 ///
 /// #[derive(BinRead)]
 /// struct Test {
-///     pointer: FilePtr<u32, u8> 
+///     pointer: FilePtr<u32, u8>
 /// }
-/// 
+///
 /// fn main() {
 ///     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
 ///     assert_eq!(test.pointer.ptr, 8);
 ///     assert_eq!(*test.pointer, 0xFF);
 /// }
 /// ```
-/// 
+///
 /// Example data mapped out:
 /// ```hex
 ///           [pointer]           [value]
 /// 00000000: 0000 0008 0000 0000 ff                   ............
 /// ```
-/// 
+///
 /// Use `offset` to change what the pointer is relative to (default: beginning of reader).
 pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
     pub ptr: Ptr,
@@ -78,7 +78,7 @@ pub type FilePtr128<T> = FilePtr<u128, T>;
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
     type Args = BR::Args;
-    
+
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
         #[cfg(feature = "debug_template")]
         let options = &{
@@ -147,9 +147,9 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
     }
 
     /// Consume the pointer and return the inner type
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Will panic if the file pointer hasn't been properly postprocessed
     pub fn into_inner(self) -> BR {
         self.value.unwrap()
@@ -212,7 +212,7 @@ impl<Ptr, BR> fmt::Debug for FilePtr<Ptr, BR>
     }
 }
 
-impl<Ptr, BR> PartialEq<FilePtr<Ptr, BR>> for FilePtr<Ptr, BR> 
+impl<Ptr, BR> PartialEq<FilePtr<Ptr, BR>> for FilePtr<Ptr, BR>
     where Ptr: BinRead<Args = ()> + IntoSeekFrom,
           BR: BinRead + PartialEq,
 {

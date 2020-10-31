@@ -10,7 +10,7 @@ use core::fmt;
 ///     a: u16,
 ///     b: PosValue<u8>
 /// }
-/// 
+///
 /// let val = Cursor::new(b"\xFF\xFE\xFD").read_be::<MyType>().unwrap();
 /// assert_eq!(val.b.pos, 2);
 /// assert_eq!(*val.b, 0xFD);
