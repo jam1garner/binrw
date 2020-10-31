@@ -1,5 +1,5 @@
 [workspace]
 members = [
-    "binread",
-    "binread_derive"
+    "binrw",
+    "binrw_derive"
 ]

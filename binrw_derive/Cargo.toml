@@ -16,7 +16,7 @@ quote = "1"
 proc-macro2 = "1"
 
 [dev-dependencies]
-binrw = { version = "1.3", path = "../binread" }
+binrw = { version = "1.3", path = "../binrw" }
 
 [features]
 debug_template = []
