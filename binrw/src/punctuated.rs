@@ -4,6 +4,7 @@
 use core::fmt;
 use crate::io::{Read, Seek};
 use crate::{BinRead, ReadOptions, BinResult};
+use crate::alloc::vec::Vec;
 
 /// A type for seperated data. Since parsing for this type is ambiguous, you must manually specify
 /// a parser using the `parse_with` attribute.

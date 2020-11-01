@@ -10,13 +10,13 @@ impl fmt::Debug for Error {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Repr {
     Simple(ErrorKind),
 }
 
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ErrorKind {
     NotFound,
     PermissionDenied,
@@ -42,6 +42,12 @@ impl Error {
     pub fn new<A>(kind: ErrorKind, _: A) -> Self {
         Self {
             repr: Repr::Simple(kind)
+        }
+    }
+
+    pub fn kind(&self) -> ErrorKind {
+        match self.repr {
+            Repr::Simple(kind) => kind
         }
     }
 }

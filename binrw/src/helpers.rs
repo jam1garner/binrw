@@ -1,4 +1,5 @@
 use crate::{BinResult, ReadOptions, io::{Read, Seek}};
+use crate::alloc::{vec::Vec, vec};
 
 /// A helper for more efficiently mass-reading bytes
 ///
