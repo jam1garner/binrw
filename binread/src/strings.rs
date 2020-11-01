@@ -1,4 +1,5 @@
 use super::*;
+use crate::alloc::{vec::Vec, vec, string::ToString};
 
 // #[cfg(feature = "std")]
 // use std::{
@@ -25,7 +26,7 @@ impl BinRead for Vec<NonZeroU8> {
     fn read_options<R: Read + Seek>(reader: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self>
     {
         reader
-            .iter_bytes()
+            .bytes()
             .take_while(|x| if let Ok(0) = x { false } else { true })
             .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
             .collect()
@@ -179,7 +180,7 @@ impl fmt::Debug for NullWideString {
     }
 }
 
-impl std::ops::Deref for NullString {
+impl core::ops::Deref for NullString {
     type Target = Vec<u8>;
 
     fn deref(&self) -> &Self::Target {
@@ -187,7 +188,7 @@ impl std::ops::Deref for NullString {
     }
 }
 
-impl std::ops::Deref for NullWideString {
+impl core::ops::Deref for NullWideString {
     type Target = Vec<u16>;
 
     fn deref(&self) -> &Self::Target {

@@ -41,7 +41,7 @@ impl<T: BinRead> BinRead for PosValue<T> {
     }
 }
 
-impl<T> std::ops::Deref for PosValue<T> {
+impl<T> core::ops::Deref for PosValue<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -49,7 +49,7 @@ impl<T> std::ops::Deref for PosValue<T> {
     }
 }
 
-impl<T> std::ops::DerefMut for PosValue<T> {
+impl<T> core::ops::DerefMut for PosValue<T> {
     fn deref_mut(&mut self) -> &mut T {
         &mut self.val
     }

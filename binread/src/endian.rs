@@ -14,6 +14,9 @@ pub use Endian::{
     Native as NE
 };
 
+
+use crate::alloc::string::String;
+
 impl Into<String> for &Endian {
     fn into(self) -> String {
         String::from(

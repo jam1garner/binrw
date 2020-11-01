@@ -227,6 +227,54 @@ pub trait BinRead: Sized {
     }
 }
 
+/// A `BinRead` trait allows reading a structure from anything that implements [`io::Read`](io::Read) and [`io::Seek`](io::Seek)
+/// BinRead is implemented on the type to be read out of the given reader
+pub trait BinWrite: Sized {
+    /// The type of arguments needed to be supplied in order to read this type, usually a tuple.
+    /// 
+    /// **NOTE:** For types that don't require any arguments, use the unit (`()`) type. This will allow [`read`](BinRead::read) to be used.
+    type Args: Any + Copy;
+
+    /// Read the type from the reader while assuming no arguments have been passed
+    /// 
+    /// # Panics
+    /// Panics if there is no [`args_default`](BinRead::args_default) implementation
+    fn read<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
+        let args = match Self::args_default() {
+            Some(args) => args,
+            None => panic!("Must pass args, no args_default implemented")
+        };
+
+        Self::read_options(reader, &ReadOptions::default(), args)
+    }
+    
+    /// Read the type from the reader using the specified arguments
+    fn read_args<R: Read + Seek>(reader: &mut R, args: Self::Args) -> BinResult<Self> {
+        Self::read_options(reader, &ReadOptions::default(), args)
+    }
+
+    /// Read the type from the reader
+    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self>;
+
+    fn after_parse<R: Read + Seek>(&mut self, _: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<()> {
+        Ok(())
+    }
+
+    /// The default arguments to be used when using the [`read`](BinRead::read) shortcut method.
+    /// Override this for any type that optionally requries arguments
+    fn args_default() -> Option<Self::Args> {
+        // Trick to effectively get specialization on stable, should constant-folded away
+        // Returns `Some(())` if Self::Args == (), otherwise returns `None`
+        if TypeId::of::<Self::Args>() == TypeId::of::<()>() {
+            Some(unsafe{
+                core::mem::MaybeUninit::uninit().assume_init()
+            })
+        } else {
+            None
+        }
+    }
+}
+
 /// An extension trait for [`io::Read`](io::Read) to provide methods for reading a value directly
 /// 
 /// ## Example
