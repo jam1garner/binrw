@@ -1,4 +1,4 @@
-use binread::{BinReaderExt, derive_binread, io::Cursor};
+use binrw::{BinReaderExt, derive_binread, io::Cursor};
 
 #[derive_binread]
 #[derive(Default, Debug, PartialEq)]

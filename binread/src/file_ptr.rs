@@ -6,7 +6,7 @@
 //! 
 //! ## Example
 //! ```rust
-//! use binread::{prelude::*, io::Cursor, FilePtr};
+//! use binrw::{prelude::*, io::Cursor, FilePtr};
 //!
 //! #[derive(BinRead)]
 //! struct Test {
@@ -39,7 +39,7 @@ use core::ops::{Deref, DerefMut};
 /// 
 /// ## Example
 /// ```rust
-/// use binread::{prelude::*, io::Cursor, FilePtr};
+/// use binrw::{prelude::*, io::Cursor, FilePtr};
 ///
 /// #[derive(BinRead)]
 /// struct Test {

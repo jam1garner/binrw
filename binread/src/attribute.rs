@@ -39,7 +39,7 @@
 //! You can use `big` or `little` at either the struct-level or the field-level in order
 //! to override the byte order of values.
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! #[br(little)]
 //! struct MyType (
@@ -57,7 +57,7 @@
 //! is described within the data itself using `is_big` or `is_little`:
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! #[br(big)]
 //! struct MyType {
@@ -82,7 +82,7 @@
 //!
 //! **Examples:**
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug)]
 //! #[br(magic = b"TEST")]
 //! struct Test {
@@ -115,7 +115,7 @@
 //!
 //! **Custom Error Handling Example:**
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(Debug, PartialEq)]
 //! struct NotSmallerError(u32, u32);
 //!
@@ -142,7 +142,7 @@
 //!
 //! **Enum Handling Example:**
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! #[br(import(ty: u8))]
 //! enum Command {
@@ -172,7 +172,7 @@
 //!
 //! **Example:**
 //! ```rust
-//! # use binread::prelude::*;
+//! # use binrw::prelude::*;
 //! #[derive(BinRead)]
 //! #[br(import(val1: u32, val2: &'static str))]
 //! struct ImportTest {
@@ -193,7 +193,7 @@
 //! Set the field to the default value for the type.
 //!
 //! ```rust
-//! # use binread::{BinRead, io::Cursor};
+//! # use binrw::{BinRead, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! struct Test {
 //!     #[br(default)]
@@ -216,7 +216,7 @@
 //! `derive(BinRead)` in order to allow the macro to remove the field.
 //!
 //! ```rust
-//! # use binread::{BinRead, io::Cursor, derive_binread};
+//! # use binrw::{BinRead, io::Cursor, derive_binread};
 //! #[derive_binread]
 //! #[derive(Debug, PartialEq)]
 //! struct Test {
@@ -249,7 +249,7 @@
 //! `post_process` is recommended for anything else.
 //!
 //! ```rust
-//! # use binread::{prelude::*, FilePtr32, NullString, io::Cursor};
+//! # use binrw::{prelude::*, FilePtr32, NullString, io::Cursor};
 //! #[derive(BinRead, Debug)]
 //! #[br(big, magic = b"TEST")]
 //! struct TestFile {
@@ -277,7 +277,7 @@
 //!
 //! **Example:**
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! struct MyType {
 //!     #[br(restore_position)]
@@ -298,7 +298,7 @@
 //! after a `try` in which parsing failed, so use with caution.
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(try)]
@@ -314,7 +314,7 @@
 //! attribute in order to apply a mapping function to map it to the type of the field.
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(map = |x: u8| x.to_string())]
@@ -331,7 +331,7 @@
 //! using the [`modular-bitfield`](https://docs.rs/modular-bitfield) crate.
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! use modular_bitfield::prelude::*;
 //!
 //! // The following field is a single byte read from the Reader
@@ -370,7 +370,7 @@
 //! binread provides the `parse_with` attribute to allow specifying custom parser functions.
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::*, ReadOptions};
+//! # use binrw::{prelude::*, io::*, ReadOptions};
 //! # use std::collections::HashMap;
 //! fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
 //!     -> BinResult<HashMap<u16, u16>>
@@ -396,7 +396,7 @@
 //! immediately dereference a [`FilePtr`](crate::FilePtr) to an owned value.
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor, FilePtr32, NullString};
+//! # use binrw::{prelude::*, io::Cursor, FilePtr32, NullString};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(parse_with = FilePtr32::parse)]
@@ -415,7 +415,7 @@
 //!
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     var: u32,
@@ -434,7 +434,7 @@
 //! you can access it using the [`count`](crate::ReadOptions::count) field on the [`ReadOptions`](crate::ReadOptions) type.
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
@@ -450,7 +450,7 @@
 //! 
 //! You can even combine `count` with [`FilePtr`](crate::FilePtr) to read a [`Vec`](Vec) at a particular offset.
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor, FilePtr};
+//! # use binrw::{prelude::*, io::Cursor, FilePtr};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
@@ -473,7 +473,7 @@
 //!
 //! **Example:**
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor, FilePtr};
+//! # use binrw::{prelude::*, io::Cursor, FilePtr};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! struct OffsetTest {
 //!     #[br(little, offset = 4)]
@@ -499,7 +499,7 @@
 //! `Some(T)`, otherwise it will store `None`.
 //!
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     var: u32,
@@ -526,7 +526,7 @@
 //! already been passed
 //!
 //! ```rust
-//! # use binread::{BinRead, NullString, io::SeekFrom};
+//! # use binrw::{BinRead, NullString, io::SeekFrom};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     #[br(align_before = 4, pad_after = 1, align_after = 4)]

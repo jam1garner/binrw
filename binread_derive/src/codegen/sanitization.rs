@@ -3,17 +3,17 @@
 use proc_macro2::{TokenStream, Ident};
 use quote::{quote, format_ident, ToTokens};
 
-const CNAME: &str = "::binread";
+const CNAME: &str = "::binrw";
 const TNAME: &str = "BinRead";
 
 macro_rules! from_crate {
     () => { IdentStr(CNAME) };
-    ($path:path) => { IdentStr(concat!("::binread::", stringify!($path))) };
+    ($path:path) => { IdentStr(concat!("::binrw::", stringify!($path))) };
 }
 
 macro_rules! from_trait {
     () => { from_crate!(BinRead) };
-    ($path:path) => { IdentStr(concat!("::binread::BinRead::", stringify!($path))) };
+    ($path:path) => { IdentStr(concat!("::binrw::BinRead::", stringify!($path))) };
 }
 
 pub static CRATE_NAME: IdentStr = from_crate!();

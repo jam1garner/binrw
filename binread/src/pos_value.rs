@@ -3,7 +3,7 @@ use core::fmt;
 
 /// A wrapper where the position it was read from is stored alongside the value
 /// ```rust
-/// use binread::{BinRead, PosValue, BinReaderExt, io::Cursor};
+/// use binrw::{BinRead, PosValue, BinReaderExt, io::Cursor};
 /// 
 /// #[derive(BinRead)]
 /// struct MyType {

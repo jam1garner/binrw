@@ -3,7 +3,7 @@
 //! # Example
 //! 
 //! ```
-//! # use binread::{prelude::*, io::Cursor, NullString};
+//! # use binrw::{prelude::*, io::Cursor, NullString};
 //! 
 //! #[derive(BinRead)]
 //! #[br(magic = b"DOG", assert(name.len() != 0))]
@@ -29,7 +29,7 @@
 //! a type from bytes and is already implemented for most primitives and simple collections.
 //! 
 //! ```rust
-//! use binread::BinRead;
+//! use binrw::BinRead;
 //! use std::io::Cursor;
 //! 
 //! let mut reader = Cursor::new(b"\0\0\0\x01");
@@ -46,7 +46,7 @@
 //! 
 //! Example:
 //! ```rust
-//! use binread::{BinReaderExt, io::Cursor};
+//! use binrw::{BinReaderExt, io::Cursor};
 //! 
 //! let mut reader = Cursor::new(b"\x00\x0A");
 //! let val: u16 = reader.read_be().unwrap();
@@ -63,7 +63,7 @@
 //! 
 //! ## Basic Derive Example
 //! ```rust
-//! # use binread::BinRead;
+//! # use binrw::BinRead;
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     first: u32,
@@ -79,7 +79,7 @@
 //! example you can use `big` or `little` at either the struct-level or the field-level in order
 //! to override the byte order of values.
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! #[br(little)]
 //! struct MyType (
@@ -101,7 +101,7 @@
 //! higher-level parsers that can have their type swapped out to allow greater reuse of code.
 //! 
 //! ```rust
-//! # use binread::{prelude::*, io::Cursor};
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct U32CountVec<T: BinRead<Args=()>> {
 //!     count: u32,
@@ -168,10 +168,10 @@ pub use {
 use io::{Read, Seek, SeekFrom};
 
 /// Derive macro for BinRead. [Usage here](BinRead).
-pub use binread_derive::BinRead;
+pub use binrw_derive::BinRead;
 
 /// Equivelant to `derive(BinRead)` but allows for temporary variables.
-pub use binread_derive::derive_binread;
+pub use binrw_derive::derive_binread;
 
 mod binread_impls;
 pub use binread_impls::*;
@@ -231,8 +231,8 @@ pub trait BinRead: Sized {
 /// 
 /// ## Example
 /// ```rust
-/// use binread::prelude::*; // BinReadExt is in the prelude
-/// use binread::endian::LE;
+/// use binrw::prelude::*; // BinReadExt is in the prelude
+/// use binrw::endian::LE;
 /// use std::io::Cursor;
 ///
 /// fn main() {

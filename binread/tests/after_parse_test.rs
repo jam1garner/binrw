@@ -1,4 +1,4 @@
-use binread::{BinRead, BinReaderExt, FilePtr8};
+use binrw::{BinRead, BinReaderExt, FilePtr8};
 use std::io::Cursor;
 
 #[test]

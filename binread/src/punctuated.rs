@@ -11,8 +11,8 @@ use crate::{BinRead, ReadOptions, BinResult};
 /// ## Example
 ///
 /// ```rust
-/// # use binread::{*, io::*};
-/// use binread::punctuated::Punctuated;
+/// # use binrw::{*, io::*};
+/// use binrw::punctuated::Punctuated;
 ///
 /// #[derive(BinRead)]
 /// struct MyList {
@@ -39,8 +39,8 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
     /// ## Example
     ///
     /// ```rust
-    /// # use binread::{*, io::*};
-    /// use binread::punctuated::Punctuated;
+    /// # use binrw::{*, io::*};
+    /// use binrw::punctuated::Punctuated;
     ///
     /// #[derive(BinRead)]
     /// struct MyList {
