@@ -9,7 +9,7 @@ pub enum Error {
         // Position in number of bytes from the start of the reader
         pos: usize,
         // The value found. Use [`Any::downcast_ref`](core::any::Any::downcast_ref) to access
-        found: Box<dyn Any>
+        found: Box<dyn Any + Sync + Send>,
     },
     /// The condition of an assertion without a custom type failed
     AssertFail {
@@ -21,7 +21,7 @@ pub enum Error {
     /// A custom error, most often given from the second value passed into an [`assert`](attribute#Assert)
     Custom {
         pos: usize,
-        err: Box<dyn Any>
+        err: Box<dyn Any + Sync + Send>,
     },
     /// No variant in the enum was successful in parsing the data
     NoVariantMatch {
@@ -70,8 +70,9 @@ impl fmt::Display for Error {
 
 /// Read a value then check if it is the expected value
 pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
-    where B: BinRead<Args=()> + PartialEq + 'static,
-          R: io::Read + io::Seek
+where
+    B: BinRead<Args = ()> + PartialEq + Sync + Send + 'static,
+    R: io::Read + io::Seek,
 {
     let pos = reader.seek(SeekFrom::Current(0))?;
     #[cfg(feature = "debug_template")]
@@ -117,9 +118,10 @@ pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinRes
 
 /// Assert a condition is true and if not optionally apply a function to generate the error
 pub fn assert<R, E, A>(reader: &mut R, test: bool, message: &str, error: Option<E>) -> BinResult<()>
-    where R: io::Read + io::Seek,
-          A: core::fmt::Debug + 'static,
-          E: Fn() -> A,
+where
+    R: io::Read + io::Seek,
+    A: core::fmt::Debug + Sync + Send + 'static,
+    E: Fn() -> A,
 {
     let pos = reader.seek(SeekFrom::Current(0))? as usize;
     if test {
