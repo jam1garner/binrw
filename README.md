@@ -26,4 +26,4 @@ assert_eq!(dog.bone_piles, &[0x1, 0x12]);
 assert_eq!(dog.name.into_string(), "Rudy")
 ```
 
-[More documentation can be found here](https://docs.rs/binread/1.0.0/binread)
+[More documentation can be found here](https://docs.rs/binread/)
