@@ -1,6 +1,12 @@
 use crate::{BinResult, ReadOptions, io::{Read, Seek}};
 use crate::alloc::{vec::Vec, vec};
 
+mod file_ptr;
+pub use file_ptr::*;
+
+mod punctuated;
+pub use punctuated::*;
+
 /// A helper for more efficiently mass-reading bytes
 ///
 ///## Example:

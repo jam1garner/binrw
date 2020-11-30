@@ -2,19 +2,10 @@ use core::any::{Any, TypeId};
 use crate::io::{Read, Seek};
 use crate::{BinResult, Endian};
 
-/// Runtime-configured options for reading the type using [`BinRead`](BinRead)
-#[non_exhaustive]
-#[derive(Default, Clone, Copy)]
-pub struct ReadOptions {
-    pub endian: Endian,
-    pub count: Option<usize>,
-    pub offset: u64,
+mod impls;
+mod options;
 
-    #[cfg(feature = "debug_template")]
-    pub dont_output_to_template: bool,
-    #[cfg(feature = "debug_template")]
-    pub variable_name: Option<&'static str>,
-}
+pub use options::ReadOptions;
 
 /// A `BinRead` trait allows reading a structure from anything that implements [`io::Read`](io::Read) and [`io::Seek`](io::Seek)
 /// BinRead is implemented on the type to be read out of the given reader

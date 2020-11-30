@@ -133,9 +133,7 @@ pub mod io;
 pub mod error;
 pub mod endian;
 pub mod helpers;
-pub mod file_ptr;
 pub mod attribute;
-pub mod punctuated;
 #[doc(hidden)] pub mod strings;
 #[doc(hidden)] pub mod pos_value;
 
@@ -148,7 +146,7 @@ pub use {
     error::Error,
     endian::Endian,
     pos_value::PosValue,
-    file_ptr::{
+    helpers::{
         FilePtr,
         FilePtr8,
         FilePtr16,
@@ -174,9 +172,6 @@ pub use binrw_derive::BinRead;
 
 /// Equivelant to `derive(BinRead)` but allows for temporary variables.
 pub use binrw_derive::derive_binread;
-
-mod binread_impls;
-pub use binread_impls::*;
 
 /// A Result for any binread function that can return an error
 pub type BinResult<T> = core::result::Result<T, Error>;

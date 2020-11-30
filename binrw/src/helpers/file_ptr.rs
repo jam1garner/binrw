@@ -27,7 +27,7 @@
 //! ```
 //!
 //! Use `offset` to change what the pointer is relative to (default: beginning of reader).
-use super::*;
+use crate::*;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 

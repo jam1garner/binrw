@@ -13,7 +13,7 @@ use crate::alloc::vec::Vec;
 ///
 /// ```rust
 /// # use binrw::{*, io::*};
-/// use binrw::punctuated::Punctuated;
+/// use binrw::helpers::Punctuated;
 ///
 /// #[derive(BinRead)]
 /// struct MyList {
@@ -41,7 +41,7 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
     ///
     /// ```rust
     /// # use binrw::{*, io::*};
-    /// use binrw::punctuated::Punctuated;
+    /// use binrw::helpers::Punctuated;
     ///
     /// #[derive(BinRead)]
     /// struct MyList {
@@ -92,6 +92,13 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
         }
 
         Ok(Self { data, seperators })
+    }
+
+    /// Convert into a `Vec` of the values without the separators
+    pub fn into_values(self) -> Vec<T> {
+        let Self { data, .. } = self;
+
+        data
     }
 }
 
