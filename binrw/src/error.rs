@@ -8,28 +8,28 @@ pub enum Error {
     /// The magic value did not match the provided one
     BadMagic {
         // Position in number of bytes from the start of the reader
-        pos: usize,
+        pos: u64,
         // The value found. Use [`Any::downcast_ref`](core::any::Any::downcast_ref) to access
         found: Box<dyn Any>
     },
     /// The condition of an assertion without a custom type failed
     AssertFail {
-        pos: usize,
+        pos: u64,
         message: String
     },
     /// An error that occured while reading from, or seeking within, the reader
     Io(io::Error),
     /// A custom error, most often given from the second value passed into an [`assert`](attribute#Assert)
     Custom {
-        pos: usize,
+        pos: u64,
         err: Box<dyn Any>
     },
     /// No variant in the enum was successful in parsing the data
     NoVariantMatch {
-        pos: usize
+        pos: u64
     },
     EnumErrors {
-        pos: usize,
+        pos: u64,
         variant_errors: Vec<(/*variant name*/ &'static str, Error)>,
     }
 }
@@ -85,7 +85,7 @@ pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinRes
         Ok(())
     } else {
         Err(Error::BadMagic {
-            pos: pos as usize,
+            pos: pos as u64,
             found: Box::new(val) as _
         })
     }
@@ -97,7 +97,7 @@ pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinRes
 //           A: core::fmt::Debug + 'static,
 //           E: Fn() -> A,
 // {
-//     let pos = reader.seek(SeekFrom::Current(0))? as usize;
+//     let pos = reader.seek(SeekFrom::Current(0))? as u64;
 //     let val = B::read(reader)?;
 //     if val == expected {
 //         Ok(())
@@ -122,7 +122,7 @@ pub fn assert<R, E, A>(reader: &mut R, test: bool, message: &str, error: Option<
           A: core::fmt::Debug + 'static,
           E: Fn() -> A,
 {
-    let pos = reader.seek(SeekFrom::Current(0))? as usize;
+    let pos = reader.seek(SeekFrom::Current(0))? as u64;
     if test {
         Ok(())
     } else {

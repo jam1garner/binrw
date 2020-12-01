@@ -133,7 +133,7 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Res
             }).collect::<Vec<_>>(),
             quote!{
                 Err(#BIN_ERROR::EnumErrors {
-                    pos: #last_pos as usize,
+                    pos: #last_pos,
                     variant_errors: #error_basket
                 })
             }
@@ -146,7 +146,7 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Res
             }).collect(),
             quote!{
                 Err(#BIN_ERROR::NoVariantMatch {
-                    pos: #last_pos as usize
+                    pos: #last_pos
                 })
             }
         )
