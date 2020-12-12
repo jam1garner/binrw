@@ -7,8 +7,8 @@
 //! | [big](#byteorder) | all | Set the endianness to big endian
 //! | [little](#byteorder) | all | Set the endianness to little endian
 //! | [map](#map) | all | Read a type from the reader and then apply a function to map it to the type to store in the struct. When used at the top-level the function must return Self.
+//! | [assert](#assert) | all | After parsing, check if a condition is true and, optionally, return a custom error if false. Allows multiple.
 //! | [magic](#magic) | top-level | At the start of parsing read a value and make sure it is equivalent to a constant value
-//! | [assert](#assert) | top-level | After parsing, check if a condition is true and, optionally, return a custom error if false. Allows multiple.
 //! | [pre_assert](#pre-assert) | top-level, variant | Similar to assert, but checks the condition before parsing.
 //! | [import](#arguments) | top-level | Define the arguments for parsing the given type
 //! | [args](#arguments) | fields | Pass a set of arguments.
