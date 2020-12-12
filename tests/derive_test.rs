@@ -66,6 +66,17 @@ fn test_read() {
     dbg!(test_file);
 }
 
+const BAD_TEST_CONTENTS: &[u8] = include_bytes!("./test_file_bad.bin");
+
+#[test]
+fn test_assert_fail() {
+    let mut test = Cursor::new(BAD_TEST_CONTENTS);
+    let err = test.read_le::<TestFile>()
+        .expect_err("Offset assertion should have failed");
+    let custom_err = err.custom_err::<BadDifferenceError>().expect("Error type was lost");
+    assert_eq!(custom_err.0, 0xBAAD - 0x20, "Unexpected failure value");
+}
+
 #[derive(BinRead, Debug)]
 #[br(big, magic = b"TEST")]
 struct TestTupleStruct (
