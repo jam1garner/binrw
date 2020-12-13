@@ -76,10 +76,11 @@ where
 {
     let pos = reader.seek(SeekFrom::Current(0))?;
     #[cfg(feature = "debug_template")]
-    let mut options = options.clone();
-    #[cfg(feature = "debug_template")] {
+    let options = {
+        let mut options = *options;
         options.variable_name = Some("magic");
-    }
+        options
+    };
     let val = B::read_options(reader, &options, ())?;
     if val == expected {
         Ok(())
@@ -229,7 +230,7 @@ pub fn read_options_then_after_parse<Args, T, R>(
           T: BinRead<Args = Args>,
           R: Read + Seek,
 {
-    let mut val = T::read_options(reader, ro, args.clone())?;
+    let mut val = T::read_options(reader, ro, args)?;
     val.after_parse(reader, ro, args)?;
     Ok(val)
 }

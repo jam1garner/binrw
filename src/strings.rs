@@ -117,9 +117,8 @@ impl BinRead for NullWideString {
         -> BinResult<Self>
     {
         #[cfg(feature = "debug_template")]
-        let mut options = options.clone();
-
-        #[cfg(feature = "debug_template")] {
+        let options = {
+            let mut options = *options;
             let pos = reader.seek(SeekFrom::Current(0)).unwrap();
 
             if !options.dont_output_to_template {
@@ -134,7 +133,8 @@ impl BinRead for NullWideString {
             
             }
             options.dont_output_to_template = true;
-        }
+            options
+        };
 
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]

@@ -70,7 +70,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
     type Args = B::Args;
 
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
-        let mut options = options.clone();
+        let mut options = *options;
         let count = match options.count.take() {
             Some(x) => x,
             None => panic!("Missing count for Vec"),

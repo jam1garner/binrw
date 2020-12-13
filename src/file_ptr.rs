@@ -78,7 +78,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
         #[cfg(feature = "debug_template")]
         let options = &{
-            let mut options = options.clone();
+            let mut options = *options;
 
             let pos = reader.seek(SeekFrom::Current(0)).unwrap();
             let type_name = &core::any::type_name::<Ptr>();
