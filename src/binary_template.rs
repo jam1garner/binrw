@@ -73,7 +73,7 @@ pub fn write_named(endian: Endian, pos: u64, type_name: &str, var_name: &str) {
     match endian {
         Endian::Big => writeln!(*file, "BigEndian();"),
         Endian::Little => writeln!(*file, "LittleEndian();"),
-        _ => writeln!(*file, "")
+        _ => writeln!(*file)
     };
 
     let color_index = CURRENT_VAR_NUM.fetch_add(1, Ordering::SeqCst) & 0x3f;
@@ -140,7 +140,7 @@ pub fn write_vec_named(endian: Endian, pos: u64, type_name: &str, count: usize, 
     match endian {
         Endian::Big => writeln!(*file, "BigEndian();"),
         Endian::Little => writeln!(*file, "LittleEndian();"),
-        _ => writeln!(*file, "")
+        _ => writeln!(*file)
     };
 
     let color_index = CURRENT_VAR_NUM.fetch_add(1, Ordering::SeqCst) & 0x3f;
