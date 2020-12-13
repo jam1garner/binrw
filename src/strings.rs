@@ -129,7 +129,7 @@ impl BinRead for NullWideString {
                     "wstring",
                     &options.variable_name
                         .map(ToString::to_string)
-                        .unwrap_or_else(|| binary_template::get_next_var_name())
+                        .unwrap_or_else(binary_template::get_next_var_name)
                 );
             
             }
@@ -156,7 +156,7 @@ impl BinRead for NullString {
                     "string",
                     &options.variable_name
                             .map(ToString::to_string)
-                            .unwrap_or_else(|| binary_template::get_next_var_name())
+                            .unwrap_or_else(binary_template::get_next_var_name)
                 );
             }
         }
