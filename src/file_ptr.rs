@@ -10,14 +10,12 @@
 //!
 //! #[derive(BinRead)]
 //! struct Test {
-//!     pointer: FilePtr<u32, u8> 
+//!     pointer: FilePtr<u32, u8>
 //! }
-//! 
-//! fn main() {
-//!     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
-//!     assert_eq!(test.pointer.ptr, 8);
-//!     assert_eq!(*test.pointer, 0xFF);
-//! }
+//!
+//! let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
+//! assert_eq!(test.pointer.ptr, 8);
+//! assert_eq!(*test.pointer, 0xFF);
 //! ```
 //! 
 //! Example data mapped out:
@@ -43,14 +41,12 @@ use core::ops::{Deref, DerefMut};
 ///
 /// #[derive(BinRead)]
 /// struct Test {
-///     pointer: FilePtr<u32, u8> 
+///     pointer: FilePtr<u32, u8>
 /// }
-/// 
-/// fn main() {
-///     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
-///     assert_eq!(test.pointer.ptr, 8);
-///     assert_eq!(*test.pointer, 0xFF);
-/// }
+///
+/// let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
+/// assert_eq!(test.pointer.ptr, 8);
+/// assert_eq!(*test.pointer, 0xFF);
 /// ```
 /// 
 /// Example data mapped out:
