@@ -85,7 +85,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
             let type_name = if type_name.starts_with("binread::file_ptr::FilePtr<") {
                 // Extract the backing type name from file pointers
                 type_name.trim_start_matches("binread::file_ptr::FilePtr<")
-                        .split(",").next().unwrap()
+                        .split(',').next().unwrap()
             } else {
                 type_name
             };
