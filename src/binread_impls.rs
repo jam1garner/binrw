@@ -142,8 +142,8 @@ macro_rules! binread_array_impl {
                     };
 
                     let mut arr: [B; $size] = Default::default();
-                    for i in 0..$size {
-                        arr[i] = BinRead::read_options(reader, options, args)?;
+                    for elem in arr.iter_mut() {
+                        *elem = BinRead::read_options(reader, options, args)?;
                     }
                     Ok(arr)
                 }
