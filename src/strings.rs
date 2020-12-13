@@ -135,6 +135,9 @@ impl BinRead for NullWideString {
             }
             options.dont_output_to_template = true;
         }
+
+        // https://github.com/rust-lang/rust-clippy/issues/6447
+        #[allow(clippy::unit_arg)]
         <Vec<NonZeroU16>>::read_options(reader, &options, args)
             .map(|chars| chars.into())
     }
@@ -160,6 +163,9 @@ impl BinRead for NullString {
                 );
             }
         }
+
+        // https://github.com/rust-lang/rust-clippy/issues/6447
+        #[allow(clippy::unit_arg)]
         <Vec<NonZeroU8>>::read_options(reader, options, args)
             .map(|chars| chars.into())
     }
