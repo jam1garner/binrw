@@ -51,7 +51,8 @@ const COLORS: &[&str] = &[
 ];
 
 pub fn set_output_file<P: AsRef<Path>>(path: P) -> std::io::Result<()> {
-    Ok(set_output(std::fs::File::create(path.as_ref())?))
+    set_output(std::fs::File::create(path.as_ref())?);
+    Ok(())
 }
 
 pub fn set_output<W: Write + Send + 'static>(mut writer: W) {
