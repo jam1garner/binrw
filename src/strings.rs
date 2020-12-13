@@ -26,7 +26,7 @@ impl BinRead for Vec<NonZeroU8> {
     {
         reader
             .iter_bytes()
-            .take_while(|x| if let Ok(0) = x { false } else { true })
+            .take_while(|x| !matches!(x, Ok(0)))
             .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
             .collect()
     }
