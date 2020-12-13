@@ -79,13 +79,13 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
         #[cfg(feature = "debug_template")]
         {
             let pos = reader.seek(SeekFrom::Current(0))?;
-            let type_name = core::any::type_name::<B>().rsplitn(1, "::").nth(0).unwrap();
+            let type_name = core::any::type_name::<B>().rsplitn(1, "::").next().unwrap();
 
             // this is a massive hack. I'm so sorry
             let type_name = if type_name.starts_with("binread::file_ptr::FilePtr<") {
                 // Extract the backing type name from file pointers
                 type_name.trim_start_matches("binread::file_ptr::FilePtr<")
-                        .split(",").nth(0).unwrap()
+                        .split(",").next().unwrap()
             } else {
                 type_name
             };
