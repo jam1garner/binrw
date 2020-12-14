@@ -8,7 +8,7 @@ fn generic_derive() {
     }
 
     let mut data = Cursor::new(b"\0\x01\x02");
-    let foo: Test<u8> = data.read_ne().unwrap();
-    assert_eq!(foo.x, [0, 1, 2]);
+    let test: Test<u8> = data.read_ne().unwrap();
+    assert_eq!(test.x, [0, 1, 2]);
 }
 

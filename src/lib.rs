@@ -228,21 +228,19 @@ pub trait BinRead: Sized {
 }
 
 /// An extension trait for [`io::Read`](io::Read) to provide methods for reading a value directly
-/// 
+///
 /// ## Example
 /// ```rust
 /// use binread::prelude::*; // BinReadExt is in the prelude
 /// use binread::endian::LE;
 /// use std::io::Cursor;
 ///
-/// fn main() {
-///     let mut reader = Cursor::new(b"\x07\0\0\0\xCC\0\0\x05");
-///     let x: u32 = reader.read_le().unwrap();
-///     let y: u16 = reader.read_type(LE).unwrap();
-///     let z = reader.read_be::<u16>().unwrap();
-/// 
-///     assert_eq!((x, y, z), (7u32, 0xCCu16, 5u16));
-/// }
+/// let mut reader = Cursor::new(b"\x07\0\0\0\xCC\0\0\x05");
+/// let x: u32 = reader.read_le().unwrap();
+/// let y: u16 = reader.read_type(LE).unwrap();
+/// let z = reader.read_be::<u16>().unwrap();
+///
+/// assert_eq!((x, y, z), (7u32, 0xCCu16, 5u16));
 /// ```
 pub trait BinReaderExt: Read + Seek + Sized {
     /// Read the given type from the reader using the given endianness.

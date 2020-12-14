@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use binread::{BinRead, BinResult, io::{Cursor, Read, Seek, SeekFrom}, FilePtr, NullString, ReadOptions};
 
 use binread::BinReaderExt;

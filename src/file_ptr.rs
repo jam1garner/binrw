@@ -10,14 +10,12 @@
 //!
 //! #[derive(BinRead)]
 //! struct Test {
-//!     pointer: FilePtr<u32, u8> 
+//!     pointer: FilePtr<u32, u8>
 //! }
-//! 
-//! fn main() {
-//!     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
-//!     assert_eq!(test.pointer.ptr, 8);
-//!     assert_eq!(*test.pointer, 0xFF);
-//! }
+//!
+//! let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
+//! assert_eq!(test.pointer.ptr, 8);
+//! assert_eq!(*test.pointer, 0xFF);
 //! ```
 //! 
 //! Example data mapped out:
@@ -43,14 +41,12 @@ use core::ops::{Deref, DerefMut};
 ///
 /// #[derive(BinRead)]
 /// struct Test {
-///     pointer: FilePtr<u32, u8> 
+///     pointer: FilePtr<u32, u8>
 /// }
-/// 
-/// fn main() {
-///     let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
-///     assert_eq!(test.pointer.ptr, 8);
-///     assert_eq!(*test.pointer, 0xFF);
-/// }
+///
+/// let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
+/// assert_eq!(test.pointer.ptr, 8);
+/// assert_eq!(*test.pointer, 0xFF);
 /// ```
 /// 
 /// Example data mapped out:
@@ -82,7 +78,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
         #[cfg(feature = "debug_template")]
         let options = &{
-            let mut options = options.clone();
+            let mut options = *options;
 
             let pos = reader.seek(SeekFrom::Current(0)).unwrap();
             let type_name = &core::any::type_name::<Ptr>();

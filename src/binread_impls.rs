@@ -70,7 +70,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
     type Args = B::Args;
 
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
-        let mut options = options.clone();
+        let mut options = *options;
         let count = match options.count.take() {
             Some(x) => x,
             None => panic!("Missing count for Vec"),
@@ -79,13 +79,13 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
         #[cfg(feature = "debug_template")]
         {
             let pos = reader.seek(SeekFrom::Current(0))?;
-            let type_name = core::any::type_name::<B>().rsplitn(1, "::").nth(0).unwrap();
+            let type_name = core::any::type_name::<B>().rsplitn(1, "::").next().unwrap();
 
             // this is a massive hack. I'm so sorry
             let type_name = if type_name.starts_with("binread::file_ptr::FilePtr<") {
                 // Extract the backing type name from file pointers
                 type_name.trim_start_matches("binread::file_ptr::FilePtr<")
-                        .split(",").nth(0).unwrap()
+                        .split(',').next().unwrap()
             } else {
                 type_name
             };
@@ -142,8 +142,8 @@ macro_rules! binread_array_impl {
                     };
 
                     let mut arr: [B; $size] = Default::default();
-                    for i in 0..$size {
-                        arr[i] = BinRead::read_options(reader, options, args)?;
+                    for elem in arr.iter_mut() {
+                        *elem = BinRead::read_options(reader, options, args)?;
                     }
                     Ok(arr)
                 }
@@ -164,7 +164,8 @@ macro_rules! binread_array_impl {
 
 binread_array_impl!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32);
 
-/// Internal macro to recursively implement BinRead for every size tuple 0 to 20
+/// Internal macro to recursively implement BinRead for every size tuple given
+/// in the invocation
 macro_rules! binread_tuple_impl {
     ($type1:ident $(, $types:ident)*) => {
         #[allow(non_camel_case_types)]
@@ -197,18 +198,18 @@ macro_rules! binread_tuple_impl {
         binread_tuple_impl!($($types),*);
     };
 
-    () => {
-        impl BinRead for () {
-            type Args = ();
-
-            fn read_options<R: Read + Seek>(_: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self> {
-                Ok(())
-            }
-        }
-    };
+    () => {};
 }
 
 binread_tuple_impl!(b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32);
+
+impl BinRead for () {
+    type Args = ();
+
+    fn read_options<R: Read + Seek>(_: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self> {
+        Ok(())
+    }
+}
 
 impl<T: BinRead> BinRead for Box<T> {
     type Args = T::Args;

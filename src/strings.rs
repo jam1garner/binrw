@@ -26,7 +26,7 @@ impl BinRead for Vec<NonZeroU8> {
     {
         reader
             .iter_bytes()
-            .take_while(|x| if let Ok(0) = x { false } else { true })
+            .take_while(|x| !matches!(x, Ok(0)))
             .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
             .collect()
     }
@@ -117,9 +117,8 @@ impl BinRead for NullWideString {
         -> BinResult<Self>
     {
         #[cfg(feature = "debug_template")]
-        let mut options = options.clone();
-
-        #[cfg(feature = "debug_template")] {
+        let options = {
+            let mut options = *options;
             let pos = reader.seek(SeekFrom::Current(0)).unwrap();
 
             if !options.dont_output_to_template {
@@ -129,12 +128,16 @@ impl BinRead for NullWideString {
                     "wstring",
                     &options.variable_name
                         .map(ToString::to_string)
-                        .unwrap_or_else(|| binary_template::get_next_var_name())
+                        .unwrap_or_else(binary_template::get_next_var_name)
                 );
             
             }
             options.dont_output_to_template = true;
-        }
+            options
+        };
+
+        // https://github.com/rust-lang/rust-clippy/issues/6447
+        #[allow(clippy::unit_arg)]
         <Vec<NonZeroU16>>::read_options(reader, &options, args)
             .map(|chars| chars.into())
     }
@@ -156,10 +159,13 @@ impl BinRead for NullString {
                     "string",
                     &options.variable_name
                             .map(ToString::to_string)
-                            .unwrap_or_else(|| binary_template::get_next_var_name())
+                            .unwrap_or_else(binary_template::get_next_var_name)
                 );
             }
         }
+
+        // https://github.com/rust-lang/rust-clippy/issues/6447
+        #[allow(clippy::unit_arg)]
         <Vec<NonZeroU8>>::read_options(reader, options, args)
             .map(|chars| chars.into())
     }
