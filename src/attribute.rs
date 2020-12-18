@@ -52,7 +52,7 @@
 //! 2. Variant-level (for enums)
 //! 3. Top-level
 //! 4. Configured (i.e. what endianess was passed in)
-//! 5. Native endianess 
+//! 5. Native endianess
 //! binread also offers the ability to conditionally set endianness for when the endianess
 //! is described within the data itself using `is_big` or `is_little`:
 //!
@@ -345,7 +345,7 @@
 //!     is_alive: bool,
 //!     is_good: bool,
 //! }
-//! 
+//!
 //! // example byte: 0x53
 //! // [good] [alive] [static] [fast] [status]
 //! //   0       1       0       1      0011
@@ -447,7 +447,7 @@
 //! #    &[1u8, 2, 3, 4]
 //! # );
 //! ```
-//! 
+//!
 //! You can even combine `count` with [`FilePtr`](crate::FilePtr) to read a [`Vec`](Vec) at a particular offset.
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor, FilePtr};

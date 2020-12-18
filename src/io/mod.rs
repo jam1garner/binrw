@@ -25,7 +25,7 @@ pub trait Read {
             if n == buf.len() {
                 return Ok(())
             }
-        } 
+        }
 
         Err(Error::new(ErrorKind::UnexpectedEof, "Out of bytes in reader"))
     }

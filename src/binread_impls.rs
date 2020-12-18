@@ -6,10 +6,10 @@ macro_rules! binread_impl {
         $(
             impl BinRead for $type_name {
                 type Args = ();
-                
+
                 fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
                     let mut val = [0; core::mem::size_of::<$type_name>()];
-                    
+
                     #[cfg(feature = "debug_template")]
                     {
                         if !options.dont_output_to_template {
@@ -30,7 +30,7 @@ macro_rules! binread_impl {
                             }
                         }
                     }
-                    
+
                     reader.read_exact(&mut val)?;
                     Ok(match options.endian {
                         Endian::Big => {

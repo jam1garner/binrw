@@ -119,7 +119,7 @@ pub fn write_end_struct(name: Option<&str>) {
         None => return
     };
 
-    let var_name = name.unwrap_or("root"); 
+    let var_name = name.unwrap_or("root");
 
     writeln!(*file, "}} {};", var_name);
 }

@@ -12,7 +12,7 @@ use core::num::{NonZeroU8, NonZeroU16};
 impl BinRead for CString {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> 
+    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self>
     {
         <Vec<NonZeroU8>>::read_options(reader, options, args)
             .map(|bytes| bytes.into())
@@ -33,16 +33,16 @@ impl BinRead for Vec<NonZeroU8> {
 }
 
 /// A null terminated UTF-8 string designed to make reading any null-terminated data easier.
-/// 
+///
 /// **Note:** Does not include the null.
 #[derive(Clone, PartialEq, Default)]
 pub struct NullString(pub Vec<u8>);
 
 /// A null terminated UTF-16 string designed to make reading any 16 bit wide null-terminated data easier.
-/// 
+///
 /// **Note:** Does not include the null.
-/// 
-/// **Note:** This is endian dependent on a per-character basis. Will read `u16`s until a `0u16` is found. 
+///
+/// **Note:** This is endian dependent on a per-character basis. Will read `u16`s until a `0u16` is found.
 #[derive(Clone, PartialEq, Default)]
 pub struct NullWideString(pub Vec<u16>);
 
@@ -130,7 +130,7 @@ impl BinRead for NullWideString {
                         .map(ToString::to_string)
                         .unwrap_or_else(binary_template::get_next_var_name)
                 );
-            
+
             }
             options.dont_output_to_template = true;
             options

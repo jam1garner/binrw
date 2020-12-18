@@ -1,66 +1,66 @@
 //! A Rust crate for helping parse binary data using ✨macro magic✨.
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```
 //! # use binread::{prelude::*, io::Cursor, NullString};
-//! 
+//!
 //! #[derive(BinRead)]
 //! #[br(magic = b"DOG", assert(name.len() != 0))]
 //! struct Dog {
 //!     bone_pile_count: u8,
-//! 
+//!
 //!     #[br(big, count = bone_pile_count)]
 //!     bone_piles: Vec<u16>,
-//! 
+//!
 //!     #[br(align_before = 0xA)]
 //!     name: NullString
 //! }
-//! 
+//!
 //! let mut reader = Cursor::new(b"DOG\x02\x00\x01\x00\x12\0\0Rudy\0");
 //! let dog: Dog = reader.read_ne().unwrap();
 //! assert_eq!(dog.bone_piles, &[0x1, 0x12]);
 //! assert_eq!(dog.name.into_string(), "Rudy")
 //! ```
-//! 
+//!
 //! # The Basics
-//! 
+//!
 //! At the core of `binread` is the [`BinRead`](BinRead) trait. It defines how to read
 //! a type from bytes and is already implemented for most primitives and simple collections.
-//! 
+//!
 //! ```rust
 //! use binread::BinRead;
 //! use std::io::Cursor;
-//! 
+//!
 //! let mut reader = Cursor::new(b"\0\0\0\x01");
 //! let val = u32::read(&mut reader).unwrap();
 //! ```
-//! 
+//!
 //! However, [`read`](BinRead::read) is intentionally simple and, as a result, doesn't even
-//! allow you to configure the byte order. For that you need [`read_options`](BinRead::read_options) 
+//! allow you to configure the byte order. For that you need [`read_options`](BinRead::read_options)
 //! which, while more powerful, isn't exactly ergonomics.
-//! 
+//!
 //! So, as a balance between ergonomics and configurability you have the [`BinReaderExt`](BinReaderExt)
 //! trait. It is an extension for readers to allow for you to directly read any BinRead types from
 //! any reader.
-//! 
+//!
 //! Example:
 //! ```rust
 //! use binread::{BinReaderExt, io::Cursor};
-//! 
+//!
 //! let mut reader = Cursor::new(b"\x00\x0A");
 //! let val: u16 = reader.read_be().unwrap();
 //! assert_eq!(val, 10);
 //! ```
-//! 
-//! It even works for tuples and arrays of BinRead types for up to size 32. 
+//!
+//! It even works for tuples and arrays of BinRead types for up to size 32.
 //!
 //! # Derive Macro
-//! 
+//!
 //! The most significant feature of binread is its ability to use the Derive macro to
 //! implement [`BinRead`](BinRead) for your own types. This allows you to replace repetitive
 //! imperative code with declarative struct definitions for your binary data parsing.
-//! 
+//!
 //! ## Basic Derive Example
 //! ```rust
 //! # use binread::BinRead;
@@ -69,7 +69,7 @@
 //!     first: u32,
 //!     second: u32
 //! }
-//! 
+//!
 //! // Also works with tuple types!
 //! #[derive(BinRead)]
 //! struct MyType2(u32, u32);
@@ -99,7 +99,7 @@
 //! ## Generics
 //! The BinRead derive macro also allows for generic parsing. That way you can build up
 //! higher-level parsers that can have their type swapped out to allow greater reuse of code.
-//! 
+//!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
@@ -183,12 +183,12 @@ pub type BinResult<T> = core::result::Result<T, Error>;
 /// BinRead is implemented on the type to be read out of the given reader
 pub trait BinRead: Sized {
     /// The type of arguments needed to be supplied in order to read this type, usually a tuple.
-    /// 
+    ///
     /// **NOTE:** For types that don't require any arguments, use the unit (`()`) type. This will allow [`read`](BinRead::read) to be used.
     type Args: Any + Copy;
 
     /// Read the type from the reader while assuming no arguments have been passed
-    /// 
+    ///
     /// # Panics
     /// Panics if there is no [`args_default`](BinRead::args_default) implementation
     fn read<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
@@ -199,7 +199,7 @@ pub trait BinRead: Sized {
 
         Self::read_options(reader, &ReadOptions::default(), args)
     }
-    
+
     /// Read the type from the reader using the specified arguments
     fn read_args<R: Read + Seek>(reader: &mut R, args: Self::Args) -> BinResult<Self> {
         Self::read_options(reader, &ReadOptions::default(), args)
