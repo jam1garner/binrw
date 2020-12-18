@@ -37,7 +37,7 @@ fn generate_derive(input: DeriveInput, code: codegen::GeneratedCode) -> TokenStr
             }
 
             fn after_parse<R: #READ_TRAIT + #SEEK_TRAIT> (&mut self, #READER: &mut R,
-                #OPT : &#OPTIONS, #ARGS : Self::Args) 
+                #OPT : &#OPTIONS, #ARGS : Self::Args)
                 -> #BIN_RESULT<()>
             {
                 #after_parse_impl
@@ -64,7 +64,7 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
                     }
                 }
                 CompileError::Syn(syn_err) => syn_err.to_compile_error()
-                
+
             };
             generate_derive(input, codegen::GeneratedCode::new(
                 quote!(todo!()),
@@ -108,7 +108,7 @@ fn remove_field_attrs(fields: &mut syn::Fields) {
 #[proc_macro_attribute]
 pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
-    
+
     let derive: TokenStream2 = match codegen::generate(&input) {
         Ok(code) => {
             generate_derive(input.clone(), code)
@@ -123,7 +123,7 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
                 CompileError::Syn(syn_err) => syn_err.to_compile_error()
-                
+
             };
             generate_derive(input.clone(), codegen::GeneratedCode::new(
                 quote!(todo!()),

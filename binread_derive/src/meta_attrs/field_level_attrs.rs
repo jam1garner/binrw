@@ -30,10 +30,10 @@ pub(crate) struct FieldLevelAttrs {
     pub big: SpannedValue<bool>,
     pub is_big: Option<TokenStream>,
     pub is_little: Option<TokenStream>,
-    
+
     // assertions/error handling
     pub assert: Vec<Assert>,
-    
+
     // TODO: this
     pub magic: Option<Lit>,
     pub pad_before: Option<TokenStream>,
@@ -137,7 +137,7 @@ impl FieldLevelAttrs {
         } else {
             PassedArgs::List(args.unwrap_or_default())
         };
-        
+
         Ok(Self {
             little,
             big,
@@ -148,7 +148,7 @@ impl FieldLevelAttrs {
             restore_position,
             do_try,
             temp,
-            
+
             calc,
             count,
             offset,

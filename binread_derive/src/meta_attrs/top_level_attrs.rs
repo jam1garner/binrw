@@ -22,7 +22,7 @@ pub struct TopLevelAttrs {
     // endian
     pub little: SpannedValue<bool>,
     pub big: SpannedValue<bool>,
-    
+
     // assertions/error handling
     pub assert: Vec<Assert>,
     pub magic: Option<TokenStream>,
@@ -58,7 +58,7 @@ impl TopLevelAttrs {
         Ok(self)
     }
 
-    pub fn from_derive_input(input: &syn::DeriveInput) -> Result<Self, CompileError> { 
+    pub fn from_derive_input(input: &syn::DeriveInput) -> Result<Self, CompileError> {
         Self::from_attrs(&input.attrs)
     }
 

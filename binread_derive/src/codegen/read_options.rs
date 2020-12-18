@@ -239,9 +239,9 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
 fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) -> Result<TokenStream, CompileError> {
     let (field_attrs, (name, ty, struct_type))
         = (get_struct_field_attrs(&ds)?, get_struct_names_types(&ds));
-    
+
     let read_struct_body = generate_body(tla, &field_attrs, &name, ty)?;
-    
+
     let struct_name = input.ident.to_string();
     let struct_assertions = get_assertions(&tla.assert);
 
@@ -301,7 +301,7 @@ fn generate_body(
 
     let repeat_handle_error = iter::repeat(&handle_error);
     let repeat_handle_error2 = iter::repeat(&handle_error);
-    
+
     let maps = get_maps(&field_attrs);
     let names_after_ignores = ignore_names(&name, &field_attrs);
     let ty_after_ignores = ignore_types(&ty, &field_attrs);
@@ -310,7 +310,7 @@ fn generate_body(
         &field_attrs,
         quote!{}
     );
-    
+
     // Handle the actual conditions for if tags
     let (setup_possible_if, possible_if, possible_else, possible_some)
         = possible_if_else(&field_attrs, &name);
@@ -330,18 +330,18 @@ fn generate_body(
 
     Ok(quote!{
         let #arg_vars = #ARGS;
-        
+
         let #OPT = #top_level_option;
-        
+
         #magic_handler
 
         #(
             #save_position
             let #name_args = (#passed_args_closure).clone();
             let #name_options = #new_options;
-            
+
             #setup_possible_if
-            let #opt_mut #names_after_ignores: #ty_after_ignores = 
+            let #opt_mut #names_after_ignores: #ty_after_ignores =
                 #possible_if {
                     #seek_before
                     #skip_before
@@ -562,7 +562,7 @@ fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident
     } else {
         None
     };
-    
+
     let offset =
         field_attrs.offset
             .as_ref()
@@ -595,11 +595,11 @@ fn get_modified_options<'a, I: IntoIterator<Item = (IdentStr<'a>, TokenStream)>>
         quote!{
             &{
                 let mut temp = #OPT.clone();
-                
+
                 #(
                     temp.#ident = #expr;
                 )*
-                
+
                 temp
             }
         }
@@ -809,7 +809,7 @@ fn filter_by_ignore<'a, I>(field_attrs: &[FieldLevelAttrs], idents: I) -> Vec<To
 }
 
 fn possible_if_else(field_attrs: &[FieldLevelAttrs], idents: &[Ident]) -> (Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>) {
-    let (cond_eval, if_stmt) = 
+    let (cond_eval, if_stmt) =
         field_attrs
             .iter()
             .zip(get_name_modified(idents, "cond_evaluated"))
@@ -938,7 +938,7 @@ fn generate_skips(field_attrs: &[FieldLevelAttrs]) -> Skips {
             }}
         }));
     }
-    
+
     Skips {
         seek_before,
         skip_before,
@@ -977,7 +977,7 @@ fn save_restore_position(field_attrs: &[FieldLevelAttrs]) -> (Vec<TokenStream>, 
                     quote!{
                         let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error?;
                     },
-                    quote!{ 
+                    quote!{
                         #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))#handle_error?;
                     }
                 )

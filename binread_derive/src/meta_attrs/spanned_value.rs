@@ -18,7 +18,7 @@ impl<T> SpannedValue<T> {
 
 impl<T> std::ops::Deref for SpannedValue<T> {
     type Target = T;
-    
+
     fn deref(&self) -> &Self::Target {
         &self.value
     }
