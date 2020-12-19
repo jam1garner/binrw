@@ -32,6 +32,7 @@
 //! | [align_after](#padding-and-alignment) | fields | Skip to the next Nth byte after reading
 //! | [seek_before](#padding-and-alignment) | fields | Passes the given [`SeekFrom`](crate::io::SeekFrom) to [`Seek::seek`](crate::io::Seek::seek)
 //! | [pad_size_to](#padding-and-alignment) | fields | Ensures the cursor is at least N bytes after the starting position for this field
+//! | [repr](#repr) | enum-level | Specifies the underlying type for a unit-like (C-style) enum
 //! | [return_all_errors](#enum-errors) | enum-level | Use an error handling type in which enum failures return a [`Vec`](Vec) with an error for every variant
 //!
 //! # Byteorder
@@ -542,6 +543,23 @@
 //!
 //! **Note:** supports using previous fields
 //!
+//! # Repr
+//!
+//! When deriving binread on a unit-like (C-style) enum, this specifies the
+//! underlying type to use when reading the enum.
+//!
+//! # use binread::BinRead;
+//! #[derive(BinRead)]
+//! #[br(repr = i16)]
+//! enum FileKind {
+//!     Unknown = -1,
+//!     Text,
+//!     Archive,
+//!     Document,
+//!     Picture,
+//! }
+//! ```
+
 #![allow(unused_imports)]
 
 use crate::derive_binread;

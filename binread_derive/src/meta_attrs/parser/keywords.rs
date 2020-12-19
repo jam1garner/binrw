@@ -21,6 +21,7 @@ kws!{
     // top-level
     import,     // import(expr, ..)
     import_tuple, // import(expr)
+    repr,
     return_all_errors,
     return_unexpected_error,
 

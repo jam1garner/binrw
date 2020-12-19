@@ -45,6 +45,8 @@ test_tla!(parse_magic, "magic = 3u8");
 test_tla!(parse_magic_paren, "magic(2u16)");
 test_tla!(parse_import, "import(x: u32, y: &[f32])");
 test_tla!(parse_import_tuple, "import_tuple(args: (u32))");
+test_tla!(parse_repr, "repr = u8");
+test_tla!(parse_repr_paren, "repr(i32)");
 
 test_fla!(fla_little, "little");
 test_fla!(fla_magic, "magic = b\"TEST\"");
@@ -71,6 +73,8 @@ parse_ty!(meta_byte_lit, "magic = b\"TEST\"", MetaLit<kw::magic>);
 parse_ty!(meta_str_lit, "magic = \"string\"", MetaLit<kw::magic>);
 parse_ty!(meta_func_closure, "map = |x| x + 1", MetaFunc<kw::map>);
 parse_ty!(meta_func_path, "map = ToString::to_string", MetaFunc<kw::map>);
+parse_ty!(meta_ty, "repr = u8", MetaType<kw::repr>);
 
 parse_ty_fail!(meta_lit_panic, "= 3u8", MetaLit<kw::magic>);
 parse_ty_fail!(meta_lit_panic2, "test = 3u8", MetaLit<kw::magic>);
+parse_ty_fail!(meta_ty_panic, "repr = 3u8", MetaType<kw::repr>);

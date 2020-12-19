@@ -10,14 +10,14 @@ pub(crate) mod parse_any;
 
 pub(crate) use meta_types::*;
 use syn::parse::{Parse, ParseStream};
-use syn::{parenthesized, token, Ident, Token, Lit, Path, Expr};
+use syn::{parenthesized, token, Ident, Token, Type, Lit, Path, Expr};
 use syn::ExprClosure;
 use syn::punctuated::Punctuated;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
 
 // import, return_all_errors, return_unexpected_error, little, big, assert,
-// magic, pre_assert
+// magic, pre_assert, repr
 parse_any!{
     enum TopLevelAttr {
         // bool type
@@ -28,6 +28,9 @@ parse_any!{
 
         // lit assignment type
         Magic(MetaLit<kw::magic>),
+
+        // ty assignment type
+        Repr(Box<MetaType<kw::repr>>),
 
         // args type
         Import(MetaList<kw::import, ImportArg>),

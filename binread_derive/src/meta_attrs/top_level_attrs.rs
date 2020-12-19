@@ -13,6 +13,7 @@ pub struct TopLevelAttrs {
     //  Top-Only Attributes
     // ======================
     pub import: Imports, // Vec<Ident>, Vec<Type>
+    pub repr: Option<Type>,
     pub return_all_errors: SpannedValue<bool>,
     pub return_unexpected_error: SpannedValue<bool>,
 
@@ -102,6 +103,7 @@ impl TopLevelAttrs {
         let pre_asserts = get_tla_type!(attrs.PreAssert);
         let map = get_tla_type!(attrs.Map);
 
+        let repr = get_only_first(get_tla_type!(attrs.Repr), "Cannot define multiple repr values")?;
         let magic = get_only_first(magics, "Cannot define multiple magic values")?;
 
         check_mutually_exclusive(imports.clone(), import_tuples.clone(), "Cannot mix import and import_tuple")?;
@@ -117,6 +119,7 @@ impl TopLevelAttrs {
             magic: magic.map(magic_to_tokens),
             magic_type: magic.map(magic_to_type),
             import: convert_import(import, import_tuple).unwrap_or_default(),
+            repr: repr.map(|r| r.value.clone()),
             return_all_errors: first_span_true(return_all_errors),
             return_unexpected_error: first_span_true(return_unexpected_errors),
             pre_assert: pre_asserts.map(convert_assert).collect::<Result<_, _>>()?,

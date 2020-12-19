@@ -1,3 +1,4 @@
+use quote::ToTokens;
 use super::*;
 use super::super::PassedValues;
 
@@ -6,16 +7,25 @@ use super::super::PassedValues;
 /// * ident(expr)
 /// * ident = expr
 /// both are always allowed
+pub type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
+
+/// MetaType represents a key/ty pair
+/// Takes two forms:
+/// * ident(ty)
+/// * ident = ty
+/// both are always allowed
+pub type MetaType<Keyword> = MetaValue<Keyword, Type>;
+
 #[derive(Debug, Clone)]
-pub struct MetaExpr<Keyword: Parse> {
+pub struct MetaValue<Keyword: Parse, Value: Parse + ToTokens> {
     pub ident: Keyword,
-    pub expr: Expr,
+    pub value: Value,
 }
 
-impl<Keyword: Parse> Parse for MetaExpr<Keyword> {
+impl<Keyword: Parse, Value: Parse + ToTokens> Parse for MetaValue<Keyword, Value> {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let ident = input.parse()?;
-        let expr = if input.peek(token::Paren) {
+        let value = if input.peek(token::Paren) {
             let content;
             parenthesized!(content in input);
             content.parse()?
@@ -24,9 +34,9 @@ impl<Keyword: Parse> Parse for MetaExpr<Keyword> {
             input.parse()?
         };
 
-        Ok(MetaExpr {
+        Ok(MetaValue {
             ident,
-            expr
+            value,
         })
     }
 }
@@ -95,8 +105,6 @@ impl<Keyword: Parse> Parse for MetaLit<Keyword> {
     }
 }
 
-use quote::ToTokens;
-
 impl<Keyword: Parse> ToTokens for MetaLit<Keyword> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         self.lit.to_tokens(tokens);
@@ -107,9 +115,9 @@ impl<Keyword: Parse, ItemType: Parse> ToTokens for MetaList<Keyword, ItemType> {
     fn to_tokens(&self, _tokens: &mut proc_macro2::TokenStream) {}
 }
 
-impl<Keyword: Parse> ToTokens for MetaExpr<Keyword> {
+impl<Keyword: Parse, Value: Parse + ToTokens> ToTokens for MetaValue<Keyword, Value> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.expr.to_tokens(tokens);
+        self.value.to_tokens(tokens);
     }
 }
 
@@ -122,9 +130,9 @@ impl<Keyword: Parse> ToTokens for MetaFunc<Keyword> {
     }
 }
 
-impl<Keyword: Parse> MetaExpr<Keyword> {
+impl<Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
     pub fn get(&self) -> proc_macro2::TokenStream {
-        (&self.expr).into_token_stream()
+        (&self.value).into_token_stream()
     }
 }
 

@@ -43,34 +43,55 @@ fn magic_type_of(variant: &Variant) -> Option<(MagicType, TokenStream)> {
     Some((tla.magic_type?, tla.magic?))
 }
 
-fn generate_enum_match(variants: &Punctuated<Variant, Comma>) -> Option<TokenStream> {
-    let (magics, var_names) = if variants.iter().all(no_variant_data) {
-        let mut variants = variants.iter();
-        let variant = variants.next()?;
-        let (magic_type, magic) = magic_type_of(variant)?;
-        let mut magics = vec![magic];
-        let mut var_names = vec![variant.ident.clone()];
-        for v in variants {
-            let (m_ty, magic) = magic_type_of(&v)?;
-            if magic_type != m_ty {
-                return None
+fn generate_unit_enum(options: &TokenStream, repr: &Type, variants: &Punctuated<Variant, Comma>) -> TokenStream {
+    let clauses = variants
+        .iter()
+        .map(|variant| {
+            let ident = &variant.ident;
+            quote! {
+                if #TEMP == Self::#ident as #repr {
+                    Ok(Self::#ident)
+                }
             }
-            magics.push(magic);
-            var_names.push(v.ident.clone());
-        }
+        })
+        .collect::<Vec<_>>();
 
-        (magics, var_names)
-    } else {
-        return None
+    quote! {
+        let #OPT = #options;
+        let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+        let #TEMP: #repr = #READ_METHOD(#READER, #OPT, ())?;
+        #(#clauses else)* {
+            Err(#BIN_ERROR::NoVariantMatch {
+                pos: #SAVED_POSITION as _,
+            })
+        }
+    }
+}
+
+fn generate_magic_enum(options: &TokenStream, variants: &Punctuated<Variant, Comma>) -> Option<TokenStream> {
+    let mut variants = variants.iter();
+    let variant = variants.next()?;
+    let (magic_type, magic) = magic_type_of(variant)?;
+    let mut magics = vec![magic];
+    let mut var_names = vec![variant.ident.clone()];
+    for v in variants {
+        let (m_ty, magic) = magic_type_of(&v)?;
+        if magic_type != m_ty {
+            return None
+        }
+        magics.push(magic);
+        var_names.push(v.ident.clone());
     };
 
     Some(quote!{
+        let #OPT = #options;
+        let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
         Ok(match #READ_METHOD(#READER, #OPT, ())? {
             #(
                 #magics => Self::#var_names,
             )*
             _ => return Err(#BIN_ERROR::NoVariantMatch {
-                pos: #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))? as _
+                pos: #SAVED_POSITION as _
             })
         })
     })
@@ -86,10 +107,21 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Res
         SpanError::err(en.brace_token.span, "Cannot construct an enum with no variants")?;
     }
 
-    if let Some(enum_match) = generate_enum_match(&en.variants) {
-        return Ok(enum_match)
+    if en.variants.iter().all(no_variant_data) {
+        let options = get_top_level_binread_options(&tla);
+        if let Some(repr) = &tla.repr {
+            Ok(generate_unit_enum(&options, repr, &en.variants))
+        } else if let Some(enum_match) = generate_magic_enum(&options, &en.variants) {
+            Ok(enum_match)
+        } else {
+            SpanError::err(en.enum_token.span, "Cannot construct a unit-type enum with no repr and no variant magic")?
+        }
+    } else {
+        generate_data_enum(input, tla, en)
     }
+}
 
+fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Result<TokenStream, CompileError> {
     // return_all_errors is default behavior
     let return_all_errors = !*tla.return_unexpected_error;
 
