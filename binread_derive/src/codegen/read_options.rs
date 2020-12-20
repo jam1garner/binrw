@@ -379,12 +379,13 @@ fn generate_body(
                     #skip_before
                     #align_before
                     #pad_size_to_prep
+                    let __binread_temp = #possible_try_conversion(#repeat_read_method_ident(
+                        #repeat_reader_ident, #name_options, (#name_args).clone()
+                    ))#repeat_handle_error?;
                     let __binread_temp = #possible_some(
                         #after_parse_applier(
                             #possible_immediate_derefs,
-                            #maps(#possible_try_conversion(#repeat_read_method_ident(
-                                #repeat_reader_ident, #name_options, (#name_args).clone()
-                            ))#repeat_handle_error?),
+                            #maps,
                             #repeat_reader_ident,
                             #name_options,
                             #name_args.clone(),
@@ -762,14 +763,25 @@ fn write_end_struct() -> TokenStream {
     }
 }
 
-fn get_maps(field_attrs: &[FieldLevelAttrs]) -> Vec<Option<TokenStream>> {
+fn get_maps(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
     field_attrs
         .iter()
         .map(|field_attrs| {
-            field_attrs.map
-                .as_ref()
-                .map(|x| Some(quote!{ (#x) }))
-                .unwrap_or_else(|| None)
+            if let Some(try_map) = &field_attrs.try_map {
+                quote!{ {
+                    let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+                    (#try_map)(__binread_temp).map_err(|e| {
+                        #BIN_ERROR::Custom {
+                            pos: #SAVED_POSITION as _,
+                            err: Box::new(e) as _
+                        }
+                    })?
+                } }
+            } else if let Some(map) = &field_attrs.map {
+                quote!{ (#map)(__binread_temp) }
+            } else {
+                quote!{ __binread_temp }
+            }
         })
         .collect()
 }

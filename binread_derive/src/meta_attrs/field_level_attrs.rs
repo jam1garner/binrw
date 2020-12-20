@@ -9,6 +9,7 @@ pub(crate) struct FieldLevelAttrs {
     // ======================
     pub args: PassedArgs,
     pub map: Option<TokenStream>,
+    pub try_map: Option<TokenStream>,
     pub ignore: bool,
     pub default: bool,
     pub calc: Option<TokenStream>,
@@ -87,6 +88,10 @@ impl FieldLevelAttrs {
 
         // func assignment type
         let map = get_fla_type!(attrs.Map);
+        let try_map = get_fla_type!(attrs.TryMap);
+
+        check_mutually_exclusive(map.clone(), try_map.clone(), "Conflicting instances of map and try_map")?;
+
         let parse_with = get_fla_type!(attrs.ParseWith);
 
         // lit assignment type
@@ -128,8 +133,8 @@ impl FieldLevelAttrs {
 
         only_first!(
             pad_before, pad_after, align_before, align_after, seek_before, pad_size_to,
-            calc, count, is_little, is_big, offset, offset_after, if_cond, map, magic,
-            parse_with, args, args_tuple
+            calc, count, is_little, is_big, offset, offset_after, if_cond, map,
+            try_map, magic, parse_with, args, args_tuple
         );
 
         let args = if let Some(arg) = args_tuple {
@@ -165,6 +170,7 @@ impl FieldLevelAttrs {
 
             parse_with,
             map,
+            try_map,
             args,
             assert: asserts.map(convert_assert).collect::<Result<_, _>>()?,
             magic,

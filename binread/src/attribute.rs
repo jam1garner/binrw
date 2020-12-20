@@ -11,6 +11,7 @@
 //! | [magic](#magic) | top-level | At the start of parsing read a value and make sure it is equivalent to a constant value
 //! | [pre_assert](#pre-assert) | top-level, variant | Similar to assert, but checks the condition before parsing.
 //! | [import](#arguments) | top-level | Define the arguments for parsing the given type
+//! | [try_map](#map) | fields | Read a type from the reader and then apply a function, which may fail, to map it to the type to store in the struct.
 //! | [args](#arguments) | fields | Pass a set of arguments.
 //! | [default](#default) | fields | Set a field to the default value for the type
 //! | [ignore](#default) | fields | An alias for `default`
@@ -324,6 +325,22 @@
 //!
 //! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().int_str, "0");
 //! ```
+//!
+//! If the conversion is fallible, use `try_map` instead:
+//!
+//! ```rust
+//! # use binread::{prelude::*, io::Cursor};
+//! # use std::convert::TryInto;
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     #[br(try_map = |x: i8| x.try_into())]
+//!     value: u8
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().value, 0);
+//! # assert!(Cursor::new(b"\xff").read_be::<MyType>().is_err());
+//! ```
+//!
 //! **Note:** supports using previous fields (if you use a closure)
 //!
 //! ## Map For Bitfields

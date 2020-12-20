@@ -52,6 +52,7 @@ test_fla!(fla_little, "little");
 test_fla!(fla_magic, "magic = b\"TEST\"");
 test_fla!(fla_if, "if(x == 1)");
 test_fla!(fla_map, "map = |val: u32| val.to_string()");
+test_fla!(fla_try_map, "try_map = |val: i32| val.try_into()");
 test_fla!(fla_seek_before, "seek_before(SeekFrom::Current(4))");
 test_fla!(fla_parse_with, "parse_with = read_offsets");
 test_fla!(fla_ignore, "ignore");

@@ -27,6 +27,7 @@ kws!{
 
     // field-level
     map,        // map = [func]
+    try_map,    // try_map = [func]
     parse_with, // parse_with = [func]
     calc,       // calc = [expr]
     count,      // count = [expr]

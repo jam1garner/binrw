@@ -61,6 +61,7 @@ parse_any!{
 
         // func assignment type
         Map(MetaFunc<kw::map>),
+        TryMap(MetaFunc<kw::try_map>),
         ParseWith(MetaFunc<kw::parse_with>),
 
         // lit assignment type
