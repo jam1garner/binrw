@@ -334,7 +334,7 @@ fn generate_body(
     let repeat_handle_error = iter::repeat(&handle_error);
     let repeat_handle_error2 = iter::repeat(&handle_error);
 
-    let maps = get_maps(&field_attrs);
+    let maps = get_maps(&field_attrs, &ty);
     let names_after_ignores = ignore_names(&name, &field_attrs);
     let ty_after_ignores = ignore_types(&ty, &field_attrs);
     let opt_mut = ignore_filter(
@@ -763,22 +763,27 @@ fn write_end_struct() -> TokenStream {
     }
 }
 
-fn get_maps(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
+fn get_maps(field_attrs: &[FieldLevelAttrs], types: &[&Type]) -> Vec<TokenStream> {
     field_attrs
         .iter()
-        .map(|field_attrs| {
+        .zip(types.iter())
+        .map(|(field_attrs, ty)| {
             if let Some(try_map) = &field_attrs.try_map {
                 quote!{ {
                     let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
-                    (#try_map)(__binread_temp).map_err(|e| {
+                    let __binread_try_map: fn(_) -> ::core::result::Result<#ty, _> = #try_map;
+                    (__binread_try_map)(__binread_temp).map_err(|e| {
                         #BIN_ERROR::Custom {
                             pos: #SAVED_POSITION as _,
-                            err: Box::new(e) as _
+                            err: Box::new(e) as _,
                         }
                     })?
                 } }
             } else if let Some(map) = &field_attrs.map {
-                quote!{ (#map)(__binread_temp) }
+                quote!{ {
+                    let __binread_map: fn(_) -> #ty = #map;
+                    (__binread_map)(__binread_temp)
+                } }
             } else {
                 quote!{ __binread_temp }
             }
