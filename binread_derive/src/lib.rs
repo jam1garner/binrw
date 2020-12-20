@@ -17,12 +17,12 @@ use meta_attrs::FieldLevelAttrs;
 use proc_macro2::TokenStream as TokenStream2;
 use compiler_error::{CompileError, SpanError};
 
-fn generate_derive(input: DeriveInput, code: codegen::GeneratedCode) -> TokenStream {
+fn generate_derive(input: &DeriveInput, code: codegen::GeneratedCode) -> TokenStream {
     let codegen::GeneratedCode {
         read_opt_impl, after_parse_impl, arg_type
     } = code;
 
-    let name = input.ident;
+    let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     quote!(
         #[allow(warnings)]
@@ -52,7 +52,7 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
 
     match codegen::generate(&input) {
         Ok(code) => {
-            generate_derive(input, code)
+            generate_derive(&input, code)
         }
         Err(err) => {
             let error = match err {
@@ -66,7 +66,7 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
                 CompileError::Syn(syn_err) => syn_err.to_compile_error()
 
             };
-            generate_derive(input, codegen::GeneratedCode::new(
+            generate_derive(&input, codegen::GeneratedCode::new(
                 quote!(todo!()),
                 error,
                 quote!(())
@@ -111,7 +111,7 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
 
     let derive: TokenStream2 = match codegen::generate(&input) {
         Ok(code) => {
-            generate_derive(input.clone(), code)
+            generate_derive(&input, code)
         }
         Err(err) => {
             let error = match err {
@@ -125,7 +125,7 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
                 CompileError::Syn(syn_err) => syn_err.to_compile_error()
 
             };
-            generate_derive(input.clone(), codegen::GeneratedCode::new(
+            generate_derive(&input, codegen::GeneratedCode::new(
                 quote!(todo!()),
                 error,
                 quote!(())
