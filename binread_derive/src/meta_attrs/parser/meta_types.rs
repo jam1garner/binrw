@@ -16,6 +16,20 @@ pub type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
 /// both are always allowed
 pub type MetaType<Keyword> = MetaValue<Keyword, Type>;
 
+/// MetaLit represents a key/lit pair
+/// Takes two forms:
+/// * ident(lit)
+/// * ident = lit
+/// both are always allowed
+pub type MetaLit<Keyword> = MetaValue<Keyword, Lit>;
+
+/// MetaFunc represents a key/fn pair
+/// Takes two forms:
+/// * ident(fn)
+/// * ident = fn
+/// both are always allowed
+pub type MetaFunc<Keyword> = MetaValue<Keyword, MetaFuncExpr>;
+
 #[derive(Debug, Clone)]
 pub struct MetaValue<Keyword: Parse, Value: Parse + ToTokens> {
     pub ident: Keyword,
@@ -41,7 +55,11 @@ impl<Keyword: Parse, Value: Parse + ToTokens> Parse for MetaValue<Keyword, Value
     }
 }
 
-type EqToken = Token![=];
+impl<Keyword: Parse, Value: Parse + ToTokens> ToTokens for MetaValue<Keyword, Value> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.value.to_tokens(tokens);
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct MetaList<Keyword: Parse, ItemType: Parse> {
@@ -63,88 +81,13 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct MetaFunc<Keyword: Parse> {
-    pub ident: Keyword,
-    pub eq: EqToken,
-    pub func: MetaFuncExpr,
-}
-
-impl<Keyword: Parse> Parse for MetaFunc<Keyword> {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(MetaFunc {
-            ident: input.parse()?,
-            eq: input.parse()?,
-            func: input.parse()?
-        })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct MetaLit<Keyword: Parse> {
-    pub ident: Keyword,
-    pub lit: Lit,
-}
-
-impl<Keyword: Parse> Parse for MetaLit<Keyword> {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let ident = input.parse()?;
-        let lit = if input.peek(token::Paren) {
-            let content;
-            parenthesized!(content in input);
-            content.parse()?
-        } else {
-            input.parse::<Token![=]>()?;
-            input.parse()?
-        };
-
-        Ok(MetaLit {
-            ident,
-            lit
-        })
-    }
-}
-
-impl<Keyword: Parse> ToTokens for MetaLit<Keyword> {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.lit.to_tokens(tokens);
-    }
-}
-
 impl<Keyword: Parse, ItemType: Parse> ToTokens for MetaList<Keyword, ItemType> {
     fn to_tokens(&self, _tokens: &mut proc_macro2::TokenStream) {}
-}
-
-impl<Keyword: Parse, Value: Parse + ToTokens> ToTokens for MetaValue<Keyword, Value> {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.value.to_tokens(tokens);
-    }
-}
-
-impl<Keyword: Parse> ToTokens for MetaFunc<Keyword> {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        match &self.func {
-            MetaFuncExpr::Path(p) => p.to_tokens(tokens),
-            MetaFuncExpr::Closure(c) => c.to_tokens(tokens)
-        }
-    }
 }
 
 impl<Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
     pub fn get(&self) -> proc_macro2::TokenStream {
         (&self.value).into_token_stream()
-    }
-}
-
-impl<Keyword: Parse> MetaFunc<Keyword> {
-    pub fn get(&self) -> proc_macro2::TokenStream {
-        self.into_token_stream()
-    }
-}
-
-impl<Keyword: Parse> MetaLit<Keyword> {
-    pub fn get(&self) -> Lit {
-        self.lit.clone()
     }
 }
 

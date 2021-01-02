@@ -97,6 +97,14 @@ parse_any!{
     }
 }
 
+impl ToTokens for MetaFuncExpr {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            Self::Path(p) => p.to_tokens(tokens),
+            Self::Closure(c) => c.to_tokens(tokens),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ImportArg {

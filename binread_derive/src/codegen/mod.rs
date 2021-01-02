@@ -1,44 +1,24 @@
 pub(crate) mod sanitization;
 mod read_options;
-mod after_parse;
-mod arg_type;
 
 use proc_macro2::TokenStream;
-use crate::{
-    meta_attrs::TopLevelAttrs,
-    compiler_error::{CompileError, SpanError}
-};
+use syn::Error;
+use crate::meta_attrs::TopLevelAttrs;
 
-pub fn generate(input: &syn::DeriveInput) -> Result<GeneratedCode, CompileError> {
+pub fn generate(input: &syn::DeriveInput) -> syn::Result<GeneratedCode> {
     if let syn::Data::Union(ref union) = input.data {
-        SpanError::err(union.union_token.span, "Unions not supported")?
+        return Err(Error::new(union.union_token.span, "Unions are not supported"));
     }
 
-    let tla = TopLevelAttrs::from_derive_input(input)?.finalize()?;
+    let tla = TopLevelAttrs::from_attrs(&input.attrs)?.finalize()?;
 
     Ok(GeneratedCode {
-        arg_type: arg_type::generate(&tla)?,
+        arg_type: tla.import.types(),
         read_opt_impl: read_options::generate(input, &tla)?,
-        after_parse_impl: after_parse::generate(input, &tla)?,
     })
 }
 
 pub struct GeneratedCode {
     pub read_opt_impl: TokenStream,
-    pub after_parse_impl: TokenStream,
     pub arg_type: TokenStream
-}
-
-impl GeneratedCode {
-    pub fn new<T1, T2, T3>(read_opt_impl: T1, after_parse_impl: T2, arg_type: T3) -> Self
-        where T1: Into<TokenStream>,
-              T2: Into<TokenStream>,
-              T3: Into<TokenStream>
-    {
-        Self {
-            read_opt_impl: read_opt_impl.into(),
-            after_parse_impl: after_parse_impl.into(),
-            arg_type: arg_type.into()
-        }
-    }
 }

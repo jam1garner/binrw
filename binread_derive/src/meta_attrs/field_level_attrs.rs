@@ -1,6 +1,5 @@
 use super::*;
 use super::parser::{FieldLevelAttr, MetaAttrList};
-use crate::CompileError;
 
 #[derive(Debug, Default)]
 pub(crate) struct FieldLevelAttrs {
@@ -36,7 +35,7 @@ pub(crate) struct FieldLevelAttrs {
     pub assert: Vec<Assert>,
 
     // TODO: this
-    pub magic: Option<Lit>,
+    pub magic: Option<TokenStream>,
     pub pad_before: Option<TokenStream>,
     pub pad_after: Option<TokenStream>,
     pub align_before: Option<TokenStream>,
@@ -64,13 +63,13 @@ macro_rules! get_fla_type {
 type FlaList = MetaAttrList<FieldLevelAttr>;
 
 impl FieldLevelAttrs {
-    pub fn from_field(field: &syn::Field) -> Result<Self, CompileError> {
+    pub fn from_field(field: &syn::Field) -> syn::Result<Self> {
         let attrs: Vec<FieldLevelAttr> =
             field.attrs
                 .iter()
                 .filter(|x| x.path.is_ident("br") || x.path.is_ident("binread"))
                 .map(flas_from_attribute)
-                .collect::<Result<Vec<FlaList>, CompileError>>()?
+                .collect::<syn::Result<Vec<FlaList>>>()?
                 .into_iter()
                 .flat_map(|x| x.0.into_iter())
                 .collect();
@@ -178,6 +177,6 @@ impl FieldLevelAttrs {
     }
 }
 
-fn flas_from_attribute(attr: &syn::Attribute) -> Result<FlaList, CompileError> {
-    Ok(syn::parse2(attr.tokens.clone())?)
+fn flas_from_attribute(attr: &syn::Attribute) -> syn::Result<FlaList> {
+    syn::parse2(attr.tokens.clone())
 }

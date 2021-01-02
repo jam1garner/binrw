@@ -8,14 +8,12 @@ use crate::{
         PassedArgs
     },
     codegen::sanitization::*,
-    compiler_error::SpanError,
-    CompileError
 };
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
 use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
 
-pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> Result<TokenStream, CompileError> {
+pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> syn::Result<TokenStream> {
     if let Some(map) = &tla.map {
         Ok(quote!(
             #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
@@ -97,14 +95,14 @@ fn generate_magic_enum(options: &TokenStream, variants: &Punctuated<Variant, Com
     })
 }
 
-fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Result<TokenStream, CompileError> {
+fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn::Result<TokenStream> {
     if *tla.return_all_errors && *tla.return_unexpected_error {
         let span = tla.return_all_errors.span().join(tla.return_unexpected_error.span()).unwrap();
-        SpanError::err(span, "Must only select a single enum error return type")?;
+        return Err(syn::Error::new(span, "Must only select a single enum error return type"));
     }
 
     if en.variants.is_empty() {
-        SpanError::err(en.brace_token.span, "Cannot construct an enum with no variants")?;
+        return Err(syn::Error::new(en.brace_token.span, "Cannot construct an enum with no variants"));
     }
 
     if en.variants.iter().all(no_variant_data) {
@@ -114,14 +112,14 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Res
         } else if let Some(enum_match) = generate_magic_enum(&options, &en.variants) {
             Ok(enum_match)
         } else {
-            SpanError::err(en.enum_token.span, "Cannot construct a unit-type enum with no repr and no variant magic")?
+            Err(syn::Error::new(en.enum_token.span, "Cannot construct a unit-type enum with no repr and no variant magic"))
         }
     } else {
         generate_data_enum(input, tla, en)
     }
 }
 
-fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> Result<TokenStream, CompileError> {
+fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn::Result<TokenStream> {
     // return_all_errors is default behavior
     let return_all_errors = !*tla.return_unexpected_error;
 
@@ -204,7 +202,7 @@ fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -
 }
 
 fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Variant)
-    -> Result<TokenStream, CompileError>
+    -> syn::Result<TokenStream>
 {
     let tla = merge_tlas(tla, TopLevelAttrs::from_variant(variant)?)?;
 
@@ -234,7 +232,7 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
     })
 }
 
-fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<TopLevelAttrs, CompileError> {
+fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> syn::Result<TopLevelAttrs> {
     let mut out = top_level.clone();
 
     let variant_level = enum_level.finalize()?;
@@ -244,12 +242,12 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
     }
 
     if *variant_level.return_all_errors || *variant_level.return_unexpected_error {
-        SpanError::err(
+        return Err(syn::Error::new(
             variant_level.return_unexpected_error.span()
                 .join(variant_level.return_all_errors.span())
                 .unwrap(),
             "Cannot specify error return type at variant level."
-        )?
+        ));
     }
 
     if !variant_level.import.is_empty() {
@@ -268,7 +266,7 @@ fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> Result<To
 
 // TODO: replace all functions that are only passed tla with a method on TopLevelAttrs
 
-fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) -> Result<TokenStream, CompileError> {
+fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) -> syn::Result<TokenStream> {
     let (field_attrs, (name, ty, struct_type))
         = (get_struct_field_attrs(&ds)?, get_struct_names_types(&ds));
 
@@ -305,7 +303,7 @@ fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) ->
 
 fn generate_body(
         tla: &TopLevelAttrs, field_attrs: &[FieldLevelAttrs], name: &[Ident], ty: Vec<&Type>
-    ) -> Result<TokenStream, CompileError>
+    ) -> syn::Result<TokenStream>
 {
     let count = name.len();
     let arg_vars = tla.import.idents();
@@ -521,18 +519,18 @@ fn get_name_modified(idents: &[Ident], append: &str) -> Vec<Ident> {
         .collect()
 }
 
-fn get_field_attrs<'a, I>(fields: I) -> Result<Vec<FieldLevelAttrs>, CompileError>
+fn get_field_attrs<'a, I>(fields: I) -> syn::Result<Vec<FieldLevelAttrs>>
     where I: IntoIterator<Item = &'a Field>
 {
     Ok(
         fields
             .into_iter()
             .map(FieldLevelAttrs::from_field)
-            .collect::<Result<_, _>>()?
+            .collect::<syn::Result<_>>()?
     )
 }
 
-fn get_struct_field_attrs(input: &DataStruct) -> Result<Vec<FieldLevelAttrs>, CompileError> {
+fn get_struct_field_attrs(input: &DataStruct) -> syn::Result<Vec<FieldLevelAttrs>> {
     match input.fields {
         syn::Fields::Named(ref fields) => get_field_attrs(fields.named.iter()),
         syn::Fields::Unnamed(ref fields) => get_field_attrs(fields.unnamed.iter()),

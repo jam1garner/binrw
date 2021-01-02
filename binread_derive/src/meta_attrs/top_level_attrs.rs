@@ -2,7 +2,6 @@ use super::*;
 use super::parser::{TopLevelAttr, MetaAttrList, MetaList, MetaLit};
 use syn::spanned::Spanned;
 use syn::parse::Parse;
-use crate::CompileError;
 use quote::ToTokens;
 use super::parser::ImportArg;
 use crate::meta_attrs::parser::ImportArgTuple;
@@ -48,32 +47,28 @@ macro_rules! get_tla_type {
 }
 
 impl TopLevelAttrs {
-    pub fn finalize(self) -> Result<Self, SpanError> {
+    pub fn finalize(self) -> syn::Result<Self> {
         if *self.big && *self.little {
-            SpanError::err(
+            return Err(syn::Error::new(
                 self.big.span().join(self.little.span()).unwrap(),
                 "Cannot set endian to both big and little endian"
-            )?;
+            ));
         }
 
         Ok(self)
     }
 
-    pub fn from_derive_input(input: &syn::DeriveInput) -> Result<Self, CompileError> {
+    pub fn from_variant(input: &syn::Variant) -> syn::Result<Self> {
         Self::from_attrs(&input.attrs)
     }
 
-    pub fn from_variant(input: &syn::Variant) -> Result<Self, CompileError> {
-        Self::from_attrs(&input.attrs)
-    }
-
-    pub fn from_attrs(attrs: &[syn::Attribute]) -> Result<Self, CompileError> {
+    pub fn from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
         let attrs: Vec<TopLevelAttr> =
             attrs
                 .iter()
                 .filter(|x| x.path.is_ident("br") || x.path.is_ident("binread"))
                 .map(tlas_from_attribute)
-                .collect::<Result<Vec<TlaList>, CompileError>>()?
+                .collect::<Result<Vec<TlaList>, syn::Error>>()?
                 .into_iter()
                 .flat_map(|x| x.0.into_iter())
                 .collect();
@@ -81,7 +76,7 @@ impl TopLevelAttrs {
         Self::from_top_level_attrs(attrs)
     }
 
-    pub fn from_top_level_attrs(attrs: Vec<TopLevelAttr>) -> Result<Self, CompileError> {
+    pub fn from_top_level_attrs(attrs: Vec<TopLevelAttr>) -> syn::Result<Self> {
         let bigs = get_tla_type!(attrs.Big);
         let littles = get_tla_type!(attrs.Little);
 
@@ -129,7 +124,7 @@ impl TopLevelAttrs {
 }
 
 fn magic_to_type(magic: &MetaLit<impl syn::parse::Parse>) -> MagicType {
-    let magic = &magic.lit;
+    let magic = &magic.value;
     match magic {
         Lit::Str(_) => MagicType::Str,
         Lit::ByteStr(_) => MagicType::ByteStr,
@@ -143,7 +138,7 @@ fn magic_to_type(magic: &MetaLit<impl syn::parse::Parse>) -> MagicType {
 }
 
 fn magic_to_tokens(magic: &MetaLit<impl syn::parse::Parse>) -> TokenStream {
-    let magic = &magic.lit;
+    let magic = &magic.value;
     if let Lit::Str(_) | Lit::ByteStr(_) = magic {
         quote::quote!{
             *#magic
@@ -171,7 +166,7 @@ fn convert_import<K: Parse>(import: Option<&MetaList<K, ImportArg>>, import_tupl
     }
 }
 
-fn join_spans_err<'a, Iter1, Iter2, S1, S2>(s1: Iter1, s2: Iter2, msg: impl Into<String>) -> Result<TopLevelAttrs, CompileError>
+fn join_spans_err<'a, Iter1, Iter2, S1, S2>(s1: Iter1, s2: Iter2, msg: impl Into<String>) -> syn::Result<TopLevelAttrs>
     where Iter1: Iterator<Item = &'a S1>,
           Iter2: Iterator<Item = &'a S2>,
           S1: Spanned + 'a,
@@ -181,14 +176,14 @@ fn join_spans_err<'a, Iter1, Iter2, S1, S2>(s1: Iter1, s2: Iter2, msg: impl Into
     let first = spans.next().unwrap();
     let span = spans.fold(first, |x, y| x.join(y).unwrap());
 
-    Err(CompileError::SpanError(SpanError::new(
+    Err(syn::Error::new(
         span,
-        msg
-    )))
+        msg.into()
+    ))
 }
 
 type TlaList = MetaAttrList<TopLevelAttr>;
 
-fn tlas_from_attribute(attr: &syn::Attribute) -> Result<TlaList, CompileError> {
+fn tlas_from_attribute(attr: &syn::Attribute) -> syn::Result<TlaList> {
     Ok(syn::parse2(attr.tokens.clone())?)
 }

@@ -7,7 +7,6 @@ pub(crate) use field_level_attrs::FieldLevelAttrs;
 pub(crate) use spanned_value::SpannedValue;
 
 use proc_macro2::TokenStream;
-use crate::compiler_error::{CompileError, SpanError};
 use syn::{Expr, Ident, Lit, parse::Parse, Type, spanned::Spanned};
 use quote::ToTokens;
 
@@ -101,7 +100,7 @@ pub enum MagicType {
     Verbatim
 }
 
-fn check_mutually_exclusive<'a, S1, S2, Iter1, Iter2>(a: Iter1, b: Iter2, msg: impl Into<String>) -> Result<(), CompileError>
+fn check_mutually_exclusive<'a, S1, S2, Iter1, Iter2>(a: Iter1, b: Iter2, msg: impl Into<String>) -> syn::Result<()>
     where S1: Spanned + 'a,
           S2: Spanned + 'a,
           Iter1: Iterator<Item = &'a S1>,
@@ -114,16 +113,16 @@ fn check_mutually_exclusive<'a, S1, S2, Iter1, Iter2>(a: Iter1, b: Iter2, msg: i
         let first = spans.next().unwrap();
         let span = spans.fold(first, |x, y| x.join(y).unwrap());
 
-        Err(CompileError::SpanError(SpanError::new(
+        Err(syn::Error::new(
             span,
-            msg
-        )))
+            msg.into()
+        ))
     } else {
         Ok(())
     }
 }
 
-fn convert_assert<K>(assert: &MetaList<K, Expr>) -> Result<Assert, CompileError>
+fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Assert>
     where K: Parse + Spanned,
 {
     let (cond, err) = match assert.fields[..] {
@@ -133,10 +132,10 @@ fn convert_assert<K>(assert: &MetaList<K, Expr>) -> Result<Assert, CompileError>
         [ref cond, ref err] => {
             (cond, Some(err))
         }
-        _ => return SpanError::err(
+        _ => return Err(syn::Error::new(
             assert.ident.span(),
             ""
-        ).map_err(Into::into),
+        ))
     };
 
     Ok(Assert(
@@ -156,7 +155,7 @@ fn first_span_true(mut vals: impl Iterator<Item = impl Spanned>) -> SpannedValue
     }
 }
 
-fn get_only_first<'a, S: Spanned>(list: impl Iterator<Item = &'a S>, msg: impl Into<String>) -> Result<Option<&'a S>, CompileError> {
+fn get_only_first<'a, S: Spanned>(list: impl Iterator<Item = &'a S>, msg: impl Into<String>) -> syn::Result<Option<&'a S>> {
     let mut list = list.peekable();
     let first = list.next();
 
@@ -164,9 +163,9 @@ fn get_only_first<'a, S: Spanned>(list: impl Iterator<Item = &'a S>, msg: impl I
         Ok(first)
     } else {
         let span = list.map(Spanned::span).fold(Spanned::span(first.unwrap()), |x, y| x.join(y).unwrap());
-        Err(CompileError::SpanError(SpanError::new(
+        Err(syn::Error::new(
             span,
-            msg
-        )))
+            msg.into()
+        ))
     }
 }
