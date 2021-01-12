@@ -18,7 +18,7 @@ use quote::ToTokens;
 
 // import, return_all_errors, return_unexpected_error, little, big, assert,
 // magic, pre_assert, repr
-parse_any!{
+parse_any! {
     enum TopLevelAttr {
         // bool type
         Big(kw::big),
@@ -33,7 +33,7 @@ parse_any!{
         Repr(Box<MetaType<kw::repr>>),
 
         // args type
-        Import(MetaList<kw::import, ImportArg>),
+        Import(MetaList<kw::import, IdentPatType>),
         ImportTuple(Box<ImportArgTuple>),
         Assert(MetaList<kw::assert, Expr>),
         PreAssert(MetaList<kw::pre_assert, Expr>),
@@ -46,7 +46,7 @@ parse_any!{
 // assert, magic, pad_before, pad_after, align_before, align_after, seek_before,
 // pad_size_to, parse_with
 
-parse_any!{
+parse_any! {
     enum FieldLevelAttr {
         // bool type
         Big(kw::big),
@@ -90,7 +90,7 @@ parse_any!{
     }
 }
 
-parse_any!{
+parse_any! {
     enum MetaFuncExpr {
         Path(Path),
         Closure(ExprClosure)
@@ -106,18 +106,22 @@ impl ToTokens for MetaFuncExpr {
     }
 }
 
+// This is like `syn::PatType` except:
+// (1) Implements `Parse`;
+// (2) No attributes;
+// (3) Only allows an ident on the LHS instead of any `syn::Pat`.
 #[derive(Debug, Clone)]
-pub struct ImportArg {
+pub struct IdentPatType {
     pub ident: Ident,
-    pub colon: Token![:],
-    pub ty: syn::Type,
+    pub colon_token: Token![:],
+    pub ty: syn::Type
 }
 
-impl Parse for ImportArg {
+impl Parse for IdentPatType {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(ImportArg {
+        Ok(IdentPatType {
             ident: input.parse()?,
-            colon: input.parse()?,
+            colon_token: input.parse()?,
             ty: input.parse()?
         })
     }
@@ -127,7 +131,7 @@ impl Parse for ImportArg {
 pub struct ImportArgTuple {
     pub ident: kw::import_tuple,
     pub parens: token::Paren,
-    pub arg: ImportArg
+    pub arg: IdentPatType
 }
 
 impl Parse for ImportArgTuple {

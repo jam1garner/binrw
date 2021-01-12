@@ -3,7 +3,7 @@ use super::parser::{TopLevelAttr, MetaAttrList, MetaList, MetaLit};
 use syn::spanned::Spanned;
 use syn::parse::Parse;
 use quote::ToTokens;
-use super::parser::ImportArg;
+use super::parser::IdentPatType;
 use crate::meta_attrs::parser::ImportArgTuple;
 
 #[derive(Debug, Clone)]
@@ -11,7 +11,7 @@ pub struct TopLevelAttrs {
     // ======================
     //  Top-Only Attributes
     // ======================
-    pub import: Imports, // Vec<Ident>, Vec<Type>
+    pub import: Imports,
     pub repr: Option<Type>,
     pub return_all_errors: SpannedValue<bool>,
     pub return_unexpected_error: SpannedValue<bool>,
@@ -148,7 +148,7 @@ fn magic_to_tokens(magic: &MetaLit<impl syn::parse::Parse>) -> TokenStream {
     }
 }
 
-fn convert_import<K: Parse>(import: Option<&MetaList<K, ImportArg>>, import_tuple: Option<impl AsRef<ImportArgTuple>>) -> Option<Imports> {
+fn convert_import<K: Parse>(import: Option<&MetaList<K, IdentPatType>>, import_tuple: Option<impl AsRef<ImportArgTuple>>) -> Option<Imports> {
     if let Some(tuple) = import_tuple {
         let tuple = tuple.as_ref();
         Some(Imports::Tuple(tuple.arg.ident.clone(), tuple.arg.ty.clone().into()))

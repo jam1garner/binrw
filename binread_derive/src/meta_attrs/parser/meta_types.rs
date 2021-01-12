@@ -61,11 +61,13 @@ impl<Keyword: Parse, Value: Parse + ToTokens> ToTokens for MetaValue<Keyword, Va
     }
 }
 
+type Fields<T> = Punctuated<T, Token![,]>;
+
 #[derive(Debug, Clone)]
 pub struct MetaList<Keyword: Parse, ItemType: Parse> {
     pub ident: Keyword,
     pub parens: token::Paren,
-    pub fields: Vec<ItemType>,
+    pub fields: Fields<ItemType>,
 }
 
 impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
@@ -76,7 +78,7 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
         Ok(MetaList {
             ident,
             parens,
-            fields: content.parse_terminated::<_, Token![,]>(ItemType::parse)?.into_iter().collect()
+            fields: content.parse_terminated::<_, Token![,]>(ItemType::parse)?
         })
     }
 }

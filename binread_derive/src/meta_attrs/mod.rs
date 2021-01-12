@@ -15,11 +15,14 @@ use self::parser::MetaList;
 #[derive(Debug, Clone)]
 pub struct Assert(pub TokenStream, pub Option<TokenStream>);
 
-#[derive(Debug)]
-struct MultiformExpr(TokenStream);
-
 #[derive(Debug, Default, Clone)]
 pub struct PassedValues(Vec<TokenStream>);
+
+impl PassedValues {
+    pub fn iter(&self) -> impl Iterator<Item = &TokenStream> {
+        self.0.iter()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum PassedArgs {
@@ -30,12 +33,6 @@ pub enum PassedArgs {
 impl Default for PassedArgs {
     fn default() -> Self {
         PassedArgs::List(PassedValues::default())
-    }
-}
-
-impl PassedValues {
-    pub fn iter(&self) -> impl Iterator<Item = &TokenStream> {
-        self.0.iter()
     }
 }
 
@@ -125,17 +122,16 @@ fn check_mutually_exclusive<'a, S1, S2, Iter1, Iter2>(a: Iter1, b: Iter2, msg: i
 fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Assert>
     where K: Parse + Spanned,
 {
-    let (cond, err) = match assert.fields[..] {
-        [ref cond] => {
-            (cond, None)
+    let (cond, err) = {
+        let mut iter = assert.fields.iter();
+        let result = (iter.next(), iter.next());
+        if iter.next().is_some() {
+            return Err(syn::Error::new(
+                assert.ident.span(),
+                "Too many arguments passed to assert"
+            ));
         }
-        [ref cond, ref err] => {
-            (cond, Some(err))
-        }
-        _ => return Err(syn::Error::new(
-            assert.ident.span(),
-            ""
-        ))
+        result
     };
 
     Ok(Assert(
