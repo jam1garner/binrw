@@ -33,8 +33,7 @@ pub struct TopLevelAttrs {
 
     // assertions/error handling
     pub assert: Vec<Assert>,
-    pub magic: Option<TokenStream>,
-    pub magic_type: Option<MagicType>,
+    pub magic: Option<(MagicType, TokenStream)>,
     pub pre_assert: Vec<Assert>,
 
     // other
@@ -115,8 +114,7 @@ impl TopLevelAttrs {
                 },
                 TopLevelAttr::Magic(m) => {
                     only_first!(tla.magic, m.ident.span());
-                    tla.magic = Some(magic_to_tokens(&m));
-                    tla.magic_type = Some(magic_to_type(&m));
+                    tla.magic = Some((magic_to_type(&m), magic_to_tokens(&m)));
                 },
                 TopLevelAttr::Map(m) => {
                     only_first!(tla.map, m.ident.span());

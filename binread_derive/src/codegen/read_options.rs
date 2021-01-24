@@ -29,7 +29,7 @@ fn magic_type_of(variant: &Variant) -> Option<(MagicType, TokenStream)> {
         return None
     }
 
-    Some((tla.magic_type?, tla.magic?))
+    tla.magic
 }
 
 fn generate_unit_enum(options: &TokenStream, repr: &Type, variants: &Punctuated<Variant, Comma>) -> TokenStream {
@@ -638,7 +638,7 @@ fn get_magic_pre_assertion(tla: &TopLevelAttrs) -> TokenStream {
     let handle_error = handle_error();
     let magic = tla.magic
         .as_ref()
-        .map(|magic|{
+        .map(|(_, magic)|{
             quote!{
                 #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
             }
