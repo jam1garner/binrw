@@ -1,5 +1,5 @@
 use super::*;
-use super::parser::{TopLevelAttr, MetaAttrList, MetaLit};
+use super::parser::{TopLevelAttr, MetaLit};
 use proc_macro2::Span;
 use quote::ToTokens;
 use crate::binread_endian::Endian;
@@ -47,12 +47,20 @@ impl TopLevelAttrs {
     }
 
     pub fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
+        macro_rules! only_first {
+            ($obj:ident.$field:ident, $span:expr) => {
+                if $obj.$field.is_some() {
+                    return Err(syn::Error::new($span, concat!("Conflicting ", stringify!($field), " keywords")));
+                }
+            }
+        }
+
         fn set_endian(tla: &mut TopLevelAttrs, endian: Endian, span: &Span) -> syn::Result<()> {
             if tla.endian == Endian::Native {
                 tla.endian = endian;
                 Ok(())
             } else {
-                Err(syn::Error::new(*span, "Conflicting endianness keywords"))
+                Err(syn::Error::new(*span, "Conflicting endian keywords"))
             }
         }
 
@@ -61,7 +69,7 @@ impl TopLevelAttrs {
                 tla.return_error_mode = error;
                 Ok(())
             } else {
-                Err(syn::Error::new(*span, "Conflicting error mode"))
+                Err(syn::Error::new(*span, "Conflicting error mode keywords"))
             }
         }
 
@@ -77,10 +85,7 @@ impl TopLevelAttrs {
                     set_endian(&mut tla, Endian::Little, &kw.span)?;
                 },
                 TopLevelAttr::Import(s) => {
-                    if tla.import.is_some() {
-                        return Err(syn::Error::new(s.ident.span, "Conflicting import"));
-                    }
-
+                    only_first!(tla.import, s.ident.span());
                     let (idents, tys): (Vec<_>, Vec<_>) = s.fields
                         .iter()
                         .cloned()
@@ -89,10 +94,7 @@ impl TopLevelAttrs {
                     tla.import = Imports::List(idents, tys);
                 },
                 TopLevelAttr::ImportTuple(s) => {
-                    if tla.import.is_some() {
-                        return Err(syn::Error::new(s.ident.span, "Conflicting import"));
-                    }
-
+                    only_first!(tla.import, s.ident.span());
                     tla.import = Imports::Tuple(s.arg.ident.clone(), s.arg.ty.clone().into());
                 },
                 TopLevelAttr::Assert(a) => {
@@ -102,9 +104,7 @@ impl TopLevelAttrs {
                     tla.pre_assert.push(convert_assert(&a)?);
                 },
                 TopLevelAttr::Repr(ty) => {
-                    if tla.repr.is_some() {
-                        return Err(syn::Error::new(ty.ident.span, "Conflicting repr keywords"))
-                    }
+                    only_first!(tla.repr, ty.ident.span());
                     tla.repr = Some(ty.value);
                 },
                 TopLevelAttr::ReturnAllErrors(e) => {
@@ -114,16 +114,12 @@ impl TopLevelAttrs {
                     set_error(&mut tla, EnumErrorHandling::ReturnUnexpectedError, &e.span)?;
                 },
                 TopLevelAttr::Magic(m) => {
-                    if tla.magic.is_some() {
-                        return Err(syn::Error::new(m.ident.span, "Conflicting magic"));
-                    }
+                    only_first!(tla.magic, m.ident.span());
                     tla.magic = Some(magic_to_tokens(&m));
                     tla.magic_type = Some(magic_to_type(&m));
                 },
                 TopLevelAttr::Map(m) => {
-                    if tla.map.is_some() {
-                        return Err(syn::Error::new(m.ident.span, "Conflicting map"));
-                    }
+                    only_first!(tla.map, m.ident.span());
                     tla.map = Some(m.into_token_stream());
                 }
             }
