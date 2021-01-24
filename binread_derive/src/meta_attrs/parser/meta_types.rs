@@ -1,6 +1,6 @@
 use quote::ToTokens;
-use super::*;
-use super::super::PassedValues;
+use super::{MetaFuncExpr, super::PassedValues};
+use syn::{Expr, Lit, Token, Type, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, token};
 
 /// MetaExpr represents a key/expr pair
 /// Takes two forms:

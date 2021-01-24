@@ -6,7 +6,7 @@ pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
 pub(crate) use field_level_attrs::{CondEndian, FieldLevelAttrs, Map};
 
 use proc_macro2::TokenStream;
-use syn::{Expr, Ident, Lit, parse::Parse, Type, spanned::Spanned};
+use syn::{Expr, Ident, parse::Parse, Type, spanned::Spanned};
 use quote::ToTokens;
 
 use self::parser::{MetaAttrList, MetaList};

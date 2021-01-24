@@ -1,7 +1,7 @@
-use super::*;
-use super::parser::{TopLevelAttr, MetaLit};
-use proc_macro2::Span;
+use super::{Assert, Imports, MagicType, collect_attrs, convert_assert, parser::{TopLevelAttr, MetaLit}};
+use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
+use syn::{Lit, Type, spanned::Spanned};
 use crate::binread_endian::Endian;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

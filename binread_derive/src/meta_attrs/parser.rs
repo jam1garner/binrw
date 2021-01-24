@@ -10,7 +10,7 @@ pub(crate) mod parse_any;
 
 pub(crate) use meta_types::*;
 use syn::parse::{Parse, ParseStream};
-use syn::{parenthesized, token, Ident, Token, Type, Lit, Path, Expr};
+use syn::{parenthesized, token, Ident, Token, Path, Expr};
 use syn::ExprClosure;
 use syn::punctuated::Punctuated;
 use proc_macro2::TokenStream as TokenStream2;

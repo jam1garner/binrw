@@ -1,9 +1,8 @@
-use proc_macro2::Span;
-
 use crate::binread_endian::Endian;
-
-use super::*;
-use super::parser::FieldLevelAttr;
+use proc_macro2::{Span, TokenStream};
+use quote::ToTokens;
+use super::{Assert, PassedArgs, collect_attrs, convert_assert, parser::FieldLevelAttr};
+use syn::spanned::Spanned;
 
 #[derive(Clone, Debug)]
 pub(crate) enum Map {
