@@ -41,10 +41,6 @@ pub struct TopLevelAttrs {
 }
 
 impl TopLevelAttrs {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
         macro_rules! only_first {
             ($obj:ident.$field:ident, $span:expr) => {
@@ -72,7 +68,7 @@ impl TopLevelAttrs {
             }
         }
 
-        let mut tla = Self::new();
+        let mut tla = Self::default();
         let attrs = collect_attrs::<TopLevelAttr>(attrs)?;
 
         for attr in attrs {
