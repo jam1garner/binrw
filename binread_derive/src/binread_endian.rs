@@ -11,15 +11,3 @@ impl Default for Endian {
         Self::Native
     }
 }
-
-impl Into<String> for &Endian {
-    fn into(self) -> String {
-        String::from(
-            match self {
-                Endian::Big => "Big",
-                Endian::Little => "Little",
-                Endian::Native => "Native",
-            }
-        )
-    }
-}
