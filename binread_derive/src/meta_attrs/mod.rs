@@ -3,14 +3,24 @@ mod spanned_value;
 mod top_level_attrs;
 mod field_level_attrs;
 pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
-pub(crate) use field_level_attrs::FieldLevelAttrs;
-pub(crate) use spanned_value::SpannedValue;
+pub(crate) use field_level_attrs::{CondEndian, FieldLevelAttrs, Map};
 
 use proc_macro2::TokenStream;
 use syn::{Expr, Ident, Lit, parse::Parse, Type, spanned::Spanned};
 use quote::ToTokens;
 
-use self::parser::MetaList;
+use self::parser::{MetaAttrList, MetaList};
+
+pub(crate) fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<impl Iterator<Item = P>> {
+    Ok(attrs
+        .iter()
+        .filter(|attr| attr.path.is_ident("br") || attr.path.is_ident("binread"))
+        .map(|attr| syn::parse2::<MetaAttrList<P>>(attr.tokens.clone()))
+        // TODO: Do not collect, iterate instead
+        .collect::<syn::Result<Vec<_>>>()?
+        .into_iter()
+        .flat_map(|list| list.0.into_iter()))
+}
 
 #[derive(Debug, Clone)]
 pub struct Assert(pub TokenStream, pub Option<TokenStream>);
@@ -26,13 +36,14 @@ impl PassedValues {
 
 #[derive(Debug, Clone)]
 pub enum PassedArgs {
+    None,
     List(PassedValues),
     Tuple(TokenStream)
 }
 
 impl Default for PassedArgs {
     fn default() -> Self {
-        PassedArgs::List(PassedValues::default())
+        PassedArgs::None
     }
 }
 
@@ -97,28 +108,6 @@ pub enum MagicType {
     Verbatim
 }
 
-fn check_mutually_exclusive<'a, S1, S2, Iter1, Iter2>(a: Iter1, b: Iter2, msg: impl Into<String>) -> syn::Result<()>
-    where S1: Spanned + 'a,
-          S2: Spanned + 'a,
-          Iter1: Iterator<Item = &'a S1>,
-          Iter2: Iterator<Item = &'a S2>,
-{
-    let mut a = a.peekable();
-    let mut b = b.peekable();
-    if a.peek().is_some() && b.peek().is_some() {
-        let mut spans = a.map(Spanned::span).chain(b.map(Spanned::span));
-        let first = spans.next().unwrap();
-        let span = spans.fold(first, |x, y| x.join(y).unwrap());
-
-        Err(syn::Error::new(
-            span,
-            msg.into()
-        ))
-    } else {
-        Ok(())
-    }
-}
-
 pub(crate) fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Assert>
     where K: Parse + Spanned,
 {
@@ -138,30 +127,4 @@ pub(crate) fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Asser
         cond.into_token_stream(),
         err.map(ToTokens::into_token_stream)
     ))
-}
-
-fn first_span_true(mut vals: impl Iterator<Item = impl Spanned>) -> SpannedValue<bool> {
-    if let Some(val) = vals.next() {
-        SpannedValue::new(
-            true,
-            val.span()
-        )
-    } else {
-        Default::default()
-    }
-}
-
-fn get_only_first<'a, S: Spanned>(list: impl Iterator<Item = &'a S>, msg: impl Into<String>) -> syn::Result<Option<&'a S>> {
-    let mut list = list.peekable();
-    let first = list.next();
-
-    if list.peek().is_none() {
-        Ok(first)
-    } else {
-        let span = list.map(Spanned::span).fold(Spanned::span(first.unwrap()), |x, y| x.join(y).unwrap());
-        Err(syn::Error::new(
-            span,
-            msg.into()
-        ))
-    }
 }

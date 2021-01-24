@@ -66,14 +66,7 @@ impl TopLevelAttrs {
         }
 
         let mut tla = Self::new();
-        let attrs = attrs
-            .iter()
-            .filter(|attr| attr.path.is_ident("br") || attr.path.is_ident("binread"))
-            .map(|attr| syn::parse2::<MetaAttrList<TopLevelAttr>>(attr.tokens.clone()))
-            // TODO: Do not collect, iterate instead
-            .collect::<syn::Result<Vec<_>>>()?
-            .into_iter()
-            .flat_map(|list| list.0.into_iter());
+        let attrs = collect_attrs::<TopLevelAttr>(attrs)?;
 
         for attr in attrs {
             match attr {

@@ -1,5 +1,5 @@
 use std::iter;
-use crate::{binread_endian::Endian, codegen::sanitization::*, meta_attrs::{Assert, EnumErrorHandling, FieldLevelAttrs, MagicType, PassedArgs, TopLevelAttrs}};
+use crate::{binread_endian::Endian, codegen::sanitization::*, meta_attrs::{Assert, CondEndian, EnumErrorHandling, FieldLevelAttrs, MagicType, Map, PassedArgs, TopLevelAttrs}};
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
 use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
@@ -433,7 +433,7 @@ fn get_permenant_names<'a, I>(fields: I) -> Vec<Ident>
         .into_iter()
         .enumerate()
         .filter_map(|(i, field)|
-            if FieldLevelAttrs::from_field(field).map(|x| x.temp).unwrap_or(false) {
+            if FieldLevelAttrs::try_from_attrs(&field.attrs).map(|x| x.temp).unwrap_or(false) {
                 None
             } else {
                 Some(
@@ -502,7 +502,7 @@ fn get_field_attrs<'a, I>(fields: I) -> syn::Result<Vec<FieldLevelAttrs>>
     Ok(
         fields
             .into_iter()
-            .map(FieldLevelAttrs::from_field)
+            .map(|f| FieldLevelAttrs::try_from_attrs(&f.attrs))
             .collect::<syn::Result<_>>()?
     )
 }
@@ -532,7 +532,8 @@ fn get_passed_args(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
                         (#(#passed_values,)*)
                     }
                 },
-                PassedArgs::Tuple(tok) => tok.clone()
+                PassedArgs::Tuple(tok) => tok.clone(),
+                PassedArgs::None => quote!{ () },
             }
 
         })
@@ -547,25 +548,24 @@ const OFFSET: IdentStr = IdentStr("offset");
 fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident)
     -> impl Iterator<Item = (IdentStr<'static>, TokenStream)>
 {
-    let endian = if let Some(condition) = &field_attrs.is_big {
+    let endian = if let CondEndian::Cond(endian, condition) = &field_attrs.endian {
+        // TODO: Should just tokenise the `endian`
+        let (true_cond, false_cond) = match endian {
+            Endian::Big => (quote!{ #ENDIAN_ENUM::Big }, quote!{ #ENDIAN_ENUM::Little }),
+            Endian::Little => (quote!{ #ENDIAN_ENUM::Little }, quote!{ #ENDIAN_ENUM::Big }),
+            Endian::Native => panic!("Got a native endianness in a condition")
+        };
+
         Some((ENDIAN, quote!{
             if (#condition) {
-                #ENDIAN_ENUM::Big
+                #true_cond
             } else {
-                #ENDIAN_ENUM::Little
+                #false_cond
             }
         }))
-    } else if let Some(condition) = &field_attrs.is_little {
-        Some((ENDIAN, quote!{
-            if (#condition) {
-                #ENDIAN_ENUM::Little
-            } else {
-                #ENDIAN_ENUM::Big
-            }
-        }))
-    } else if *field_attrs.big {
+    } else if matches!(field_attrs.endian, CondEndian::Fixed(Endian::Big)) {
         Some((ENDIAN, quote!{ #ENDIAN_ENUM::Big }))
-    } else if *field_attrs.little {
+    } else if matches!(field_attrs.endian, CondEndian::Fixed(Endian::Little)) {
         Some((ENDIAN, quote!{ #ENDIAN_ENUM::Little }))
     } else {
         None
@@ -743,7 +743,7 @@ fn get_maps(field_attrs: &[FieldLevelAttrs], types: &[&Type]) -> Vec<TokenStream
         .iter()
         .zip(types.iter())
         .map(|(field_attrs, ty)| {
-            if let Some(try_map) = &field_attrs.try_map {
+            if let Map::Try(try_map) = &field_attrs.map {
                 quote!{ {
                     let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
                     let __binread_try_map: fn(_) -> ::core::result::Result<#ty, _> = #try_map;
@@ -754,7 +754,7 @@ fn get_maps(field_attrs: &[FieldLevelAttrs], types: &[&Type]) -> Vec<TokenStream
                         }
                     })?
                 } }
-            } else if let Some(map) = &field_attrs.map {
+            } else if let Map::Map(map) = &field_attrs.map {
                 quote!{ {
                     let __binread_map: fn(_) -> #ty = #map;
                     (__binread_map)(__binread_temp)
