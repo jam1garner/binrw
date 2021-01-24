@@ -10,7 +10,7 @@ pub fn generate(input: &syn::DeriveInput) -> syn::Result<GeneratedCode> {
         return Err(Error::new(union.union_token.span, "Unions are not supported"));
     }
 
-    let tla = TopLevelAttrs::from_attrs(&input.attrs)?.finalize()?;
+    let tla = TopLevelAttrs::try_from_attrs(&input.attrs)?;
 
     Ok(GeneratedCode {
         arg_type: tla.import.types(),

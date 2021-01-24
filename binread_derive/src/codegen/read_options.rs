@@ -1,14 +1,5 @@
 use std::iter;
-use crate::{
-    meta_attrs::{
-        TopLevelAttrs,
-        FieldLevelAttrs,
-        Assert,
-        MagicType,
-        PassedArgs
-    },
-    codegen::sanitization::*,
-};
+use crate::{binread_endian::Endian, codegen::sanitization::*, meta_attrs::{Assert, EnumErrorHandling, FieldLevelAttrs, MagicType, PassedArgs, TopLevelAttrs}};
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
 use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
@@ -32,7 +23,7 @@ fn no_variant_data(v: &Variant) -> bool {
 }
 
 fn magic_type_of(variant: &Variant) -> Option<(MagicType, TokenStream)> {
-    let tla = TopLevelAttrs::from_variant(variant).ok()?;
+    let tla = TopLevelAttrs::try_from_attrs(&variant.attrs).ok()?;
 
     if !tla.pre_assert.is_empty() {
         return None
@@ -96,11 +87,6 @@ fn generate_magic_enum(options: &TokenStream, variants: &Punctuated<Variant, Com
 }
 
 fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn::Result<TokenStream> {
-    if *tla.return_all_errors && *tla.return_unexpected_error {
-        let span = tla.return_all_errors.span().join(tla.return_unexpected_error.span()).unwrap();
-        return Err(syn::Error::new(span, "Must only select a single enum error return type"));
-    }
-
     if en.variants.is_empty() {
         return Err(syn::Error::new(en.brace_token.span, "Cannot construct an enum with no variants"));
     }
@@ -120,9 +106,7 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn
 }
 
 fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn::Result<TokenStream> {
-    // return_all_errors is default behavior
-    let return_all_errors = !*tla.return_unexpected_error;
-
+    let return_all_errors = tla.return_error_mode != EnumErrorHandling::ReturnUnexpectedError;
     let enum_name = &input.ident;
     let variant_funcs =
         en.variants.iter().map(|variant| {
@@ -204,7 +188,7 @@ fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -
 fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Variant)
     -> syn::Result<TokenStream>
 {
-    let tla = merge_tlas(tla, TopLevelAttrs::from_variant(variant)?)?;
+    let tla = merge_tlas(tla, TopLevelAttrs::try_from_attrs(&variant.attrs)?)?;
 
     let variant_name = &variant.ident;
     let (name, ty) = get_name_types_fields(variant.fields.iter());
@@ -232,25 +216,18 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
     })
 }
 
-fn merge_tlas(top_level: &TopLevelAttrs, enum_level: TopLevelAttrs) -> syn::Result<TopLevelAttrs> {
+fn merge_tlas(top_level: &TopLevelAttrs, variant_level: TopLevelAttrs) -> syn::Result<TopLevelAttrs> {
     let mut out = top_level.clone();
 
-    let variant_level = enum_level.finalize()?;
-    if *variant_level.big || *variant_level.little {
-        out.big = variant_level.big;
-        out.little = variant_level.little;
+    if variant_level.endian != Endian::Native {
+        out.endian = variant_level.endian;
     }
 
-    if *variant_level.return_all_errors || *variant_level.return_unexpected_error {
-        return Err(syn::Error::new(
-            variant_level.return_unexpected_error.span()
-                .join(variant_level.return_all_errors.span())
-                .unwrap(),
-            "Cannot specify error return type at variant level."
-        ));
+    if variant_level.return_error_mode != EnumErrorHandling::Default {
+        panic!("Cannot specify error return type at variant level");
     }
 
-    if !variant_level.import.is_empty() {
+    if variant_level.import.is_some() {
         panic!("Cannot have imports at variant level");
     }
 
@@ -646,9 +623,9 @@ fn get_new_options(idents: &[Ident], field_attrs: &[FieldLevelAttrs]) -> Vec<Tok
 }
 
 fn get_top_level_binread_options(tla: &TopLevelAttrs) -> TokenStream {
-    let endian = if *tla.big {
+    let endian = if tla.endian == Endian::Big {
         Some((ENDIAN, quote!{ #ENDIAN_ENUM::Big }))
-    } else if *tla.little {
+    } else if tla.endian == Endian::Little {
         Some((ENDIAN, quote!{ #ENDIAN_ENUM::Little }))
     } else {
         None

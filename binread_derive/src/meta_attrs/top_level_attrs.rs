@@ -1,27 +1,35 @@
 use super::*;
-use super::parser::{TopLevelAttr, MetaAttrList, MetaList, MetaLit};
-use syn::spanned::Spanned;
-use syn::parse::Parse;
+use super::parser::{TopLevelAttr, MetaAttrList, MetaLit};
+use proc_macro2::Span;
 use quote::ToTokens;
-use super::parser::IdentPatType;
-use crate::meta_attrs::parser::ImportArgTuple;
+use crate::binread_endian::Endian;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum EnumErrorHandling {
+    Default,
+    ReturnAllErrors,
+    ReturnUnexpectedError,
+}
+
+impl Default for EnumErrorHandling {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
+#[derive(Debug, Default, Clone)]
 pub struct TopLevelAttrs {
     // ======================
     //  Top-Only Attributes
     // ======================
     pub import: Imports,
     pub repr: Option<Type>,
-    pub return_all_errors: SpannedValue<bool>,
-    pub return_unexpected_error: SpannedValue<bool>,
+    pub return_error_mode: EnumErrorHandling,
 
     // ======================
     //  All-level attributes
     // ======================
-    // endian
-    pub little: SpannedValue<bool>,
-    pub big: SpannedValue<bool>,
+    pub endian: Endian,
 
     // assertions/error handling
     pub assert: Vec<Assert>,
@@ -33,93 +41,101 @@ pub struct TopLevelAttrs {
     pub map: Option<TokenStream>,
 }
 
-macro_rules! get_tla_type {
-    ($tla:ident.$variant:ident) => {
-        $tla.iter()
-            .filter_map(|x|{
-                if let TopLevelAttr::$variant(x) = x {
-                    Some(x)
-                } else {
-                    None
-                }
-            })
-    };
-}
-
 impl TopLevelAttrs {
-    pub fn finalize(self) -> syn::Result<Self> {
-        if *self.big && *self.little {
-            return Err(syn::Error::new(
-                self.big.span().join(self.little.span()).unwrap(),
-                "Cannot set endian to both big and little endian"
-            ));
-        }
-
-        Ok(self)
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn from_variant(input: &syn::Variant) -> syn::Result<Self> {
-        Self::from_attrs(&input.attrs)
-    }
-
-    pub fn from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
-        let attrs: Vec<TopLevelAttr> =
-            attrs
-                .iter()
-                .filter(|x| x.path.is_ident("br") || x.path.is_ident("binread"))
-                .map(tlas_from_attribute)
-                .collect::<Result<Vec<TlaList>, syn::Error>>()?
-                .into_iter()
-                .flat_map(|x| x.0.into_iter())
-                .collect();
-
-        Self::from_top_level_attrs(attrs)
-    }
-
-    pub fn from_top_level_attrs(attrs: Vec<TopLevelAttr>) -> syn::Result<Self> {
-        let bigs = get_tla_type!(attrs.Big);
-        let littles = get_tla_type!(attrs.Little);
-
-        if bigs.clone().take(2).count() + littles.clone().take(2).count() > 1 {
-            return join_spans_err(bigs, littles, "Cannot set endianess more than once");
+    pub fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
+        fn set_endian(tla: &mut TopLevelAttrs, endian: Endian, span: &Span) -> syn::Result<()> {
+            if tla.endian == Endian::Native {
+                tla.endian = endian;
+                Ok(())
+            } else {
+                Err(syn::Error::new(*span, "Conflicting endianness keywords"))
+            }
         }
 
-        let return_all_errors = get_tla_type!(attrs.ReturnAllErrors);
-        let return_unexpected_errors = get_tla_type!(attrs.ReturnUnexpectedError);
-
-        if return_all_errors.clone().take(2).count() + return_unexpected_errors.clone().take(2).count() > 1 {
-            return join_spans_err(return_all_errors, return_unexpected_errors, "Cannot set more than one return type");
+        fn set_error(tla: &mut TopLevelAttrs, error: EnumErrorHandling, span: &Span) -> syn::Result<()> {
+            if tla.return_error_mode == EnumErrorHandling::Default {
+                tla.return_error_mode = error;
+                Ok(())
+            } else {
+                Err(syn::Error::new(*span, "Conflicting error mode"))
+            }
         }
 
-        let magics = get_tla_type!(attrs.Magic);
-        let imports = get_tla_type!(attrs.Import);
-        let import_tuples = get_tla_type!(attrs.ImportTuple);
-        let asserts = get_tla_type!(attrs.Assert);
-        let pre_asserts = get_tla_type!(attrs.PreAssert);
-        let map = get_tla_type!(attrs.Map);
+        let mut tla = Self::new();
+        let attrs = attrs
+            .iter()
+            .filter(|attr| attr.path.is_ident("br") || attr.path.is_ident("binread"))
+            .map(|attr| syn::parse2::<MetaAttrList<TopLevelAttr>>(attr.tokens.clone()))
+            // TODO: Do not collect, iterate instead
+            .collect::<syn::Result<Vec<_>>>()?
+            .into_iter()
+            .flat_map(|list| list.0.into_iter());
 
-        let repr = get_only_first(get_tla_type!(attrs.Repr), "Cannot define multiple repr values")?;
-        let magic = get_only_first(magics, "Cannot define multiple magic values")?;
+        for attr in attrs {
+            match attr {
+                TopLevelAttr::Big(kw) => {
+                    set_endian(&mut tla, Endian::Big, &kw.span)?;
+                },
+                TopLevelAttr::Little(kw) => {
+                    set_endian(&mut tla, Endian::Little, &kw.span)?;
+                },
+                TopLevelAttr::Import(s) => {
+                    if tla.import.is_some() {
+                        return Err(syn::Error::new(s.ident.span, "Conflicting import"));
+                    }
 
-        check_mutually_exclusive(imports.clone(), import_tuples.clone(), "Cannot mix import and import_tuple")?;
+                    let (idents, tys): (Vec<_>, Vec<_>) = s.fields
+                        .iter()
+                        .cloned()
+                        .map(|import_arg| (import_arg.ident, import_arg.ty))
+                        .unzip();
+                    tla.import = Imports::List(idents, tys);
+                },
+                TopLevelAttr::ImportTuple(s) => {
+                    if tla.import.is_some() {
+                        return Err(syn::Error::new(s.ident.span, "Conflicting import"));
+                    }
 
-        let import = get_only_first(imports, "Cannot define multiple sets of arguments")?;
-        let import_tuple = get_only_first(import_tuples, "Cannot define multiple sets of tuple arguments")?;
-        let map = get_only_first(map, "Cannot define multiple mapping functions")?;
-
-        Ok(Self {
-            assert: asserts.map(convert_assert).collect::<Result<_, _>>()?,
-            big: first_span_true(bigs),
-            little: first_span_true(littles),
-            magic: magic.map(magic_to_tokens),
-            magic_type: magic.map(magic_to_type),
-            import: convert_import(import, import_tuple).unwrap_or_default(),
-            repr: repr.map(|r| r.value.clone()),
-            return_all_errors: first_span_true(return_all_errors),
-            return_unexpected_error: first_span_true(return_unexpected_errors),
-            pre_assert: pre_asserts.map(convert_assert).collect::<Result<_, _>>()?,
-            map: map.map(|x| x.to_token_stream()),
-        })
+                    tla.import = Imports::Tuple(s.arg.ident.clone(), s.arg.ty.clone().into());
+                },
+                TopLevelAttr::Assert(a) => {
+                    tla.assert.push(convert_assert(&a)?);
+                },
+                TopLevelAttr::PreAssert(a) => {
+                    tla.pre_assert.push(convert_assert(&a)?);
+                },
+                TopLevelAttr::Repr(ty) => {
+                    if tla.repr.is_some() {
+                        return Err(syn::Error::new(ty.ident.span, "Conflicting repr keywords"))
+                    }
+                    tla.repr = Some(ty.value);
+                },
+                TopLevelAttr::ReturnAllErrors(e) => {
+                    set_error(&mut tla, EnumErrorHandling::ReturnAllErrors, &e.span)?;
+                },
+                TopLevelAttr::ReturnUnexpectedError(e) => {
+                    set_error(&mut tla, EnumErrorHandling::ReturnUnexpectedError, &e.span)?;
+                },
+                TopLevelAttr::Magic(m) => {
+                    if tla.magic.is_some() {
+                        return Err(syn::Error::new(m.ident.span, "Conflicting magic"));
+                    }
+                    tla.magic = Some(magic_to_tokens(&m));
+                    tla.magic_type = Some(magic_to_type(&m));
+                },
+                TopLevelAttr::Map(m) => {
+                    if tla.map.is_some() {
+                        return Err(syn::Error::new(m.ident.span, "Conflicting map"));
+                    }
+                    tla.map = Some(m.into_token_stream());
+                }
+            }
+        }
+        Ok(tla)
     }
 }
 
@@ -146,44 +162,4 @@ fn magic_to_tokens(magic: &MetaLit<impl syn::parse::Parse>) -> TokenStream {
     } else {
         magic.to_token_stream()
     }
-}
-
-fn convert_import<K: Parse>(import: Option<&MetaList<K, IdentPatType>>, import_tuple: Option<impl AsRef<ImportArgTuple>>) -> Option<Imports> {
-    if let Some(tuple) = import_tuple {
-        let tuple = tuple.as_ref();
-        Some(Imports::Tuple(tuple.arg.ident.clone(), tuple.arg.ty.clone().into()))
-    } else if let Some(list) = import {
-        let (idents, tys): (Vec<_>, Vec<_>) =
-            list.fields
-                .iter()
-                .cloned()
-                .map(|import_arg| (import_arg.ident, import_arg.ty))
-                .unzip();
-
-        Some(Imports::List(idents, tys))
-    } else {
-        None
-    }
-}
-
-fn join_spans_err<'a, Iter1, Iter2, S1, S2>(s1: Iter1, s2: Iter2, msg: impl Into<String>) -> syn::Result<TopLevelAttrs>
-    where Iter1: Iterator<Item = &'a S1>,
-          Iter2: Iterator<Item = &'a S2>,
-          S1: Spanned + 'a,
-          S2: Spanned + 'a,
-{
-    let mut spans = s1.map(Spanned::span).chain(s2.map(Spanned::span));
-    let first = spans.next().unwrap();
-    let span = spans.fold(first, |x, y| x.join(y).unwrap());
-
-    Err(syn::Error::new(
-        span,
-        msg.into()
-    ))
-}
-
-type TlaList = MetaAttrList<TopLevelAttr>;
-
-fn tlas_from_attribute(attr: &syn::Attribute) -> syn::Result<TlaList> {
-    Ok(syn::parse2(attr.tokens.clone())?)
 }

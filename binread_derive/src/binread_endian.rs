@@ -6,6 +6,12 @@ pub enum Endian {
     Native,
 }
 
+impl Default for Endian {
+    fn default() -> Self {
+        Self::Native
+    }
+}
+
 impl Into<String> for &Endian {
     fn into(self) -> String {
         String::from(

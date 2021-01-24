@@ -15,12 +15,20 @@ use codegen::sanitization::*;
 use meta_attrs::FieldLevelAttrs;
 use proc_macro2::TokenStream as TokenStream2;
 
-fn generate_impl(input: &DeriveInput) -> syn::Result<TokenStream> {
-    let codegen::GeneratedCode { read_opt_impl, arg_type } = codegen::generate(&input)?;
+fn generate_impl(input: &DeriveInput) -> TokenStream {
+    let codegen::GeneratedCode { read_opt_impl, arg_type } = codegen::generate(&input).unwrap_or_else(|e| {
+        // If there is a parsing error, a BinRead impl still needs to be
+        // generated to avoid misleading errors at all call sites that use the
+        // BinRead trait
+        codegen::GeneratedCode {
+            arg_type: quote! { () },
+            read_opt_impl: e.to_compile_error(),
+        }
+    });
 
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    Ok(quote!(
+    quote!(
         #[allow(non_snake_case)]
         impl #impl_generics #TRAIT_NAME for #name #ty_generics #where_clause {
             type Args = #arg_type;
@@ -32,13 +40,13 @@ fn generate_impl(input: &DeriveInput) -> syn::Result<TokenStream> {
                 #read_opt_impl
             }
         }
-    ).into())
+    ).into()
 }
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
 pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    generate_impl(&input).unwrap_or_else(|e| e.to_compile_error().into())
+    generate_impl(&input)
 }
 
 fn is_temp(field: &syn::Field) -> bool {
@@ -74,9 +82,7 @@ fn remove_field_attrs(fields: &mut syn::Fields) {
 #[proc_macro_attribute]
 pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
-    let generated_impl = generate_impl(&input)
-        .map(TokenStream2::from)
-        .unwrap_or_else(|e| e.to_compile_error());
+    let generated_impl = TokenStream2::from(generate_impl(&input));
 
     match input.data {
         syn::Data::Struct(ref mut input_struct) => {

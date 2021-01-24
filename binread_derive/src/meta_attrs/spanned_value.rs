@@ -10,10 +10,6 @@ impl<T> SpannedValue<T> {
     pub fn new(value: T, span: Span) -> Self {
         Self { span, value }
     }
-
-    pub fn span(&self) -> Span {
-        self.span
-    }
 }
 
 impl<T> std::ops::Deref for SpannedValue<T> {

@@ -2,7 +2,7 @@ mod parser;
 mod spanned_value;
 mod top_level_attrs;
 mod field_level_attrs;
-pub(crate) use top_level_attrs::TopLevelAttrs;
+pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
 pub(crate) use field_level_attrs::FieldLevelAttrs;
 pub(crate) use spanned_value::SpannedValue;
 
@@ -38,19 +38,21 @@ impl Default for PassedArgs {
 
 #[derive(Debug, Clone)]
 pub enum Imports {
+    None,
     List(Vec<Ident>, Vec<Type>),
     Tuple(Ident, Box<Type>)
 }
 
 impl Default for Imports {
     fn default() -> Self {
-        Imports::List(Vec::new(), Vec::new())
+        Imports::None
     }
 }
 
 impl Imports {
     pub fn idents(&self) -> TokenStream {
         match self {
+            Imports::None => quote::quote! { () },
             Imports::List(idents, _) => {
                 let idents = idents.iter();
                 quote::quote! {
@@ -65,6 +67,7 @@ impl Imports {
 
     pub fn types(&self) -> TokenStream {
         match self {
+            Imports::None => quote::quote! { () },
             Imports::List(_, types) => {
                 let types = types.iter();
                 quote::quote! {
@@ -77,11 +80,8 @@ impl Imports {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Imports::List(idents, _) => idents.is_empty(),
-            Imports::Tuple(_, _) => false
-        }
+    pub fn is_some(&self) -> bool {
+        !matches!(self, Imports::None)
     }
 }
 
@@ -119,7 +119,7 @@ fn check_mutually_exclusive<'a, S1, S2, Iter1, Iter2>(a: Iter1, b: Iter2, msg: i
     }
 }
 
-fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Assert>
+pub(crate) fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Assert>
     where K: Parse + Spanned,
 {
     let (cond, err) = {
