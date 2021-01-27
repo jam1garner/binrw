@@ -29,19 +29,10 @@ pub(crate) fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<i
 #[derive(Debug, Clone)]
 pub struct Assert(pub TokenStream, pub Option<TokenStream>);
 
-#[derive(Debug, Default, Clone)]
-pub struct PassedValues(Vec<TokenStream>);
-
-impl PassedValues {
-    pub fn iter(&self) -> impl Iterator<Item = &TokenStream> {
-        self.0.iter()
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum PassedArgs {
     None,
-    List(PassedValues),
+    List(Vec<TokenStream>),
     Tuple(TokenStream)
 }
 

@@ -1,5 +1,5 @@
 use quote::ToTokens;
-use super::{MetaFuncExpr, super::PassedValues};
+use super::MetaFuncExpr;
 use syn::{Expr, Lit, Token, Type, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, token};
 
 /// `MetaExpr` represents a key/expr pair
@@ -94,7 +94,7 @@ impl<Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
 }
 
 impl<Keyword: Parse> MetaList<Keyword, Expr> {
-    pub fn get(&self) -> PassedValues {
-        PassedValues(self.fields.iter().map(ToTokens::into_token_stream).collect())
+    pub fn get(&self) -> Vec<proc_macro2::TokenStream> {
+        self.fields.iter().map(ToTokens::into_token_stream).collect()
     }
 }
