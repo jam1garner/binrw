@@ -37,7 +37,7 @@ pub struct MetaValue<Keyword: Parse, Value: Parse + ToTokens> {
 }
 
 impl<Keyword: Parse, Value: Parse + ToTokens> Parse for MetaValue<Keyword, Value> {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
         let value = if input.peek(token::Paren) {
             let content;
@@ -71,7 +71,7 @@ pub struct MetaList<Keyword: Parse, ItemType: Parse> {
 }
 
 impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
         let content;
         let parens = parenthesized!(content in input);

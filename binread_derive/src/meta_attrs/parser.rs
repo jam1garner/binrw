@@ -118,7 +118,7 @@ pub struct IdentPatType {
 }
 
 impl Parse for IdentPatType {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         Ok(IdentPatType {
             ident: input.parse()?,
             colon_token: input.parse()?,
@@ -135,7 +135,7 @@ pub struct ImportArgTuple {
 }
 
 impl Parse for ImportArgTuple {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
         let content;
         let parens = parenthesized!(content in input);
@@ -150,7 +150,7 @@ impl Parse for ImportArgTuple {
 pub(crate) struct MetaAttrList<P: Parse>(pub Vec<P>);
 
 impl<P: Parse> Parse for MetaAttrList<P> {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let content;
         parenthesized!(content in input);
         Ok(MetaAttrList(

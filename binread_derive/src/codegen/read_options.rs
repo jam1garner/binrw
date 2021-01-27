@@ -546,7 +546,7 @@ const COUNT: IdentStr = IdentStr("count");
 const OFFSET: IdentStr = IdentStr("offset");
 
 fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident)
-    -> impl Iterator<Item = (IdentStr<'static>, TokenStream)>
+    -> impl Iterator<Item = (IdentStr, TokenStream)>
 {
     let endian = if let CondEndian::Cond(endian, condition) = &field_attrs.endian {
         // TODO: Should just tokenise the `endian`
@@ -591,7 +591,7 @@ fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident
         .chain(offset)
 }
 
-fn get_modified_options<'a, I: IntoIterator<Item = (IdentStr<'a>, TokenStream)>>(option_pairs: I)
+fn get_modified_options<I: IntoIterator<Item = (IdentStr, TokenStream)>>(option_pairs: I)
         -> TokenStream
 {
     let (ident, expr): (Vec<_>, Vec<_>) = option_pairs.into_iter().unzip();
@@ -810,8 +810,8 @@ fn ignore_types(idents: &[&Type], field_attrs: &[FieldLevelAttrs]) -> Vec<TokenS
     ignore_filter(idents, field_attrs, quote! { () })
 }
 
-fn filter_by_ignore<'a, I>(field_attrs: &[FieldLevelAttrs], idents: I) -> Vec<TokenStream>
-    where I: IntoIterator<Item = IdentStr<'a>>
+fn filter_by_ignore<I>(field_attrs: &[FieldLevelAttrs], idents: I) -> Vec<TokenStream>
+    where I: IntoIterator<Item = IdentStr>
 {
     idents
         .into_iter()
@@ -974,8 +974,8 @@ fn generate_skips(field_attrs: &[FieldLevelAttrs]) -> Skips {
     }
 }
 
-fn split_by_immediate_deref<'a, 'b>(after_parse: Vec<&'a IdentStr<'a>>, field_attrs: &'b [FieldLevelAttrs])
-    -> (Vec<&'a IdentStr<'a>>, Vec<&'a IdentStr<'a>>)
+fn split_by_immediate_deref<'a, 'b>(after_parse: Vec<&'a IdentStr>, field_attrs: &'b [FieldLevelAttrs])
+    -> (Vec<&'a IdentStr>, Vec<&'a IdentStr>)
 {
     after_parse
         .into_iter()

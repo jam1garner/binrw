@@ -16,7 +16,7 @@ macro_rules! parse_any {
         }
 
         impl syn::parse::Parse for $enum {
-            fn parse(input: ParseStream) -> syn::Result<Self> {
+            fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
                 let x = input.parse().map(Self::$variant1);
                 $(
                     let x = x.or_else(|_: syn::Error|{

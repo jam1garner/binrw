@@ -57,11 +57,11 @@ pub fn closure_wrap<T: ToTokens>(value: T) -> TokenStream {
 /// A string wrapper that converts the str to a $path TokenStream, allowing for constant-time
 /// idents that can be shared across threads
 #[derive(Debug, Clone, Copy)]
-pub struct IdentStr<'a>(pub &'a str);
+pub struct IdentStr(pub &'static str);
 
 use quote::TokenStreamExt;
 
-impl<'a> ToTokens for IdentStr<'a> {
+impl ToTokens for IdentStr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let idents: Vec<_> =
             self.0.split("::")

@@ -1,4 +1,4 @@
-extern crate proc_macro;
+#![warn(rust_2018_idioms)]
 
 use proc_macro::TokenStream;
 use quote::quote;
