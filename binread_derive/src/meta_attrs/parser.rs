@@ -147,12 +147,6 @@ impl Parse for ImportArgTuple {
     }
 }
 
-impl ToTokens for ImportArgTuple {
-    fn to_tokens(&self, _tokens: &mut TokenStream2) {
-        //self.arg.to_tokens(tokens) // TODO? I notice that MetaList doesn't do anything in its implementation
-    }
-}
-
 pub(crate) struct MetaAttrList<P: Parse>(pub Vec<P>);
 
 impl<P: Parse> Parse for MetaAttrList<P> {
@@ -162,18 +156,5 @@ impl<P: Parse> Parse for MetaAttrList<P> {
         Ok(MetaAttrList(
             Punctuated::<P, Token![,]>::parse_terminated(&content)?.into_iter().collect()
         ))
-    }
-}
-
-pub(crate) struct BinreadAttribute;
-
-impl Parse for BinreadAttribute {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        if input.peek(kw::br) {
-            let _: kw::br = input.parse()?;
-        } else {
-            let _: kw::binread = input.parse()?;
-        }
-        Ok(Self)
     }
 }
