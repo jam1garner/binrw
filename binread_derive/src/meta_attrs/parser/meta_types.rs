@@ -36,6 +36,12 @@ pub struct MetaValue<Keyword: Parse, Value: Parse + ToTokens> {
     pub value: Value,
 }
 
+impl<Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
+    pub fn get(&self) -> proc_macro2::TokenStream {
+        self.value.to_token_stream()
+    }
+}
+
 impl<Keyword: Parse, Value: Parse + ToTokens> Parse for MetaValue<Keyword, Value> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
@@ -80,16 +86,6 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
             parens,
             fields: content.parse_terminated::<_, Token![,]>(ItemType::parse)?
         })
-    }
-}
-
-impl<Keyword: Parse, ItemType: Parse> ToTokens for MetaList<Keyword, ItemType> {
-    fn to_tokens(&self, _tokens: &mut proc_macro2::TokenStream) {}
-}
-
-impl<Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
-    pub fn get(&self) -> proc_macro2::TokenStream {
-        (&self.value).into_token_stream()
     }
 }
 
