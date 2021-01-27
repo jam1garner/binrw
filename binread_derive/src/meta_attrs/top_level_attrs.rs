@@ -50,21 +50,21 @@ impl TopLevelAttrs {
             }
         }
 
-        fn set_endian(tla: &mut TopLevelAttrs, endian: Endian, span: &Span) -> syn::Result<()> {
+        fn set_endian(tla: &mut TopLevelAttrs, endian: Endian, span: Span) -> syn::Result<()> {
             if tla.endian == Endian::Native {
                 tla.endian = endian;
                 Ok(())
             } else {
-                Err(syn::Error::new(*span, "Conflicting endian keywords"))
+                Err(syn::Error::new(span, "Conflicting endian keywords"))
             }
         }
 
-        fn set_error(tla: &mut TopLevelAttrs, error: EnumErrorHandling, span: &Span) -> syn::Result<()> {
+        fn set_error(tla: &mut TopLevelAttrs, error: EnumErrorHandling, span: Span) -> syn::Result<()> {
             if tla.return_error_mode == EnumErrorHandling::Default {
                 tla.return_error_mode = error;
                 Ok(())
             } else {
-                Err(syn::Error::new(*span, "Conflicting error mode keywords"))
+                Err(syn::Error::new(span, "Conflicting error mode keywords"))
             }
         }
 
@@ -74,10 +74,10 @@ impl TopLevelAttrs {
         for attr in attrs {
             match attr {
                 TopLevelAttr::Big(kw) => {
-                    set_endian(&mut tla, Endian::Big, &kw.span)?;
+                    set_endian(&mut tla, Endian::Big, kw.span())?;
                 },
                 TopLevelAttr::Little(kw) => {
-                    set_endian(&mut tla, Endian::Little, &kw.span)?;
+                    set_endian(&mut tla, Endian::Little, kw.span())?;
                 },
                 TopLevelAttr::Import(s) => {
                     only_first!(tla.import, s.ident.span());
@@ -103,10 +103,10 @@ impl TopLevelAttrs {
                     tla.repr = Some(ty.value);
                 },
                 TopLevelAttr::ReturnAllErrors(e) => {
-                    set_error(&mut tla, EnumErrorHandling::ReturnAllErrors, &e.span)?;
+                    set_error(&mut tla, EnumErrorHandling::ReturnAllErrors, e.span())?;
                 },
                 TopLevelAttr::ReturnUnexpectedError(e) => {
-                    set_error(&mut tla, EnumErrorHandling::ReturnUnexpectedError, &e.span)?;
+                    set_error(&mut tla, EnumErrorHandling::ReturnUnexpectedError, e.span())?;
                 },
                 TopLevelAttr::Magic(m) => {
                     only_first!(tla.magic, m.ident.span());

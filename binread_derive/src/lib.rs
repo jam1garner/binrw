@@ -56,17 +56,20 @@ fn is_temp(field: &syn::Field) -> bool {
 }
 
 fn is_not_binread_attr(attr: &syn::Attribute) -> bool {
-    attr.path.get_ident().map(|ident| ident != "br" && ident != "binread").unwrap_or(true)
+    attr.path.get_ident().map_or(true, |ident| ident != "br" && ident != "binread")
 }
 
 fn remove_br_attrs(fields: &mut syn::punctuated::Punctuated<syn::Field, syn::Token![,]>) {
     *fields = fields
         .clone()
         .into_pairs()
-        .filter(|x| !is_temp(x.value()))
-        .map(|mut field|{
-            field.value_mut().attrs.retain(is_not_binread_attr);
-            field
+        .filter_map(|mut field| {
+            if is_temp(field.value()) {
+                None
+            } else {
+                field.value_mut().attrs.retain(is_not_binread_attr);
+                Some(field)
+            }
         })
         .collect()
 }

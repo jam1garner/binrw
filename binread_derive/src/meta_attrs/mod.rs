@@ -14,8 +14,12 @@ use self::parser::{MetaAttrList, MetaList};
 pub(crate) fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<impl Iterator<Item = P>> {
     Ok(attrs
         .iter()
-        .filter(|attr| attr.path.is_ident("br") || attr.path.is_ident("binread"))
-        .map(|attr| syn::parse2::<MetaAttrList<P>>(attr.tokens.clone()))
+        .filter_map(|attr|
+            if attr.path.is_ident("br") || attr.path.is_ident("binread") {
+                Some(syn::parse2::<MetaAttrList<P>>(attr.tokens.clone()))
+            } else {
+                None
+            })
         // TODO: Do not collect, iterate instead
         .collect::<syn::Result<Vec<_>>>()?
         .into_iter()

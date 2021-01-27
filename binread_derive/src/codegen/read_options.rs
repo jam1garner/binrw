@@ -93,13 +93,13 @@ fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn
 
     if en.variants.iter().all(no_variant_data) {
         let options = get_top_level_binread_options(&tla);
-        if let Some(repr) = &tla.repr {
+        tla.repr.as_ref().map_or_else(|| {
+            generate_magic_enum(&options, &en.variants).ok_or_else(|| {
+                syn::Error::new(en.enum_token.span, "Cannot construct a unit-type enum with no repr and no variant magic")
+            })
+        }, |repr| {
             Ok(generate_unit_enum(&options, repr, &en.variants))
-        } else if let Some(enum_match) = generate_magic_enum(&options, &en.variants) {
-            Ok(enum_match)
-        } else {
-            Err(syn::Error::new(en.enum_token.span, "Cannot construct a unit-type enum with no repr and no variant magic"))
-        }
+        })
     } else {
         generate_data_enum(input, tla, en)
     }
@@ -194,7 +194,7 @@ fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Varia
     let (name, ty) = get_name_types_fields(variant.fields.iter());
     let field_attrs = get_field_attrs(variant.fields.iter())?;
 
-    let body = generate_body(&tla, &field_attrs, &name, ty)?;
+    let body = generate_body(&tla, &field_attrs, &name, &ty)?;
     let variant_assertions = get_assertions(&tla.pre_assert);
 
     let name = get_permenant_names(variant.fields.iter());
@@ -247,7 +247,7 @@ fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) ->
     let (field_attrs, (name, ty, struct_type))
         = (get_struct_field_attrs(&ds)?, get_struct_names_types(&ds));
 
-    let read_struct_body = generate_body(tla, &field_attrs, &name, ty)?;
+    let read_struct_body = generate_body(tla, &field_attrs, &name, &ty)?;
 
     let struct_name = input.ident.to_string();
     let struct_assertions = get_assertions(&tla.assert);
@@ -279,7 +279,7 @@ fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) ->
 }
 
 fn generate_body(
-        tla: &TopLevelAttrs, field_attrs: &[FieldLevelAttrs], name: &[Ident], ty: Vec<&Type>
+        tla: &TopLevelAttrs, field_attrs: &[FieldLevelAttrs], name: &[Ident], ty: &[&Type]
     ) -> syn::Result<TokenStream>
 {
     let count = name.len();
@@ -315,7 +315,7 @@ fn generate_body(
     let opt_mut = ignore_filter(
         iter::repeat(&quote!{ mut }),
         &field_attrs,
-        quote!{}
+        &quote!{}
     );
 
     // Handle the actual conditions for if tags
@@ -439,8 +439,7 @@ fn get_permenant_names<'a, I>(fields: I) -> Vec<Ident>
                 Some(
                     field.ident
                         .as_ref()
-                        .map(Clone::clone)
-                        .unwrap_or_else(|| format_ident!("self_{}", i))
+                        .map_or_else(|| format_ident!("self_{}", i), Clone::clone)
                 )
             }
         )
@@ -456,8 +455,7 @@ fn get_name_types_fields<'a, I>(fields: I) -> (Vec<Ident>, Vec<&'a Type>)
         .map(|(i, field)| (
             field.ident
                 .as_ref()
-                .map(Clone::clone)
-                .unwrap_or_else(|| format_ident!("self_{}", i)),
+                .map_or_else(|| format_ident!("self_{}", i), Clone::clone),
             &field.ty
         ))
         .unzip()
@@ -657,15 +655,17 @@ fn get_assertions(asserts: &[Assert]) -> Vec<TokenStream> {
     asserts
         .iter()
         .map(|Assert(assert, error)| {
-            let error = error.as_ref().map(|err|{
-                    quote!{Some(
-                        || { #err }
-                    )}
-                }).unwrap_or_else(|| quote!{{
+            let error = error.as_ref().map_or_else(
+                || quote!{{
                     let mut x = Some(||{});
                     x = None;
                     x
-                }});
+                }},
+                |err|{
+                    quote!{Some(
+                        || { #err }
+                    )}
+                });
             let assert_string = assert.to_string();
             let assert = closure_wrap(assert);
             quote!{
@@ -684,15 +684,16 @@ fn get_field_assertions(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
                 .iter()
                 .map(|Assert(assert, error)|{
                     let assert_string = assert.to_string();
-                    let error = error.as_ref().map(|err|{
-                            quote!{Some(
-                                || { #err }
-                            )}
-                        }).unwrap_or_else(|| quote!{{
+                    let error = error.as_ref().map_or_else(|| quote!{{
                             let mut x = Some(||{});
                             x = None;
                             x
-                        }});
+                        }},
+                        |err|{
+                            quote!{Some(
+                                || { #err }
+                            )}
+                        });
                     quote!{
                         #ASSERT(#READER, #assert, #assert_string, #error)#handle_error?;
                     }
@@ -785,7 +786,7 @@ fn get_after_parse_handlers(field_attrs: &[FieldLevelAttrs]) -> Vec<&IdentStr> {
         .collect()
 }
 
-fn ignore_filter<T, I>(idents: I, field_attrs: &[FieldLevelAttrs], replace_filter: TokenStream) -> Vec<TokenStream>
+fn ignore_filter<T, I>(idents: I, field_attrs: &[FieldLevelAttrs], replace_filter: &TokenStream) -> Vec<TokenStream>
     where T: ToTokens,
           I: IntoIterator<Item = T>
 {
@@ -803,11 +804,11 @@ fn ignore_filter<T, I>(idents: I, field_attrs: &[FieldLevelAttrs], replace_filte
 }
 
 fn ignore_names(idents: &[Ident], field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
-    ignore_filter(idents, field_attrs, quote!{ _ })
+    ignore_filter(idents, field_attrs, &quote!{ _ })
 }
 
 fn ignore_types(idents: &[&Type], field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
-    ignore_filter(idents, field_attrs, quote! { () })
+    ignore_filter(idents, field_attrs, &quote! { () })
 }
 
 fn filter_by_ignore<I>(field_attrs: &[FieldLevelAttrs], idents: I) -> Vec<TokenStream>

@@ -2,28 +2,28 @@ use quote::ToTokens;
 use super::{MetaFuncExpr, super::PassedValues};
 use syn::{Expr, Lit, Token, Type, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, token};
 
-/// MetaExpr represents a key/expr pair
+/// `MetaExpr` represents a key/expr pair
 /// Takes two forms:
 /// * ident(expr)
 /// * ident = expr
 /// both are always allowed
 pub type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
 
-/// MetaType represents a key/ty pair
+/// `MetaType` represents a key/ty pair
 /// Takes two forms:
 /// * ident(ty)
 /// * ident = ty
 /// both are always allowed
 pub type MetaType<Keyword> = MetaValue<Keyword, Type>;
 
-/// MetaLit represents a key/lit pair
+/// `MetaLit` represents a key/lit pair
 /// Takes two forms:
 /// * ident(lit)
 /// * ident = lit
 /// both are always allowed
 pub type MetaLit<Keyword> = MetaValue<Keyword, Lit>;
 
-/// MetaFunc represents a key/fn pair
+/// `MetaFunc` represents a key/fn pair
 /// Takes two forms:
 /// * ident(fn)
 /// * ident = fn

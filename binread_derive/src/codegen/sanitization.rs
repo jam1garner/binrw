@@ -54,8 +54,8 @@ pub fn closure_wrap<T: ToTokens>(value: T) -> TokenStream {
     )
 }
 
-/// A string wrapper that converts the str to a $path TokenStream, allowing for constant-time
-/// idents that can be shared across threads
+/// A string wrapper that converts the str to a $path `TokenStream`, allowing
+/// for constant-time idents that can be shared across threads
 #[derive(Debug, Clone, Copy)]
 pub struct IdentStr(pub &'static str);
 

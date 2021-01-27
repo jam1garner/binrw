@@ -104,30 +104,30 @@ impl FieldLevelAttrs {
             }
         }
 
-        fn set_endian(fla: &mut FieldLevelAttrs, endian: CondEndian, span: &Span) -> syn::Result<()> {
+        fn set_endian(fla: &mut FieldLevelAttrs, endian: CondEndian, span: Span) -> syn::Result<()> {
             if matches!(fla.endian, CondEndian::Fixed(Endian::Native)) {
                 fla.endian = endian;
                 Ok(())
             } else {
-                Err(syn::Error::new(*span, "Conflicting endianness keywords"))
+                Err(syn::Error::new(span, "Conflicting endianness keywords"))
             }
         }
 
-        fn set_map(fla: &mut FieldLevelAttrs, map: Map, span: &Span) -> syn::Result<()> {
+        fn set_map(fla: &mut FieldLevelAttrs, map: Map, span: Span) -> syn::Result<()> {
             if matches!(fla.map, Map::None) {
                 fla.map = map;
                 Ok(())
             } else {
-                Err(syn::Error::new(*span, "Conflicting map keywords"))
+                Err(syn::Error::new(span, "Conflicting map keywords"))
             }
         }
 
-        fn set_args(fla: &mut FieldLevelAttrs, args: PassedArgs, span: &Span) -> syn::Result<()> {
+        fn set_args(fla: &mut FieldLevelAttrs, args: PassedArgs, span: Span) -> syn::Result<()> {
             if matches!(fla.args, PassedArgs::None) {
                 fla.args = args;
                 Ok(())
             } else {
-                Err(syn::Error::new(*span, "Conflicting args keywords"))
+                Err(syn::Error::new(span, "Conflicting args keywords"))
             }
         }
 
@@ -135,8 +135,8 @@ impl FieldLevelAttrs {
         let mut fla = Self::default();
         for attr in attrs {
             match attr {
-                FieldLevelAttr::Big(e) => set_endian(&mut fla, CondEndian::Fixed(Endian::Big), &e.span())?,
-                FieldLevelAttr::Little(e) => set_endian(&mut fla, CondEndian::Fixed(Endian::Little), &e.span())?,
+                FieldLevelAttr::Big(e) => set_endian(&mut fla, CondEndian::Fixed(Endian::Big), e.span())?,
+                FieldLevelAttr::Little(e) => set_endian(&mut fla, CondEndian::Fixed(Endian::Little), e.span())?,
                 FieldLevelAttr::Default(kw) => set_bool!(fla.default, kw.span()),
                 FieldLevelAttr::Ignore(kw) => set_bool!(fla.ignore, kw.span()),
                 FieldLevelAttr::DerefNow(kw) => set_bool!(fla.deref_now, kw.span()),
@@ -144,19 +144,19 @@ impl FieldLevelAttrs {
                 FieldLevelAttr::PostProcessNow(kw) => set_bool!(fla.postprocess_now, kw.span()),
                 FieldLevelAttr::Try(kw) => set_bool!(fla.do_try, kw.span()),
                 FieldLevelAttr::Temp(kw) => set_bool!(fla.temp, kw.span()),
-                FieldLevelAttr::Map(map) => set_map(&mut fla, Map::Map(map.value.into_token_stream()), &map.ident.span())?,
-                FieldLevelAttr::TryMap(map) => set_map(&mut fla, Map::Try(map.value.into_token_stream()), &map.ident.span())?,
+                FieldLevelAttr::Map(map) => set_map(&mut fla, Map::Map(map.value.into_token_stream()), map.ident.span())?,
+                FieldLevelAttr::TryMap(map) => set_map(&mut fla, Map::Try(map.value.into_token_stream()), map.ident.span())?,
                 FieldLevelAttr::ParseWith(parser) => set_option!(fla.parse_with, parser),
                 FieldLevelAttr::Magic(magic) => set_option!(fla.magic, magic),
-                FieldLevelAttr::Args(args) => set_args(&mut fla, PassedArgs::List(args.get()), &args.ident.span())?,
-                FieldLevelAttr::ArgsTuple(args) => set_args(&mut fla, PassedArgs::Tuple(args.value.into_token_stream()), &args.ident.span())?,
+                FieldLevelAttr::Args(args) => set_args(&mut fla, PassedArgs::List(args.get()), args.ident.span())?,
+                FieldLevelAttr::ArgsTuple(args) => set_args(&mut fla, PassedArgs::Tuple(args.value.into_token_stream()), args.ident.span())?,
                 FieldLevelAttr::Assert(a) => {
                     fla.assert.push(convert_assert(&a)?);
                 },
                 FieldLevelAttr::Calc(calc) => set_option!(fla.calc, calc),
                 FieldLevelAttr::Count(count) => set_option!(fla.count, count),
-                FieldLevelAttr::IsLittle(e) => set_endian(&mut fla, CondEndian::Cond(Endian::Little, e.get()), &e.span())?,
-                FieldLevelAttr::IsBig(e) => set_endian(&mut fla, CondEndian::Cond(Endian::Big, e.get()), &e.span())?,
+                FieldLevelAttr::IsLittle(e) => set_endian(&mut fla, CondEndian::Cond(Endian::Little, e.get()), e.span())?,
+                FieldLevelAttr::IsBig(e) => set_endian(&mut fla, CondEndian::Cond(Endian::Big, e.get()), e.span())?,
                 FieldLevelAttr::Offset(offset) => set_option!(fla.offset, offset),
                 FieldLevelAttr::OffsetAfter(offset_after) => set_option!(fla.offset_after, offset_after),
                 FieldLevelAttr::If(if_cond) => set_option!(fla.if_cond, if_cond),
