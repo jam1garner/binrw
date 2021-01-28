@@ -1,15 +1,14 @@
+mod field_level_attrs;
 mod parser;
 mod spanned_value;
 mod top_level_attrs;
-mod field_level_attrs;
-pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
-pub(crate) use field_level_attrs::{CondEndian, FieldLevelAttrs, Map};
 
+pub(crate) use field_level_attrs::{CondEndian, FieldLevelAttrs, Map};
 use proc_macro2::TokenStream;
 use syn::{Expr, Ident, parse::Parse, Type, spanned::Spanned};
 use quote::ToTokens;
-
-use self::parser::{MetaAttrList, MetaList};
+use self::parser::{MetaAttrList, meta_types::MetaList};
+pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
 
 pub(crate) fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<impl Iterator<Item = P>> {
     Ok(attrs

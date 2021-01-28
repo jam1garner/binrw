@@ -1,20 +1,15 @@
-#[cfg(test)]
-mod parsing_tests;
-pub(crate) mod meta_types;
 mod keywords;
-
-use keywords as kw;
-
+pub(crate) mod meta_types;
 #[macro_use]
 pub(crate) mod parse_any;
+#[cfg(test)]
+mod parsing_tests;
 
-pub(crate) use meta_types::*;
-use syn::parse::{Parse, ParseStream};
-use syn::{parenthesized, token, Ident, Token, Path, Expr};
-use syn::ExprClosure;
-use syn::punctuated::Punctuated;
+use keywords as kw;
+use syn::{Expr, ExprClosure, Ident, Path, Token, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, token};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
+use self::meta_types::{MetaExpr, MetaFunc, MetaList, MetaLit, MetaType};
 
 // import, return_all_errors, return_unexpected_error, little, big, assert,
 // magic, pre_assert, repr

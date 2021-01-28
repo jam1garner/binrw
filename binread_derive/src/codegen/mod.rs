@@ -1,9 +1,9 @@
-pub(crate) mod sanitization;
 mod read_options;
+pub(crate) mod sanitization;
 
+use crate::meta_attrs::TopLevelAttrs;
 use proc_macro2::TokenStream;
 use syn::Error;
-use crate::meta_attrs::TopLevelAttrs;
 
 pub fn generate(input: &syn::DeriveInput) -> syn::Result<GeneratedCode> {
     if let syn::Data::Union(ref union) = input.data {

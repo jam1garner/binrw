@@ -1,5 +1,5 @@
-use super::{FieldLevelAttr, kw, MetaFunc, MetaLit, MetaType, TopLevelAttr};
 use proc_macro2::TokenStream as TokenStream2;
+use super::{FieldLevelAttr, kw, MetaFunc, MetaLit, MetaType, TopLevelAttr};
 
 macro_rules! test_tla {
     ($name:ident, $str:literal) => {

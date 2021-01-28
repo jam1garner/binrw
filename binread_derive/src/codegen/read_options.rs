@@ -1,7 +1,7 @@
-use std::iter;
 use crate::{binread_endian::Endian, codegen::sanitization::*, meta_attrs::{Assert, CondEndian, EnumErrorHandling, FieldLevelAttrs, MagicType, Map, PassedArgs, TopLevelAttrs}};
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
+use std::iter;
 use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
 
 pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> syn::Result<TokenStream> {

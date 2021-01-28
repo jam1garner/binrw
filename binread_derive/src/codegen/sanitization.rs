@@ -1,6 +1,6 @@
 ///! Utilities for helping sanitize macro
 use proc_macro2::TokenStream;
-use quote::{quote, format_ident, ToTokens};
+use quote::{quote, format_ident, TokenStreamExt, ToTokens};
 
 macro_rules! from_crate {
     ($path:path) => { IdentStr(concat!("::binread::", stringify!($path))) };
@@ -58,8 +58,6 @@ pub fn closure_wrap<T: ToTokens>(value: T) -> TokenStream {
 /// for constant-time idents that can be shared across threads
 #[derive(Debug, Clone, Copy)]
 pub struct IdentStr(pub &'static str);
-
-use quote::TokenStreamExt;
 
 impl ToTokens for IdentStr {
     fn to_tokens(&self, tokens: &mut TokenStream) {

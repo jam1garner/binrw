@@ -1,19 +1,15 @@
 #![warn(rust_2018_idioms)]
 
-use proc_macro::TokenStream;
-use quote::quote;
-use syn::{
-    parse_macro_input,
-    DeriveInput
-};
-
+mod binread_endian;
 mod codegen;
 mod meta_attrs;
-mod binread_endian;
 
 use codegen::sanitization::*;
 use meta_attrs::FieldLevelAttrs;
+use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use quote::quote;
+use syn::{DeriveInput, parse_macro_input};
 
 fn generate_impl(input: &DeriveInput) -> TokenStream {
     let codegen::GeneratedCode { read_opt_impl, arg_type } = codegen::generate(&input).unwrap_or_else(|e| {
