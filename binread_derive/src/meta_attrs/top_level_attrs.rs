@@ -19,24 +19,17 @@ impl Default for EnumErrorHandling {
 
 #[derive(Debug, Default, Clone)]
 pub struct TopLevelAttrs {
-    // ======================
-    //  Top-Only Attributes
-    // ======================
     pub import: Imports,
-    pub repr: Option<Type>,
-    pub return_error_mode: EnumErrorHandling,
-
-    // ======================
-    //  All-level attributes
-    // ======================
     pub endian: Endian,
-
-    // assertions/error handling
     pub assert: Vec<Assert>,
-    pub magic: Option<(MagicType, TokenStream)>,
     pub pre_assert: Vec<Assert>,
 
-    // other
+    // TODO: Used for enum only
+    pub repr: Option<Type>,
+
+    // TODO: Used for variants only?
+    pub return_error_mode: EnumErrorHandling,
+    pub magic: Option<(MagicType, TokenStream)>,
     pub map: Option<TokenStream>,
 }
 
