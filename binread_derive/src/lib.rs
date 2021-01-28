@@ -1,9 +1,11 @@
+#![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 
 mod binread_endian;
 mod codegen;
 mod meta_attrs;
 
+#[allow(clippy::wildcard_imports)]
 use codegen::sanitization::*;
 use meta_attrs::FieldLevelAttrs;
 use proc_macro::TokenStream;

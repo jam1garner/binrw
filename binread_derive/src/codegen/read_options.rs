@@ -1,4 +1,6 @@
-use crate::{binread_endian::Endian, codegen::sanitization::*, meta_attrs::{Assert, CondEndian, EnumErrorHandling, FieldLevelAttrs, MagicType, Map, PassedArgs, TopLevelAttrs}};
+use crate::{binread_endian::Endian, meta_attrs::{Assert, CondEndian, EnumErrorHandling, FieldLevelAttrs, MagicType, Map, PassedArgs, TopLevelAttrs}};
+#[allow(clippy::wildcard_imports)]
+use crate::codegen::sanitization::*;
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
 use std::iter;

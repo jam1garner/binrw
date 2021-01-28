@@ -36,6 +36,7 @@ impl Default for CondEndian {
 }
 
 #[derive(Debug, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct FieldLevelAttrs {
     // ======================
     //    Field-level only
