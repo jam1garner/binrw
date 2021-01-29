@@ -1,8 +1,8 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, PassedArgs, collect_attrs, convert_assert, parser::FieldLevelAttr};
-use syn::spanned::Spanned;
+use super::{Assert, PassedArgs, collect_attrs, convert_assert, keywords as kw, meta_types::{MetaExpr, MetaFunc, MetaList, MetaLit}};
+use syn::{Expr, Token, spanned::Spanned};
 
 #[derive(Clone, Debug)]
 pub(crate) enum Map {
@@ -32,6 +32,40 @@ pub(crate) enum CondEndian {
 impl Default for CondEndian {
     fn default() -> Self {
         Self::Fixed(Endian::default())
+    }
+}
+
+parse_any! {
+    enum FieldLevelAttr {
+        Big(kw::big),
+        Little(kw::little),
+        Default(kw::default),
+        Ignore(kw::ignore),
+        DerefNow(kw::deref_now),
+        RestorePosition(kw::restore_position),
+        PostProcessNow(kw::postprocess_now),
+        Try(Token![try]),
+        Temp(kw::temp),
+        Map(MetaFunc<kw::map>),
+        TryMap(MetaFunc<kw::try_map>),
+        ParseWith(MetaFunc<kw::parse_with>),
+        Magic(MetaLit<kw::magic>),
+        Args(MetaList<kw::args, Expr>),
+        ArgsTuple(MetaExpr<kw::args_tuple>),
+        Assert(MetaList<kw::assert, Expr>),
+        Calc(MetaExpr<kw::calc>),
+        Count(MetaExpr<kw::count>),
+        IsLittle(MetaExpr<kw::is_little>),
+        IsBig(MetaExpr<kw::is_big>),
+        Offset(MetaExpr<kw::offset>),
+        OffsetAfter(MetaExpr<kw::offset_after>),
+        If(MetaExpr<Token![if]>),
+        PadBefore(MetaExpr<kw::pad_before>),
+        PadAfter(MetaExpr<kw::pad_after>),
+        AlignBefore(MetaExpr<kw::align_before>),
+        AlignAfter(MetaExpr<kw::align_after>),
+        SeekBefore(MetaExpr<kw::seek_before>),
+        PadSizeTo(MetaExpr<kw::pad_size_to>)
     }
 }
 
@@ -80,14 +114,6 @@ pub(crate) struct FieldLevelAttrs {
 
 impl FieldLevelAttrs {
     pub fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
-        macro_rules! only_first {
-            ($obj:ident.$field:ident, $span:expr) => {
-                if $obj.$field.is_some() {
-                    return Err(syn::Error::new($span, concat!("Conflicting ", stringify!($field), " keywords")));
-                }
-            }
-        }
-
         macro_rules! set_option {
             ($obj:ident.$field:ident, $raw_obj:ident) => { {
                 only_first!($obj.$field, $raw_obj.ident.span());

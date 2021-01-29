@@ -1,8 +1,8 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, Imports, MagicType, collect_attrs, convert_assert, parser::{TopLevelAttr, meta_types::MetaLit}};
-use syn::{Lit, Type, spanned::Spanned};
+use super::{Assert, collect_attrs, convert_assert, Imports, keywords as kw, MagicType, meta_types::{ImportArgTuple, IdentPatType, MetaFunc, MetaList, MetaLit, MetaType}};
+use syn::{Expr, Lit, Type, spanned::Spanned};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum EnumErrorHandling {
@@ -14,6 +14,22 @@ pub enum EnumErrorHandling {
 impl Default for EnumErrorHandling {
     fn default() -> Self {
         Self::Default
+    }
+}
+
+parse_any! {
+    enum TopLevelAttr {
+        Big(kw::big),
+        Little(kw::little),
+        ReturnAllErrors(kw::return_all_errors),
+        ReturnUnexpectedError(kw::return_unexpected_error),
+        Magic(MetaLit<kw::magic>),
+        Repr(Box<MetaType<kw::repr>>),
+        Import(MetaList<kw::import, IdentPatType>),
+        ImportTuple(Box<ImportArgTuple>),
+        Assert(MetaList<kw::assert, Expr>),
+        PreAssert(MetaList<kw::pre_assert, Expr>),
+        Map(MetaFunc<kw::map>),
     }
 }
 
@@ -35,14 +51,6 @@ pub struct TopLevelAttrs {
 
 impl TopLevelAttrs {
     pub fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
-        macro_rules! only_first {
-            ($obj:ident.$field:ident, $span:expr) => {
-                if $obj.$field.is_some() {
-                    return Err(syn::Error::new($span, concat!("Conflicting ", stringify!($field), " keywords")));
-                }
-            }
-        }
-
         fn set_endian(tla: &mut TopLevelAttrs, endian: Endian, span: Span) -> syn::Result<()> {
             if tla.endian == Endian::Native {
                 tla.endian = endian;

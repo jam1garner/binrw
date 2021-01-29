@@ -3,11 +3,11 @@
 
 mod binread_endian;
 mod codegen;
-mod meta_attrs;
+mod parser;
 
 #[allow(clippy::wildcard_imports)]
 use codegen::sanitization::*;
-use meta_attrs::FieldLevelAttrs;
+use parser::FieldLevelAttrs;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;

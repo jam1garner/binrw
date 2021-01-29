@@ -16,14 +16,14 @@ macro_rules! parse_any {
         }
 
         impl syn::parse::Parse for $enum {
-            fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+            fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
                 let x = input.parse().map(Self::$variant1);
                 $(
                     let x = x.or_else(|_: syn::Error|{
                             Ok(Self::$variantn(input.parse()?))
                         });
                 )*
-                x.map_err(|_: syn::Error|{
+                x.map_err(|_: syn::Error| {
                     input.error(concat!(
                         "Cannot parse, expected one of the following: ",
                         stringify!($variant1)
@@ -36,4 +36,12 @@ macro_rules! parse_any {
             }
         }
     };
+}
+
+macro_rules! only_first {
+    ($obj:ident.$field:ident, $span:expr) => {
+        if $obj.$field.is_some() {
+            return Err(syn::Error::new($span, concat!("Conflicting ", stringify!($field), " keywords")));
+        }
+    }
 }
