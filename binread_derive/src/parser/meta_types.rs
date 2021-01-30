@@ -76,7 +76,7 @@ pub(crate) struct MetaList<Keyword, ItemType> {
     pub fields: Fields<ItemType>,
 }
 
-impl <Keyword> MetaList<Keyword, Expr> {
+impl <Keyword, ItemType: ToTokens> MetaList<Keyword, ItemType> {
     pub fn get(&self) -> Vec<proc_macro2::TokenStream> {
         self.fields.iter().map(ToTokens::into_token_stream).collect()
     }
