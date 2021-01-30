@@ -72,9 +72,6 @@ parse_any! {
 #[derive(Debug, Default)]
 #[allow(clippy::struct_excessive_bools)]
 pub(crate) struct FieldLevelAttrs {
-    // ======================
-    //    Field-level only
-    // ======================
     pub args: PassedArgs,
     pub map: Map,
     pub ignore: bool,
@@ -89,17 +86,8 @@ pub(crate) struct FieldLevelAttrs {
     pub restore_position: bool,
     pub do_try: bool,
     pub temp: bool,
-
-    // ======================
-    //  All-level attributes
-    // ======================
-    // endian
     pub endian: CondEndian,
-
-    // assertions/error handling
     pub assert: Vec<Assert>,
-
-    // TODO: this
     pub magic: Option<TokenStream>,
     pub pad_before: Option<TokenStream>,
     pub pad_after: Option<TokenStream>,
@@ -107,9 +95,7 @@ pub(crate) struct FieldLevelAttrs {
     pub align_after: Option<TokenStream>,
     pub seek_before: Option<TokenStream>,
     pub pad_size_to: Option<TokenStream>,
-
-    // parsing
-    pub parse_with: Option<TokenStream>
+    pub parse_with: Option<TokenStream>,
 }
 
 impl FieldLevelAttrs {
