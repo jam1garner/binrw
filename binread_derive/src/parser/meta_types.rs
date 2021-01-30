@@ -113,7 +113,7 @@ impl Parse for MetaFuncExpr {
         input.parse()
             .map(Self::Path)
             .or_else(|_: syn::Error| Ok(Self::Closure(input.parse()?)))
-            .map_err(|_: syn::Error| input.error("Cannot parse, expected a path or closure"))
+            .map_err(|_: syn::Error| input.error("expected path or closure"))
     }
 }
 
