@@ -19,9 +19,9 @@ macro_rules! parse_any {
             fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
                 let x = input.parse().map(Self::$variant1);
                 $(
-                    let x = x.or_else(|_: syn::Error|{
-                            Ok(Self::$variantn(input.parse()?))
-                        });
+                    let x = x.or_else(|_: syn::Error| {
+                        Ok(Self::$variantn(input.parse()?))
+                    });
                 )*
                 x.map_err(|_: syn::Error| {
                     let mut error = format!("Cannot parse, expected one of the following: {}", <$ty1 as $crate::parser::KeywordToken>::display());
