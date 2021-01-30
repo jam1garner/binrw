@@ -173,14 +173,20 @@ impl KeywordToken for ImportArgTuple {
     }
 }
 
-pub(crate) struct MetaAttrList<P>(pub Vec<P>);
+pub(crate) struct MetaAttrList<P>(Punctuated::<P, Token![,]>);
+
+impl <P> MetaAttrList<P> {
+    pub(crate) fn into_iter(self) -> impl Iterator<Item = P> {
+        self.0.into_iter()
+    }
+}
 
 impl <P: Parse> Parse for MetaAttrList<P> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let content;
         parenthesized!(content in input);
         Ok(MetaAttrList(
-            Punctuated::<P, Token![,]>::parse_terminated(&content)?.into_iter().collect()
+            Punctuated::<P, Token![,]>::parse_terminated(&content)?
         ))
     }
 }

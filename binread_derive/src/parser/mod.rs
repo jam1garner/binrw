@@ -36,7 +36,7 @@ pub(crate) fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<i
         // TODO: Do not collect, iterate instead
         .collect::<syn::Result<Vec<_>>>()?
         .into_iter()
-        .flat_map(|list| list.0.into_iter()))
+        .flat_map(MetaAttrList::<P>::into_iter))
 }
 
 #[derive(Debug, Clone)]
