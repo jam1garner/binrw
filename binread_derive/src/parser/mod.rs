@@ -16,6 +16,9 @@ pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
 
 pub(crate) trait KeywordToken {
     fn display() -> &'static str;
+    fn dyn_display(&self) -> &'static str {
+        Self::display()
+    }
 }
 
 impl <T: syn::token::Token> KeywordToken for T {
@@ -24,7 +27,34 @@ impl <T: syn::token::Token> KeywordToken for T {
     }
 }
 
-pub(crate) fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<impl Iterator<Item = P>> {
+pub(crate) fn duplicate_attr<Keyword: KeywordToken + Spanned, R>(kw: &Keyword) -> syn::Result<R> {
+    Err(syn::Error::new(kw.span(), format!("duplicate {} attribute", KeywordToken::dyn_display(kw))))
+}
+
+pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
+    fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
+        let mut this = Self::default();
+        let mut all_errors = None::<syn::Error>;
+        for attr in collect_attrs::<Attr>(attrs)? {
+            if let Err(parse_error) = this.try_set_attr(attr) {
+                if let Some(all_error) = &mut all_errors {
+                    all_error.combine(parse_error);
+                } else {
+                    all_errors = Some(parse_error);
+                }
+            }
+        }
+
+        match all_errors {
+            Some(all_error) => Err(all_error),
+            None => Ok(this),
+        }
+    }
+
+    fn try_set_attr(&mut self, attr: Attr) -> syn::Result<()>;
+}
+
+fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<impl Iterator<Item = P>> {
     Ok(attrs
         .iter()
         .filter_map(|attr|

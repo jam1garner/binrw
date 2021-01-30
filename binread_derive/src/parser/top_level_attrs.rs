@@ -1,7 +1,7 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, collect_attrs, convert_assert, Imports, keywords as kw, MagicType, meta_types::{ImportArgTuple, IdentPatType, MetaFunc, MetaList, MetaLit, MetaType}};
+use super::{Assert, FromAttrs, convert_assert, Imports, keywords as kw, MagicType, meta_types::{ImportArgTuple, IdentPatType, MetaFunc, MetaList, MetaLit, MetaType}};
 use syn::{Expr, Lit, Type, spanned::Spanned};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -49,14 +49,14 @@ pub struct TopLevelAttrs {
     pub map: Option<TokenStream>,
 }
 
-impl TopLevelAttrs {
-    pub fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
+impl FromAttrs<TopLevelAttr> for TopLevelAttrs {
+    fn try_set_attr(&mut self, attr: TopLevelAttr) -> syn::Result<()> {
         fn set_endian(tla: &mut TopLevelAttrs, endian: Endian, span: Span) -> syn::Result<()> {
             if tla.endian == Endian::Native {
                 tla.endian = endian;
                 Ok(())
             } else {
-                Err(syn::Error::new(span, "Conflicting endian keywords"))
+                Err(syn::Error::new(span, "conflicting endian attribute"))
             }
         }
 
@@ -65,53 +65,51 @@ impl TopLevelAttrs {
                 tla.return_error_mode = error;
                 Ok(())
             } else {
-                Err(syn::Error::new(span, "Conflicting error mode keywords"))
+                Err(syn::Error::new(span, "conflicting error mode attribute"))
             }
         }
 
-        let mut tla = Self::default();
-        for attr in collect_attrs::<TopLevelAttr>(attrs)? {
-            match attr {
-                TopLevelAttr::Big(kw) =>
-                    set_endian(&mut tla, Endian::Big, kw.span())?,
-                TopLevelAttr::Little(kw) =>
-                    set_endian(&mut tla, Endian::Little, kw.span())?,
-                TopLevelAttr::Import(s) => {
-                    only_first!(tla.import, s.ident.span());
-                    let (idents, tys): (Vec<_>, Vec<_>) = s.fields
-                        .iter()
-                        .cloned()
-                        .map(|import_arg| (import_arg.ident, import_arg.ty))
-                        .unzip();
-                    tla.import = Imports::List(idents, tys);
-                },
-                TopLevelAttr::ImportTuple(s) => {
-                    only_first!(tla.import, s.ident.span());
-                    tla.import = Imports::Tuple(s.arg.ident, s.arg.ty.into());
-                },
-                TopLevelAttr::Assert(a) =>
-                    tla.assert.push(convert_assert(&a)?),
-                TopLevelAttr::PreAssert(a) =>
-                    tla.pre_assert.push(convert_assert(&a)?),
-                TopLevelAttr::Repr(ty) => {
-                    only_first!(tla.repr, ty.ident.span());
-                    tla.repr = Some(ty.value);
-                },
-                TopLevelAttr::ReturnAllErrors(e) =>
-                    set_error(&mut tla, EnumErrorHandling::ReturnAllErrors, e.span())?,
-                TopLevelAttr::ReturnUnexpectedError(e) =>
-                    set_error(&mut tla, EnumErrorHandling::ReturnUnexpectedError, e.span())?,
-                TopLevelAttr::Magic(m) => {
-                    only_first!(tla.magic, m.ident.span());
-                    tla.magic = Some((magic_to_type(&m), magic_to_tokens(&m)));
-                },
-                TopLevelAttr::Map(m) => {
-                    only_first!(tla.map, m.ident.span());
-                    tla.map = Some(m.into_token_stream());
-                }
+        match attr {
+            TopLevelAttr::Big(kw) =>
+                set_endian(self, Endian::Big, kw.span())?,
+            TopLevelAttr::Little(kw) =>
+                set_endian(self, Endian::Little, kw.span())?,
+            TopLevelAttr::Import(s) => {
+                only_first!(self.import, s.ident);
+                let (idents, tys): (Vec<_>, Vec<_>) = s.fields
+                    .iter()
+                    .cloned()
+                    .map(|import_arg| (import_arg.ident, import_arg.ty))
+                    .unzip();
+                self.import = Imports::List(idents, tys);
+            },
+            TopLevelAttr::ImportTuple(s) => {
+                only_first!(self.import, s.ident);
+                self.import = Imports::Tuple(s.arg.ident, s.arg.ty.into());
+            },
+            TopLevelAttr::Assert(a) =>
+                self.assert.push(convert_assert(&a)?),
+            TopLevelAttr::PreAssert(a) =>
+                self.pre_assert.push(convert_assert(&a)?),
+            TopLevelAttr::Repr(ty) => {
+                only_first!(self.repr, ty.ident);
+                self.repr = Some(ty.value);
+            },
+            TopLevelAttr::ReturnAllErrors(e) =>
+                set_error(self, EnumErrorHandling::ReturnAllErrors, e.span())?,
+            TopLevelAttr::ReturnUnexpectedError(e) =>
+                set_error(self, EnumErrorHandling::ReturnUnexpectedError, e.span())?,
+            TopLevelAttr::Magic(m) => {
+                only_first!(self.magic, m.ident);
+                self.magic = Some((magic_to_type(&m), magic_to_tokens(&m)));
+            },
+            TopLevelAttr::Map(m) => {
+                only_first!(self.map, m.ident);
+                self.map = Some(m.into_token_stream());
             }
         }
-        Ok(tla)
+
+        Ok(())
     }
 }
 

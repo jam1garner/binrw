@@ -24,7 +24,7 @@ macro_rules! parse_any {
                     });
                 )*
                 x.map_err(|_: syn::Error| {
-                    let mut error = format!("Cannot parse, expected one of the following: {}", <$ty1 as $crate::parser::KeywordToken>::display());
+                    let mut error = format!("invalid keyword, expected one of {}", <$ty1 as $crate::parser::KeywordToken>::display());
                     $(
                         error.push_str(", ");
                         error.push_str(<$tyn as $crate::parser::KeywordToken>::display());
@@ -37,9 +37,9 @@ macro_rules! parse_any {
 }
 
 macro_rules! only_first {
-    ($obj:ident.$field:ident, $span:expr) => {
+    ($obj:ident.$field:ident, $kw:expr) => {
         if $obj.$field.is_some() {
-            return Err(syn::Error::new($span, concat!("Conflicting ", stringify!($field), " keywords")));
+            return $crate::parser::duplicate_attr(&$kw);
         }
     }
 }

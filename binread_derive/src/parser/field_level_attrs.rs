@@ -1,7 +1,7 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, PassedArgs, collect_attrs, convert_assert, keywords as kw, meta_types::{MetaExpr, MetaFunc, MetaList, MetaLit}};
+use super::{Assert, FromAttrs, PassedArgs, convert_assert, keywords as kw, meta_types::{MetaExpr, MetaFunc, MetaList, MetaLit}};
 use syn::{Expr, Token, spanned::Spanned};
 
 #[derive(Clone, Debug)]
@@ -98,22 +98,24 @@ pub(crate) struct FieldLevelAttrs {
     pub parse_with: Option<TokenStream>,
 }
 
-impl FieldLevelAttrs {
+impl FromAttrs<FieldLevelAttr> for FieldLevelAttrs {
     #[allow(clippy::too_many_lines)]
-    pub fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> {
+    fn try_set_attr(&mut self, attr: FieldLevelAttr) -> syn::Result<()> {
         macro_rules! set_option {
             ($obj:ident.$field:ident, $raw_obj:ident) => { {
-                only_first!($obj.$field, $raw_obj.ident.span());
+                only_first!($obj.$field, $raw_obj.ident);
                 $obj.$field = Some($raw_obj.value.to_token_stream());
+                Ok(())
             } }
         }
 
         macro_rules! set_bool {
-            ($obj:ident.$field:ident, $span:expr) => {
+            ($obj:ident.$field:ident, $kw:expr) => {
                 if $obj.$field == false {
                     $obj.$field = true;
+                    Ok(())
                 } else {
-                    return Err(syn::Error::new($span, concat!("Duplicate ", stringify!($field), " keywords")));
+                    super::duplicate_attr(&$kw)
                 }
             }
         }
@@ -123,7 +125,7 @@ impl FieldLevelAttrs {
                 fla.endian = endian;
                 Ok(())
             } else {
-                Err(syn::Error::new(span, "Conflicting endianness keywords"))
+                Err(syn::Error::new(span, "conflicting endian attribute"))
             }
         }
 
@@ -132,7 +134,7 @@ impl FieldLevelAttrs {
                 fla.map = map;
                 Ok(())
             } else {
-                Err(syn::Error::new(span, "Conflicting map keywords"))
+                Err(syn::Error::new(span, "conflicting map-like attribute"))
             }
         }
 
@@ -141,74 +143,71 @@ impl FieldLevelAttrs {
                 fla.args = args;
                 Ok(())
             } else {
-                Err(syn::Error::new(span, "Conflicting args keywords"))
+                Err(syn::Error::new(span, "conflicting args-like attribute"))
             }
         }
 
-        let mut fla = Self::default();
-        for attr in collect_attrs::<FieldLevelAttr>(attrs)? {
-            match attr {
-                FieldLevelAttr::Big(kw) =>
-                    set_endian(&mut fla, CondEndian::Fixed(Endian::Big), kw.span())?,
-                FieldLevelAttr::Little(kw) =>
-                    set_endian(&mut fla, CondEndian::Fixed(Endian::Little), kw.span())?,
-                FieldLevelAttr::Default(kw) =>
-                    set_bool!(fla.default, kw.span()),
-                FieldLevelAttr::Ignore(kw) =>
-                    set_bool!(fla.ignore, kw.span()),
-                FieldLevelAttr::DerefNow(kw) =>
-                    set_bool!(fla.deref_now, kw.span()),
-                FieldLevelAttr::RestorePosition(kw) =>
-                    set_bool!(fla.restore_position, kw.span()),
-                FieldLevelAttr::PostProcessNow(kw) =>
-                    set_bool!(fla.postprocess_now, kw.span()),
-                FieldLevelAttr::Try(kw) =>
-                    set_bool!(fla.do_try, kw.span()),
-                FieldLevelAttr::Temp(kw) =>
-                    set_bool!(fla.temp, kw.span()),
-                FieldLevelAttr::Map(map) =>
-                    set_map(&mut fla, Map::Map(map.value.to_token_stream()), map.ident.span())?,
-                FieldLevelAttr::TryMap(map) =>
-                    set_map(&mut fla, Map::Try(map.value.to_token_stream()), map.ident.span())?,
-                FieldLevelAttr::ParseWith(parser) =>
-                    set_option!(fla.parse_with, parser),
-                FieldLevelAttr::Magic(magic) =>
-                    set_option!(fla.magic, magic),
-                FieldLevelAttr::Args(args) =>
-                    set_args(&mut fla, PassedArgs::List(args.get()), args.ident.span())?,
-                FieldLevelAttr::ArgsTuple(args) =>
-                    set_args(&mut fla, PassedArgs::Tuple(args.value.to_token_stream()), args.span())?,
-                FieldLevelAttr::Assert(assert) =>
-                    fla.assert.push(convert_assert(&assert)?),
-                FieldLevelAttr::Calc(calc) =>
-                    set_option!(fla.calc, calc),
-                FieldLevelAttr::Count(count) =>
-                    set_option!(fla.count, count),
-                FieldLevelAttr::IsLittle(is_little) =>
-                    set_endian(&mut fla, CondEndian::Cond(Endian::Little, is_little.to_token_stream()), is_little.ident.span())?,
-                FieldLevelAttr::IsBig(is_big) =>
-                    set_endian(&mut fla, CondEndian::Cond(Endian::Big, is_big.to_token_stream()), is_big.ident.span())?,
-                FieldLevelAttr::Offset(offset) =>
-                    set_option!(fla.offset, offset),
-                FieldLevelAttr::OffsetAfter(offset_after) =>
-                    set_option!(fla.offset_after, offset_after),
-                FieldLevelAttr::If(if_cond) =>
-                    set_option!(fla.if_cond, if_cond),
-                FieldLevelAttr::PadBefore(pad_before) =>
-                    set_option!(fla.pad_before, pad_before),
-                FieldLevelAttr::PadAfter(pad_after) =>
-                    set_option!(fla.pad_after, pad_after),
-                FieldLevelAttr::AlignBefore(align_before) =>
-                    set_option!(fla.align_before, align_before),
-                FieldLevelAttr::AlignAfter(align_after) =>
-                    set_option!(fla.align_after, align_after),
-                FieldLevelAttr::SeekBefore(seek_before) =>
-                    set_option!(fla.seek_before, seek_before),
-                FieldLevelAttr::PadSizeTo(pad_size_to) =>
-                    set_option!(fla.pad_size_to, pad_size_to),
-            }
+        match attr {
+            FieldLevelAttr::Big(kw) =>
+                set_endian(self, CondEndian::Fixed(Endian::Big), kw.span()),
+            FieldLevelAttr::Little(kw) =>
+                set_endian(self, CondEndian::Fixed(Endian::Little), kw.span()),
+            FieldLevelAttr::Default(kw) =>
+                set_bool!(self.default, kw),
+            FieldLevelAttr::Ignore(kw) =>
+                set_bool!(self.ignore, kw),
+            FieldLevelAttr::DerefNow(kw) =>
+                set_bool!(self.deref_now, kw),
+            FieldLevelAttr::RestorePosition(kw) =>
+                set_bool!(self.restore_position, kw),
+            FieldLevelAttr::PostProcessNow(kw) =>
+                set_bool!(self.postprocess_now, kw),
+            FieldLevelAttr::Try(kw) =>
+                set_bool!(self.do_try, kw),
+            FieldLevelAttr::Temp(kw) =>
+                set_bool!(self.temp, kw),
+            FieldLevelAttr::Map(map) =>
+                set_map(self, Map::Map(map.value.to_token_stream()), map.ident.span()),
+            FieldLevelAttr::TryMap(map) =>
+                set_map(self, Map::Try(map.value.to_token_stream()), map.ident.span()),
+            FieldLevelAttr::ParseWith(parser) =>
+                set_option!(self.parse_with, parser),
+            FieldLevelAttr::Magic(magic) =>
+                set_option!(self.magic, magic),
+            FieldLevelAttr::Args(args) =>
+                set_args(self, PassedArgs::List(args.get()), args.ident.span()),
+            FieldLevelAttr::ArgsTuple(args) =>
+                set_args(self, PassedArgs::Tuple(args.value.to_token_stream()), args.span()),
+            FieldLevelAttr::Assert(assert) => {
+                self.assert.push(convert_assert(&assert)?);
+                Ok(())
+            },
+            FieldLevelAttr::Calc(calc) =>
+                set_option!(self.calc, calc),
+            FieldLevelAttr::Count(count) =>
+                set_option!(self.count, count),
+            FieldLevelAttr::IsLittle(is_little) =>
+                set_endian(self, CondEndian::Cond(Endian::Little, is_little.to_token_stream()), is_little.ident.span()),
+            FieldLevelAttr::IsBig(is_big) =>
+                set_endian(self, CondEndian::Cond(Endian::Big, is_big.to_token_stream()), is_big.ident.span()),
+            FieldLevelAttr::Offset(offset) =>
+                set_option!(self.offset, offset),
+            FieldLevelAttr::OffsetAfter(offset_after) =>
+                set_option!(self.offset_after, offset_after),
+            FieldLevelAttr::If(if_cond) =>
+                set_option!(self.if_cond, if_cond),
+            FieldLevelAttr::PadBefore(pad_before) =>
+                set_option!(self.pad_before, pad_before),
+            FieldLevelAttr::PadAfter(pad_after) =>
+                set_option!(self.pad_after, pad_after),
+            FieldLevelAttr::AlignBefore(align_before) =>
+                set_option!(self.align_before, align_before),
+            FieldLevelAttr::AlignAfter(align_after) =>
+                set_option!(self.align_after, align_after),
+            FieldLevelAttr::SeekBefore(seek_before) =>
+                set_option!(self.seek_before, seek_before),
+            FieldLevelAttr::PadSizeTo(pad_size_to) =>
+                set_option!(self.pad_size_to, pad_size_to),
         }
-
-        Ok(fla)
     }
 }

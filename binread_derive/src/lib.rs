@@ -48,6 +48,7 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
 }
 
 fn is_temp(field: &syn::Field) -> bool {
+    use parser::FromAttrs;
     FieldLevelAttrs::try_from_attrs(&field.attrs)
         .map(|attrs| attrs.temp)
         .unwrap_or(false)

@@ -1,7 +1,7 @@
 mod read_options;
 pub(crate) mod sanitization;
 
-use crate::parser::TopLevelAttrs;
+use crate::parser::{FromAttrs, TopLevelAttrs};
 use proc_macro2::TokenStream;
 use syn::Error;
 
