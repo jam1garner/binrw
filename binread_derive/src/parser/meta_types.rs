@@ -36,12 +36,6 @@ pub(crate) struct MetaValue<Keyword, Value> {
     pub value: Value,
 }
 
-impl <Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
-    pub fn get(&self) -> proc_macro2::TokenStream {
-        self.value.to_token_stream()
-    }
-}
-
 impl <Keyword: Parse, Value: Parse> Parse for MetaValue<Keyword, Value> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;

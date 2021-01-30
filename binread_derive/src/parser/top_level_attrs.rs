@@ -70,16 +70,12 @@ impl TopLevelAttrs {
         }
 
         let mut tla = Self::default();
-        let attrs = collect_attrs::<TopLevelAttr>(attrs)?;
-
-        for attr in attrs {
+        for attr in collect_attrs::<TopLevelAttr>(attrs)? {
             match attr {
-                TopLevelAttr::Big(kw) => {
-                    set_endian(&mut tla, Endian::Big, kw.span())?;
-                },
-                TopLevelAttr::Little(kw) => {
-                    set_endian(&mut tla, Endian::Little, kw.span())?;
-                },
+                TopLevelAttr::Big(kw) =>
+                    set_endian(&mut tla, Endian::Big, kw.span())?,
+                TopLevelAttr::Little(kw) =>
+                    set_endian(&mut tla, Endian::Little, kw.span())?,
                 TopLevelAttr::Import(s) => {
                     only_first!(tla.import, s.ident.span());
                     let (idents, tys): (Vec<_>, Vec<_>) = s.fields
@@ -93,22 +89,18 @@ impl TopLevelAttrs {
                     only_first!(tla.import, s.ident.span());
                     tla.import = Imports::Tuple(s.arg.ident.clone(), s.arg.ty.clone().into());
                 },
-                TopLevelAttr::Assert(a) => {
-                    tla.assert.push(convert_assert(&a)?);
-                },
-                TopLevelAttr::PreAssert(a) => {
-                    tla.pre_assert.push(convert_assert(&a)?);
-                },
+                TopLevelAttr::Assert(a) =>
+                    tla.assert.push(convert_assert(&a)?),
+                TopLevelAttr::PreAssert(a) =>
+                    tla.pre_assert.push(convert_assert(&a)?),
                 TopLevelAttr::Repr(ty) => {
                     only_first!(tla.repr, ty.ident.span());
                     tla.repr = Some(ty.value);
                 },
-                TopLevelAttr::ReturnAllErrors(e) => {
-                    set_error(&mut tla, EnumErrorHandling::ReturnAllErrors, e.span())?;
-                },
-                TopLevelAttr::ReturnUnexpectedError(e) => {
-                    set_error(&mut tla, EnumErrorHandling::ReturnUnexpectedError, e.span())?;
-                },
+                TopLevelAttr::ReturnAllErrors(e) =>
+                    set_error(&mut tla, EnumErrorHandling::ReturnAllErrors, e.span())?,
+                TopLevelAttr::ReturnUnexpectedError(e) =>
+                    set_error(&mut tla, EnumErrorHandling::ReturnUnexpectedError, e.span())?,
                 TopLevelAttr::Magic(m) => {
                     only_first!(tla.magic, m.ident.span());
                     tla.magic = Some((magic_to_type(&m), magic_to_tokens(&m)));
