@@ -10,7 +10,6 @@ use proc_macro2::TokenStream;
 use crate::compiler_error::{CompileError, SpanError};
 use syn::{Expr, Ident, Lit, parse::Parse, Type, spanned::Spanned};
 use quote::ToTokens;
-use proc_macro2::TokenStream as TokenStream2;
 
 use self::parser::MetaList;
 
@@ -54,7 +53,7 @@ impl Default for Imports {
 }
 
 impl Imports {
-    pub fn idents(&self) -> TokenStream2 {
+    pub fn idents(&self) -> TokenStream {
         match self {
             Imports::List(idents, _) => {
                 let idents = idents.iter();
@@ -68,7 +67,7 @@ impl Imports {
         }
     }
 
-    pub fn types(&self) -> TokenStream2 {
+    pub fn types(&self) -> TokenStream {
         match self {
             Imports::List(_, types) => {
                 let types = types.iter();
