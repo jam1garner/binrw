@@ -67,12 +67,6 @@ impl <Keyword: KeywordToken, Value> KeywordToken for MetaValue<Keyword, Value> {
     }
 }
 
-impl <Keyword: KeywordToken, Value> KeywordToken for Box<MetaValue<Keyword, Value>> {
-    fn display() -> &'static str {
-        <Keyword as KeywordToken>::display()
-    }
-}
-
 type Fields<T> = Punctuated<T, Token![,]>;
 
 #[derive(Debug, Clone)]
@@ -174,12 +168,6 @@ impl Parse for ImportArgTuple {
 }
 
 impl KeywordToken for ImportArgTuple {
-    fn display() -> &'static str {
-        <kw::import_tuple as KeywordToken>::display()
-    }
-}
-
-impl KeywordToken for Box<ImportArgTuple> {
     fn display() -> &'static str {
         <kw::import_tuple as KeywordToken>::display()
     }

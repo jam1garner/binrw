@@ -24,9 +24,9 @@ parse_any! {
         ReturnAllErrors(kw::return_all_errors),
         ReturnUnexpectedError(kw::return_unexpected_error),
         Magic(MetaLit<kw::magic>),
-        Repr(Box<MetaType<kw::repr>>),
+        Repr(MetaType<kw::repr>),
         Import(MetaList<kw::import, IdentPatType>),
-        ImportTuple(Box<ImportArgTuple>),
+        ImportTuple(ImportArgTuple),
         Assert(MetaList<kw::assert, Expr>),
         PreAssert(MetaList<kw::pre_assert, Expr>),
         Map(MetaFunc<kw::map>),
@@ -87,7 +87,7 @@ impl TopLevelAttrs {
                 },
                 TopLevelAttr::ImportTuple(s) => {
                     only_first!(tla.import, s.ident.span());
-                    tla.import = Imports::Tuple(s.arg.ident.clone(), s.arg.ty.clone().into());
+                    tla.import = Imports::Tuple(s.arg.ident, s.arg.ty.into());
                 },
                 TopLevelAttr::Assert(a) =>
                     tla.assert.push(convert_assert(&a)?),
