@@ -11,6 +11,7 @@ license = "MIT"
 proc-macro = true
 
 [dependencies]
+either = "1.6"
 syn = { version = "1", features = ["extra-traits", "full"] }
 quote = "1"
 proc-macro2 = "1"

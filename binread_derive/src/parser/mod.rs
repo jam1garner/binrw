@@ -33,12 +33,28 @@ pub(crate) fn duplicate_attr<Keyword: KeywordToken + Spanned, R>(kw: &Keyword) -
 
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
     fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
+        #[allow(clippy::filter_map)]
+        let attrs = attrs
+            .iter()
+            .filter(|attr| attr.path.is_ident("br") || attr.path.is_ident("binread"))
+            .flat_map(|attr| {
+                match syn::parse2::<MetaAttrList<Attr>>(attr.tokens.clone()) {
+                    Ok(list) => either::Either::Right(list.into_iter().map(Ok)),
+                    Err(err) => either::Either::Left(core::iter::once(Err(err))),
+                }
+            });
+
         let mut this = Self::default();
         let mut all_errors = None::<syn::Error>;
-        for attr in collect_attrs::<Attr>(attrs)? {
-            if let Err(parse_error) = this.try_set_attr(attr) {
-                if let Some(all_error) = &mut all_errors {
-                    all_error.combine(parse_error);
+        for attr in attrs {
+            let result = match attr {
+                Ok(attr) => this.try_set_attr(attr),
+                Err(e) => Err(e),
+            };
+
+            if let Err(parse_error) = result {
+                if let Some(error) = &mut all_errors {
+                    error.combine(parse_error);
                 } else {
                     all_errors = Some(parse_error);
                 }
@@ -46,27 +62,12 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
         }
 
         match all_errors {
-            Some(all_error) => Err(all_error),
+            Some(error) => Err(error),
             None => Ok(this),
         }
     }
 
     fn try_set_attr(&mut self, attr: Attr) -> syn::Result<()>;
-}
-
-fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<impl Iterator<Item = P>> {
-    Ok(attrs
-        .iter()
-        .filter_map(|attr|
-            if attr.path.is_ident("br") || attr.path.is_ident("binread") {
-                Some(syn::parse2::<MetaAttrList<P>>(attr.tokens.clone()))
-            } else {
-                None
-            })
-        // TODO: Do not collect, iterate instead
-        .collect::<syn::Result<Vec<_>>>()?
-        .into_iter()
-        .flat_map(MetaAttrList::<P>::into_iter))
 }
 
 #[derive(Debug, Clone)]
