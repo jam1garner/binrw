@@ -8,7 +8,7 @@ macro_rules! parse_any {
         $(,)?
     }) => {
         #[derive(Debug, Clone)]
-        pub enum $enum {
+        pub(crate) enum $enum {
             $variant1($ty1),
             $(
                 $variantn($tyn)
@@ -24,14 +24,12 @@ macro_rules! parse_any {
                         });
                 )*
                 x.map_err(|_: syn::Error| {
-                    input.error(concat!(
-                        "Cannot parse, expected one of the following: ",
-                        stringify!($variant1)
-                        $(
-                            ,", ",
-                            stringify!($variantn)
-                        )*
-                    ))
+                    let mut error = format!("Cannot parse, expected one of the following: {}", <$ty1 as $crate::parser::KeywordToken>::display());
+                    $(
+                        error.push_str(", ");
+                        error.push_str(<$tyn as $crate::parser::KeywordToken>::display());
+                    )*
+                    input.error(error)
                 })
             }
         }

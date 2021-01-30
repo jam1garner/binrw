@@ -123,7 +123,7 @@ impl TopLevelAttrs {
     }
 }
 
-fn magic_to_type(magic: &MetaLit<impl syn::parse::Parse>) -> MagicType {
+fn magic_to_type<Keyword>(magic: &MetaLit<Keyword>) -> MagicType {
     let magic = &magic.value;
     match magic {
         Lit::Str(_) => MagicType::Str,
@@ -137,7 +137,7 @@ fn magic_to_type(magic: &MetaLit<impl syn::parse::Parse>) -> MagicType {
     }
 }
 
-fn magic_to_tokens(magic: &MetaLit<impl syn::parse::Parse>) -> TokenStream {
+fn magic_to_tokens<Keyword>(magic: &MetaLit<Keyword>) -> TokenStream {
     let magic = &magic.value;
     if let Lit::Str(_) | Lit::ByteStr(_) = magic {
         quote::quote!{

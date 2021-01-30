@@ -1,5 +1,5 @@
 use quote::ToTokens;
-use super::keywords as kw;
+use super::{KeywordToken, keywords as kw};
 use syn::{Expr, Lit, Token, Type, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, token};
 
 /// `MetaExpr` represents a key/expr pair
@@ -7,42 +7,42 @@ use syn::{Expr, Lit, Token, Type, parenthesized, parse::{Parse, ParseStream}, pu
 /// * ident(expr)
 /// * ident = expr
 /// both are always allowed
-pub type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
+pub(crate) type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
 
 /// `MetaType` represents a key/ty pair
 /// Takes two forms:
 /// * ident(ty)
 /// * ident = ty
 /// both are always allowed
-pub type MetaType<Keyword> = MetaValue<Keyword, Type>;
+pub(crate) type MetaType<Keyword> = MetaValue<Keyword, Type>;
 
 /// `MetaLit` represents a key/lit pair
 /// Takes two forms:
 /// * ident(lit)
 /// * ident = lit
 /// both are always allowed
-pub type MetaLit<Keyword> = MetaValue<Keyword, Lit>;
+pub(crate) type MetaLit<Keyword> = MetaValue<Keyword, Lit>;
 
 /// `MetaFunc` represents a key/fn pair
 /// Takes two forms:
 /// * ident(fn)
 /// * ident = fn
 /// both are always allowed
-pub type MetaFunc<Keyword> = MetaValue<Keyword, MetaFuncExpr>;
+pub(crate) type MetaFunc<Keyword> = MetaValue<Keyword, MetaFuncExpr>;
 
 #[derive(Debug, Clone)]
-pub struct MetaValue<Keyword: Parse, Value: Parse + ToTokens> {
+pub(crate) struct MetaValue<Keyword, Value> {
     pub ident: Keyword,
     pub value: Value,
 }
 
-impl<Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
+impl <Keyword: Parse, Value: Parse + ToTokens> MetaValue<Keyword, Value> {
     pub fn get(&self) -> proc_macro2::TokenStream {
         self.value.to_token_stream()
     }
 }
 
-impl<Keyword: Parse, Value: Parse + ToTokens> Parse for MetaValue<Keyword, Value> {
+impl <Keyword: Parse, Value: Parse> Parse for MetaValue<Keyword, Value> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
         let value = if input.peek(token::Paren) {
@@ -61,22 +61,40 @@ impl<Keyword: Parse, Value: Parse + ToTokens> Parse for MetaValue<Keyword, Value
     }
 }
 
-impl<Keyword: Parse, Value: Parse + ToTokens> ToTokens for MetaValue<Keyword, Value> {
+impl <Keyword, Value: ToTokens> ToTokens for MetaValue<Keyword, Value> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         self.value.to_tokens(tokens);
+    }
+}
+
+impl <Keyword: KeywordToken, Value> KeywordToken for MetaValue<Keyword, Value> {
+    fn display() -> &'static str {
+        <Keyword as KeywordToken>::display()
+    }
+}
+
+impl <Keyword: KeywordToken, Value> KeywordToken for Box<MetaValue<Keyword, Value>> {
+    fn display() -> &'static str {
+        <Keyword as KeywordToken>::display()
     }
 }
 
 type Fields<T> = Punctuated<T, Token![,]>;
 
 #[derive(Debug, Clone)]
-pub struct MetaList<Keyword: Parse, ItemType: Parse> {
+pub(crate) struct MetaList<Keyword, ItemType> {
     pub ident: Keyword,
     pub parens: token::Paren,
     pub fields: Fields<ItemType>,
 }
 
-impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
+impl <Keyword> MetaList<Keyword, Expr> {
+    pub fn get(&self) -> Vec<proc_macro2::TokenStream> {
+        self.fields.iter().map(ToTokens::into_token_stream).collect()
+    }
+}
+
+impl <Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
         let content;
@@ -89,16 +107,25 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
     }
 }
 
-impl<Keyword: Parse> MetaList<Keyword, Expr> {
-    pub fn get(&self) -> Vec<proc_macro2::TokenStream> {
-        self.fields.iter().map(ToTokens::into_token_stream).collect()
+impl <Keyword: KeywordToken, ItemType> KeywordToken for MetaList<Keyword, ItemType> {
+    fn display() -> &'static str {
+        <Keyword as KeywordToken>::display()
     }
 }
 
-parse_any! {
-    enum MetaFuncExpr {
-        Path(syn::Path),
-        Closure(syn::ExprClosure)
+#[derive(Debug, Clone)]
+pub(crate) enum MetaFuncExpr {
+    Path(syn::Path),
+    Closure(syn::ExprClosure)
+}
+
+impl Parse for MetaFuncExpr {
+    #[allow(clippy::map_err_ignore)]
+    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        input.parse()
+            .map(Self::Path)
+            .or_else(|_: syn::Error| Ok(Self::Closure(input.parse()?)))
+            .map_err(|_: syn::Error| input.error("Cannot parse, expected a path or closure"))
     }
 }
 
@@ -116,7 +143,7 @@ impl ToTokens for MetaFuncExpr {
 // (2) No attributes;
 // (3) Only allows an ident on the LHS instead of any `syn::Pat`.
 #[derive(Debug, Clone)]
-pub struct IdentPatType {
+pub(crate) struct IdentPatType {
     pub ident: syn::Ident,
     pub colon_token: Token![:],
     pub ty: syn::Type
@@ -133,7 +160,7 @@ impl Parse for IdentPatType {
 }
 
 #[derive(Debug, Clone)]
-pub struct ImportArgTuple {
+pub(crate) struct ImportArgTuple {
     pub ident: kw::import_tuple,
     pub parens: token::Paren,
     pub arg: IdentPatType
@@ -152,9 +179,21 @@ impl Parse for ImportArgTuple {
     }
 }
 
-pub(crate) struct MetaAttrList<P: Parse>(pub Vec<P>);
+impl KeywordToken for ImportArgTuple {
+    fn display() -> &'static str {
+        <kw::import_tuple as KeywordToken>::display()
+    }
+}
 
-impl<P: Parse> Parse for MetaAttrList<P> {
+impl KeywordToken for Box<ImportArgTuple> {
+    fn display() -> &'static str {
+        <kw::import_tuple as KeywordToken>::display()
+    }
+}
+
+pub(crate) struct MetaAttrList<P>(pub Vec<P>);
+
+impl <P: Parse> Parse for MetaAttrList<P> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let content;
         parenthesized!(content in input);

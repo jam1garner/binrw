@@ -14,6 +14,16 @@ use quote::ToTokens;
 use self::meta_types::{MetaAttrList, MetaList};
 pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
 
+pub(crate) trait KeywordToken {
+    fn display() -> &'static str;
+}
+
+impl <T: syn::token::Token> KeywordToken for T {
+    fn display() -> &'static str {
+        <Self as syn::token::Token>::display()
+    }
+}
+
 pub(crate) fn collect_attrs<P: Parse>(attrs: &[syn::Attribute]) -> syn::Result<impl Iterator<Item = P>> {
     Ok(attrs
         .iter()
