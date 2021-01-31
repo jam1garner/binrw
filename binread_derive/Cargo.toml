@@ -1,0 +1,19 @@
+[package]
+name = "binread_derive"
+version = "1.4.3"
+authors = ["jam1garner <jam1.mcleod@hotmail.com>"]
+edition = "2018"
+description = "Derive macro for binread"
+repository = "https://github.com/jam1garner/binread"
+license = "MIT"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1", features = ["extra-traits", "full"] }
+quote = "1"
+proc-macro2 = "1"
+
+[features]
+debug_template = []

@@ -1,22 +1,5 @@
-[package]
-name = "binread"
-version = "1.4.1"
-authors = ["jam1garner <jam1.mcleod@hotmail.com>"]
-edition = "2018"
-repository = "https://github.com/jam1garner/binread"
-license = "MIT"
-description = "A Rust crate for helping read structs from binary data using ✨macro magic✨"
-readme = "README.md"
-documentation = "https://docs.rs/binread"
-
-[dependencies]
-binread_derive = { version = "1.4", path = "../binread_derive" }
-lazy_static = { version = "1.4" , optional=true }
-
-[dev-dependencies]
-modular-bitfield = "0.9"
-
-[features]
-default = ["std"]
-std = []
-debug_template = ["std", "lazy_static", "binread_derive/debug_template"]
+[workspace]
+members = [
+    "binread",
+    "binread_derive"
+]
