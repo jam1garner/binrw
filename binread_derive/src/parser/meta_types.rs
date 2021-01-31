@@ -1,3 +1,4 @@
+use proc_macro2::TokenStream;
 use quote::ToTokens;
 use super::{KeywordToken, keywords as kw};
 use syn::{Expr, Lit, Token, Type, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, token};
@@ -56,7 +57,7 @@ impl <Keyword: Parse, Value: Parse> Parse for MetaValue<Keyword, Value> {
 }
 
 impl <Keyword, Value: ToTokens> ToTokens for MetaValue<Keyword, Value> {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         self.value.to_tokens(tokens);
     }
 }
@@ -77,7 +78,7 @@ pub(crate) struct MetaList<Keyword, ItemType> {
 }
 
 impl <Keyword, ItemType: ToTokens> MetaList<Keyword, ItemType> {
-    pub fn get(&self) -> Vec<proc_macro2::TokenStream> {
+    pub fn get(&self) -> Vec<TokenStream> {
         self.fields.iter().map(ToTokens::into_token_stream).collect()
     }
 }
@@ -118,7 +119,7 @@ impl Parse for MetaFuncExpr {
 }
 
 impl ToTokens for MetaFuncExpr {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Self::Path(p) => p.to_tokens(tokens),
             Self::Closure(c) => c.to_tokens(tokens),
