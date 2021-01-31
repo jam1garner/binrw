@@ -35,11 +35,3 @@ macro_rules! parse_any {
         }
     };
 }
-
-macro_rules! only_first {
-    ($obj:ident.$field:ident, $kw:expr) => {
-        if $obj.$field.is_some() {
-            return $crate::parser::duplicate_attr(&$kw);
-        }
-    }
-}

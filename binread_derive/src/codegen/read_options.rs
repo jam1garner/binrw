@@ -34,7 +34,7 @@ fn magic_type_of(variant: &Variant) -> Option<(MagicType, TokenStream)> {
     tla.magic
 }
 
-fn generate_unit_enum(options: &TokenStream, repr: &Type, variants: &Punctuated<Variant, Comma>) -> TokenStream {
+fn generate_unit_enum(options: &TokenStream, repr: &TokenStream, variants: &Punctuated<Variant, Comma>) -> TokenStream {
     let clauses = variants
         .iter()
         .map(|variant| {

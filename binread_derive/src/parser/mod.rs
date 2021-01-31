@@ -11,7 +11,7 @@ pub(crate) use field_level_attrs::{CondEndian, FieldLevelAttrs, Map};
 use proc_macro2::TokenStream;
 use syn::{Expr, Ident, parse::Parse, Type, spanned::Spanned};
 use quote::ToTokens;
-use self::meta_types::{MetaAttrList, MetaList};
+use self::meta_types::{MetaAttrList, MetaList, MetaValue};
 pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
 
 pub(crate) trait KeywordToken {
@@ -166,4 +166,16 @@ pub(crate) fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Asser
         cond.into_token_stream(),
         err.map(ToTokens::into_token_stream)
     ))
+}
+
+pub(crate) fn set_option_ts<K, V>(value: &mut Option<TokenStream>, attr: &MetaValue<K, V>) -> syn::Result<()>
+    where K: KeywordToken + Spanned,
+          V: ToTokens,
+{
+    if value.is_some() {
+        duplicate_attr(&attr.ident)
+    } else {
+        *value = Some(attr.value.to_token_stream());
+        Ok(())
+    }
 }
