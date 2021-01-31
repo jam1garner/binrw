@@ -1,4 +1,4 @@
-use crate::{binread_endian::Endian, parser::{Assert, FromAttrs, CondEndian, EnumErrorHandling, FieldLevelAttrs, MagicType, Map, PassedArgs, TopLevelAttrs}};
+use crate::{binread_endian::Endian, parser::{Assert, CondEndian, EnumErrorHandling, FieldLevelAttrs, MagicType, Map, PassedArgs, TopLevelAttrs}};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use proc_macro2::TokenStream;
@@ -6,7 +6,7 @@ use quote::{quote, format_ident, ToTokens};
 use std::iter;
 use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
 
-pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> syn::Result<TokenStream> {
+pub(crate) fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> syn::Result<TokenStream> {
     if let Some(map) = &tla.map {
         Ok(quote!(
             #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
@@ -20,12 +20,15 @@ pub fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> syn::Result<TokenSt
     }
 }
 
-fn no_variant_data(v: &Variant) -> bool {
+// TODO: Put this somewhere else which is common, or else just tag the
+// attributes so it is known if it is a unit enum or not so it does not need to
+// scan twice
+pub(crate) fn no_variant_data(v: &Variant) -> bool {
     matches!(v.fields, Fields::Unit)
 }
 
 fn magic_type_of(variant: &Variant) -> Option<(MagicType, TokenStream)> {
-    let tla = TopLevelAttrs::try_from_attrs(&variant.attrs).ok()?;
+    let tla = TopLevelAttrs::try_from_variant(&variant).ok()?;
 
     if !tla.pre_assert.is_empty() {
         return None
@@ -190,7 +193,7 @@ fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -
 fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Variant)
     -> syn::Result<TokenStream>
 {
-    let tla = merge_tlas(tla, TopLevelAttrs::try_from_attrs(&variant.attrs)?)?;
+    let tla = merge_tlas(tla, TopLevelAttrs::try_from_variant(&variant)?)?;
 
     let variant_name = &variant.ident;
     let (name, ty) = get_name_types_fields(variant.fields.iter());
@@ -435,7 +438,7 @@ fn get_permenant_names<'a, I>(fields: I) -> Vec<Ident>
         .into_iter()
         .enumerate()
         .filter_map(|(i, field)|
-            if FieldLevelAttrs::try_from_attrs(&field.attrs).map(|x| x.temp).unwrap_or(false) {
+            if FieldLevelAttrs::try_from_field(&field).map(|x| x.temp).unwrap_or(false) {
                 None
             } else {
                 Some(
@@ -502,7 +505,7 @@ fn get_field_attrs<'a, I>(fields: I) -> syn::Result<Vec<FieldLevelAttrs>>
     Ok(
         fields
             .into_iter()
-            .map(|f| FieldLevelAttrs::try_from_attrs(&f.attrs))
+            .map(|f| FieldLevelAttrs::try_from_field(&f))
             .collect::<syn::Result<_>>()?
     )
 }

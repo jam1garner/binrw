@@ -1,16 +1,11 @@
-mod read_options;
+pub(crate) mod read_options;
 pub(crate) mod sanitization;
 
-use crate::parser::{FromAttrs, TopLevelAttrs};
+use crate::parser::TopLevelAttrs;
 use proc_macro2::TokenStream;
-use syn::Error;
 
 pub fn generate(input: &syn::DeriveInput) -> syn::Result<GeneratedCode> {
-    if let syn::Data::Union(ref union) = input.data {
-        return Err(Error::new(union.union_token.span, "Unions are not supported"));
-    }
-
-    let tla = TopLevelAttrs::try_from_attrs(&input.attrs)?;
+    let tla = TopLevelAttrs::try_from_input(&input)?;
 
     Ok(GeneratedCode {
         arg_type: tla.import.types(),

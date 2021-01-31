@@ -1,8 +1,8 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, FromAttrs, KeywordToken, PassedArgs, convert_assert, keywords as kw, meta_types::{MetaExpr, MetaFunc, MetaList, MetaLit}, set_option_ts};
-use syn::{Expr, Token, spanned::Spanned};
+use super::{Assert, Check, FromAttrs, KeywordToken, PassedArgs, convert_assert, keywords as kw, meta_types::{MetaExpr, MetaFunc, MetaList, MetaLit}, set_option_ts};
+use syn::{Expr, Field, Token, spanned::Spanned};
 
 #[derive(Clone, Debug)]
 pub(crate) enum Map {
@@ -98,7 +98,19 @@ pub(crate) struct FieldLevelAttrs {
     pub parse_with: Option<TokenStream>,
 }
 
+struct FieldCheck;
+impl Check<FieldLevelAttr> for FieldCheck {
+    const ERR_LOCATION: &'static str = "field";
+    fn check(_: &FieldLevelAttr) -> syn::Result<()> {
+        Ok(())
+    }
+}
+
 impl FieldLevelAttrs {
+    pub(crate) fn try_from_field(field: &Field) -> syn::Result<Self> {
+        Self::try_from_attrs::<FieldCheck>(&field.attrs)
+    }
+
     fn set_endian(&mut self, endian: CondEndian, span: Span) -> syn::Result<()> {
         if matches!(self.endian, CondEndian::Fixed(Endian::Native)) {
             self.endian = endian;
@@ -128,7 +140,8 @@ impl FieldLevelAttrs {
 }
 
 impl FromAttrs<FieldLevelAttr> for FieldLevelAttrs {
-    fn try_set_attr(&mut self, attr: FieldLevelAttr) -> syn::Result<()> {
+    fn try_set_attr<C: Check<FieldLevelAttr>>(&mut self, attr: FieldLevelAttr) -> syn::Result<()> {
+        C::check(&attr)?;
         match attr {
             FieldLevelAttr::Big(kw) =>
                 self.set_endian(CondEndian::Fixed(Endian::Big), kw.span()),

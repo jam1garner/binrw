@@ -14,6 +14,14 @@ use quote::ToTokens;
 use self::meta_types::{MetaAttrList, MetaList, MetaValue};
 pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
 
+pub(crate) trait Check<Attr> {
+    const ERR_LOCATION: &'static str;
+    fn check(attr: &Attr) -> syn::Result<()>;
+    fn err<K: KeywordToken + Spanned>(kw: &K) -> syn::Result<()> {
+        Err(syn::Error::new(kw.span(), format!("{} not allowed on {}", kw.dyn_display(), Self::ERR_LOCATION)))
+    }
+}
+
 pub(crate) trait KeywordToken {
     fn display() -> &'static str;
     fn dyn_display(&self) -> &'static str {
@@ -32,7 +40,7 @@ pub(crate) fn duplicate_attr<Keyword: KeywordToken + Spanned, R>(kw: &Keyword) -
 }
 
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
-    fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
+    fn try_from_attrs<C: Check<Attr>>(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
         #[allow(clippy::filter_map)]
         let attrs = attrs
             .iter()
@@ -48,7 +56,7 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
         let mut all_errors = None::<syn::Error>;
         for attr in attrs {
             let result = match attr {
-                Ok(attr) => this.try_set_attr(attr),
+                Ok(attr) => this.try_set_attr::<C>(attr),
                 Err(e) => Err(e),
             };
 
@@ -67,7 +75,7 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
         }
     }
 
-    fn try_set_attr(&mut self, attr: Attr) -> syn::Result<()>;
+    fn try_set_attr<C: Check<Attr>>(&mut self, attr: Attr) -> syn::Result<()>;
 }
 
 #[derive(Debug, Clone)]

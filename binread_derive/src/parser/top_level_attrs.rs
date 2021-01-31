@@ -1,11 +1,11 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, FromAttrs, Imports, KeywordToken, MagicType, convert_assert, keywords as kw, meta_types::{ImportArgTuple, IdentPatType, MetaFunc, MetaList, MetaLit, MetaType}, set_option_ts};
-use syn::{Expr, Lit, spanned::Spanned};
+use super::{Assert, Check, FromAttrs, Imports, KeywordToken, MagicType, convert_assert, keywords as kw, meta_types::{ImportArgTuple, IdentPatType, MetaFunc, MetaList, MetaLit, MetaType}, set_option_ts};
+use syn::{DeriveInput, Expr, Lit, Variant, spanned::Spanned};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum EnumErrorHandling {
+pub(crate) enum EnumErrorHandling {
     Default,
     ReturnAllErrors,
     ReturnUnexpectedError,
@@ -34,22 +34,98 @@ parse_any! {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct TopLevelAttrs {
-    pub import: Imports,
+pub(crate) struct TopLevelAttrs {
     pub endian: Endian,
+    pub import: Imports,
     pub assert: Vec<Assert>,
     pub pre_assert: Vec<Assert>,
-
-    // TODO: Used for enum only
-    pub repr: Option<TokenStream>,
-
-    // TODO: Used for variants only?
-    pub return_error_mode: EnumErrorHandling,
     pub magic: Option<(MagicType, TokenStream)>,
     pub map: Option<TokenStream>,
+    pub repr: Option<TokenStream>,
+    pub return_error_mode: EnumErrorHandling,
+}
+
+pub(crate) struct StructCheck;
+impl Check<TopLevelAttr> for StructCheck {
+    const ERR_LOCATION: &'static str = "struct";
+    fn check(attr: &TopLevelAttr) -> syn::Result<()> {
+        match attr {
+            TopLevelAttr::Big(_)
+            | TopLevelAttr::Little(_)
+            | TopLevelAttr::Magic(_)
+            | TopLevelAttr::Import(_)
+            | TopLevelAttr::ImportTuple(_)
+            | TopLevelAttr::Assert(_)
+            | TopLevelAttr::PreAssert(_)
+            | TopLevelAttr::Map(_) => Ok(()),
+            TopLevelAttr::ReturnAllErrors(kw) => Self::err(kw),
+            TopLevelAttr::ReturnUnexpectedError(kw) => Self::err(kw),
+            TopLevelAttr::Repr(repr) => Self::err(&repr.ident)
+        }
+    }
+}
+
+pub(crate) struct UnitEnumCheck;
+impl Check<TopLevelAttr> for UnitEnumCheck {
+    const ERR_LOCATION: &'static str = "unit enum";
+    fn check(attr: &TopLevelAttr) -> syn::Result<()> {
+        match attr {
+            TopLevelAttr::Big(_)
+            | TopLevelAttr::Little(_)
+            | TopLevelAttr::Repr(_) => Ok(()),
+            TopLevelAttr::Magic(m) => Self::err(&m.ident),
+            TopLevelAttr::Import(i) => Self::err(&i.ident),
+            TopLevelAttr::ImportTuple(i) => Self::err(&i.ident),
+            TopLevelAttr::Assert(a) => Self::err(&a.ident),
+            TopLevelAttr::PreAssert(a) => Self::err(&a.ident),
+            TopLevelAttr::Map(m) => Self::err(&m.ident),
+            TopLevelAttr::ReturnAllErrors(kw) => Self::err(kw),
+            TopLevelAttr::ReturnUnexpectedError(kw) => Self::err(kw),
+        }
+    }
+}
+
+pub(crate) struct VariantEnumCheck;
+impl Check<TopLevelAttr> for VariantEnumCheck {
+    const ERR_LOCATION: &'static str = "enum";
+    fn check(attr: &TopLevelAttr) -> syn::Result<()> {
+        match attr {
+            TopLevelAttr::Big(_)
+            | TopLevelAttr::Little(_)
+            | TopLevelAttr::Magic(_)
+            | TopLevelAttr::Import(_)
+            | TopLevelAttr::ImportTuple(_)
+            | TopLevelAttr::Assert(_)
+            | TopLevelAttr::PreAssert(_)
+            | TopLevelAttr::Map(_)
+            | TopLevelAttr::ReturnAllErrors(_)
+            | TopLevelAttr::ReturnUnexpectedError(_) => Ok(()),
+            TopLevelAttr::Repr(repr) => Self::err(&repr.ident),
+        }
+    }
 }
 
 impl TopLevelAttrs {
+    pub(crate) fn try_from_input(input: &DeriveInput) -> syn::Result<Self> {
+        match &input.data {
+            syn::Data::Struct(_) =>
+                Self::try_from_attrs::<StructCheck>(&input.attrs),
+            syn::Data::Enum(en) => {
+                if en.variants.iter().all(crate::codegen::read_options::no_variant_data) {
+                    Self::try_from_attrs::<UnitEnumCheck>(&input.attrs)
+                } else {
+                    Self::try_from_attrs::<VariantEnumCheck>(&input.attrs)
+                }
+            },
+            syn::Data::Union(union) =>
+                Err(syn::Error::new(union.union_token.span, "Unions are not supported"))
+        }
+    }
+
+    pub(crate) fn try_from_variant(variant: &Variant) -> syn::Result<Self> {
+        Self::try_from_attrs::<VariantEnumCheck>(&variant.attrs)
+    }
+
     fn set_endian(&mut self, endian: Endian, span: Span) -> syn::Result<()> {
         if self.endian == Endian::Native {
             self.endian = endian;
@@ -79,7 +155,8 @@ impl TopLevelAttrs {
 }
 
 impl FromAttrs<TopLevelAttr> for TopLevelAttrs {
-    fn try_set_attr(&mut self, attr: TopLevelAttr) -> syn::Result<()> {
+    fn try_set_attr<C: Check<TopLevelAttr>>(&mut self, attr: TopLevelAttr) -> syn::Result<()> {
+        C::check(&attr)?;
         match attr {
             TopLevelAttr::Big(kw) =>
                 self.set_endian(Endian::Big, kw.span())?,
