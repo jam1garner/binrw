@@ -1,36 +1,31 @@
 /// Attempt to parse variants in order until a match is found
 macro_rules! parse_any {
     (enum $enum:ident {
-        $variant1:ident($ty1:ty),
         $(
-            $variantn:ident($tyn:ty)
+            $variant:ident($ty:ty)
         ),*
         $(,)?
     }) => {
         #[derive(Debug, Clone)]
         pub(crate) enum $enum {
-            $variant1($ty1),
             $(
-                $variantn($tyn)
+                $variant($ty)
             ),*
         }
 
         impl syn::parse::Parse for $enum {
             fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-                let x = input.parse().map(Self::$variant1);
-                $(
-                    let x = x.or_else(|_: syn::Error| {
-                        Ok(Self::$variantn(input.parse()?))
-                    });
-                )*
-                x.map_err(|_: syn::Error| {
-                    let mut error = format!("invalid keyword, expected one of {}", <$ty1 as $crate::parser::KeywordToken>::display());
+                $(if <<$ty as $crate::parser::KeywordToken>::Token as syn::token::Token>::peek(input.cursor()) {
+                    input.parse().map(Self::$variant)
+                } else)* {
+                    let mut error = String::from("expected one of: ");
                     $(
+                        error.push_str(<$ty as $crate::parser::KeywordToken>::display());
                         error.push_str(", ");
-                        error.push_str(<$tyn as $crate::parser::KeywordToken>::display());
                     )*
-                    input.error(error)
-                })
+                    error.truncate(error.len() - 2);
+                    Err(input.error(error))
+                }
             }
         }
     };

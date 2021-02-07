@@ -9,7 +9,7 @@ mod top_level_attrs;
 
 pub(crate) use field_level_attrs::{CondEndian, FieldLevelAttrs, Map};
 use proc_macro2::TokenStream;
-use syn::{Expr, Ident, parse::Parse, Type, spanned::Spanned};
+use syn::{Expr, Ident, Type, parse::Parse, spanned::Spanned, token::Token};
 use quote::ToTokens;
 use self::meta_types::{MetaAttrList, MetaList, MetaValue};
 pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
@@ -23,16 +23,17 @@ pub(crate) trait Check<Attr> {
 }
 
 pub(crate) trait KeywordToken {
-    fn display() -> &'static str;
+    type Token: Token;
+    fn display() -> &'static str {
+        <Self::Token as Token>::display()
+    }
     fn dyn_display(&self) -> &'static str {
         Self::display()
     }
 }
 
-impl <T: syn::token::Token> KeywordToken for T {
-    fn display() -> &'static str {
-        <Self as syn::token::Token>::display()
-    }
+impl <T: Token> KeywordToken for T {
+    type Token = T;
 }
 
 pub(crate) fn duplicate_attr<Keyword: KeywordToken + Spanned, R>(kw: &Keyword) -> syn::Result<R> {

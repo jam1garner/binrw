@@ -55,10 +55,8 @@ impl <Keyword, Value: ToTokens> ToTokens for MetaValue<Keyword, Value> {
     }
 }
 
-impl <Keyword: KeywordToken, Value> KeywordToken for MetaValue<Keyword, Value> {
-    fn display() -> &'static str {
-        <Keyword as KeywordToken>::display()
-    }
+impl <Keyword: syn::token::Token + KeywordToken, Value> KeywordToken for MetaValue<Keyword, Value> {
+    type Token = Keyword;
 }
 
 type Fields<T> = Punctuated<T, Token![,]>;
@@ -89,10 +87,8 @@ impl <Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
     }
 }
 
-impl <Keyword: KeywordToken, ItemType> KeywordToken for MetaList<Keyword, ItemType> {
-    fn display() -> &'static str {
-        <Keyword as KeywordToken>::display()
-    }
+impl <Keyword: syn::token::Token + KeywordToken, ItemType> KeywordToken for MetaList<Keyword, ItemType> {
+    type Token = Keyword;
 }
 
 // This is like `syn::PatType` except:
@@ -137,9 +133,7 @@ impl Parse for ImportArgTuple {
 }
 
 impl KeywordToken for ImportArgTuple {
-    fn display() -> &'static str {
-        <kw::import_tuple as KeywordToken>::display()
-    }
+    type Token = kw::import_tuple;
 }
 
 pub(crate) struct MetaAttrList<P>(Fields<P>);
