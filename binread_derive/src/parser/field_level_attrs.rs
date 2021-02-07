@@ -1,7 +1,7 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, Check, FromAttrs, KeywordToken, PassedArgs, convert_assert, keywords as kw, meta_types::{MetaExpr, MetaFunc, MetaList, MetaLit}, set_option_ts};
+use super::{Assert, Check, FromAttrs, KeywordToken, PassedArgs, convert_assert, keywords as kw, meta_types::{MetaExpr, MetaList, MetaLit}, set_option_ts};
 use syn::{Expr, Field, Token, spanned::Spanned};
 
 #[derive(Clone, Debug)]
@@ -46,9 +46,9 @@ parse_any! {
         PostProcessNow(kw::postprocess_now),
         Try(Token![try]),
         Temp(kw::temp),
-        Map(MetaFunc<kw::map>),
-        TryMap(MetaFunc<kw::try_map>),
-        ParseWith(MetaFunc<kw::parse_with>),
+        Map(MetaExpr<kw::map>),
+        TryMap(MetaExpr<kw::try_map>),
+        ParseWith(MetaExpr<kw::parse_with>),
         Magic(MetaLit<kw::magic>),
         Args(MetaList<kw::args, Expr>),
         ArgsTuple(MetaExpr<kw::args_tuple>),

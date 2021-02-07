@@ -24,13 +24,6 @@ pub(crate) type MetaType<Keyword> = MetaValue<Keyword, Type>;
 /// both are always allowed
 pub(crate) type MetaLit<Keyword> = MetaValue<Keyword, Lit>;
 
-/// `MetaFunc` represents a key/fn pair
-/// Takes two forms:
-/// * ident(fn)
-/// * ident = fn
-/// both are always allowed
-pub(crate) type MetaFunc<Keyword> = MetaValue<Keyword, MetaFuncExpr>;
-
 #[derive(Debug, Clone)]
 pub(crate) struct MetaValue<Keyword, Value> {
     pub ident: Keyword,
@@ -99,31 +92,6 @@ impl <Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
 impl <Keyword: KeywordToken, ItemType> KeywordToken for MetaList<Keyword, ItemType> {
     fn display() -> &'static str {
         <Keyword as KeywordToken>::display()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum MetaFuncExpr {
-    Path(syn::Path),
-    Closure(syn::ExprClosure)
-}
-
-impl Parse for MetaFuncExpr {
-    #[allow(clippy::map_err_ignore)]
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-        input.parse()
-            .map(Self::Path)
-            .or_else(|_: syn::Error| Ok(Self::Closure(input.parse()?)))
-            .map_err(|_: syn::Error| input.error("expected path or closure"))
-    }
-}
-
-impl ToTokens for MetaFuncExpr {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self {
-            Self::Path(p) => p.to_tokens(tokens),
-            Self::Closure(c) => c.to_tokens(tokens),
-        }
     }
 }
 

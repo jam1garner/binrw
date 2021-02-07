@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream as TokenStream2;
-use super::{field_level_attrs::FieldLevelAttr, keywords as kw, meta_types::{MetaFunc, MetaLit, MetaType}, top_level_attrs::TopLevelAttr};
+use super::{field_level_attrs::FieldLevelAttr, keywords as kw, meta_types::{MetaExpr, MetaLit, MetaType}, top_level_attrs::TopLevelAttr};
 
 macro_rules! test_tla {
     ($name:ident, $str:literal) => {
@@ -73,8 +73,9 @@ parse_ty!(meta_bool, "little", kw::little);
 parse_ty!(meta_lit, "magic = 3u8", MetaLit<kw::magic>);
 parse_ty!(meta_byte_lit, "magic = b\"TEST\"", MetaLit<kw::magic>);
 parse_ty!(meta_str_lit, "magic = \"string\"", MetaLit<kw::magic>);
-parse_ty!(meta_func_closure, "map = |x| x + 1", MetaFunc<kw::map>);
-parse_ty!(meta_func_path, "map = ToString::to_string", MetaFunc<kw::map>);
+parse_ty!(meta_func_closure, "map = |x| x + 1", MetaExpr<kw::map>);
+parse_ty!(meta_func_path, "map = ToString::to_string", MetaExpr<kw::map>);
+parse_ty!(meta_func_fn_expr, "map = {|| { |x| x + 1 }()}", MetaExpr<kw::map>);
 parse_ty!(meta_ty, "repr = u8", MetaType<kw::repr>);
 
 parse_ty_fail!(meta_lit_panic, "= 3u8", MetaLit<kw::magic>);

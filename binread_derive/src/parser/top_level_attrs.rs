@@ -1,7 +1,7 @@
 use crate::binread_endian::Endian;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use super::{Assert, Check, FromAttrs, Imports, KeywordToken, MagicType, convert_assert, keywords as kw, meta_types::{ImportArgTuple, IdentPatType, MetaFunc, MetaList, MetaLit, MetaType}, set_option_ts};
+use super::{Assert, Check, FromAttrs, Imports, KeywordToken, MagicType, convert_assert, keywords as kw, meta_types::{IdentPatType, ImportArgTuple, MetaExpr, MetaList, MetaLit, MetaType}, set_option_ts};
 use syn::{DeriveInput, Expr, Lit, Variant, spanned::Spanned};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -29,7 +29,7 @@ parse_any! {
         ImportTuple(ImportArgTuple),
         Assert(MetaList<kw::assert, Expr>),
         PreAssert(MetaList<kw::pre_assert, Expr>),
-        Map(MetaFunc<kw::map>),
+        Map(MetaExpr<kw::map>),
     }
 }
 
