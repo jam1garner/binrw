@@ -5,50 +5,22 @@ mod binread_endian;
 mod codegen;
 mod parser;
 
-#[allow(clippy::wildcard_imports)]
-use codegen::sanitization::*;
-use parser::FieldLevelAttrs;
+use codegen::generate_impl;
+use parser::{FromField, StructField};
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
-
-fn generate_impl(input: &DeriveInput) -> TokenStream {
-    let codegen::GeneratedCode { read_opt_impl, arg_type } = codegen::generate(&input).unwrap_or_else(|e| {
-        // If there is a parsing error, a BinRead impl still needs to be
-        // generated to avoid misleading errors at all call sites that use the
-        // BinRead trait
-        codegen::GeneratedCode {
-            arg_type: quote! { () },
-            read_opt_impl: e.to_compile_error(),
-        }
-    });
-
-    let name = &input.ident;
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    quote!(
-        #[allow(non_snake_case)]
-        impl #impl_generics #TRAIT_NAME for #name #ty_generics #where_clause {
-            type Args = #arg_type;
-
-            fn read_options<R: #READ_TRAIT + #SEEK_TRAIT>
-                (#READER: &mut R, #OPT: &#OPTIONS, #ARGS: Self::Args)
-                -> #BIN_RESULT<Self>
-            {
-                #read_opt_impl
-            }
-        }
-    ).into()
-}
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
 pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    generate_impl(&input)
+    generate_impl(&input).into()
 }
 
+// TODO: Should not be reparsing every field every time, should iterate the
+// fields on the parsed struct tree
 fn is_temp(field: &syn::Field) -> bool {
-    FieldLevelAttrs::try_from_field(&field)
+    StructField::from_field(&field)
         .map(|attrs| attrs.temp)
         .unwrap_or(false)
 }
@@ -83,7 +55,7 @@ fn remove_field_attrs(fields: &mut syn::Fields) {
 #[proc_macro_attribute]
 pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
-    let generated_impl = TokenStream2::from(generate_impl(&input));
+    let generated_impl = generate_impl(&input);
 
     match input.data {
         syn::Data::Struct(ref mut input_struct) => {

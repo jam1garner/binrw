@@ -6,7 +6,7 @@ macro_rules! kws {
     }
 }
 
-kws!{
+kws! {
     // attribute description
     br,
     binread,

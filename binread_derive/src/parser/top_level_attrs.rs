@@ -1,223 +1,284 @@
-use crate::binread_endian::Endian;
-use proc_macro2::{Span, TokenStream};
-use quote::ToTokens;
-use super::{Assert, Check, FromAttrs, Imports, KeywordToken, MagicType, convert_assert, keywords as kw, meta_types::{IdentPatType, ImportArgTuple, MetaExpr, MetaList, MetaLit, MetaType}, set_option_ts};
-use syn::{DeriveInput, Expr, Lit, Variant, spanned::Spanned};
+use proc_macro2::TokenStream;
+use super::{EnumVariant, FromInput, TrySet, StructField, UnitEnumField, types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map}};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub(crate) enum EnumErrorHandling {
-    Default,
-    ReturnAllErrors,
-    ReturnUnexpectedError,
+#[derive(Clone, Debug)]
+pub(crate) enum Input {
+    Struct(Struct),
+    UnitStruct(Struct),
+    Enum(Enum),
+    UnitOnlyEnum(UnitOnlyEnum),
 }
 
-impl Default for EnumErrorHandling {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
-parse_any! {
-    enum TopLevelAttr {
-        Big(kw::big),
-        Little(kw::little),
-        ReturnAllErrors(kw::return_all_errors),
-        ReturnUnexpectedError(kw::return_unexpected_error),
-        Magic(MetaLit<kw::magic>),
-        Repr(MetaType<kw::repr>),
-        Import(MetaList<kw::import, IdentPatType>),
-        ImportTuple(ImportArgTuple),
-        Assert(MetaList<kw::assert, Expr>),
-        PreAssert(MetaList<kw::pre_assert, Expr>),
-        Map(MetaExpr<kw::map>),
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub(crate) struct TopLevelAttrs {
-    pub endian: Endian,
-    pub import: Imports,
-    pub assert: Vec<Assert>,
-    pub pre_assert: Vec<Assert>,
-    pub magic: Option<(MagicType, TokenStream)>,
-    pub map: Option<TokenStream>,
-    pub repr: Option<TokenStream>,
-    pub return_error_mode: EnumErrorHandling,
-}
-
-pub(crate) struct StructCheck;
-impl Check<TopLevelAttr> for StructCheck {
-    const ERR_LOCATION: &'static str = "struct";
-    fn check(attr: &TopLevelAttr) -> syn::Result<()> {
-        match attr {
-            TopLevelAttr::Big(_)
-            | TopLevelAttr::Little(_)
-            | TopLevelAttr::Magic(_)
-            | TopLevelAttr::Import(_)
-            | TopLevelAttr::ImportTuple(_)
-            | TopLevelAttr::Assert(_)
-            | TopLevelAttr::PreAssert(_)
-            | TopLevelAttr::Map(_) => Ok(()),
-            TopLevelAttr::ReturnAllErrors(kw) => Self::err(kw),
-            TopLevelAttr::ReturnUnexpectedError(kw) => Self::err(kw),
-            TopLevelAttr::Repr(repr) => Self::err(&repr.ident)
-        }
-    }
-}
-
-pub(crate) struct UnitEnumCheck;
-impl Check<TopLevelAttr> for UnitEnumCheck {
-    const ERR_LOCATION: &'static str = "unit enum";
-    fn check(attr: &TopLevelAttr) -> syn::Result<()> {
-        match attr {
-            TopLevelAttr::Big(_)
-            | TopLevelAttr::Little(_)
-            | TopLevelAttr::Repr(_) => Ok(()),
-            TopLevelAttr::Magic(m) => Self::err(&m.ident),
-            TopLevelAttr::Import(i) => Self::err(&i.ident),
-            TopLevelAttr::ImportTuple(i) => Self::err(&i.ident),
-            TopLevelAttr::Assert(a) => Self::err(&a.ident),
-            TopLevelAttr::PreAssert(a) => Self::err(&a.ident),
-            TopLevelAttr::Map(m) => Self::err(&m.ident),
-            TopLevelAttr::ReturnAllErrors(kw) => Self::err(kw),
-            TopLevelAttr::ReturnUnexpectedError(kw) => Self::err(kw),
-        }
-    }
-}
-
-pub(crate) struct VariantEnumCheck;
-impl Check<TopLevelAttr> for VariantEnumCheck {
-    const ERR_LOCATION: &'static str = "enum";
-    fn check(attr: &TopLevelAttr) -> syn::Result<()> {
-        match attr {
-            TopLevelAttr::Big(_)
-            | TopLevelAttr::Little(_)
-            | TopLevelAttr::Magic(_)
-            | TopLevelAttr::Import(_)
-            | TopLevelAttr::ImportTuple(_)
-            | TopLevelAttr::Assert(_)
-            | TopLevelAttr::PreAssert(_)
-            | TopLevelAttr::Map(_)
-            | TopLevelAttr::ReturnAllErrors(_)
-            | TopLevelAttr::ReturnUnexpectedError(_) => Ok(()),
-            TopLevelAttr::Repr(repr) => Self::err(&repr.ident),
-        }
-    }
-}
-
-impl TopLevelAttrs {
-    pub(crate) fn try_from_input(input: &DeriveInput) -> syn::Result<Self> {
+impl Input {
+    pub(crate) fn from_input(input: &syn::DeriveInput) -> syn::Result<Self> {
+        let attrs = &input.attrs;
         match &input.data {
-            syn::Data::Struct(_) =>
-                Self::try_from_attrs::<StructCheck>(&input.attrs),
-            syn::Data::Enum(en) => {
-                if en.variants.iter().all(crate::codegen::read_options::no_variant_data) {
-                    Self::try_from_attrs::<UnitEnumCheck>(&input.attrs)
+            syn::Data::Struct(st) => {
+                if matches!(st.fields, syn::Fields::Unit) {
+                    Ok(Self::UnitStruct(Struct::from_input(attrs, st.fields.iter())?))
                 } else {
-                    Self::try_from_attrs::<VariantEnumCheck>(&input.attrs)
+                    Ok(Self::Struct(Struct::from_input(attrs, st.fields.iter())?))
+                }
+            },
+            syn::Data::Enum(en) => {
+                let variants = &en.variants;
+                if variants.is_empty() {
+                    Err(syn::Error::new(en.enum_token.span, "null enums are not supported"))
+                } else if variants.iter().all(|v| matches!(v.fields, syn::Fields::Unit)) {
+                    Ok(Self::UnitOnlyEnum(UnitOnlyEnum::from_input(attrs, variants.iter())?))
+                } else {
+                    Ok(Self::Enum(Enum::from_input(attrs, variants.iter())?))
                 }
             },
             syn::Data::Union(union) =>
-                Err(syn::Error::new(union.union_token.span, "Unions are not supported"))
+                Err(syn::Error::new(union.union_token.span, "unions are not supported"))
         }
     }
 
-    pub(crate) fn try_from_variant(variant: &Variant) -> syn::Result<Self> {
-        Self::try_from_attrs::<VariantEnumCheck>(&variant.attrs)
-    }
-
-    fn set_endian(&mut self, endian: Endian, span: Span) -> syn::Result<()> {
-        if self.endian == Endian::Native {
-            self.endian = endian;
-            Ok(())
-        } else {
-            Err(syn::Error::new(span, "conflicting endian attribute"))
+    #[deprecated]
+    pub(crate) fn endian(&self) -> &CondEndian {
+        match self {
+            Input::Struct(s)
+            | Input::UnitStruct(s) => &s.endian,
+            Input::Enum(e) => &e.endian,
+            Input::UnitOnlyEnum(e) => &e.endian,
         }
     }
 
-    fn set_error(&mut self, error: EnumErrorHandling, span: Span) -> syn::Result<()> {
-        if self.return_error_mode == EnumErrorHandling::Default {
-            self.return_error_mode = error;
-            Ok(())
-        } else {
-            Err(syn::Error::new(span, "conflicting error mode attribute"))
+    pub(crate) fn imports(&self) -> &Imports {
+        match self {
+            Input::Struct(s)
+            | Input::UnitStruct(s) => &s.import,
+            Input::Enum(e) => &e.import,
+            Input::UnitOnlyEnum(_) => &Imports::None,
         }
     }
 
-    fn set_import<K: KeywordToken + Spanned, F: Fn() -> Imports>(&mut self, get_import: F, kw: &K) -> syn::Result<()> {
-        if self.import.is_some() {
-            super::duplicate_attr(kw)
-        } else {
-            self.import = get_import();
-            Ok(())
+    #[deprecated]
+    pub(crate) fn map(&self) -> &Map {
+        match self {
+            Input::Struct(s)
+            | Input::UnitStruct(s) => &s.map,
+            Input::Enum(e) => &e.map,
+            Input::UnitOnlyEnum(e) => &e.map,
+        }
+    }
+
+    #[deprecated]
+    pub(crate) fn magic(&self) -> &Magic {
+        match self {
+            Input::Struct(s)
+            | Input::UnitStruct(s) => &s.magic,
+            Input::Enum(e) => &e.magic,
+            Input::UnitOnlyEnum(e) => &e.magic,
+        }
+    }
+
+    #[deprecated]
+    pub(crate) fn pre_assert(&self) -> &Vec<Assert> {
+        match self {
+            Input::Struct(s)
+            | Input::UnitStruct(s) => &s.pre_assert,
+            Input::Enum(e) => &e.pre_assert,
+            Input::UnitOnlyEnum(_) => panic!("pre_assert on unit enum"),
         }
     }
 }
 
-impl FromAttrs<TopLevelAttr> for TopLevelAttrs {
-    fn try_set_attr<C: Check<TopLevelAttr>>(&mut self, attr: TopLevelAttr) -> syn::Result<()> {
-        C::check(&attr)?;
-        match attr {
-            TopLevelAttr::Big(kw) =>
-                self.set_endian(Endian::Big, kw.span())?,
-            TopLevelAttr::Little(kw) =>
-                self.set_endian(Endian::Little, kw.span())?,
-            TopLevelAttr::Import(s) =>
-                self.set_import(|| {
-                    let (idents, tys): (Vec<_>, Vec<_>) = s.fields
-                        .iter()
-                        .cloned()
-                        .map(|import_arg| (import_arg.ident, import_arg.ty))
-                        .unzip();
-                    Imports::List(idents, tys)
-                }, &s.ident)?,
-            TopLevelAttr::ImportTuple(s) =>
-                self.set_import(|| Imports::Tuple(s.arg.ident.clone(), s.arg.ty.clone().into()), &s.ident)?,
-            TopLevelAttr::Assert(a) =>
-                self.assert.push(convert_assert(&a)?),
-            TopLevelAttr::PreAssert(a) =>
-                self.pre_assert.push(convert_assert(&a)?),
-            TopLevelAttr::Repr(ty) =>
-                set_option_ts(&mut self.repr, &ty)?,
-            TopLevelAttr::ReturnAllErrors(e) =>
-                self.set_error(EnumErrorHandling::ReturnAllErrors, e.span())?,
-            TopLevelAttr::ReturnUnexpectedError(e) =>
-                self.set_error(EnumErrorHandling::ReturnUnexpectedError, e.span())?,
-            TopLevelAttr::Magic(m) =>
-                if self.magic.is_some() {
-                    return super::duplicate_attr(&m.ident);
-                } else {
-                    self.magic = Some((magic_to_type(&m), magic_to_tokens(&m)));
-                },
-            TopLevelAttr::Map(m) =>
-                set_option_ts(&mut self.map, &m)?,
-        }
+attr_struct! {
+    #[from(StructAttr)]
+    #[derive(Clone, Debug, Default)]
+    pub(crate) struct Struct {
+        #[from(Big, Little)]
+        pub endian: CondEndian,
+        #[from(Map, TryMap)]
+        pub map: Map,
+        #[from(Magic)]
+        pub magic: Magic,
+        #[from(Import, ImportTuple)]
+        pub import: Imports,
+        #[from(Assert)]
+        pub assert: Vec<Assert>,
+        // TODO: Are Magic and PreAssert conflicting preconditions? Is PreAssert
+        // only for enum variants?
+        #[from(PreAssert)]
+        pub pre_assert: Vec<Assert>,
+        pub fields: Vec<StructField>,
+    }
+}
 
+impl Struct {
+    pub(crate) fn is_tuple(&self) -> bool {
+        self.fields.get(0).map_or(false, |field| field.ident.is_none())
+    }
+}
+
+impl FromInput<StructAttr> for Struct {
+    type Field = StructField;
+
+    fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
+        self.fields.push(field);
         Ok(())
     }
 }
 
-fn magic_to_type<Keyword>(magic: &MetaLit<Keyword>) -> MagicType {
-    let magic = &magic.value;
-    match magic {
-        Lit::Str(_) => MagicType::Str,
-        Lit::ByteStr(_) => MagicType::ByteStr,
-        Lit::Byte(_) => MagicType::Byte,
-        Lit::Char(_) => MagicType::Char,
-        Lit::Int(i) => MagicType::Int(i.suffix().to_owned()),
-        Lit::Float(_) => MagicType::Float,
-        Lit::Bool(_) => MagicType::Bool,
-        Lit::Verbatim(_) => MagicType::Verbatim
+attr_struct! {
+    #[from(EnumAttr)]
+    #[derive(Clone, Debug, Default)]
+    pub(crate) struct Enum {
+        #[from(Big, Little)]
+        pub endian: CondEndian,
+        #[from(Map, TryMap)]
+        pub map: Map,
+        #[from(Magic)]
+        pub magic: Magic,
+        #[from(Import, ImportTuple)]
+        pub import: Imports,
+        #[from(Assert)]
+        pub assert: Vec<Assert>,
+        #[from(PreAssert)]
+        pub pre_assert: Vec<Assert>,
+        #[from(ReturnAllErrors, ReturnUnexpectedError)]
+        pub error_mode: EnumErrorMode,
+        pub variants: Vec<EnumVariant>,
     }
 }
 
-fn magic_to_tokens<Keyword>(magic: &MetaLit<Keyword>) -> TokenStream {
-    let magic = &magic.value;
-    if let Lit::Str(_) | Lit::ByteStr(_) = magic {
-        quote::quote!{
-            *#magic
+impl Enum {
+    pub(crate) fn with_variant(&self, variant: &EnumVariant) -> Self {
+        let mut out = self.clone();
+
+        match variant {
+            EnumVariant::Variant { options, .. } => {
+                if options.endian.is_some() {
+                    out.endian = options.endian.clone();
+                }
+
+                if options.magic.is_some() {
+                    out.magic = options.magic.clone();
+                }
+
+                out.pre_assert.extend_from_slice(&options.pre_assert);
+                out.assert.extend_from_slice(&options.assert);
+            },
+
+            EnumVariant::Unit(options) => {
+                if options.magic.is_some() {
+                    out.magic = options.magic.clone();
+                }
+
+                out.pre_assert.extend_from_slice(&options.pre_assert);
+            }
         }
-    } else {
-        magic.to_token_stream()
+
+        out
     }
+}
+
+impl FromInput<EnumAttr> for Enum {
+    type Field = EnumVariant;
+
+    fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
+        self.variants.push(field);
+        Ok(())
+    }
+}
+
+attr_struct! {
+    #[from(UnitEnumAttr)]
+    #[derive(Clone, Debug, Default)]
+    pub(crate) struct UnitOnlyEnum {
+        #[from(Big, Little)]
+        pub endian: CondEndian,
+        #[from(Map, TryMap)]
+        pub map: Map,
+        #[from(Magic)]
+        pub magic: Magic,
+        #[from(Repr)]
+        pub repr: Option<TokenStream>,
+        pub fields: Vec<UnitEnumField>,
+    }
+}
+
+impl UnitOnlyEnum {
+    pub(crate) fn is_magic_enum(&self) -> bool {
+        self.fields.get(0).map_or(false, |field| field.magic.is_some())
+    }
+
+    pub(crate) fn is_repr_enum(&self) -> bool {
+        self.repr.is_some()
+    }
+}
+
+impl FromInput<UnitEnumAttr> for UnitOnlyEnum {
+    type Field = UnitEnumField;
+
+    fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
+        if self.is_repr_enum() && field.magic.is_some() {
+            Err(syn::Error::new(proc_macro2::Span::call_site(), "`repr` and `magic` are mutually exclusive"))
+        } else {
+            // TODO: Clone less please
+            let expected_magic_kind = self.fields.get(0)
+                .unwrap_or(&field)
+                .magic
+                .as_ref()
+                .map(|field| field.0.clone());
+            let magic_kind = field.magic.as_ref().map(|field| field.0.clone());
+
+            if expected_magic_kind == magic_kind {
+                self.fields.push(field);
+                Ok(())
+            } else if expected_magic_kind.is_some() && magic_kind.is_some() {
+                // TODO: Should error on the magic token, or at least the field
+                // ident
+                Err(syn::Error::new(proc_macro2::Span::call_site(), format!("conflicting magic type; expected {}", expected_magic_kind.unwrap())))
+            } else {
+                Err(syn::Error::new(proc_macro2::Span::call_site(), "either all variants, or no variants, must have magic on a unit enum"))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! test_struct {
+        ($name:ident, $str:literal) => {
+            #[test]
+            fn $name() {
+                let tokens: TokenStream = ($str).parse().unwrap();
+                let _: StructAttr = syn::parse2(tokens).unwrap();
+            }
+        }
+    }
+
+    macro_rules! test_enum {
+        ($name:ident, $str:literal) => {
+            #[test]
+            fn $name() {
+                let tokens: TokenStream = ($str).parse().unwrap();
+                let _: EnumAttr = syn::parse2(tokens).unwrap();
+            }
+        }
+    }
+
+    macro_rules! test_unit_enum {
+        ($name:ident, $str:literal) => {
+            #[test]
+            fn $name() {
+                let tokens: TokenStream = ($str).parse().unwrap();
+                let _: UnitEnumAttr = syn::parse2(tokens).unwrap();
+            }
+        }
+    }
+
+    test_struct!(parse_struct_big, "big");
+    test_struct!(parse_struct_magic, "magic = 3u8");
+    test_struct!(parse_struct_magic_paren, "magic(2u16)");
+    test_struct!(parse_struct_import, "import(x: u32, y: &[f32])");
+    test_struct!(parse_struct_import_tuple, "import_tuple(args: (u32))");
+    test_enum!(parse_enum_error, "return_all_errors");
+    test_unit_enum!(parse_unit_enum_repr, "repr = u8");
+    test_unit_enum!(parse_unit_enum_repr_paren, "repr(i32)");
 }

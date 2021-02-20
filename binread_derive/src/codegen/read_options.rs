@@ -1,55 +1,104 @@
-use crate::{binread_endian::Endian, parser::{Assert, CondEndian, EnumErrorHandling, FieldLevelAttrs, MagicType, Map, PassedArgs, TopLevelAttrs}};
+use crate::{binread_endian::Endian, parser::{Assert, CondEndian, Enum, EnumErrorMode, EnumVariant, Input, Map, PassedArgs, Struct, StructField, UnitOnlyEnum, UnitEnumField}};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
 use std::iter;
-use syn::{Ident, DeriveInput, Type, DataStruct, DataEnum, Field, Fields, Variant, punctuated::Punctuated, token::Comma};
+use syn::{Ident, Type};
 
-pub(crate) fn generate(input: &DeriveInput, tla: &TopLevelAttrs) -> syn::Result<TokenStream> {
-    if let Some(map) = &tla.map {
-        Ok(quote!(
+pub(crate) fn generate(ident: &Ident, input: &Input) -> syn::Result<TokenStream> {
+    match input.map() {
+        Map::None => match input {
+            Input::UnitStruct(_) => Ok(generate_unit_struct()),
+            Input::Struct(s) => generate_struct(ident, input, s),
+            Input::Enum(e) => generate_data_enum(e),
+            Input::UnitOnlyEnum(e) => generate_unit_enum(ident, e),
+        },
+        Map::Try(map) => Ok(quote! {
+            #READ_METHOD(#READER, #OPT, #ARGS).and_then(#map)
+        }),
+        Map::Map(map) => Ok(quote! {
             #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
-        ))
-    } else {
-        match &input.data {
-            syn::Data::Struct(ds) => generate_struct(input, tla, &ds),
-            syn::Data::Enum(en) => generate_enum(input, tla, &en),
-            _ => todo!()
-        }
+        }),
     }
 }
 
-// TODO: Put this somewhere else which is common, or else just tag the
-// attributes so it is known if it is a unit enum or not so it does not need to
-// scan twice
-pub(crate) fn no_variant_data(v: &Variant) -> bool {
-    matches!(v.fields, Fields::Unit)
-}
-
-fn magic_type_of(variant: &Variant) -> Option<(MagicType, TokenStream)> {
-    let tla = TopLevelAttrs::try_from_variant(&variant).ok()?;
-
-    if !tla.pre_assert.is_empty() {
-        return None
-    }
-
-    tla.magic
-}
-
-fn generate_unit_enum(options: &TokenStream, repr: &TokenStream, variants: &Punctuated<Variant, Comma>) -> TokenStream {
-    let clauses = variants
+// TODO: Maybe should be Struct function, also too much cloning
+fn map_fields(fields: &[StructField]) -> impl Iterator<Item = (Ident, Option<Ident>, Type)> + Clone + '_ {
+    fields
         .iter()
-        .map(|variant| {
-            let ident = &variant.ident;
-            quote! {
-                if #TEMP == Self::#ident as #repr {
-                    Ok(Self::#ident)
-                }
-            }
+        .enumerate()
+        .map(|(i, field)| {
+            let ident = field.ident.clone().unwrap_or_else(|| format_ident!("self_{}", i));
+            (ident.clone(), if field.temp { None } else { Some(ident) }, field.ty.clone())
         })
-        .collect::<Vec<_>>();
+}
 
+fn generate_unit_struct() -> TokenStream {
+    // TODO: Probably the parser should warn about this condition, since it
+    // means that no reading is happening? The only way this even makes sense is
+    // if the magic is treated like a precondition and a magic mismatch = read
+    // failure.
+    quote! { Ok(Self) }
+}
+
+fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> syn::Result<TokenStream> {
+    let fields = map_fields(&ds.fields);
+
+    // TODO: Do not collect, use iterators directly. Also, less cloning
+    let in_names = fields.clone().map(|f| f.0).collect::<Vec<_>>();
+    let ty = fields.clone().map(|f| f.2).collect::<Vec<_>>();
+    let out_names = fields.filter_map(|f| f.1);
+
+    let debug_tpl_start = get_debug_template_start(&ident);
+    let read_body = generate_body(tla, &ds.fields, &in_names, &ty)?;
+    let debug_tpl_end = get_debug_template_end();
+    let assertions = get_assertions(&ds.assert);
+    let return_value = if ds.is_tuple() {
+        quote! { Self(#(#out_names),*) }
+    } else {
+        quote! { Self { #(#out_names),* } }
+    };
+
+    Ok(quote! {
+        #debug_tpl_start
+        #read_body
+        #debug_tpl_end
+        #(#assertions)*
+        Ok(#return_value)
+    })
+}
+
+fn generate_unit_enum(ident: &Ident, en: &UnitOnlyEnum) -> syn::Result<TokenStream> {
+    // TODO: This validation should be in the parser
+    if en.fields.is_empty() {
+        return Err(syn::Error::new(ident.span(), "cannot generate a reader for an enum with no variants"));
+    }
+
+    let options = get_read_options_with_endian(&en.endian);
+
+    if let Some(repr) = &en.repr {
+        Ok(generate_unit_enum_repr(&options, repr, &en.fields))
+    } else if en.is_magic_enum() {
+        Ok(generate_unit_enum_magic(&options, &en.fields))
+    } else {
+        // TODO: This condition should be impossible; validation should happen
+        // in the parser
+        Err(syn::Error::new(ident.span(), "cannot generate a reader for a unit-type enum with no repr and no variant magic"))
+    }
+}
+
+fn generate_unit_enum_repr(options: &TokenStream, repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
+    let clauses = variants.iter().map(|variant| {
+        let ident = &variant.ident;
+        quote! {
+            if #TEMP == Self::#ident as #repr {
+                Ok(Self::#ident)
+            }
+        }
+    });
+
+    // TODO: Should this not restore position on failure?
     quote! {
         let #OPT = #options;
         let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
@@ -62,22 +111,19 @@ fn generate_unit_enum(options: &TokenStream, repr: &TokenStream, variants: &Punc
     }
 }
 
-fn generate_magic_enum(options: &TokenStream, variants: &Punctuated<Variant, Comma>) -> Option<TokenStream> {
-    let mut variants = variants.iter();
-    let variant = variants.next()?;
-    let (magic_type, magic) = magic_type_of(variant)?;
-    let mut magics = vec![magic];
-    let mut var_names = vec![variant.ident.clone()];
-    for v in variants {
-        let (m_ty, magic) = magic_type_of(&v)?;
-        if magic_type != m_ty {
-            return None
-        }
-        magics.push(magic);
-        var_names.push(v.ident.clone());
-    };
+fn generate_unit_enum_magic(options: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
+    // TODO: The original code here looked as if it wanted to only handle magic
+    // on variants without a pre-assert condition, but this just ended up
+    // failing the generation with an early return whenever there was any
+    // pre-assert condition. So not sure what is the desired behaviour here.
+    // This implementation matches the *actual* prior implementation (validation
+    // happens in the parser).
 
-    Some(quote!{
+    let magics = variants.iter().map(|field| &field.magic.as_ref().unwrap().1);
+    let var_names = variants.iter().map(|field| &field.ident);
+
+    // TODO: Should this not restore position on failure?
+    quote! {
         let #OPT = #options;
         let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
         Ok(match #READ_METHOD(#READER, #OPT, ())? {
@@ -88,207 +134,116 @@ fn generate_magic_enum(options: &TokenStream, variants: &Punctuated<Variant, Com
                 pos: #SAVED_POSITION as _
             })
         })
-    })
+    }
 }
 
-fn generate_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn::Result<TokenStream> {
-    if en.variants.is_empty() {
-        return Err(syn::Error::new(en.brace_token.span, "Cannot construct an enum with no variants"));
-    }
+fn generate_data_enum(en: &Enum) -> syn::Result<TokenStream> {
+    let return_all_errors = en.error_mode != EnumErrorMode::ReturnUnexpectedError;
 
-    if en.variants.iter().all(no_variant_data) {
-        let options = get_top_level_binread_options(&tla);
-        tla.repr.as_ref().map_or_else(|| {
-            generate_magic_enum(&options, &en.variants).ok_or_else(|| {
-                syn::Error::new(en.enum_token.span, "Cannot construct a unit-type enum with no repr and no variant magic")
+    let (create_error_basket, return_error) = if return_all_errors {(
+        quote! {
+            extern crate alloc;
+            let mut #ERROR_BASKET: alloc::vec::Vec<(&'static str, #BIN_ERROR)> = alloc::vec::Vec::new();
+        },
+        quote! {
+            Err(#BIN_ERROR::EnumErrors {
+                pos: #POS as _,
+                variant_errors: #ERROR_BASKET
             })
-        }, |repr| {
-            Ok(generate_unit_enum(&options, repr, &en.variants))
-        })
-    } else {
-        generate_data_enum(input, tla, en)
-    }
-}
+        }
+    )} else {(
+        TokenStream::new(),
+        quote! {
+            Err(#BIN_ERROR::NoVariantMatch {
+                pos: #POS as _
+            })
+        }
+    )};
 
-fn generate_data_enum(input: &DeriveInput, tla: &TopLevelAttrs, en: &DataEnum) -> syn::Result<TokenStream> {
-    let return_all_errors = tla.return_error_mode != EnumErrorHandling::ReturnUnexpectedError;
-    let enum_name = &input.ident;
-    let variant_funcs =
-        en.variants.iter().map(|variant| {
-                format_ident!(
-                    "__binread_generated_parse_enum_{}_variant_{}",
-                    enum_name,
-                    variant.ident
-                )
-            });
-    let variant_funcs2 = variant_funcs.clone();
+    let try_each_variant = en.variants
+        .iter()
+        .map(|variant| {
+            // TODO: No unwrap, it should be infallible
+            let body = generate_variant_impl(en, variant).unwrap();
 
-    let variant_func_impls = en.variants
-                                .iter()
-                                .map(|variant| generate_variant_impl(enum_name, tla, variant))
-                                .collect::<Result<Vec<_>, _>>()?;
-
-    let variant_prototypes = iter::repeat(quote!{<R: #READ_TRAIT + #SEEK_TRAIT>(#READER: &mut R, #OPT: &#OPTIONS, #ARGS: <#enum_name as #TRAIT_NAME>::Args) -> #BIN_RESULT<#enum_name>});
-    let last_attempt = IdentStr("__binread_generated_last_attempt");
-    let error_basket = IdentStr("__binread_generated_error_basket");
-    let last_pos = IdentStr("__binread_generated_pos_before_variant");
-    let (seek_trait, reader, seek_from, opt, args) = (SEEK_TRAIT, READER, SEEK_FROM, OPT, ARGS);
-
-    let (create_error_basket, handle_error, end_error) = if return_all_errors {
-        (
-            quote!{
-                extern crate alloc;
-                let mut #error_basket: alloc::vec::Vec<(&'static str, #BIN_ERROR)> = alloc::vec::Vec::new();
-            },
-            en.variants.iter().map(|variant|{
-                let name = variant.ident.to_string();
-                quote!{
-                    #error_basket.push((#name, #last_attempt.err().unwrap()));
-                    #seek_trait::seek(#reader, #seek_from::Start(#last_pos))?;
+            let handle_error = if return_all_errors {
+                let name = variant.ident().to_string();
+                quote! {
+                    #ERROR_BASKET.push((#name, #TEMP.err().unwrap()));
                 }
-            }).collect::<Vec<_>>(),
-            quote!{
-                Err(#BIN_ERROR::EnumErrors {
-                    pos: #last_pos as usize,
-                    variant_errors: #error_basket
-                })
-            }
-        )
-    } else {
-        (
-            quote!{},
-            en.variants.iter().map(|_|{
-                quote!{ #seek_trait::seek(#reader, #seek_from::Start(#last_pos))?; }
-            }).collect(),
-            quote!{
-                Err(#BIN_ERROR::NoVariantMatch {
-                    pos: #last_pos as usize
-                })
-            }
-        )
-    };
-
-    Ok(quote!{
-        #create_error_basket
-        let #last_pos = #seek_trait::seek(#reader, #seek_from::Current(0))?;
-        #(
-            fn #variant_funcs#variant_prototypes {
-                #variant_func_impls
-            }
-        )*
-
-        #(
-            let #last_attempt = #variant_funcs2(#reader, #opt, #args);
-            if #last_attempt.is_ok() {
-                return #last_attempt;
             } else {
-                #handle_error
+                TokenStream::new()
+            };
+
+            quote! {
+                let #TEMP = (|| {
+                    #body
+                })();
+
+                if #TEMP.is_ok() {
+                    return #TEMP;
+                } else {
+                    #handle_error
+                    #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
+                }
             }
-        )*
+        });
 
-        #end_error
+    Ok(quote! {
+        #create_error_basket
+        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+        #(#try_each_variant)*
+        #return_error
     })
 }
 
-fn generate_variant_impl(enum_name: &Ident, tla: &TopLevelAttrs, variant: &Variant)
-    -> syn::Result<TokenStream>
-{
-    let tla = merge_tlas(tla, TopLevelAttrs::try_from_variant(&variant)?)?;
+// TODO: This is distressingly close to generate_struct
+fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> syn::Result<TokenStream> {
+    let todo = Vec::new();
+    let (in_names, ty, fields, assertions, return_value);
+    match variant {
+        EnumVariant::Variant { ident, options: ds } => {
+            fields = &ds.fields;
+            let fields = map_fields(&ds.fields);
+            // TODO: Do not collect, use iterators directly. Also, less cloning
+            in_names = fields.clone().map(|f| f.0).collect::<Vec<_>>();
+            ty = fields.clone().map(|f| f.2).collect::<Vec<_>>();
+            let out_names = fields.filter_map(|f| f.1);
 
-    let variant_name = &variant.ident;
-    let (name, ty) = get_name_types_fields(variant.fields.iter());
-    let field_attrs = get_field_attrs(variant.fields.iter())?;
+            assertions = get_assertions(&ds.pre_assert);
+            // TODO: Unit kind would be here
+            return_value = if ds.is_tuple() {
+                quote! { Self::#ident(#(#out_names),*) }
+            } else {
+                quote! { Self::#ident { #(#out_names),* } }
+            };
+        },
+        EnumVariant::Unit(options) => {
+            fields = &todo;
+            in_names = Vec::new();
+            ty = Vec::new();
+            assertions = get_assertions(&options.pre_assert);
+            let ident = &options.ident;
+            return_value = quote! { Self::#ident };
+        },
+    }
 
-    let body = generate_body(&tla, &field_attrs, &name, &ty)?;
-    let variant_assertions = get_assertions(&tla.pre_assert);
-
-    let name = get_permenant_names(variant.fields.iter());
-
-    let build_variant = match &variant.fields {
-        syn::Fields::Named(_) => quote!{ #enum_name::#variant_name { #(#name),* } },
-        syn::Fields::Unnamed(_) => quote!{ #enum_name::#variant_name (#(#name),*) },
-        syn::Fields::Unit => quote!{ #enum_name::#variant_name },
-    };
-
-    Ok(quote!{
-        #body
-
-        #(
-            #variant_assertions
-        )*
-
-        Ok(#build_variant)
+    // TODO: Kind of expensive since the enum is containing all the fields
+    // and this is a clone.
+    let tla = Input::Enum(en.with_variant(variant));
+    let read_body = generate_body(&tla, &fields, &in_names, &ty)?;
+    Ok(quote! {
+        #read_body
+        #(#assertions)*
+        Ok(#return_value)
     })
-}
-
-fn merge_tlas(top_level: &TopLevelAttrs, variant_level: TopLevelAttrs) -> syn::Result<TopLevelAttrs> {
-    let mut out = top_level.clone();
-
-    if variant_level.endian != Endian::Native {
-        out.endian = variant_level.endian;
-    }
-
-    if variant_level.return_error_mode != EnumErrorHandling::Default {
-        panic!("Cannot specify error return type at variant level");
-    }
-
-    if variant_level.import.is_some() {
-        panic!("Cannot have imports at variant level");
-    }
-
-    if variant_level.magic.is_some() {
-        out.magic = variant_level.magic;
-    }
-
-    out.pre_assert.extend_from_slice(&variant_level.pre_assert);
-    out.assert.extend_from_slice(&variant_level.assert);
-
-    Ok(out)
 }
 
 // TODO: replace all functions that are only passed tla with a method on TopLevelAttrs
 
-fn generate_struct(input: &DeriveInput, tla: &TopLevelAttrs, ds: &DataStruct) -> syn::Result<TokenStream> {
-    let (field_attrs, (name, ty, struct_type))
-        = (get_struct_field_attrs(&ds)?, get_struct_names_types(&ds));
-
-    let read_struct_body = generate_body(tla, &field_attrs, &name, &ty)?;
-
-    let struct_name = input.ident.to_string();
-    let struct_assertions = get_assertions(&tla.assert);
-
-    let write_start_struct = write_start_struct(&struct_name);
-    let write_end_struct = write_end_struct();
-
-    let name = get_struct_permenant_names(&ds);
-
-    let build_struct = match struct_type {
-        StructType::Fields => quote!{Ok(Self { #(#name),* })},
-        StructType::Tuple => quote!{Ok(Self ( #(#name),* ))},
-        StructType::Unit => return Ok(quote!{Ok(Self)}),
-    };
-
-    Ok(quote!{
-        #write_start_struct
-
-        #read_struct_body
-
-        #write_end_struct
-
-        #(
-            #struct_assertions
-        )*
-
-        #build_struct
-    })
-}
-
-fn generate_body(
-        tla: &TopLevelAttrs, field_attrs: &[FieldLevelAttrs], name: &[Ident], ty: &[&Type]
-    ) -> syn::Result<TokenStream>
-{
+fn generate_body(tla: &Input, field_attrs: &[StructField], name: &[Ident], ty: &[Type]) -> syn::Result<TokenStream> {
     let count = name.len();
-    let arg_vars = tla.import.idents();
+    let arg_vars = tla.imports().idents();
     let name_args: Vec<Ident> = get_name_modified(&name, "args");
     let passed_args_closure:Vec<TokenStream> = get_passed_args(&field_attrs);
     let name_options: Vec<Ident> = get_name_modified(&name, "options");
@@ -305,18 +260,18 @@ fn generate_body(
 
     let field_asserts = get_field_assertions(&field_attrs);
     let after_parse = get_after_parse_handlers(&field_attrs);
-    let top_level_option = get_top_level_binread_options(&tla);
+    let top_level_option = get_read_options_with_endian(&tla.endian());
     let magic_handler = get_magic_pre_assertion(&tla);
 
-    let handle_error = handle_error();
+    let handle_error = get_debug_template_handle_error();
     let possible_try_conversion = get_possible_try_conversion(&field_attrs);
 
     let repeat_handle_error = iter::repeat(&handle_error);
     let repeat_handle_error2 = iter::repeat(&handle_error);
 
-    let maps = get_maps(&field_attrs, &ty);
+    let maps = get_maps(&field_attrs, ty);
     let names_after_ignores = ignore_names(&name, &field_attrs);
-    let ty_after_ignores = ignore_types(&ty, &field_attrs);
+    let ty_after_ignores = ignore_types(ty, &field_attrs);
     let opt_mut = ignore_filter(
         iter::repeat(&quote!{ mut }),
         &field_attrs,
@@ -403,14 +358,7 @@ fn generate_body(
     })
 }
 
-#[derive(Clone, Copy, Debug)]
-enum StructType {
-    Unit,
-    Tuple,
-    Fields
-}
-
-fn get_possible_set_offset(field_attrs: &[FieldLevelAttrs], name_options: &[Ident]) -> Vec<Option<TokenStream>> {
+fn get_possible_set_offset(field_attrs: &[StructField], name_options: &[Ident]) -> Vec<Option<TokenStream>> {
     field_attrs
         .iter()
         .zip(name_options)
@@ -431,65 +379,6 @@ fn get_possible_set_offset(field_attrs: &[FieldLevelAttrs], name_options: &[Iden
         .collect()
 }
 
-fn get_permenant_names<'a, I>(fields: I) -> Vec<Ident>
-    where I: IntoIterator<Item = &'a Field>,
-{
-    fields
-        .into_iter()
-        .enumerate()
-        .filter_map(|(i, field)|
-            if FieldLevelAttrs::try_from_field(&field).map(|x| x.temp).unwrap_or(false) {
-                None
-            } else {
-                Some(
-                    field.ident
-                        .as_ref()
-                        .map_or_else(|| format_ident!("self_{}", i), Clone::clone)
-                )
-            }
-        )
-        .collect()
-}
-
-fn get_name_types_fields<'a, I>(fields: I) -> (Vec<Ident>, Vec<&'a Type>)
-    where I: IntoIterator<Item = &'a Field>,
-{
-    fields
-        .into_iter()
-        .enumerate()
-        .map(|(i, field)| (
-            field.ident
-                .as_ref()
-                .map_or_else(|| format_ident!("self_{}", i), Clone::clone),
-            &field.ty
-        ))
-        .unzip()
-}
-
-fn get_struct_permenant_names(input: &DataStruct) -> Vec<Ident> {
-    match input.fields {
-        syn::Fields::Named(ref fields) => get_permenant_names(fields.named.iter()),
-        syn::Fields::Unnamed(ref fields) => get_permenant_names(fields.unnamed.iter()),
-        syn::Fields::Unit => vec![],
-    }
-}
-
-fn get_struct_names_types(input: &DataStruct) -> (Vec<Ident>, Vec<&Type>, StructType) {
-    match input.fields {
-        syn::Fields::Named(ref fields) => {
-            let (names, types) = get_name_types_fields(fields.named.iter());
-            (names, types, StructType::Fields)
-        }
-        syn::Fields::Unnamed(ref fields) => {
-            let (names, types) = get_name_types_fields(fields.unnamed.iter());
-            (names, types, StructType::Tuple)
-        }
-        syn::Fields::Unit => {
-            (vec![], vec![], StructType::Unit)
-        },
-    }
-}
-
 fn get_name_modified(idents: &[Ident], append: &str) -> Vec<Ident> {
     idents
         .iter()
@@ -499,26 +388,7 @@ fn get_name_modified(idents: &[Ident], append: &str) -> Vec<Ident> {
         .collect()
 }
 
-fn get_field_attrs<'a, I>(fields: I) -> syn::Result<Vec<FieldLevelAttrs>>
-    where I: IntoIterator<Item = &'a Field>
-{
-    Ok(
-        fields
-            .into_iter()
-            .map(|f| FieldLevelAttrs::try_from_field(&f))
-            .collect::<syn::Result<_>>()?
-    )
-}
-
-fn get_struct_field_attrs(input: &DataStruct) -> syn::Result<Vec<FieldLevelAttrs>> {
-    match input.fields {
-        syn::Fields::Named(ref fields) => get_field_attrs(fields.named.iter()),
-        syn::Fields::Unnamed(ref fields) => get_field_attrs(fields.unnamed.iter()),
-        syn::Fields::Unit => Ok(vec![])
-    }
-}
-
-fn get_passed_args(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
+fn get_passed_args(field_attrs: &[StructField]) -> Vec<TokenStream> {
     field_attrs
         .iter()
         .map(|field_attr| {
@@ -548,31 +418,33 @@ const ENDIAN: IdentStr = IdentStr("endian");
 const COUNT: IdentStr = IdentStr("count");
 const OFFSET: IdentStr = IdentStr("offset");
 
-fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident)
+fn get_endian_tokens(endian: &CondEndian) -> Option<(IdentStr, TokenStream)> {
+    match endian {
+        CondEndian::Fixed(Endian::Big) => Some((ENDIAN, quote! { #ENDIAN_ENUM::Big })),
+        CondEndian::Fixed(Endian::Little) => Some((ENDIAN, quote! { #ENDIAN_ENUM::Little })),
+        CondEndian::Fixed(Endian::Native) => None,
+        CondEndian::Cond(endian, condition) => {
+            let (true_cond, false_cond) = match endian {
+                Endian::Big => (quote!{ #ENDIAN_ENUM::Big }, quote!{ #ENDIAN_ENUM::Little }),
+                Endian::Little => (quote!{ #ENDIAN_ENUM::Little }, quote!{ #ENDIAN_ENUM::Big }),
+                Endian::Native => panic!("Got a native endianness in a condition")
+            };
+
+            Some((ENDIAN, quote! {
+                if (#condition) {
+                    #true_cond
+                } else {
+                    #false_cond
+                }
+            }))
+        }
+    }
+}
+
+fn get_name_option_pairs_ident_expr(field_attrs: &StructField, ident: &Ident)
     -> impl Iterator<Item = (IdentStr, TokenStream)>
 {
-    let endian = if let CondEndian::Cond(endian, condition) = &field_attrs.endian {
-        // TODO: Should just tokenise the `endian`
-        let (true_cond, false_cond) = match endian {
-            Endian::Big => (quote!{ #ENDIAN_ENUM::Big }, quote!{ #ENDIAN_ENUM::Little }),
-            Endian::Little => (quote!{ #ENDIAN_ENUM::Little }, quote!{ #ENDIAN_ENUM::Big }),
-            Endian::Native => panic!("Got a native endianness in a condition")
-        };
-
-        Some((ENDIAN, quote!{
-            if (#condition) {
-                #true_cond
-            } else {
-                #false_cond
-            }
-        }))
-    } else if matches!(field_attrs.endian, CondEndian::Fixed(Endian::Big)) {
-        Some((ENDIAN, quote!{ #ENDIAN_ENUM::Big }))
-    } else if matches!(field_attrs.endian, CondEndian::Fixed(Endian::Little)) {
-        Some((ENDIAN, quote!{ #ENDIAN_ENUM::Little }))
-    } else {
-        None
-    };
+    let endian = get_endian_tokens(&field_attrs.endian);
 
     let offset =
         field_attrs.offset
@@ -594,59 +466,48 @@ fn get_name_option_pairs_ident_expr(field_attrs: &FieldLevelAttrs, ident: &Ident
         .chain(offset)
 }
 
-fn get_modified_options<I: IntoIterator<Item = (IdentStr, TokenStream)>>(option_pairs: I)
-        -> TokenStream
-{
-    let (ident, expr): (Vec<_>, Vec<_>) = option_pairs.into_iter().unzip();
-    if ident.is_empty() {
-        quote!{
-            #OPT
+fn get_read_options_override_keys(options: impl Iterator<Item = (IdentStr, TokenStream)>) -> TokenStream {
+    let mut set_options = options.map(|(key, value)| {
+        quote! {
+            #TEMP.#key = #value;
         }
+    }).peekable();
+
+    if set_options.peek().is_none() {
+        quote! { #OPT }
     } else {
-        quote!{
+        quote! {
             &{
-                let mut temp = #OPT.clone();
-
-                #(
-                    temp.#ident = #expr;
-                )*
-
-                temp
+                let mut #TEMP = #OPT.clone();
+                #(#set_options)*
+                #TEMP
             }
         }
     }
 }
 
-fn get_new_options(idents: &[Ident], field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
+fn get_new_options(idents: &[Ident], field_attrs: &[StructField]) -> Vec<TokenStream> {
     field_attrs
         .iter()
         .zip(idents)
-        .map(|(a, b)| get_modified_options(get_name_option_pairs_ident_expr(a, b)))
+        .map(|(a, b)| get_read_options_override_keys(get_name_option_pairs_ident_expr(a, b)))
         .collect()
 }
 
-fn get_top_level_binread_options(tla: &TopLevelAttrs) -> TokenStream {
-    let endian = if tla.endian == Endian::Big {
-        Some((ENDIAN, quote!{ #ENDIAN_ENUM::Big }))
-    } else if tla.endian == Endian::Little {
-        Some((ENDIAN, quote!{ #ENDIAN_ENUM::Little }))
-    } else {
-        None
-    };
-
-    get_modified_options(endian.into_iter())
+fn get_read_options_with_endian(endian: &CondEndian) -> TokenStream {
+    get_read_options_override_keys(get_endian_tokens(endian).into_iter())
 }
 
-fn get_magic_pre_assertion(tla: &TopLevelAttrs) -> TokenStream {
-    let handle_error = handle_error();
-    let magic = tla.magic
+fn get_magic_pre_assertion(tla: &Input) -> TokenStream {
+    let handle_error = get_debug_template_handle_error();
+    let magic = tla.magic()
         .as_ref()
         .map(|(_, magic)|{
             quote!{
                 #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
             }
         });
-    let pre_asserts = get_assertions(&tla.pre_assert);
+    let pre_asserts = get_assertions(&tla.pre_assert());
 
     quote! {
         #magic
@@ -655,11 +516,11 @@ fn get_magic_pre_assertion(tla: &TopLevelAttrs) -> TokenStream {
 }
 
 
-fn get_assertions(asserts: &[Assert]) -> Vec<TokenStream> {
-    let handle_error = handle_error();
+fn get_assertions(asserts: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
     asserts
         .iter()
         .map(|Assert(assert, error)| {
+            let handle_error = get_debug_template_handle_error();
             let error = error.as_ref().map_or_else(
                 || quote!{{
                     let mut x = Some(||{});
@@ -677,11 +538,10 @@ fn get_assertions(asserts: &[Assert]) -> Vec<TokenStream> {
                 #ASSERT(#READER, #assert, #assert_string, #error)#handle_error?;
             }
         })
-        .collect()
 }
 
-fn get_field_assertions(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
-    let handle_error = handle_error();
+fn get_field_assertions(field_attrs: &[StructField]) -> Vec<TokenStream> {
+    let handle_error = get_debug_template_handle_error();
     field_attrs
         .iter()
         .map(|field_attrs|{
@@ -709,42 +569,43 @@ fn get_field_assertions(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
         .collect()
 }
 
-fn handle_error() -> TokenStream {
-    let write_end_struct = write_end_struct();
+fn get_debug_template_handle_error() -> TokenStream {
     if cfg!(feature = "debug_template") {
-        quote!{
-            .map_err(|e|{
+        let write_end_struct = get_debug_template_end();
+        quote! {
+            .map_err(|e| {
                 #WRITE_COMMENT(&format!("Error: {:?}", e));
                 #write_end_struct
                 e
             })
         }
     } else {
-        quote!{}
+        TokenStream::new()
     }
 }
 
-fn write_start_struct(struct_name: &str) -> TokenStream {
+fn get_debug_template_start(struct_name: &Ident) -> TokenStream {
     if cfg!(feature = "debug_template") {
-        quote!{
-            #WRITE_START_STRUCT (#struct_name);
+        let struct_name = struct_name.to_string();
+        quote! {
+            #WRITE_START_STRUCT(#struct_name);
         }
     } else {
-        quote!{}
+        TokenStream::new()
     }
 }
 
-fn write_end_struct() -> TokenStream {
+fn get_debug_template_end() -> TokenStream {
     if cfg!(feature = "debug_template") {
         quote!{
             #WRITE_END_STRUCT (#OPT.variable_name);
         }
     } else {
-        quote!{}
+        TokenStream::new()
     }
 }
 
-fn get_maps(field_attrs: &[FieldLevelAttrs], types: &[&Type]) -> Vec<TokenStream> {
+fn get_maps(field_attrs: &[StructField], types: &[Type]) -> Vec<TokenStream> {
     // This validates the map function return value by trying to coerce it into
     // a function with the expected return type. If this is not done, the
     // compiler will emit the diagnostic on the `#[derive(BinRead)]` attribute
@@ -785,7 +646,7 @@ fn get_maps(field_attrs: &[FieldLevelAttrs], types: &[&Type]) -> Vec<TokenStream
 }
 
 
-fn get_after_parse_handlers(field_attrs: &[FieldLevelAttrs]) -> Vec<&IdentStr> {
+fn get_after_parse_handlers(field_attrs: &[StructField]) -> Vec<&IdentStr> {
     field_attrs
         .iter()
         .map(|field_attrs| {
@@ -803,7 +664,7 @@ fn get_after_parse_handlers(field_attrs: &[FieldLevelAttrs]) -> Vec<&IdentStr> {
         .collect()
 }
 
-fn ignore_filter<T, I>(idents: I, field_attrs: &[FieldLevelAttrs], replace_filter: &TokenStream) -> Vec<TokenStream>
+fn ignore_filter<T, I>(idents: I, field_attrs: &[StructField], replace_filter: &TokenStream) -> Vec<TokenStream>
     where T: ToTokens,
           I: IntoIterator<Item = T>
 {
@@ -820,15 +681,15 @@ fn ignore_filter<T, I>(idents: I, field_attrs: &[FieldLevelAttrs], replace_filte
         .collect()
 }
 
-fn ignore_names(idents: &[Ident], field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
+fn ignore_names(idents: &[Ident], field_attrs: &[StructField]) -> Vec<TokenStream> {
     ignore_filter(idents, field_attrs, &quote!{ _ })
 }
 
-fn ignore_types(idents: &[&Type], field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
+fn ignore_types(idents: &[Type], field_attrs: &[StructField]) -> Vec<TokenStream> {
     ignore_filter(idents, field_attrs, &quote! { () })
 }
 
-fn filter_by_ignore<I>(field_attrs: &[FieldLevelAttrs], idents: I) -> Vec<TokenStream>
+fn filter_by_ignore<I>(field_attrs: &[StructField], idents: I) -> Vec<TokenStream>
     where I: IntoIterator<Item = IdentStr>
 {
     idents
@@ -850,7 +711,7 @@ fn filter_by_ignore<I>(field_attrs: &[FieldLevelAttrs], idents: I) -> Vec<TokenS
         .collect()
 }
 
-fn possible_if_else(field_attrs: &[FieldLevelAttrs], idents: &[Ident]) -> (Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>) {
+fn possible_if_else(field_attrs: &[StructField], idents: &[Ident]) -> (Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>) {
     let (cond_eval, if_stmt) =
         field_attrs
             .iter()
@@ -885,7 +746,7 @@ fn possible_if_else(field_attrs: &[FieldLevelAttrs], idents: &[Ident]) -> (Vec<T
     )
 }
 
-fn possible_if_let(field_attrs: &[FieldLevelAttrs], idents: &[Ident]) -> (Vec<TokenStream>, Vec<TokenStream>) {
+fn possible_if_let(field_attrs: &[StructField], idents: &[Ident]) -> (Vec<TokenStream>, Vec<TokenStream>) {
     field_attrs
         .iter()
         .zip(idents)
@@ -915,7 +776,7 @@ struct Skips {
     align_after: Vec<Option<TokenStream>>
 }
 
-fn generate_skips(field_attrs: &[FieldLevelAttrs]) -> Skips {
+fn generate_skips(field_attrs: &[StructField]) -> Skips {
     let mut seek_before = vec![];
     let mut skip_before = vec![];
     let mut align_before = vec![];
@@ -924,7 +785,7 @@ fn generate_skips(field_attrs: &[FieldLevelAttrs]) -> Skips {
     let mut skip_after = vec![];
     let mut align_after = vec![];
 
-    let handle_error = handle_error();
+    let handle_error = get_debug_template_handle_error();
     for attrs in field_attrs {
         seek_before.push(attrs.seek_before.as_ref().map(|seek|{
             let seek = closure_wrap(seek);
@@ -992,7 +853,7 @@ fn generate_skips(field_attrs: &[FieldLevelAttrs]) -> Skips {
     }
 }
 
-fn split_by_immediate_deref<'a, 'b>(after_parse: Vec<&'a IdentStr>, field_attrs: &'b [FieldLevelAttrs])
+fn split_by_immediate_deref<'a, 'b>(after_parse: Vec<&'a IdentStr>, field_attrs: &'b [StructField])
     -> (Vec<&'a IdentStr>, Vec<&'a IdentStr>)
 {
     after_parse
@@ -1009,8 +870,8 @@ fn split_by_immediate_deref<'a, 'b>(after_parse: Vec<&'a IdentStr>, field_attrs:
 }
 
 
-fn save_restore_position(field_attrs: &[FieldLevelAttrs]) -> (Vec<TokenStream>, Vec<TokenStream>) {
-    let handle_error = handle_error();
+fn save_restore_position(field_attrs: &[StructField]) -> (Vec<TokenStream>, Vec<TokenStream>) {
+    let handle_error = get_debug_template_handle_error();
     field_attrs
         .iter()
         .map(|field_attrs|{
@@ -1032,7 +893,7 @@ fn save_restore_position(field_attrs: &[FieldLevelAttrs]) -> (Vec<TokenStream>, 
 
 const SAVED_POSITION: IdentStr = IdentStr("__binread_generated_saved_position");
 
-fn get_possible_try_conversion(field_attrs: &[FieldLevelAttrs]) -> Vec<TokenStream> {
+fn get_possible_try_conversion(field_attrs: &[StructField]) -> Vec<TokenStream> {
     field_attrs
         .iter()
         .map(|field|{

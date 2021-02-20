@@ -3,6 +3,8 @@ use quote::ToTokens;
 use super::{KeywordToken, keywords as kw};
 use syn::{Expr, Lit, Token, Type, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, token};
 
+type Fields<T> = Punctuated<T, Token![,]>;
+
 /// `MetaExpr` represents a key/expr pair
 /// Takes two forms:
 /// * ident(expr)
@@ -49,6 +51,12 @@ impl <Keyword: Parse, Value: Parse> Parse for MetaValue<Keyword, Value> {
     }
 }
 
+impl <Keyword, Value: ToTokens> From<MetaValue<Keyword, Value>> for TokenStream {
+    fn from(value: MetaValue<Keyword, Value>) -> Self {
+        value.value.into_token_stream()
+    }
+}
+
 impl <Keyword, Value: ToTokens> ToTokens for MetaValue<Keyword, Value> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.value.to_tokens(tokens);
@@ -57,21 +65,17 @@ impl <Keyword, Value: ToTokens> ToTokens for MetaValue<Keyword, Value> {
 
 impl <Keyword: syn::token::Token + KeywordToken, Value> KeywordToken for MetaValue<Keyword, Value> {
     type Token = Keyword;
-}
 
-type Fields<T> = Punctuated<T, Token![,]>;
+    fn keyword_span(&self) -> proc_macro2::Span {
+        self.ident.keyword_span()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct MetaList<Keyword, ItemType> {
     pub ident: Keyword,
     pub parens: token::Paren,
     pub fields: Fields<ItemType>,
-}
-
-impl <Keyword, ItemType: ToTokens> MetaList<Keyword, ItemType> {
-    pub fn get(&self) -> Vec<TokenStream> {
-        self.fields.iter().map(ToTokens::into_token_stream).collect()
-    }
 }
 
 impl <Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
@@ -89,6 +93,10 @@ impl <Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
 
 impl <Keyword: syn::token::Token + KeywordToken, ItemType> KeywordToken for MetaList<Keyword, ItemType> {
     type Token = Keyword;
+
+    fn keyword_span(&self) -> proc_macro2::Span {
+        self.ident.keyword_span()
+    }
 }
 
 // This is like `syn::PatType` except:
@@ -134,6 +142,10 @@ impl Parse for ImportArgTuple {
 
 impl KeywordToken for ImportArgTuple {
     type Token = kw::import_tuple;
+
+    fn keyword_span(&self) -> proc_macro2::Span {
+        self.ident.keyword_span()
+    }
 }
 
 pub(crate) struct MetaAttrList<P>(Fields<P>);
@@ -152,4 +164,43 @@ impl <P: Parse> Parse for MetaAttrList<P> {
             Fields::parse_terminated(&content)?
         ))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! parse_ty {
+        ($name:ident, $str:literal, $ty:ty) => {
+            #[test]
+            fn $name() {
+                let tokens: TokenStream = ($str).parse().unwrap();
+                let _: $ty = syn::parse2(tokens).unwrap();
+            }
+        }
+    }
+
+    macro_rules! parse_ty_fail {
+        ($name:ident, $str:literal, $ty:ty) => {
+            #[test]
+            #[should_panic]
+            fn $name() {
+                let tokens: TokenStream = ($str).parse().unwrap();
+                let _: $ty = syn::parse2(tokens).unwrap();
+            }
+        }
+    }
+
+    parse_ty!(meta_bool, "little", kw::little);
+    parse_ty!(meta_lit, "magic = 3u8", MetaLit<kw::magic>);
+    parse_ty!(meta_byte_lit, "magic = b\"TEST\"", MetaLit<kw::magic>);
+    parse_ty!(meta_str_lit, "magic = \"string\"", MetaLit<kw::magic>);
+    parse_ty!(meta_func_closure, "map = |x| x + 1", MetaExpr<kw::map>);
+    parse_ty!(meta_func_path, "map = ToString::to_string", MetaExpr<kw::map>);
+    parse_ty!(meta_func_fn_expr, "map = {|| { |x| x + 1 }()}", MetaExpr<kw::map>);
+    parse_ty!(meta_ty, "repr = u8", MetaType<kw::repr>);
+
+    parse_ty_fail!(meta_lit_panic, "= 3u8", MetaLit<kw::magic>);
+    parse_ty_fail!(meta_lit_panic2, "test = 3u8", MetaLit<kw::magic>);
+    parse_ty_fail!(meta_ty_panic, "repr = 3u8", MetaType<kw::repr>);
 }

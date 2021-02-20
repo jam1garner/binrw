@@ -1,19 +1,37 @@
-pub(crate) mod read_options;
+mod read_options;
 pub(crate) mod sanitization;
 
-use crate::parser::TopLevelAttrs;
+use crate::parser::Input;
 use proc_macro2::TokenStream;
+use quote::quote;
+#[allow(clippy::wildcard_imports)]
+use sanitization::*;
 
-pub fn generate(input: &syn::DeriveInput) -> syn::Result<GeneratedCode> {
-    let tla = TopLevelAttrs::try_from_input(&input)?;
+pub(crate) fn generate_impl(input: &syn::DeriveInput) -> TokenStream {
+    let (arg_type, read_opt_impl) = match Input::from_input(input) {
+        Ok(binread_input) => (
+            binread_input.imports().types(),
+            read_options::generate(&input.ident, &binread_input).unwrap_or_else(syn::Error::into_compile_error),
+        ),
+        // If there is a parsing error, a BinRead impl still needs to be
+        // generated to avoid misleading errors at all call sites that use the
+        // BinRead trait
+        Err(error) => (quote! { () }, error.into_compile_error()),
+    };
 
-    Ok(GeneratedCode {
-        arg_type: tla.import.types(),
-        read_opt_impl: read_options::generate(input, &tla)?,
-    })
-}
+    let name = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    quote! {
+        #[allow(non_snake_case)]
+        impl #impl_generics #TRAIT_NAME for #name #ty_generics #where_clause {
+            type Args = #arg_type;
 
-pub struct GeneratedCode {
-    pub read_opt_impl: TokenStream,
-    pub arg_type: TokenStream
+            fn read_options<R: #READ_TRAIT + #SEEK_TRAIT>
+                (#READER: &mut R, #OPT: &#OPTIONS, #ARGS: Self::Args)
+                -> #BIN_RESULT<Self>
+            {
+                #read_opt_impl
+            }
+        }
+    }
 }

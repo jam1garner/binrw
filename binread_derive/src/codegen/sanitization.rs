@@ -46,6 +46,7 @@ pub static TRY_CONVERSION: IdentStr = from_crate!(error::try_conversion);
 
 pub static TEMP: IdentStr = IdentStr("__binread_temp");
 pub static POS: IdentStr = IdentStr("__binread_generated_position_temp");
+pub static ERROR_BASKET: IdentStr = IdentStr("__binread_generated_error_basket");
 
 
 pub fn closure_wrap<T: ToTokens>(value: T) -> TokenStream {

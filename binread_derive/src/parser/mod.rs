@@ -1,47 +1,25 @@
 #[macro_use]
 pub(crate) mod macros;
+mod attrs;
 mod field_level_attrs;
 mod keywords;
 pub(crate) mod meta_types;
-#[cfg(test)]
-mod parsing_tests;
 mod top_level_attrs;
+mod types;
 
-pub(crate) use field_level_attrs::{CondEndian, FieldLevelAttrs, Map};
-use proc_macro2::TokenStream;
-use syn::{Expr, Ident, Type, parse::Parse, spanned::Spanned, token::Token};
-use quote::ToTokens;
-use self::meta_types::{MetaAttrList, MetaList, MetaValue};
-pub(crate) use top_level_attrs::{EnumErrorHandling, TopLevelAttrs};
-
-pub(crate) trait Check<Attr> {
-    const ERR_LOCATION: &'static str;
-    fn check(attr: &Attr) -> syn::Result<()>;
-    fn err<K: KeywordToken + Spanned>(kw: &K) -> syn::Result<()> {
-        Err(syn::Error::new(kw.span(), format!("{} not allowed on {}", kw.dyn_display(), Self::ERR_LOCATION)))
-    }
-}
-
-pub(crate) trait KeywordToken {
-    type Token: Token;
-    fn display() -> &'static str {
-        <Self::Token as Token>::display()
-    }
-    fn dyn_display(&self) -> &'static str {
-        Self::display()
-    }
-}
-
-impl <T: Token> KeywordToken for T {
-    type Token = T;
-}
-
-pub(crate) fn duplicate_attr<Keyword: KeywordToken + Spanned, R>(kw: &Keyword) -> syn::Result<R> {
-    Err(syn::Error::new(kw.span(), format!("duplicate {} attribute", KeywordToken::dyn_display(kw))))
-}
+pub(crate) use field_level_attrs::*;
+use proc_macro2::Span;
+use meta_types::MetaAttrList;
+use syn::{spanned::Spanned, token::Token};
+pub(crate) use top_level_attrs::*;
+pub(crate) use types::*;
 
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
-    fn try_from_attrs<C: Check<Attr>>(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
+    fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
+        Self::set_from_attrs(Self::default(), attrs)
+    }
+
+    fn set_from_attrs(mut self, attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Sized {
         #[allow(clippy::filter_map)]
         let attrs = attrs
             .iter()
@@ -53,11 +31,10 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
                 }
             });
 
-        let mut this = Self::default();
         let mut all_errors = None::<syn::Error>;
         for attr in attrs {
             let result = match attr {
-                Ok(attr) => this.try_set_attr::<C>(attr),
+                Ok(attr) => self.try_set_attr(attr),
                 Err(e) => Err(e),
             };
 
@@ -72,119 +49,98 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
 
         match all_errors {
             Some(error) => Err(error),
-            None => Ok(this),
+            None => Ok(self),
         }
     }
 
-    fn try_set_attr<C: Check<Attr>>(&mut self, attr: Attr) -> syn::Result<()>;
+    fn try_set_attr(&mut self, attr: Attr) -> syn::Result<()>;
 }
 
-#[derive(Debug, Clone)]
-pub struct Assert(pub TokenStream, pub Option<TokenStream>);
+pub(crate) trait FromField {
+    type In;
 
-#[derive(Debug, Clone)]
-pub enum PassedArgs {
-    None,
-    List(Vec<TokenStream>),
-    Tuple(TokenStream)
+    fn from_field(field: &Self::In) -> syn::Result<Self> where Self: Sized;
 }
 
-impl Default for PassedArgs {
-    fn default() -> Self {
-        PassedArgs::None
-    }
-}
+pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
+    type Field: FromField + 'static;
 
-#[derive(Debug, Clone)]
-pub enum Imports {
-    None,
-    List(Vec<Ident>, Vec<Type>),
-    Tuple(Ident, Box<Type>)
-}
+    fn from_input<'input>(attrs: &'input [syn::Attribute], fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>) -> syn::Result<Self> where Self: Sized + Default {
+        // TODO: This probably should return an incomplete object + error so
+        // that all field validation can occur; currently if the parent object
+        // has an error then any validation in push_field will not occur.
+        let (mut this, mut all_errors) = match Self::try_from_attrs(attrs) {
+            Ok(this) => (Some(this), None),
+            Err(all_errors) => (None, Some(all_errors)),
+        };
 
-impl Default for Imports {
-    fn default() -> Self {
-        Imports::None
-    }
-}
+        for field in fields {
+            let field_error = match Self::Field::from_field(field) {
+                Ok(field) => match &mut this {
+                    Some(this) => this.push_field(field),
+                    None => Ok(()),
+                },
+                Err(field_error) => Err(field_error),
+            };
 
-impl Imports {
-    pub fn idents(&self) -> TokenStream {
-        match self {
-            Imports::None => quote::quote! { () },
-            Imports::List(idents, _) => {
-                let idents = idents.iter();
-                quote::quote! {
-                    (#(mut #idents,)*)
+            if let Err(field_error) = field_error {
+                match &mut all_errors {
+                    Some(all_errors) => all_errors.combine(field_error),
+                    None => all_errors = Some(field_error),
                 }
-            },
-            Imports::Tuple(ident, _) => quote::quote! {
-                mut #ident
             }
         }
+
+        all_errors.map_or_else(|| Ok(this.unwrap()), Err)
     }
 
-    pub fn types(&self) -> TokenStream {
-        match self {
-            Imports::None => quote::quote! { () },
-            Imports::List(_, types) => {
-                let types = types.iter();
-                quote::quote! {
-                    (#(#types,)*)
-                }
-            },
-            Imports::Tuple(_, ty) => {
-                ty.to_token_stream()
-            }
+    fn push_field(&mut self, field: Self::Field) -> syn::Result<()>;
+}
+
+pub(crate) trait KeywordToken {
+    type Token: Token;
+
+    fn display() -> &'static str {
+        <Self::Token as Token>::display()
+    }
+
+    fn dyn_display(&self) -> &'static str {
+        Self::display()
+    }
+
+    fn keyword_span(&self) -> Span;
+}
+
+impl <T: Token + Spanned> KeywordToken for T {
+    type Token = T;
+
+    fn keyword_span(&self) -> Span {
+        self.span()
+    }
+}
+
+pub(crate) trait TrySet<T> {
+    fn try_set(self, to: &mut T) -> syn::Result<()>;
+}
+
+impl <T: KeywordToken> TrySet<bool> for T {
+    fn try_set(self, to: &mut bool) -> syn::Result<()> {
+        if *to {
+            Err(syn::Error::new(self.keyword_span(), format!("conflicting {} keyword", self.dyn_display())))
+        } else {
+            *to = true;
+            Ok(())
         }
     }
-
-    pub fn is_some(&self) -> bool {
-        !matches!(self, Imports::None)
-    }
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum MagicType {
-    Str,
-    ByteStr,
-    Byte,
-    Char,
-    Int(String),
-    Float,
-    Bool,
-    Verbatim
-}
-
-pub(crate) fn convert_assert<K>(assert: &MetaList<K, Expr>) -> syn::Result<Assert>
-    where K: Parse + Spanned,
-{
-    let (cond, err) = {
-        let mut iter = assert.fields.iter();
-        let result = (iter.next(), iter.next());
-        if iter.next().is_some() {
-            return Err(syn::Error::new(
-                assert.ident.span(),
-                "Too many arguments passed to assert"
-            ));
+impl <T: Into<To> + KeywordToken, To> TrySet<Option<To>> for T {
+    fn try_set(self, to: &mut Option<To>) -> syn::Result<()> {
+        if to.is_none() {
+            *to = Some(self.into());
+            Ok(())
+        } else {
+            Err(syn::Error::new(self.keyword_span(), format!("conflicting {} keyword", self.dyn_display())))
         }
-        result
-    };
-
-    Ok(Assert(
-        cond.into_token_stream(),
-        err.map(ToTokens::into_token_stream)
-    ))
-}
-
-pub(crate) fn set_option_ts<K, V>(value: &mut Option<TokenStream>, attr: &MetaValue<K, V>) -> syn::Result<()>
-    where K: KeywordToken + Spanned,
-          V: ToTokens,
-{
-    if value.is_some() {
-        duplicate_attr(&attr.ident)
-    } else {
-        *value = Some(attr.value.to_token_stream());
-        Ok(())
     }
 }
