@@ -6,20 +6,20 @@ use quote::{quote, format_ident, ToTokens};
 use std::iter;
 use syn::{Ident, Type};
 
-pub(crate) fn generate(ident: &Ident, input: &Input) -> syn::Result<TokenStream> {
+pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
     match input.map() {
         Map::None => match input {
-            Input::UnitStruct(_) => Ok(generate_unit_struct()),
+            Input::UnitStruct(_) => generate_unit_struct(),
             Input::Struct(s) => generate_struct(ident, input, s),
             Input::Enum(e) => generate_data_enum(e),
-            Input::UnitOnlyEnum(e) => generate_unit_enum(ident, e),
+            Input::UnitOnlyEnum(e) => generate_unit_enum(e),
         },
-        Map::Try(map) => Ok(quote! {
+        Map::Try(map) => quote! {
             #READ_METHOD(#READER, #OPT, #ARGS).and_then(#map)
-        }),
-        Map::Map(map) => Ok(quote! {
+        },
+        Map::Map(map) => quote! {
             #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
-        }),
+        },
     }
 }
 
@@ -42,7 +42,7 @@ fn generate_unit_struct() -> TokenStream {
     quote! { Ok(Self) }
 }
 
-fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> syn::Result<TokenStream> {
+fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> TokenStream {
     let fields = map_fields(&ds.fields);
 
     // TODO: Do not collect, use iterators directly. Also, less cloning
@@ -51,7 +51,7 @@ fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> syn::Result<Token
     let out_names = fields.filter_map(|f| f.1);
 
     let debug_tpl_start = get_debug_template_start(&ident);
-    let read_body = generate_body(tla, &ds.fields, &in_names, &ty)?;
+    let read_body = generate_body(tla, &ds.fields, &in_names, &ty);
     let debug_tpl_end = get_debug_template_end();
     let assertions = get_assertions(&ds.assert);
     let return_value = if ds.is_tuple() {
@@ -60,31 +60,21 @@ fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> syn::Result<Token
         quote! { Self { #(#out_names),* } }
     };
 
-    Ok(quote! {
+    quote! {
         #debug_tpl_start
         #read_body
         #debug_tpl_end
         #(#assertions)*
         Ok(#return_value)
-    })
+    }
 }
 
-fn generate_unit_enum(ident: &Ident, en: &UnitOnlyEnum) -> syn::Result<TokenStream> {
-    // TODO: This validation should be in the parser
-    if en.fields.is_empty() {
-        return Err(syn::Error::new(ident.span(), "cannot generate a reader for an enum with no variants"));
-    }
-
+fn generate_unit_enum(en: &UnitOnlyEnum) -> TokenStream {
     let options = get_read_options_with_endian(&en.endian);
 
-    if let Some(repr) = &en.repr {
-        Ok(generate_unit_enum_repr(&options, repr, &en.fields))
-    } else if en.is_magic_enum() {
-        Ok(generate_unit_enum_magic(&options, &en.fields))
-    } else {
-        // TODO: This condition should be impossible; validation should happen
-        // in the parser
-        Err(syn::Error::new(ident.span(), "cannot generate a reader for a unit-type enum with no repr and no variant magic"))
+    match &en.repr {
+        Some(repr) => generate_unit_enum_repr(&options, repr, &en.fields),
+        None => generate_unit_enum_magic(&options, &en.fields),
     }
 }
 
@@ -137,7 +127,7 @@ fn generate_unit_enum_magic(options: &TokenStream, variants: &[UnitEnumField]) -
     }
 }
 
-fn generate_data_enum(en: &Enum) -> syn::Result<TokenStream> {
+fn generate_data_enum(en: &Enum) -> TokenStream {
     let return_all_errors = en.error_mode != EnumErrorMode::ReturnUnexpectedError;
 
     let (create_error_basket, return_error) = if return_all_errors {(
@@ -163,8 +153,7 @@ fn generate_data_enum(en: &Enum) -> syn::Result<TokenStream> {
     let try_each_variant = en.variants
         .iter()
         .map(|variant| {
-            // TODO: No unwrap, it should be infallible
-            let body = generate_variant_impl(en, variant).unwrap();
+            let body = generate_variant_impl(en, variant);
 
             let handle_error = if return_all_errors {
                 let name = variant.ident().to_string();
@@ -189,16 +178,16 @@ fn generate_data_enum(en: &Enum) -> syn::Result<TokenStream> {
             }
         });
 
-    Ok(quote! {
+    quote! {
         #create_error_basket
         let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
         #(#try_each_variant)*
         #return_error
-    })
+    }
 }
 
 // TODO: This is distressingly close to generate_struct
-fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> syn::Result<TokenStream> {
+fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
     let todo = Vec::new();
     let (in_names, ty, fields, assertions, return_value);
     match variant {
@@ -231,17 +220,17 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> syn::Result<TokenS
     // TODO: Kind of expensive since the enum is containing all the fields
     // and this is a clone.
     let tla = Input::Enum(en.with_variant(variant));
-    let read_body = generate_body(&tla, &fields, &in_names, &ty)?;
-    Ok(quote! {
+    let read_body = generate_body(&tla, &fields, &in_names, &ty);
+    quote! {
         #read_body
         #(#assertions)*
         Ok(#return_value)
-    })
+    }
 }
 
 // TODO: replace all functions that are only passed tla with a method on TopLevelAttrs
 
-fn generate_body(tla: &Input, field_attrs: &[StructField], name: &[Ident], ty: &[Type]) -> syn::Result<TokenStream> {
+fn generate_body(tla: &Input, field_attrs: &[StructField], name: &[Ident], ty: &[Type]) -> TokenStream {
     let count = name.len();
     let arg_vars = tla.imports().idents();
     let name_args: Vec<Ident> = get_name_modified(&name, "args");
@@ -295,7 +284,7 @@ fn generate_body(tla: &Input, field_attrs: &[StructField], name: &[Ident], ty: &
 
     let (save_position, restore_position) = save_restore_position(&field_attrs);
 
-    Ok(quote!{
+    quote!{
         let #arg_vars = #ARGS;
 
         let #OPT = #top_level_option;
@@ -355,7 +344,7 @@ fn generate_body(tla: &Input, field_attrs: &[StructField], name: &[Ident], ty: &
         )*
 
         #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))#handle_error?;
-    })
+    }
 }
 
 fn get_possible_set_offset(field_attrs: &[StructField], name_options: &[Ident]) -> Vec<Option<TokenStream>> {

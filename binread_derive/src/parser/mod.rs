@@ -14,6 +14,14 @@ use syn::{spanned::Spanned, token::Token};
 pub(crate) use top_level_attrs::*;
 pub(crate) use types::*;
 
+fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
+    if let Some(all_errors) = all_errors {
+        all_errors.combine(new_error);
+    } else {
+        *all_errors = Some(new_error);
+    }
+}
+
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
     fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
         Self::set_from_attrs(Self::default(), attrs)
@@ -39,11 +47,7 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
             };
 
             if let Err(parse_error) = result {
-                if let Some(error) = &mut all_errors {
-                    error.combine(parse_error);
-                } else {
-                    all_errors = Some(parse_error);
-                }
+                combine_error(&mut all_errors, parse_error);
             }
         }
 
@@ -68,7 +72,8 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     fn from_input<'input>(attrs: &'input [syn::Attribute], fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>) -> syn::Result<Self> where Self: Sized + Default {
         // TODO: This probably should return an incomplete object + error so
         // that all field validation can occur; currently if the parent object
-        // has an error then any validation in push_field will not occur.
+        // has an error then any validation in `push_field` or `validate` will
+        // not occur.
         let (mut this, mut all_errors) = match Self::try_from_attrs(attrs) {
             Ok(this) => (Some(this), None),
             Err(all_errors) => (None, Some(all_errors)),
@@ -84,10 +89,13 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
             };
 
             if let Err(field_error) = field_error {
-                match &mut all_errors {
-                    Some(all_errors) => all_errors.combine(field_error),
-                    None => all_errors = Some(field_error),
-                }
+                combine_error(&mut all_errors, field_error);
+            }
+        }
+
+        if let Some(ref this) = this {
+            if let Err(validation_error) = this.validate() {
+                combine_error(&mut all_errors, validation_error);
             }
         }
 
@@ -95,6 +103,10 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     }
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()>;
+
+    fn validate(&self) -> syn::Result<()> {
+        Ok(())
+    }
 }
 
 pub(crate) trait KeywordToken {

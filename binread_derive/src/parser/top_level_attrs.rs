@@ -35,7 +35,6 @@ impl Input {
         }
     }
 
-    #[deprecated]
     pub(crate) fn endian(&self) -> &CondEndian {
         match self {
             Input::Struct(s)
@@ -54,7 +53,6 @@ impl Input {
         }
     }
 
-    #[deprecated]
     pub(crate) fn map(&self) -> &Map {
         match self {
             Input::Struct(s)
@@ -64,7 +62,6 @@ impl Input {
         }
     }
 
-    #[deprecated]
     pub(crate) fn magic(&self) -> &Magic {
         match self {
             Input::Struct(s)
@@ -74,7 +71,6 @@ impl Input {
         }
     }
 
-    #[deprecated]
     pub(crate) fn pre_assert(&self) -> &Vec<Assert> {
         match self {
             Input::Struct(s)
@@ -235,6 +231,14 @@ impl FromInput<UnitEnumAttr> for UnitOnlyEnum {
             } else {
                 Err(syn::Error::new(proc_macro2::Span::call_site(), "either all variants, or no variants, must have magic on a unit enum"))
             }
+        }
+    }
+
+    fn validate(&self) -> syn::Result<()> {
+        if self.repr.is_none() && !self.is_magic_enum() {
+            Err(syn::Error::new(proc_macro2::Span::call_site(), "cannot generate a reader for a unit-type enum with no repr and no variant magic"))
+        } else {
+            Ok(())
         }
     }
 }

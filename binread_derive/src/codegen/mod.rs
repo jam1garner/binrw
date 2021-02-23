@@ -11,7 +11,7 @@ pub(crate) fn generate_impl(input: &syn::DeriveInput) -> TokenStream {
     let (arg_type, read_opt_impl) = match Input::from_input(input) {
         Ok(binread_input) => (
             binread_input.imports().types(),
-            read_options::generate(&input.ident, &binread_input).unwrap_or_else(syn::Error::into_compile_error),
+            read_options::generate(&input.ident, &binread_input),
         ),
         // If there is a parsing error, a BinRead impl still needs to be
         // generated to avoid misleading errors at all call sites that use the
