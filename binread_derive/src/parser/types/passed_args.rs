@@ -33,7 +33,7 @@ impl <T: Into<PassedArgs> + KeywordToken> TrySet<PassedArgs> for T {
             *to = self.into();
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), "duplicate args keyword"))
+            Err(syn::Error::new(self.keyword_span(), "conflicting args keyword"))
         }
     }
 }

@@ -1,0 +1,7 @@
+error: BinRead on unit-like enums requires either `#[br(repr = ...)]` on the enum or `#[br(magic = ...)]` on at least one variant
+ --> $DIR/enum_missing_magic_repr.rs:3:10
+  |
+3 | #[derive(BinRead)]
+  |          ^^^^^^^
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

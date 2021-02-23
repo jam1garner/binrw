@@ -1,0 +1,7 @@
+error: unions are not supported
+ --> $DIR/unsupported_type_union.rs:4:1
+  |
+4 | / union Bar {
+5 | |     a: i32,
+6 | | }
+  | |_^

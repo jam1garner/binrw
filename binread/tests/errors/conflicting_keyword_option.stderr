@@ -1,0 +1,5 @@
+error: conflicting `magic` keyword
+ --> $DIR/conflicting_keyword_option.rs:4:19
+  |
+4 | #[br(magic = 0u8, magic = 0u8)]
+  |                   ^^^^^

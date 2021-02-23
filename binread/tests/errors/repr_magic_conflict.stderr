@@ -1,0 +1,8 @@
+error: `repr` and `magic` are mutually exclusive
+ --> $DIR/repr_magic_conflict.rs:4:6
+  |
+4 |   #[br(repr = u8)]
+  |  ______^
+5 | | enum Foo {
+6 | |     #[br(magic = 0u8)] A,
+  | |______________^

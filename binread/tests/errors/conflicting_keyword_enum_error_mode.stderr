@@ -1,0 +1,5 @@
+error: conflicting error handling keyword
+ --> $DIR/conflicting_keyword_enum_error_mode.rs:4:25
+  |
+4 | #[br(return_all_errors, return_unexpected_error)]
+  |                         ^^^^^^^^^^^^^^^^^^^^^^^

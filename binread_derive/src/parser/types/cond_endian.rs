@@ -51,7 +51,7 @@ impl <T: Into<CondEndian> + KeywordToken> TrySet<CondEndian> for T {
             *to = self.into();
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), "conflicting endian keyword"))
+            Err(syn::Error::new(self.keyword_span(), "conflicting endianness keyword"))
         }
     }
 }

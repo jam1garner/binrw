@@ -491,7 +491,8 @@ fn get_magic_pre_assertion(tla: &Input) -> TokenStream {
     let handle_error = get_debug_template_handle_error();
     let magic = tla.magic()
         .as_ref()
-        .map(|(_, magic)|{
+        .map(|magic|{
+            let (_, ref magic) = **magic;
             quote!{
                 #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
             }

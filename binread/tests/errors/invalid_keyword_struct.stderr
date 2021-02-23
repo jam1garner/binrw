@@ -1,0 +1,5 @@
+error: expected one of: `big`, `little`, `map`, `try_map`, `magic`, `import`, `import_tuple`, `assert`, `pre_assert`
+ --> $DIR/invalid_keyword_struct.rs:4:6
+  |
+4 | #[br(invalid_struct_keyword)]
+  |      ^^^^^^^^^^^^^^^^^^^^^^

@@ -1,6 +1,7 @@
-use crate::parser::attrs;
+use crate::parser::{attrs, KeywordToken};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
+use super::SpannedValue;
 use syn::Lit;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -30,12 +31,12 @@ impl core::fmt::Display for Kind {
     }
 }
 
-pub(crate) type Magic = Option<(Kind, TokenStream)>;
+pub(crate) type Magic = Option<SpannedValue<(Kind, TokenStream)>>;
 
-impl From<attrs::Magic> for (Kind, TokenStream) {
+impl From<attrs::Magic> for SpannedValue<(Kind, TokenStream)> {
     fn from(magic: attrs::Magic) -> Self {
-        let magic = &magic.value;
-        (match &magic {
+        let value = &magic.value;
+        let value = (match &value {
             Lit::Str(_) => Kind::Str,
             Lit::ByteStr(_) => Kind::ByteStr,
             Lit::Byte(_) => Kind::Byte,
@@ -45,13 +46,15 @@ impl From<attrs::Magic> for (Kind, TokenStream) {
             Lit::Bool(_) => Kind::Bool,
             Lit::Verbatim(_) => Kind::Verbatim
         }, {
-            if let Lit::Str(_) | Lit::ByteStr(_) = magic {
+            if let Lit::Str(_) | Lit::ByteStr(_) = value {
                 quote::quote! {
                     *#magic
                 }
             } else {
-                magic.to_token_stream()
+                value.to_token_stream()
             }
-        })
+        });
+
+        SpannedValue::new(value, magic.keyword_span())
     }
 }

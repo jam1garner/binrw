@@ -1,0 +1,5 @@
+error: expected one of: `magic`, `pre_assert`
+ --> $DIR/invalid_keyword_unit_enum_field.rs:6:10
+  |
+6 |     #[br(invalid_unit_enum_field_keyword)]
+  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

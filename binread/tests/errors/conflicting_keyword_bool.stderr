@@ -1,0 +1,5 @@
+error: conflicting `ignore` keyword
+ --> $DIR/conflicting_keyword_bool.rs:5:18
+  |
+5 |     #[br(ignore, ignore)]
+  |                  ^^^^^^

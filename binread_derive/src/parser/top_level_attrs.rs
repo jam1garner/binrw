@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
-use super::{EnumVariant, FromInput, TrySet, StructField, UnitEnumField, types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map}};
+use syn::spanned::Spanned;
+use super::{EnumVariant, FromInput, SpannedValue, StructField, TrySet, UnitEnumField, types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map}};
 
 #[derive(Clone, Debug)]
 pub(crate) enum Input {
@@ -23,15 +24,15 @@ impl Input {
             syn::Data::Enum(en) => {
                 let variants = &en.variants;
                 if variants.is_empty() {
-                    Err(syn::Error::new(en.enum_token.span, "null enums are not supported"))
+                    Err(syn::Error::new(input.span(), "null enums are not supported"))
                 } else if variants.iter().all(|v| matches!(v.fields, syn::Fields::Unit)) {
                     Ok(Self::UnitOnlyEnum(UnitOnlyEnum::from_input(attrs, variants.iter())?))
                 } else {
                     Ok(Self::Enum(Enum::from_input(attrs, variants.iter())?))
                 }
             },
-            syn::Data::Union(union) =>
-                Err(syn::Error::new(union.union_token.span, "unions are not supported"))
+            syn::Data::Union(_) =>
+                Err(syn::Error::new(input.span(), "unions are not supported"))
         }
     }
 
@@ -191,7 +192,7 @@ attr_struct! {
         #[from(Magic)]
         pub magic: Magic,
         #[from(Repr)]
-        pub repr: Option<TokenStream>,
+        pub repr: Option<SpannedValue<TokenStream>>,
         pub fields: Vec<UnitEnumField>,
     }
 }
@@ -200,45 +201,36 @@ impl UnitOnlyEnum {
     pub(crate) fn is_magic_enum(&self) -> bool {
         self.fields.get(0).map_or(false, |field| field.magic.is_some())
     }
-
-    pub(crate) fn is_repr_enum(&self) -> bool {
-        self.repr.is_some()
-    }
 }
 
 impl FromInput<UnitEnumAttr> for UnitOnlyEnum {
     type Field = UnitEnumField;
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
-        if self.is_repr_enum() && field.magic.is_some() {
-            Err(syn::Error::new(proc_macro2::Span::call_site(), "`repr` and `magic` are mutually exclusive"))
+        if let (Some(repr), Some(magic)) = (self.repr.as_ref(), field.magic.as_ref()) {
+            let magic_span = magic.span();
+            let span = magic_span.join(repr.span()).unwrap_or(magic_span);
+            Err(syn::Error::new(span, "`repr` and `magic` are mutually exclusive"))
         } else {
-            // TODO: Clone less please
-            let expected_magic_kind = self.fields.get(0)
-                .unwrap_or(&field)
-                .magic
-                .as_ref()
-                .map(|field| field.0.clone());
-            let magic_kind = field.magic.as_ref().map(|field| field.0.clone());
-
-            if expected_magic_kind == magic_kind {
-                self.fields.push(field);
-                Ok(())
-            } else if expected_magic_kind.is_some() && magic_kind.is_some() {
-                // TODO: Should error on the magic token, or at least the field
-                // ident
-                Err(syn::Error::new(proc_macro2::Span::call_site(), format!("conflicting magic type; expected {}", expected_magic_kind.unwrap())))
-            } else {
-                Err(syn::Error::new(proc_macro2::Span::call_site(), "either all variants, or no variants, must have magic on a unit enum"))
+            let expected_magic = self.fields.get(0).unwrap_or(&field).magic.as_ref();
+            if let (Some(expected_magic), Some(magic)) = (expected_magic, field.magic.as_ref()) {
+                if expected_magic.0 != magic.0 {
+                    let magic_span = magic.1.span();
+                    let span = magic_span.join(expected_magic.1.span()).unwrap_or(magic_span);
+                    return Err(syn::Error::new(span, format!("conflicting magic types; expected {}", expected_magic.0)));
+                }
             }
+
+            self.fields.push(field);
+            Ok(())
         }
     }
 
     fn validate(&self) -> syn::Result<()> {
-        if self.repr.is_none() && !self.is_magic_enum() {
-            Err(syn::Error::new(proc_macro2::Span::call_site(), "cannot generate a reader for a unit-type enum with no repr and no variant magic"))
-        } else {
+        if self.repr.is_some() || self.is_magic_enum() {
             Ok(())
+        } else {
+            Err(syn::Error::new(proc_macro2::Span::call_site(), "BinRead on unit-like enums requires either `#[br(repr = ...)]` on the enum or `#[br(magic = ...)]` on at least one variant"))
         }
     }
 }

@@ -36,7 +36,7 @@ impl From<attrs::TryMap> for Map {
 impl <T: Into<Map> + KeywordToken> TrySet<Map> for T {
     fn try_set(self, to: &mut Map) -> syn::Result<()> {
         if to.is_some() {
-            Err(syn::Error::new(self.keyword_span(), "conflicting map function"))
+            Err(syn::Error::new(self.keyword_span(), "conflicting map keyword"))
         } else {
             *to = self.into();
             Ok(())

@@ -71,7 +71,7 @@ impl <T: Into<Imports> + KeywordToken> TrySet<Imports> for T {
             *to = self.into();
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), "duplicate import keyword"))
+            Err(syn::Error::new(self.keyword_span(), "conflicting import keyword"))
         }
     }
 }

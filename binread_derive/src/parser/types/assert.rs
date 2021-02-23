@@ -11,21 +11,50 @@ impl <K: Parse + Spanned> TryFrom<attrs::AssertLike<K>> for Assert {
     type Error = syn::Error;
 
     fn try_from(value: attrs::AssertLike<K>) -> Result<Self, Self::Error> {
-        let (cond, err) = {
-            let mut iter = value.fields.iter();
-            let result = (iter.next(), iter.next());
-            if iter.next().is_some() {
+        let (cond, message) = {
+            let mut args = value.fields.iter();
+
+            let cond = if let Some(cond) = args.next() {
+                cond
+            } else {
                 return Err(Self::Error::new(
                     value.ident.span(),
-                    "Too many arguments passed to assert"
+                    "`assert` requires a boolean expression as an argument"
                 ));
+            };
+
+            let message = args.next();
+
+            // TODO: This should work like `assert!` and accept formatting
+            // arguments instead of rejecting
+            let mut extra_span = None::<proc_macro2::Span>;
+            for extra_arg in args {
+                let arg_span = extra_arg.span();
+                if let Some(span) = extra_span {
+                    // This join will fail if the `proc_macro_span` feature is
+                    // unavailable. Falling back to the `ident` span is better
+                    // than doing nothing.
+                    if let Some(new_span) = span.join(arg_span) {
+                        extra_span = Some(new_span);
+                    } else {
+                        extra_span = Some(value.ident.span());
+                        break;
+                    }
+                } else {
+                    extra_span = Some(arg_span);
+                }
             }
-            result
+
+            if let Some(span) = extra_span {
+                return Err(Self::Error::new(span, "too many arguments"));
+            }
+
+            (cond, message)
         };
 
         Ok(Self(
             cond.into_token_stream(),
-            err.map(ToTokens::into_token_stream)
+            message.map(ToTokens::into_token_stream)
         ))
     }
 }
