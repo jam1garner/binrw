@@ -156,3 +156,161 @@ impl <T: Into<To> + KeywordToken, To> TrySet<Option<To>> for T {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use proc_macro2::TokenStream;
+    use super::*;
+    use syn::DeriveInput;
+
+    fn try_input(input: TokenStream) -> syn::Result<Input> {
+        Input::from_input(&syn::parse2::<DeriveInput>(input)?)
+    }
+
+    macro_rules! try_error (
+        ($name:ident: $message:literal $tt:tt) => {
+            #[test]
+            #[should_panic(expected = $message)]
+            fn $name() {
+                try_input(quote::quote! $tt).unwrap();
+            }
+        };
+        ($name:ident $tt:tt) => {
+            #[test]
+            #[should_panic]
+            fn $name() {
+                try_input(quote::quote! $tt).unwrap();
+            }
+        };
+    );
+
+    try_error!(conflicting_keyword_bool: "conflicting `ignore` keyword" {
+        struct Foo {
+            #[br(ignore, ignore)]
+            a: i32,
+        }
+    });
+
+    try_error!(conflicting_keyword_cond_endian: "conflicting endianness keyword" {
+        struct Foo {
+            #[br(big, little, is_big = true, is_little = true)]
+            a: i32,
+        }
+    });
+
+    try_error!(conflicting_keyword_enum_error_mode: "conflicting error handling keyword" {
+        #[br(return_all_errors, return_unexpected_error)]
+        enum Foo {
+            A(i32),
+        }
+    });
+
+    try_error!(conflicting_keyword_imports: "conflicting import keyword" {
+        #[br(import(a: i32), import_tuple(args: (i32, )))]
+        struct Foo;
+    });
+
+    try_error!(conflicting_keyword_map: "conflicting map keyword" {
+        struct Foo {
+            #[br(map = |_| 0, try_map = |_| Ok(0))]
+            a: i32,
+        }
+    });
+
+    try_error!(conflicting_keyword_option: "conflicting `magic` keyword" {
+        #[br(magic = 0u8, magic = 0u8)]
+        struct Foo;
+    });
+
+    try_error!(conflicting_keyword_passed_args: "conflicting args keyword" {
+        struct Foo {
+            a: i32,
+            #[br(args(a), args_tuple = (a, ))]
+            b: i32,
+        }
+    });
+
+    try_error!(enum_missing_magic_repr {
+        enum UnitEnum {
+            A,
+        }
+    });
+
+    try_error!(invalid_assert_args: "too many arguments" {
+        #[br(assert(false, "message", "too", "many", "arguments"))]
+        struct Foo;
+    });
+
+    try_error!(invalid_assert_empty: "requires a boolean expression" {
+        #[br(assert())]
+        struct Foo;
+    });
+
+    try_error!(invalid_keyword_enum_variant: "expected one of" {
+        enum Enum {
+            #[br(invalid_enum_variant_keyword)]
+            A(i32),
+        }
+    });
+
+    try_error!(invalid_keyword_enum: "expected one of" {
+        #[br(invalid_enum_keyword)]
+        enum Enum {
+            A(i32),
+        }
+    });
+
+    try_error!(invalid_keyword_struct_field: "expected one of" {
+        struct Struct {
+            #[br(invalid_struct_field_keyword)]
+            field: i32,
+        }
+    });
+
+    try_error!(invalid_keyword_struct: "expected one of" {
+        #[br(invalid_struct_keyword)]
+        struct Struct {
+            field: i32,
+        }
+    });
+
+    try_error!(invalid_keyword_unit_enum_field: "expected one of" {
+        #[br(repr = u8)]
+        enum UnitEnum {
+            #[br(invalid_unit_enum_field_keyword)]
+            A,
+        }
+    });
+
+    try_error!(invalid_keyword_unit_enum: "expected one of" {
+        #[br(invalid_unit_enum_keyword)]
+        enum UnitEnum {
+            #[br(magic = 0u8)]
+            A,
+        }
+    });
+
+    try_error!(magic_conflict: "conflicting magic types" {
+        enum Foo {
+            #[br(magic = 0u8)] A,
+            #[br(magic = 1i16)] B,
+        }
+    });
+
+    try_error!(repr_magic_conflict: "mutually exclusive" {
+        #[br(repr = u8)]
+        enum Foo {
+            #[br(magic = 0u8)] A,
+        }
+    });
+
+    try_error!(unsupported_type_enum: "null enums are not supported" {
+        enum Foo {}
+    });
+
+    try_error!(unsupported_type_union: "unions are not supported" {
+        union Bar {
+            a: i32,
+        }
+    });
+}
