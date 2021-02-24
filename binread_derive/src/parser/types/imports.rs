@@ -61,7 +61,7 @@ impl From<attrs::Import> for Imports {
 
 impl From<attrs::ImportTuple> for Imports {
     fn from(value: attrs::ImportTuple) -> Self {
-        Imports::Tuple(value.arg.ident, value.arg.ty.into())
+        Imports::Tuple(value.value.ident, value.value.ty.into())
     }
 }
 

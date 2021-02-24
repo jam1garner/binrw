@@ -1,4 +1,4 @@
-use super::{keywords as kw, meta_types::{ImportArgTuple, IdentPatType, MetaExpr, MetaList, MetaLit, MetaType}};
+use super::{keywords as kw, meta_types::{IdentPatType, MetaExpr, MetaList, MetaLit, MetaType, MetaValue}};
 use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
@@ -15,7 +15,7 @@ pub(crate) type DerefNow = kw::deref_now;
 pub(crate) type If = MetaExpr<Token![if]>;
 pub(crate) type Ignore = kw::ignore;
 pub(crate) type Import = MetaList<kw::import, IdentPatType>;
-pub(crate) type ImportTuple = ImportArgTuple;
+pub(crate) type ImportTuple = MetaValue<kw::import_tuple, IdentPatType>;
 pub(crate) type IsBig = MetaExpr<kw::is_big>;
 pub(crate) type IsLittle = MetaExpr<kw::is_little>;
 pub(crate) type Little = kw::little;
