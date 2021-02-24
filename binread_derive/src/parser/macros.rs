@@ -6,8 +6,7 @@ macro_rules! parse_any {
         ),*
         $(,)?
     }) => {
-        #[derive(Debug, Clone)]
-        pub(crate) enum $enum {
+        pub(super) enum $enum {
             $(
                 $variant($ty)
             ),*
