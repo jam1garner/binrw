@@ -9,7 +9,7 @@ use syn::{Ident, Type};
 pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
     match input.map() {
         Map::None => match input {
-            Input::UnitStruct(_) => generate_unit_struct(),
+            Input::UnitStruct(_) => generate_unit_struct(input),
             Input::Struct(s) => generate_struct(ident, input, s),
             Input::Enum(e) => generate_data_enum(e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(e),
@@ -34,12 +34,17 @@ fn map_fields(fields: &[StructField]) -> impl Iterator<Item = (Ident, Option<Ide
         })
 }
 
-fn generate_unit_struct() -> TokenStream {
-    // TODO: Probably the parser should warn about this condition, since it
-    // means that no reading is happening? The only way this even makes sense is
-    // if the magic is treated like a precondition and a magic mismatch = read
-    // failure.
-    quote! { Ok(Self) }
+fn generate_unit_struct(tla: &Input) -> TokenStream {
+    // TODO: If this is only using endian, magic, and pre_assert, then it is
+    // just like a unit enum field and should be parsed and handled that way.
+    let top_level_option = get_read_options_with_endian(&tla.endian());
+    let magic_handler = get_magic_pre_assertion(&tla);
+
+    quote! {
+        let #OPT = #top_level_option;
+        #magic_handler
+        Ok(Self)
+    }
 }
 
 fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> TokenStream {
