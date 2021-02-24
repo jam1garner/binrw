@@ -2,7 +2,6 @@ use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 use super::{EnumVariant, FromInput, SpannedValue, StructField, TrySet, UnitEnumField, types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map}};
 
-#[derive(Clone, Debug)]
 pub(crate) enum Input {
     Struct(Struct),
     UnitStruct(Struct),
