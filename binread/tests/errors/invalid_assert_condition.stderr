@@ -1,0 +1,5 @@
+error[E0308]: mismatched types
+ --> $DIR/invalid_assert_condition.rs:4:13
+  |
+4 | #[br(assert("wrong type"))]
+  |             ^^^^^^^^^^^^ expected `bool`, found `&str`

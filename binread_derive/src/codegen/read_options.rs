@@ -523,7 +523,7 @@ fn get_assertions(asserts: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ 
                     )}
                 });
             let assert_string = assert.to_string();
-            let assert = closure_wrap(assert);
+
             quote!{
                 #ASSERT(#READER, #assert, #assert_string, #error)#handle_error?;
             }
