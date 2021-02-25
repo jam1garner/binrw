@@ -96,23 +96,3 @@ fn test_tuple() {
     let mut test = Cursor::new(TEST_CONTENTS);
     dbg!(TestTupleStruct::read(&mut test).unwrap());
 }
-
-#[derive(BinRead, Debug, Eq, PartialEq)]
-#[br(big)]
-enum TestEnum {
-    #[br(magic(0u8))] Nop,
-    #[br(magic(2u8))] Begin {
-        arg_count: u16,
-        var_count: u16,
-    },
-}
-
-#[test]
-fn test_enum() {
-    let mut test = Cursor::new(b"\0");
-    assert!(matches!(TestEnum::read(&mut test).unwrap(), TestEnum::Nop));
-    let mut test = Cursor::new(b"\x01");
-    TestEnum::read(&mut test).unwrap_err();
-    let mut test = Cursor::new(b"\x02\0\x03\0\x04");
-    assert_eq!(TestEnum::read(&mut test).unwrap(), TestEnum::Begin { arg_count: 3, var_count: 4 });
-}
