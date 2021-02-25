@@ -1,9 +1,9 @@
+use core::iter;
 use crate::{binread_endian::Endian, parser::{Assert, CondEndian, Enum, EnumErrorMode, EnumVariant, Input, Map, PassedArgs, Struct, StructField, UnitOnlyEnum, UnitEnumField}};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use proc_macro2::TokenStream;
 use quote::{quote, format_ident, ToTokens};
-use std::iter;
 use syn::{Ident, Type};
 
 pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
