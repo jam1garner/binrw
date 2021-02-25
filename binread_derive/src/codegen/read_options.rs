@@ -37,10 +37,12 @@ fn map_fields(fields: &[StructField]) -> impl Iterator<Item = (Ident, Option<Ide
 fn generate_unit_struct(tla: &Input) -> TokenStream {
     // TODO: If this is only using endian, magic, and pre_assert, then it is
     // just like a unit enum field and should be parsed and handled that way.
+    let imports = tla.imports().idents();
     let top_level_option = get_read_options_with_endian(&tla.endian());
     let magic_handler = get_magic_pre_assertion(&tla);
 
     quote! {
+        let #imports = #ARGS;
         let #OPT = #top_level_option;
         #magic_handler
         Ok(Self)
