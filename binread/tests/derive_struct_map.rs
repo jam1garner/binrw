@@ -1,37 +1,50 @@
 use binread::{BinRead, io::Cursor};
 use core::convert::TryInto;
 
-#[derive(BinRead, Debug)]
-#[br(big)]
-struct Test {
-    #[br(try_map = |x: i32| { x.try_into() })]
-    x: i16,
+#[test]
+fn map_closure() {
+    #[derive(BinRead, Debug)]
+    #[br(big, import(extra: u8))]
+    struct Test {
+        // Capturing a variable in the closure ensures that a closure type is
+        // actually tested, since a closure that does not capture is a plain
+        // function, not a functor
+        #[br(map = |value: u8| (value + extra).into())]
+        a: i16,
+    }
+
+    let result = Test::read_args(&mut Cursor::new("\x01"), (5, )).unwrap();
+    assert_eq!(result.a, 6);
 }
 
 #[test]
-fn derive_try_map_success() {
-    let mut data = Cursor::new(b"\xff\xff\xff\xff");
-    let test = Test::read(&mut data).expect("Map should have succeeded");
-    assert_eq!(test.x, -1);
+fn map_expr() {
+    #[derive(BinRead, Debug)]
+    #[br(big)]
+    struct Test {
+        #[br(map = make_map(1))]
+        a: i16,
+    }
+
+    fn make_map(extra: u8) -> impl Fn(u8) -> i16 {
+        move |value: u8| { (value + extra).into() }
+    }
+
+    let result = Test::read(&mut Cursor::new("\x01")).unwrap();
+    assert_eq!(result.a, 2);
 }
 
 #[test]
-fn derive_try_map_fail() {
-    let mut data = Cursor::new(b"\x7f\0\0\0");
-    let err = Test::read(&mut data).expect_err("Map should have failed");
-    err.custom_err::<<i32 as ::core::convert::TryInto<i16>>::Error>().expect("Map error should come from the closure");
-}
+fn try_map() {
+    #[derive(BinRead, Debug)]
+    #[br(big)]
+    struct Test {
+        #[br(try_map = |x: i32| { x.try_into() })]
+        a: i16,
+    }
 
-#[derive(BinRead, Debug)]
-#[br(big, import(extra: u8))]
-struct TestCapture {
-    #[br(map = |value: u8| value + extra)]
-    x: u8
-}
-
-#[test]
-fn derive_map() {
-    let mut data = Cursor::new("\x01");
-    let test = TestCapture::read_args(&mut data, (5, )).expect("Map should have succeeded");
-    assert_eq!(test.x, 6);
+    let result = Test::read(&mut Cursor::new(b"\xff\xff\xff\xff")).unwrap();
+    assert_eq!(result.a, -1);
+    let error = Test::read(&mut Cursor::new(b"\x7f\0\0\0")).expect_err("accepted bad data");
+    error.custom_err::<<i32 as ::core::convert::TryInto<i16>>::Error>().expect("wrong error type");
 }
