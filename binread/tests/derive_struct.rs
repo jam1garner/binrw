@@ -109,7 +109,7 @@ fn deref_now() {
         b: i32,
     }
 
-    let mut reader = Cursor::new(include_bytes!("deref_now.bin"));
+    let mut reader = Cursor::new(include_bytes!("data/deref_now.bin"));
     let result = Test::read(&mut reader).unwrap();
     assert_eq!(result, Test {
         a: FilePtr { ptr: 0x10, value: Some(NullString(b"Test string".to_vec())) },
