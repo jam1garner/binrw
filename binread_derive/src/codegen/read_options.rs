@@ -111,20 +111,23 @@ fn generate_unit_enum_magic(options: &TokenStream, variants: &[UnitEnumField]) -
     // on variants without a pre-assert condition, but this just ended up
     // failing the generation with an early return whenever there was any
     // pre-assert condition. So not sure what is the desired behaviour here.
-    // This implementation matches the *actual* prior implementation (validation
-    // happens in the parser).
 
-    let magics = variants.iter().map(|field| &field.magic.as_ref().unwrap().1);
-    let var_names = variants.iter().map(|field| &field.ident);
+    let matches = variants.iter().filter_map(|field| {
+        if let Some(magic) = &field.magic {
+            let ident = &field.ident;
+            let magic = &magic.1;
+            Some(quote! { #magic => Self::#ident })
+        } else {
+            None
+        }
+    });
 
     // TODO: Should this not restore position on failure?
     quote! {
         let #OPT = #options;
         let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
         Ok(match #READ_METHOD(#READER, #OPT, ())? {
-            #(
-                #magics => Self::#var_names,
-            )*
+            #(#matches,)*
             _ => return Err(#BIN_ERROR::NoVariantMatch {
                 pos: #SAVED_POSITION as _
             })
