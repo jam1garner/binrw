@@ -1,5 +1,5 @@
 use binread::{BinRead, io::Cursor};
-use std::convert::TryInto;
+use core::convert::TryInto;
 
 #[derive(BinRead, Debug)]
 #[br(big)]

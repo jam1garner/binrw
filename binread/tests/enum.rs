@@ -1,5 +1,4 @@
-use binread::{BinRead, derive_binread};
-use std::io::Cursor;
+use binread::{BinRead, derive_binread, io::Cursor};
 
 #[test]
 fn enum_calc_temp_field() {

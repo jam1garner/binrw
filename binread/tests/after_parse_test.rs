@@ -1,5 +1,4 @@
-use binread::{BinRead, BinReaderExt, FilePtr8};
-use std::io::Cursor;
+use binread::{BinRead, BinReaderExt, FilePtr8, io::Cursor};
 
 #[test]
 #[allow(non_snake_case)]

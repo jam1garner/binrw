@@ -1,5 +1,4 @@
-use binread::BinRead;
-use std::io::Cursor;
+use binread::{BinRead, io::Cursor};
 
 #[test]
 fn unit_enum_magic() {
