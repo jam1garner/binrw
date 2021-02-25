@@ -1,15 +1,13 @@
 use binread::BinRead;
 use std::io::Cursor;
 
-#[derive(BinRead, Debug)]
-#[br(big, magic = 1u16)]
-struct UnitStruct;
-
 #[test]
-fn unit_struct() {
-    let mut test = Cursor::new(b"\x00\x01");
-    UnitStruct::read(&mut test).unwrap();
+fn unit_struct_magic() {
+    #[derive(BinRead, Debug)]
+    #[br(big, magic = 1u16)]
+    struct Test;
 
-    let mut test = Cursor::new(b"\x00\x00");
-    UnitStruct::read(&mut test).unwrap_err();
+    Test::read(&mut Cursor::new(b"\x00\x01")).unwrap();
+    let error = Test::read(&mut Cursor::new(b"\x00\x00")).expect_err("accepted bad data");
+    assert!(matches!(error, binread::Error::BadMagic { .. }));
 }
