@@ -96,3 +96,38 @@ fn test_tuple() {
     let mut test = Cursor::new(TEST_CONTENTS);
     dbg!(TestTupleStruct::read(&mut test).unwrap());
 }
+
+#[test]
+fn deref_now() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(big, magic = b"TEST")]
+    struct Test {
+        // deref_now on the first field tests that the reader position is correctly
+        // restored before reading the second field
+        #[br(deref_now)]
+        a: FilePtr<u32, NullString>,
+        b: i32,
+    }
+
+    let mut reader = Cursor::new(include_bytes!("deref_now.bin"));
+    let result = Test::read(&mut reader).unwrap();
+    assert_eq!(result, Test {
+        a: FilePtr { ptr: 0x10, value: Some(NullString(b"Test string".to_vec())) },
+        b: -1,
+    });
+}
+
+#[test]
+fn try_directive() {
+    #[derive(BinRead)]
+    #[br(big)]
+    struct Test {
+        #[br(try)]
+        a: Option<[ i32; 2 ]>,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\0\0\0")).unwrap();
+    assert!(result.a.is_none());
+    let result = Test::read(&mut Cursor::new(b"\xff\xff\xff\xff\0\0\0\0")).unwrap();
+    assert_eq!(result.a, Some([ -1, 0 ]));
+}
