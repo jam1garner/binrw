@@ -35,7 +35,25 @@ fn map_expr() {
 }
 
 #[test]
-fn try_map() {
+fn map_struct() {
+    #[derive(BinRead, Debug)]
+    #[br(map = Self::from_bytes)]
+    struct Test {
+        a: i16,
+    }
+
+    impl Test {
+        fn from_bytes(bytes: [u8; 2]) -> Self {
+            Self { a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8) }
+        }
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\x01")).unwrap();
+    assert_eq!(result.a, 256);
+}
+
+#[test]
+fn try_map_field() {
     #[derive(BinRead, Debug)]
     #[br(big)]
     struct Test {
@@ -47,4 +65,28 @@ fn try_map() {
     assert_eq!(result.a, -1);
     let error = Test::read(&mut Cursor::new(b"\x7f\0\0\0")).expect_err("accepted bad data");
     error.custom_err::<<i32 as ::core::convert::TryInto<i16>>::Error>().expect("wrong error type");
+}
+
+#[test]
+fn try_map_struct() {
+    #[derive(BinRead, Debug)]
+    #[br(try_map = Self::from_bytes)]
+    struct Test {
+        a: i16,
+    }
+
+    impl Test {
+        fn from_bytes(bytes: [u8; 2]) -> binread::BinResult<Self> {
+            if bytes[0] == 0 {
+                Ok(Self { a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8) })
+            } else {
+                Err(binread::Error::Custom { pos: 0, err: Box::new("oops") })
+            }
+        }
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\x01")).unwrap();
+    assert_eq!(result.a, 256);
+    let error = Test::read(&mut Cursor::new(b"\x01\0")).expect_err("accepted bad data");
+    assert_eq!(*error.custom_err::<&str>().unwrap(), "oops");
 }
