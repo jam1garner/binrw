@@ -12,23 +12,11 @@ impl <T> SpannedValue<T> {
     }
 }
 
-impl <T: Default> Default for SpannedValue<T> {
-    fn default() -> Self {
-        SpannedValue::new(Default::default(), Span::call_site())
-    }
-}
-
 impl <T> core::ops::Deref for SpannedValue<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
         &self.value
-    }
-}
-
-impl <T> core::ops::DerefMut for SpannedValue<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.value
     }
 }
 

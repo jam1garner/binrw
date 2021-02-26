@@ -3,9 +3,6 @@ use binread::{BinRead, BinResult, derive_binread, io::{Cursor, Read, Seek, SeekF
 #[test]
 fn all_the_things() {
     #[derive(Debug)]
-    struct BadDifferenceError(u16);
-
-    #[derive(Debug)]
     struct PlainObject;
 
     #[derive(BinRead, Debug)]
@@ -40,10 +37,7 @@ fn all_the_things() {
         #[br(map = |val: u32| val.to_string())]
         entry_num: String,
 
-        #[br(assert(
-            offsets.1 - offsets.0 == 0x10,
-            BadDifferenceError(offsets.1 - offsets.0)
-        ))]
+        #[br(assert(offsets.1 - offsets.0 == 0x10))]
         #[br(seek_before(SeekFrom::Current(4)))]
         #[br(parse_with = read_offsets)]
         #[br(is_big = entry_num == "1")]
