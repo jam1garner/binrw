@@ -1,7 +1,6 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 
-mod binread_endian;
 mod codegen;
 mod parser;
 

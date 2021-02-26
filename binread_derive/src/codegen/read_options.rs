@@ -1,5 +1,5 @@
 use core::iter;
-use crate::{binread_endian::Endian, parser::{Assert, CondEndian, Enum, EnumErrorMode, EnumVariant, Input, Map, PassedArgs, Struct, StructField, UnitOnlyEnum, UnitEnumField}};
+use crate::{parser::{Assert, CondEndian, Endian, Enum, EnumErrorMode, EnumVariant, Input, Map, PassedArgs, Struct, StructField, UnitOnlyEnum, UnitEnumField}};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use proc_macro2::TokenStream;
@@ -419,14 +419,13 @@ const OFFSET: IdentStr = IdentStr("offset");
 
 fn get_endian_tokens(endian: &CondEndian) -> Option<(IdentStr, TokenStream)> {
     match endian {
+        CondEndian::Inherited => None,
         CondEndian::Fixed(Endian::Big) => Some((ENDIAN, quote! { #ENDIAN_ENUM::Big })),
         CondEndian::Fixed(Endian::Little) => Some((ENDIAN, quote! { #ENDIAN_ENUM::Little })),
-        CondEndian::Fixed(Endian::Native) => None,
         CondEndian::Cond(endian, condition) => {
             let (true_cond, false_cond) = match endian {
                 Endian::Big => (quote!{ #ENDIAN_ENUM::Big }, quote!{ #ENDIAN_ENUM::Little }),
                 Endian::Little => (quote!{ #ENDIAN_ENUM::Little }, quote!{ #ENDIAN_ENUM::Big }),
-                Endian::Native => panic!("Got a native endianness in a condition")
             };
 
             Some((ENDIAN, quote! {

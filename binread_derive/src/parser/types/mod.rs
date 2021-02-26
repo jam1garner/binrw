@@ -8,7 +8,7 @@ mod passed_args;
 mod spanned_value;
 
 pub(crate) use assert::Assert;
-pub(crate) use cond_endian::CondEndian;
+pub(crate) use cond_endian::{CondEndian, Endian};
 pub(crate) use enum_error_mode::EnumErrorMode;
 pub(crate) use imports::Imports;
 pub(crate) use magic::Magic;
