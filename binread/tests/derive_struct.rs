@@ -137,6 +137,25 @@ fn deref_now() {
 }
 
 #[test]
+fn import_tuple() {
+    #[derive(BinRead, Debug)]
+    struct Test {
+        #[br(args_tuple = (1, 2))]
+        a: Child,
+    }
+
+    #[derive(BinRead, Debug)]
+    #[br(import_tuple(args: (u8, u8)))]
+    struct Child {
+        #[br(calc(args.0 + args.1))]
+        a: u8,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"")).unwrap();
+    assert_eq!(result.a.a, 3);
+}
+
+#[test]
 fn try_directive() {
     #[derive(BinRead)]
     #[br(big)]
