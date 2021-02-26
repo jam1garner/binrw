@@ -21,6 +21,25 @@ fn enum_calc_temp_field() {
 }
 
 #[test]
+fn enum_endianness() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(big)]
+    enum Test {
+        #[br(magic(1u16))] OneBig,
+        #[br(little, magic(2u16))] TwoLittle {
+            a: u16,
+        },
+    }
+
+    assert_eq!(Test::read(&mut Cursor::new(b"\0\x01")).unwrap(), Test::OneBig);
+    let error = Test::read(&mut Cursor::new(b"\x01\0")).expect_err("accepted bad data");
+    assert!(matches!(error, binread::Error::EnumErrors { .. }));
+    assert_eq!(Test::read(&mut Cursor::new(b"\x02\0\x03\0")).unwrap(), Test::TwoLittle { a: 3 });
+    let error = Test::read(&mut Cursor::new(b"\0\x02\x03\0")).expect_err("accepted bad data");
+    assert!(matches!(error, binread::Error::EnumErrors { .. }));
+}
+
+#[test]
 fn mixed_enum() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(big)]
