@@ -40,6 +40,50 @@ fn enum_endianness() {
 }
 
 #[test]
+fn enum_return_all_errors() {
+    #[derive(BinRead, Debug)]
+    #[br(big, return_all_errors)]
+    enum Test {
+        #[br(magic(0u16))] One {
+            a: u16,
+        },
+        #[br(magic(1u16))] Two {
+            a: u16,
+        },
+    }
+
+    let error = Test::read(&mut Cursor::new("\0\x01")).expect_err("accepted bad data");
+    match error {
+        binread::Error::EnumErrors { pos, variant_errors } => {
+            assert_eq!(pos, 0);
+            assert_eq!(variant_errors.len(), 2);
+            assert_eq!(variant_errors[0].0, "One");
+            assert!(matches!(variant_errors[0].1, binread::Error::BadMagic { .. }));
+            assert_eq!(variant_errors[1].0, "Two");
+            assert!(matches!(variant_errors[1].1, binread::Error::Io(..)));
+        },
+        _ => panic!("wrong error type")
+    }
+}
+
+#[test]
+fn enum_return_unexpected_error() {
+    #[derive(BinRead, Debug)]
+    #[br(big, return_unexpected_error)]
+    enum Test {
+        #[br(magic(0u16))] One {
+            a: u16,
+        },
+        #[br(magic(1u16))] Two {
+            a: u16,
+        },
+    }
+
+    let error = Test::read(&mut Cursor::new("\0\x01")).expect_err("accepted bad data");
+    assert!(matches!(error, binread::Error::NoVariantMatch { .. }));
+}
+
+#[test]
 fn mixed_enum() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(big)]
