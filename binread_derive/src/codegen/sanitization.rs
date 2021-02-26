@@ -1,14 +1,14 @@
 ///! Utilities for helping sanitize macro
-use proc_macro2::TokenStream;
-use quote::{quote, format_ident, TokenStreamExt, ToTokens};
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::{quote, TokenStreamExt, ToTokens};
 
 macro_rules! from_crate {
-    ($path:path) => { IdentStr(concat!("::binread::", stringify!($path))) };
+    ($path:path) => { IdentStr(concat!("binread::", stringify!($path))) };
 }
 
 macro_rules! from_trait {
     () => { from_crate!(BinRead) };
-    ($path:path) => { IdentStr(concat!("::binread::BinRead::", stringify!($path))) };
+    ($path:path) => { IdentStr(concat!("binread::BinRead::", stringify!($path))) };
 }
 
 pub static TRAIT_NAME: IdentStr = from_trait!();
@@ -62,16 +62,9 @@ pub struct IdentStr(pub &'static str);
 
 impl ToTokens for IdentStr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let idents: Vec<_> =
-            self.0.split("::")
-            .map(|id|{
-                let id = id.trim();
-                if id.is_empty() {
-                    None
-                } else {
-                    Some(format_ident!("{}", id))
-                }
-            }).collect();
+        let idents = self.0.split("::").map(|ident| {
+            Ident::new(ident, Span::call_site())
+        });
         tokens.append_separated(idents, quote!(::));
     }
 }
