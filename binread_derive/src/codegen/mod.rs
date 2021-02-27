@@ -1,5 +1,6 @@
-mod read_options;
+#[macro_use]
 pub(crate) mod sanitization;
+mod read_options;
 
 use crate::parser::Input;
 use proc_macro2::TokenStream;

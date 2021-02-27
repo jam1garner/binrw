@@ -412,10 +412,12 @@ fn get_passed_args(field_attrs: &[StructField]) -> Vec<TokenStream> {
         .collect()
 }
 
-const VARIABLE_NAME: IdentStr = IdentStr("variable_name");
-const ENDIAN: IdentStr = IdentStr("endian");
-const COUNT: IdentStr = IdentStr("count");
-const OFFSET: IdentStr = IdentStr("offset");
+ident_str! {
+    VARIABLE_NAME = "variable_name";
+    ENDIAN = "endian";
+    COUNT = "count";
+    OFFSET = "offset";
+}
 
 fn get_endian_tokens(endian: &CondEndian) -> Option<(IdentStr, TokenStream)> {
     match endian {
@@ -890,7 +892,7 @@ fn save_restore_position(field_attrs: &[StructField]) -> (Vec<TokenStream>, Vec<
         .unzip()
 }
 
-const SAVED_POSITION: IdentStr = IdentStr("__binread_generated_saved_position");
+ident_str!(SAVED_POSITION = "__binread_generated_saved_position");
 
 fn get_possible_try_conversion(field_attrs: &[StructField]) -> Vec<TokenStream> {
     field_attrs

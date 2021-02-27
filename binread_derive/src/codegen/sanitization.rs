@@ -2,52 +2,58 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, TokenStreamExt, ToTokens};
 
+macro_rules! ident_str {
+    () => {};
+
+    ($vis:vis $ident:ident = $path:expr; $($tail:tt)*) => {
+        ident_str!($vis $ident = $path);
+        ident_str!($($tail)*);
+    };
+
+    ($vis:vis $ident:ident = $path:expr) => {
+        $vis const $ident: IdentStr = IdentStr::new($path);
+    };
+}
+
 macro_rules! from_crate {
-    ($path:path) => { IdentStr(concat!("binread::", stringify!($path))) };
+    ($path:path) => { concat!("binread::", stringify!($path)) };
 }
 
 macro_rules! from_trait {
     () => { from_crate!(BinRead) };
-    ($path:path) => { IdentStr(concat!("binread::BinRead::", stringify!($path))) };
+    ($path:path) => { concat!("binread::BinRead::", stringify!($path)) };
 }
 
-pub static TRAIT_NAME: IdentStr = from_trait!();
-
-pub static BIN_ERROR: IdentStr = from_crate!(Error);
-pub static OPTIONS: IdentStr = from_crate!(ReadOptions);
-pub static READ_TRAIT: IdentStr = from_crate!(io::Read);
-pub static SEEK_TRAIT: IdentStr = from_crate!(io::Seek);
-pub static SEEK_FROM: IdentStr = from_crate!(io::SeekFrom);
-pub static BIN_RESULT: IdentStr = from_crate!(BinResult);
-pub static ENDIAN_ENUM: IdentStr = from_crate!(Endian);
-
-pub static READ_METHOD: IdentStr = from_trait!(read_options);
-pub static AFTER_PARSE: IdentStr = from_trait!(after_parse);
-
-pub static READER: IdentStr = IdentStr("__binread_generated_var_reader");
-pub static OPT: IdentStr = IdentStr("__binread_generated_var_options");
-pub static ARGS: IdentStr = IdentStr("__binread_generated_var_arguments");
-
-pub static DEFAULT: IdentStr = IdentStr("core::default::Default::default");
-
-pub static ASSERT_MAGIC: IdentStr = from_crate!(error::magic);
-pub static ASSERT: IdentStr = from_crate!(error::assert);
-
-pub static WRITE_START_STRUCT: IdentStr = from_crate!(binary_template::write_start_struct);
-pub static WRITE_END_STRUCT: IdentStr = from_crate!(binary_template::write_end_struct);
-pub static WRITE_COMMENT: IdentStr = from_crate!(binary_template::write_comment);
-
-pub static READ_METHOD_NOP: IdentStr = from_crate!(error::nop3);
-pub static READ_METHOD_DEFAULT: IdentStr = from_crate!(error::nop3_default);
-pub static AFTER_PARSE_NOP: IdentStr = from_crate!(error::nop5);
-pub static AFTER_PARSE_TRY: IdentStr = from_crate!(error::try_after_parse);
-pub static AFTER_PARSE_IDENTITY: IdentStr = from_crate!(error::identity_after_parse);
-pub static TRY_CONVERSION: IdentStr = from_crate!(error::try_conversion);
-
-pub static TEMP: IdentStr = IdentStr("__binread_temp");
-pub static POS: IdentStr = IdentStr("__binread_generated_position_temp");
-pub static ERROR_BASKET: IdentStr = IdentStr("__binread_generated_error_basket");
-
+ident_str! {
+    pub(super) TRAIT_NAME = from_trait!();
+    pub(super) BIN_ERROR = from_crate!(Error);
+    pub(super) OPTIONS = from_crate!(ReadOptions);
+    pub(super) READ_TRAIT = from_crate!(io::Read);
+    pub(super) SEEK_TRAIT = from_crate!(io::Seek);
+    pub(super) SEEK_FROM = from_crate!(io::SeekFrom);
+    pub(super) BIN_RESULT = from_crate!(BinResult);
+    pub(super) ENDIAN_ENUM = from_crate!(Endian);
+    pub(super) READ_METHOD = from_trait!(read_options);
+    pub(super) AFTER_PARSE = from_trait!(after_parse);
+    pub(super) READER = "__binread_generated_var_reader";
+    pub(super) OPT = "__binread_generated_var_options";
+    pub(super) ARGS = "__binread_generated_var_arguments";
+    pub(super) DEFAULT = "core::default::Default::default";
+    pub(super) ASSERT_MAGIC = from_crate!(error::magic);
+    pub(super) ASSERT = from_crate!(error::assert);
+    pub(super) WRITE_START_STRUCT = from_crate!(binary_template::write_start_struct);
+    pub(super) WRITE_END_STRUCT = from_crate!(binary_template::write_end_struct);
+    pub(super) WRITE_COMMENT = from_crate!(binary_template::write_comment);
+    pub(super) READ_METHOD_NOP = from_crate!(error::nop3);
+    pub(super) READ_METHOD_DEFAULT = from_crate!(error::nop3_default);
+    pub(super) AFTER_PARSE_NOP = from_crate!(error::nop5);
+    pub(super) AFTER_PARSE_TRY = from_crate!(error::try_after_parse);
+    pub(super) AFTER_PARSE_IDENTITY = from_crate!(error::identity_after_parse);
+    pub(super) TRY_CONVERSION = from_crate!(error::try_conversion);
+    pub(super) TEMP = "__binread_temp";
+    pub(super) POS = "__binread_generated_position_temp";
+    pub(super) ERROR_BASKET = "__binread_generated_error_basket";
+}
 
 pub fn closure_wrap<T: ToTokens>(value: T) -> TokenStream {
     quote!(
@@ -58,7 +64,13 @@ pub fn closure_wrap<T: ToTokens>(value: T) -> TokenStream {
 /// A string wrapper that converts the str to a $path `TokenStream`, allowing
 /// for constant-time idents that can be shared across threads
 #[derive(Debug, Clone, Copy)]
-pub struct IdentStr(pub &'static str);
+pub struct IdentStr(&'static str);
+
+impl IdentStr {
+    pub(crate) const fn new(str: &'static str) -> Self {
+        IdentStr(str)
+    }
+}
 
 impl ToTokens for IdentStr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
