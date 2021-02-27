@@ -56,18 +56,18 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     let generated_impl = generate_impl(&input);
 
-    match input.data {
-        syn::Data::Struct(ref mut input_struct) => {
+    match &mut input.data {
+        syn::Data::Struct(input_struct) => {
             input.attrs.retain(is_not_binread_attr);
             remove_field_attrs(&mut input_struct.fields)
         },
-        syn::Data::Enum(ref mut input_enum) => {
+        syn::Data::Enum(input_enum) => {
             for variant in input_enum.variants.iter_mut() {
                 variant.attrs.retain(is_not_binread_attr);
                 remove_field_attrs(&mut variant.fields)
             }
         },
-        syn::Data::Union(ref mut union) => {
+        syn::Data::Union(union) => {
             for field in union.fields.named.iter_mut() {
                 field.attrs.retain(is_not_binread_attr);
             }
