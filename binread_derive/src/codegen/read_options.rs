@@ -365,7 +365,6 @@ fn get_possible_set_offset(field_attrs: &[StructField], name_options: &[Ident]) 
             field.offset_after
                 .as_ref()
                 .map(|offset|{
-                    let offset = closure_wrap(offset);
                     quote!{
                         let #name = &{
                             let mut temp = #name.clone();
@@ -449,7 +448,7 @@ fn get_name_option_pairs_ident_expr(field_attrs: &StructField, ident: &Ident)
     let offset =
         field_attrs.offset
             .as_ref()
-            .map(|offset| (OFFSET, closure_wrap(offset)));
+            .map(|offset| (OFFSET, offset.clone()));
 
     let variable_name = if cfg!(feature = "debug_template") {
         let name = ident.to_string();
