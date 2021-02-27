@@ -130,6 +130,11 @@ attr_struct! {
         pub magic: Magic,
         #[from(Import, ImportTuple)]
         pub import: Imports,
+        // TODO: Does this make sense? It is not known what properties will
+        // exist in order to construct a valid variant. The assertions all get
+        // copied and used as if they were applied to each variant in the enum,
+        // so the only way this ever works is if every variant contains the same
+        // properties being checked by the assertion.
         #[from(Assert)]
         pub assert: Vec<Assert>,
         #[from(PreAssert)]

@@ -214,10 +214,12 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
             // TODO: Do not collect, use iterators directly. Also, less cloning
             in_names = fields.clone().map(|f| f.0).collect::<Vec<_>>();
             ty = fields.clone().map(|f| f.2).collect::<Vec<_>>();
-            let out_names = fields.filter_map(|f| f.1);
-
-            assertions = get_assertions(&ds.assert);
+            assertions = {
+                let assertions = get_assertions(&en.assert).chain(get_assertions(&ds.assert));
+                quote! { #(#assertions)* }
+            };
             // TODO: Unit kind would be here
+            let out_names = fields.filter_map(|f| f.1);
             return_value = if ds.is_tuple() {
                 quote! { Self::#ident(#(#out_names),*) }
             } else {
@@ -228,7 +230,7 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
             fields = &todo;
             in_names = Vec::new();
             ty = Vec::new();
-            assertions = get_assertions(&[]);
+            assertions = TokenStream::new();
             let ident = &options.ident;
             return_value = quote! { Self::#ident };
         },
@@ -240,7 +242,7 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
     let read_body = generate_body(&tla, &fields, &in_names, &ty);
     quote! {
         #read_body
-        #(#assertions)*
+        #assertions
         Ok(#return_value)
     }
 }

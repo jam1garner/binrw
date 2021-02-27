@@ -1,6 +1,26 @@
 use binread::{BinRead, derive_binread, io::{Cursor, Seek, SeekFrom}};
 
 #[test]
+fn enum_assert() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(assert(b == 1))]
+    enum Test {
+        A {
+            a: u8,
+            b: u8,
+        },
+        B {
+            a: i16,
+            b: u8,
+        },
+    }
+
+    let mut data = Cursor::new(b"\xff\xff\x01");
+    let result = Test::read(&mut data).unwrap();
+    assert_eq!(result, Test::B { a: -1, b: 1 });
+}
+
+#[test]
 fn enum_calc_temp_field() {
     #[derive_binread]
     #[derive(Debug, Eq, PartialEq)]
@@ -69,12 +89,19 @@ fn enum_return_all_errors() {
 #[test]
 fn enum_rewind_on_assert() {
     #[derive(BinRead, Debug)]
+    #[br(assert(b == 1))]
     enum Test {
-        #[br(assert(a == 1))]
-        A { a: u8 },
+        A {
+            a: u8,
+            b: u8,
+        },
+        B {
+            a: u16,
+            b: u8,
+        },
     }
 
-    let mut data = Cursor::new(b"\0\0");
+    let mut data = Cursor::new(b"\0\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
     Test::read(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
@@ -84,7 +111,29 @@ fn enum_rewind_on_assert() {
 fn enum_rewind_on_eof() {
     #[derive(BinRead, Debug)]
     enum Test {
-        A { a: u16 },
+        A {
+            a: u8,
+            // Fail on the second field to actually test that a rewind happens
+            // to the beginning of the enum, not just the beginning of the field
+            b: u16,
+        },
+    }
+
+    let mut data = Cursor::new(b"\0\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+}
+
+#[test]
+fn enum_rewind_on_variant_assert() {
+    #[derive(BinRead, Debug)]
+    enum Test {
+        #[br(assert(b == 1))]
+        A {
+            a: u8,
+            b: u8,
+        },
     }
 
     let mut data = Cursor::new(b"\0\0");
