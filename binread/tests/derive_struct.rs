@@ -131,6 +131,19 @@ fn deref_now() {
 }
 
 #[test]
+fn pad_after_before() {
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        #[br(pad_after = 1, pad_before = 1)]
+        a: u8,
+        b: u8,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\x01\0\x02")).unwrap();
+    assert_eq!(result, Test { a: 1, b: 2 });
+}
+
+#[test]
 fn import_tuple() {
     #[derive(BinRead, Debug)]
     struct Test {
@@ -147,6 +160,19 @@ fn import_tuple() {
 
     let result = Test::read(&mut Cursor::new(b"")).unwrap();
     assert_eq!(result.a.a, 3);
+}
+
+#[test]
+fn offset_after() {
+    #[derive(BinRead, Debug)]
+    struct Test {
+        #[br(offset_after = b.into())]
+        a: FilePtr<u8, u8>,
+        b: u8,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\x01\x03\xff\xff\x04")).unwrap();
+    assert_eq!(*result.a, 4);
 }
 
 #[test]
