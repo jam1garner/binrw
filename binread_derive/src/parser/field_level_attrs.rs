@@ -5,56 +5,56 @@ attr_struct! {
     #[from(StructFieldAttr)]
     #[derive(Clone, Debug)]
     pub(crate) struct StructField {
-        pub ident: Option<syn::Ident>,
-        pub ty: syn::Type,
+        pub(crate) ident: Option<syn::Ident>,
+        pub(crate) ty: syn::Type,
         #[from(Big, Little, IsBig, IsLittle)]
-        pub endian: CondEndian,
+        pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
-        pub map: Map,
+        pub(crate) map: Map,
         #[from(Magic)]
-        pub magic: Magic,
+        pub(crate) magic: Magic,
         #[from(Args, ArgsTuple)]
-        pub args: PassedArgs,
+        pub(crate) args: PassedArgs,
         #[from(Ignore)]
-        pub ignore: bool,
+        pub(crate) ignore: bool,
         #[from(Default)]
-        pub default: bool,
+        pub(crate) default: bool,
         #[from(Calc)]
-        pub calc: Option<TokenStream>,
+        pub(crate) calc: Option<TokenStream>,
         #[from(Count)]
-        pub count: Option<TokenStream>,
+        pub(crate) count: Option<TokenStream>,
         #[from(Offset)]
-        pub offset: Option<TokenStream>,
+        pub(crate) offset: Option<TokenStream>,
         #[from(OffsetAfter)]
-        pub offset_after: Option<TokenStream>,
+        pub(crate) offset_after: Option<TokenStream>,
         #[from(If)]
-        pub if_cond: Option<TokenStream>,
+        pub(crate) if_cond: Option<TokenStream>,
         #[from(DerefNow)]
-        pub deref_now: bool,
+        pub(crate) deref_now: bool,
         #[from(PostProcessNow)]
-        pub postprocess_now: bool,
+        pub(crate) postprocess_now: bool,
         #[from(RestorePosition)]
-        pub restore_position: bool,
+        pub(crate) restore_position: bool,
         #[from(Try)]
-        pub do_try: bool,
+        pub(crate) do_try: bool,
         #[from(Temp)]
-        pub temp: bool,
+        pub(crate) temp: bool,
         #[from(Assert)]
-        pub assert: Vec<Assert>,
+        pub(crate) assert: Vec<Assert>,
         #[from(PadBefore)]
-        pub pad_before: Option<TokenStream>,
+        pub(crate) pad_before: Option<TokenStream>,
         #[from(PadAfter)]
-        pub pad_after: Option<TokenStream>,
+        pub(crate) pad_after: Option<TokenStream>,
         #[from(AlignBefore)]
-        pub align_before: Option<TokenStream>,
+        pub(crate) align_before: Option<TokenStream>,
         #[from(AlignAfter)]
-        pub align_after: Option<TokenStream>,
+        pub(crate) align_after: Option<TokenStream>,
         #[from(SeekBefore)]
-        pub seek_before: Option<TokenStream>,
+        pub(crate) seek_before: Option<TokenStream>,
         #[from(PadSizeTo)]
-        pub pad_size_to: Option<TokenStream>,
+        pub(crate) pad_size_to: Option<TokenStream>,
         #[from(ParseWith)]
-        pub parse_with: Option<TokenStream>,
+        pub(crate) parse_with: Option<TokenStream>,
     }
 }
 
@@ -97,14 +97,14 @@ attr_struct! {
     #[from(UnitEnumFieldAttr)]
     #[derive(Clone, Debug)]
     pub(crate) struct UnitEnumField {
-        pub ident: syn::Ident,
+        pub(crate) ident: syn::Ident,
         // TODO: Magic and PreAssert seem to be conflicting preconditions, in
         // which case they should both be parsed into the same property instead
         // of being separated.
         #[from(Magic)]
-        pub magic: Magic,
+        pub(crate) magic: Magic,
         #[from(PreAssert)]
-        pub pre_assert: Vec<Assert>,
+        pub(crate) pre_assert: Vec<Assert>,
     }
 }
 

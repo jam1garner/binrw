@@ -86,20 +86,20 @@ attr_struct! {
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Struct {
         #[from(Big, Little)]
-        pub endian: CondEndian,
+        pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
-        pub map: Map,
+        pub(crate) map: Map,
         #[from(Magic)]
-        pub magic: Magic,
+        pub(crate) magic: Magic,
         #[from(Import, ImportTuple)]
-        pub import: Imports,
+        pub(crate) import: Imports,
         #[from(Assert)]
-        pub assert: Vec<Assert>,
+        pub(crate) assert: Vec<Assert>,
         // TODO: Are Magic and PreAssert conflicting preconditions? Is PreAssert
         // only for enum variants?
         #[from(PreAssert)]
-        pub pre_assert: Vec<Assert>,
-        pub fields: Vec<StructField>,
+        pub(crate) pre_assert: Vec<Assert>,
+        pub(crate) fields: Vec<StructField>,
     }
 }
 
@@ -123,25 +123,25 @@ attr_struct! {
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
         #[from(Big, Little)]
-        pub endian: CondEndian,
+        pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
-        pub map: Map,
+        pub(crate) map: Map,
         #[from(Magic)]
-        pub magic: Magic,
+        pub(crate) magic: Magic,
         #[from(Import, ImportTuple)]
-        pub import: Imports,
+        pub(crate) import: Imports,
         // TODO: Does this make sense? It is not known what properties will
         // exist in order to construct a valid variant. The assertions all get
         // copied and used as if they were applied to each variant in the enum,
         // so the only way this ever works is if every variant contains the same
         // properties being checked by the assertion.
         #[from(Assert)]
-        pub assert: Vec<Assert>,
+        pub(crate) assert: Vec<Assert>,
         #[from(PreAssert)]
-        pub pre_assert: Vec<Assert>,
+        pub(crate) pre_assert: Vec<Assert>,
         #[from(ReturnAllErrors, ReturnUnexpectedError)]
-        pub error_mode: EnumErrorMode,
-        pub variants: Vec<EnumVariant>,
+        pub(crate) error_mode: EnumErrorMode,
+        pub(crate) variants: Vec<EnumVariant>,
     }
 }
 
@@ -190,14 +190,14 @@ attr_struct! {
     #[derive(Clone, Debug, Default)]
     pub(crate) struct UnitOnlyEnum {
         #[from(Big, Little)]
-        pub endian: CondEndian,
+        pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
-        pub map: Map,
+        pub(crate) map: Map,
         #[from(Magic)]
-        pub magic: Magic,
+        pub(crate) magic: Magic,
         #[from(Repr)]
-        pub repr: Option<SpannedValue<TokenStream>>,
-        pub fields: Vec<UnitEnumField>,
+        pub(crate) repr: Option<SpannedValue<TokenStream>>,
+        pub(crate) fields: Vec<UnitEnumField>,
     }
 }
 

@@ -28,8 +28,8 @@ pub(crate) type MetaLit<Keyword> = MetaValue<Keyword, Lit>;
 
 #[derive(Debug, Clone)]
 pub(crate) struct MetaValue<Keyword, Value> {
-    pub ident: Keyword,
-    pub value: Value,
+    pub(crate) ident: Keyword,
+    pub(crate) value: Value,
 }
 
 impl <Keyword: Parse, Value: Parse> Parse for MetaValue<Keyword, Value> {
@@ -73,9 +73,9 @@ impl <Keyword: syn::token::Token + KeywordToken, Value> KeywordToken for MetaVal
 
 #[derive(Debug, Clone)]
 pub(crate) struct MetaList<Keyword, ItemType> {
-    pub ident: Keyword,
-    pub parens: token::Paren,
-    pub fields: Fields<ItemType>,
+    pub(crate) ident: Keyword,
+    pub(crate) parens: token::Paren,
+    pub(crate) fields: Fields<ItemType>,
 }
 
 impl <Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
@@ -105,9 +105,9 @@ impl <Keyword: syn::token::Token + KeywordToken, ItemType> KeywordToken for Meta
 // (3) Only allows an ident on the LHS instead of any `syn::Pat`.
 #[derive(Debug, Clone)]
 pub(crate) struct IdentPatType {
-    pub ident: syn::Ident,
-    pub colon_token: Token![:],
-    pub ty: syn::Type
+    pub(crate) ident: syn::Ident,
+    pub(crate) colon_token: Token![:],
+    pub(crate) ty: syn::Type
 }
 
 impl Parse for IdentPatType {

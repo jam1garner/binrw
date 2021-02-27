@@ -5,7 +5,7 @@ use quote::ToTokens;
 use syn::{parse::Parse, spanned::Spanned};
 
 #[derive(Debug, Clone)]
-pub(crate) struct Assert(pub TokenStream, pub Option<TokenStream>);
+pub(crate) struct Assert(pub(crate) TokenStream, pub(crate) Option<TokenStream>);
 
 impl <K: Parse + Spanned> TryFrom<attrs::AssertLike<K>> for Assert {
     type Error = syn::Error;
