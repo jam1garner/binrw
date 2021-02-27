@@ -53,6 +53,23 @@ impl Input {
         }
     }
 
+    pub(crate) fn is_temp_field(&self, variant_index: usize, index: usize) -> bool {
+        match self {
+            Input::Struct(s) => s.fields.get(index).map_or(false, |field| field.temp),
+            Input::Enum(e) => {
+                e.variants.get(variant_index).map_or(false, |variant| {
+                    if let EnumVariant::Variant { options, .. } = variant {
+                        options.fields.get(index).map_or(false, |field| field.temp)
+                    } else {
+                        false
+                    }
+                })
+            },
+            Input::UnitStruct(_)
+            | Input::UnitOnlyEnum(_) => false,
+        }
+    }
+
     pub(crate) fn map(&self) -> &Map {
         match self {
             Input::Struct(s)
