@@ -176,6 +176,54 @@ fn offset_after() {
 }
 
 #[test]
+fn rewind_on_assert() {
+    #[derive(BinRead, Debug)]
+    #[br(assert(b == 1))]
+    struct Test {
+        a: u8,
+        b: u8,
+    }
+
+    let mut data = Cursor::new(b"\0\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+}
+
+#[test]
+fn rewind_on_eof() {
+    #[derive(BinRead, Debug)]
+    struct Test {
+        a: u8,
+        // Fail on the second field to actually test that a rewind happens to
+        // the beginning of the struct, not just the beginning of the field
+        b: u16,
+    }
+
+    let mut data = Cursor::new(b"\0\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+}
+
+#[test]
+fn rewind_on_field_assert() {
+    #[derive(BinRead, Debug)]
+    struct Test {
+        a: u8,
+        // Assert on the second field to actually test that a rewind happens to
+        // the beginning of the struct, not just the beginning of the field
+        #[br(assert(b == 1))]
+        b: u8,
+    }
+
+    let mut data = Cursor::new(b"\0\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+}
+
+#[test]
 fn try_directive() {
     #[derive(BinRead)]
     #[br(big)]

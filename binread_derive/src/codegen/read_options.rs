@@ -7,7 +7,7 @@ use quote::{quote, format_ident, ToTokens};
 use syn::{Ident, Type};
 
 pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
-    match input.map() {
+    let inner = match input.map() {
         Map::None => match input {
             Input::UnitStruct(_) => generate_unit_struct(input),
             Input::Struct(s) => generate_struct(ident, input, s),
@@ -20,6 +20,16 @@ pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
         Map::Map(map) => quote! {
             #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
         },
+    };
+
+    quote! {
+        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+        (|| {
+            #inner
+        })().or_else(|error| {
+            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
+            Err(error)
+        })
     }
 }
 
@@ -95,14 +105,12 @@ fn generate_unit_enum_repr(options: &TokenStream, repr: &TokenStream, variants: 
         }
     });
 
-    // TODO: Should this not restore position on failure?
     quote! {
         let #OPT = #options;
-        let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
         let #TEMP: #repr = #READ_METHOD(#READER, #OPT, ())?;
         #(#clauses else)* {
             Err(#BIN_ERROR::NoVariantMatch {
-                pos: #SAVED_POSITION as _,
+                pos: #POS as _,
             })
         }
     }
@@ -118,22 +126,22 @@ fn generate_unit_enum_magic(options: &TokenStream, variants: &[UnitEnumField]) -
         if let Some(magic) = &field.magic {
             let ident = &field.ident;
             let magic = &magic.1;
-            Some(quote! { #magic => Self::#ident })
+            Some(quote! { #magic => Ok(Self::#ident) })
         } else {
             None
         }
     });
 
-    // TODO: Should this not restore position on failure?
     quote! {
         let #OPT = #options;
-        let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
-        Ok(match #READ_METHOD(#READER, #OPT, ())? {
+        match #READ_METHOD(#READER, #OPT, ())? {
             #(#matches,)*
-            _ => return Err(#BIN_ERROR::NoVariantMatch {
-                pos: #SAVED_POSITION as _
-            })
-        })
+            _ => {
+                Err(#BIN_ERROR::NoVariantMatch {
+                    pos: #POS as _
+                })
+            }
+        }
     }
 }
 
@@ -190,7 +198,6 @@ fn generate_data_enum(en: &Enum) -> TokenStream {
 
     quote! {
         #create_error_basket
-        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
         #(#try_each_variant)*
         #return_error
     }

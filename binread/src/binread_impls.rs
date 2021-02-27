@@ -9,11 +9,11 @@ macro_rules! binread_impl {
 
                 fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
                     let mut val = [0; core::mem::size_of::<$type_name>()];
+                    let pos = reader.seek(SeekFrom::Current(0))?;
 
                     #[cfg(feature = "debug_template")]
                     {
                         if !options.dont_output_to_template {
-                            let pos = reader.seek(SeekFrom::Current(0))?;
                             if let Some(name) = options.variable_name {
                                 binary_template::write_named(
                                     options.endian,
@@ -31,7 +31,10 @@ macro_rules! binread_impl {
                         }
                     }
 
-                    reader.read_exact(&mut val)?;
+                    reader.read_exact(&mut val).or_else(|e| {
+                        reader.seek(SeekFrom::Start(pos))?;
+                        Err(e)
+                    })?;
                     Ok(match options.endian {
                         Endian::Big => {
                             <$type_name>::from_be_bytes(val)

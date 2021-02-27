@@ -1,4 +1,4 @@
-use binread::{BinRead, derive_binread, io::Cursor};
+use binread::{BinRead, derive_binread, io::{Cursor, Seek, SeekFrom}};
 
 #[test]
 fn enum_calc_temp_field() {
@@ -64,6 +64,33 @@ fn enum_return_all_errors() {
         },
         _ => panic!("wrong error type")
     }
+}
+
+#[test]
+fn enum_rewind_on_assert() {
+    #[derive(BinRead, Debug)]
+    enum Test {
+        #[br(assert(a == 1))]
+        A { a: u8 },
+    }
+
+    let mut data = Cursor::new(b"\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+}
+
+#[test]
+fn enum_rewind_on_eof() {
+    #[derive(BinRead, Debug)]
+    enum Test {
+        A { a: u16 },
+    }
+
+    let mut data = Cursor::new(b"\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 
 #[test]

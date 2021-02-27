@@ -1,4 +1,4 @@
-use binread::{BinRead, io::Cursor};
+use binread::{BinRead, io::{Cursor, Seek, SeekFrom}};
 
 #[test]
 fn unit_enum_magic() {
@@ -33,4 +33,32 @@ fn unit_enum_repr() {
     let error = Test::read(&mut Cursor::new(b"\0\x01")).expect_err("accepted bad data");
     assert!(matches!(error, binread::Error::NoVariantMatch { .. }));
     assert_eq!(Test::read(&mut Cursor::new(b"\0\x02")).unwrap(), Test::Two);
+}
+
+#[test]
+fn unit_enum_rewind_on_eof() {
+    #[derive(BinRead, Debug)]
+    #[br(repr(u16))]
+    enum Test {
+        A,
+    }
+
+    let mut data = Cursor::new(b"\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+}
+
+#[test]
+fn unit_enum_rewind_on_no_variant() {
+    #[derive(BinRead, Debug)]
+    #[br(repr(u8))]
+    enum Test {
+        A = 1,
+    }
+
+    let mut data = Cursor::new(b"\0\0");
+    let expected = data.seek(SeekFrom::Start(1)).unwrap();
+    Test::read(&mut data).expect_err("accepted bad data");
+    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
