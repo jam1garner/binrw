@@ -1,0 +1,5 @@
+error[E0425]: cannot find function `does_not_exist` in this scope
+ --> $DIR/invalid_parse_with_fn.rs:5:23
+  |
+5 |     #[br(parse_with = does_not_exist)]
+  |                       ^^^^^^^^^^^^^^ not found in this scope
