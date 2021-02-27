@@ -3,3 +3,9 @@ error: null enums are not supported
   |
 4 | enum Foo {}
   | ^^^^^^^^^^^
+
+error: null enums are not supported
+ --> $DIR/unsupported_type_enum.rs:7:1
+  |
+7 | enum Bar {}
+  | ^^^^^^^^^^^
