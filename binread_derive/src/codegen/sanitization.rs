@@ -11,7 +11,8 @@ macro_rules! ident_str {
     };
 
     ($vis:vis $ident:ident = $path:expr) => {
-        $vis const $ident: IdentStr = IdentStr::new($path);
+        $vis const $ident: $crate::codegen::sanitization::IdentStr =
+            $crate::codegen::sanitization::IdentStr::new($path);
     };
 }
 
@@ -41,9 +42,6 @@ ident_str! {
     pub(super) SAVED_POSITION = "__binread_generated_saved_position";
     pub(super) ASSERT_MAGIC = from_crate!(error::magic);
     pub(super) ASSERT = from_crate!(error::assert);
-    pub(super) WRITE_START_STRUCT = from_crate!(binary_template::write_start_struct);
-    pub(super) WRITE_END_STRUCT = from_crate!(binary_template::write_end_struct);
-    pub(super) WRITE_COMMENT = from_crate!(binary_template::write_comment);
     pub(super) READ_METHOD_NOP = from_crate!(error::nop3);
     pub(super) READ_METHOD_DEFAULT = from_crate!(error::nop3_default);
     pub(super) AFTER_PARSE_NOP = from_crate!(error::nop5);
