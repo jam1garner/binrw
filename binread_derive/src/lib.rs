@@ -22,6 +22,7 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut derive_input = parse_macro_input!(input as DeriveInput);
     let binread_input = Input::from_input(&derive_input);
     let generated_impl = generate_impl(&derive_input, &binread_input);
+    let binread_input = binread_input.ok();
 
     clean_struct_attrs(&mut derive_input.attrs);
 
@@ -48,8 +49,8 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     ).into()
 }
 
-fn clean_field_attrs(binread_input: &syn::Result<Input>, variant_index: usize, fields: &mut syn::Fields) {
-    if let Ok(binread_input) = binread_input {
+fn clean_field_attrs(binread_input: &Option<Input>, variant_index: usize, fields: &mut syn::Fields) {
+    if let Some(binread_input) = binread_input {
         let fields = match fields {
             syn::Fields::Named(fields) => &mut fields.named,
             syn::Fields::Unnamed(fields) => &mut fields.unnamed,

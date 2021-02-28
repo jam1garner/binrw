@@ -23,11 +23,11 @@ fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
 }
 
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
-    fn try_from_attrs(attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Default + Sized {
+    fn try_from_attrs(attrs: &[syn::Attribute]) -> ParseResult<Self> where Self: Default + Sized {
         Self::set_from_attrs(Self::default(), attrs)
     }
 
-    fn set_from_attrs(mut self, attrs: &[syn::Attribute]) -> syn::Result<Self> where Self: Sized {
+    fn set_from_attrs(mut self, attrs: &[syn::Attribute]) -> ParseResult<Self> where Self: Sized {
         #[allow(clippy::filter_map)]
         let attrs = attrs
             .iter()
@@ -51,9 +51,12 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
             }
         }
 
-        match all_errors {
-            Some(error) => Err(error),
-            None => Ok(self),
+        // https://github.com/rust-lang/rust-clippy/issues/5822
+        #[allow(clippy::option_if_let_else)]
+        if let Some(error) = all_errors {
+            ParseResult::Partial(self, error)
+        } else {
+            ParseResult::Ok(self)
         }
     }
 
@@ -63,43 +66,37 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
 pub(crate) trait FromField {
     type In;
 
-    fn from_field(field: &Self::In) -> syn::Result<Self> where Self: Sized;
+    fn from_field(field: &Self::In) -> ParseResult<Self> where Self: Sized;
 }
 
 pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     type Field: FromField + 'static;
 
-    fn from_input<'input>(attrs: &'input [syn::Attribute], fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>) -> syn::Result<Self> where Self: Sized + Default {
-        // TODO: This probably should return an incomplete object + error so
-        // that all field validation can occur; currently if the parent object
-        // has an error then any validation in `push_field` or `validate` will
-        // not occur.
-        let (mut this, mut all_errors) = match Self::try_from_attrs(attrs) {
-            Ok(this) => (Some(this), None),
-            Err(all_errors) => (None, Some(all_errors)),
-        };
+    fn from_input<'input>(attrs: &'input [syn::Attribute], fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>) -> ParseResult<Self> where Self: Sized + Default {
+        let (mut this, mut all_errors) = Self::try_from_attrs(attrs).unwrap_tuple();
 
         for field in fields {
-            let field_error = match Self::Field::from_field(field) {
-                Ok(field) => match &mut this {
-                    Some(this) => this.push_field(field),
-                    None => Ok(()),
-                },
-                Err(field_error) => Err(field_error),
-            };
+            let (field, mut field_error) = Self::Field::from_field(field).unwrap_tuple();
+            if field_error.is_none() {
+                field_error = this.push_field(field).err();
+            }
 
-            if let Err(field_error) = field_error {
+            if let Some(field_error) = field_error {
                 combine_error(&mut all_errors, field_error);
             }
         }
 
-        if let Some(ref this) = this {
-            if let Err(validation_error) = this.validate() {
-                combine_error(&mut all_errors, validation_error);
-            }
+        if let Err(validation_error) = this.validate() {
+            combine_error(&mut all_errors, validation_error);
         }
 
-        all_errors.map_or_else(|| Ok(this.unwrap()), Err)
+        // https://github.com/rust-lang/rust-clippy/issues/5822
+        #[allow(clippy::option_if_let_else)]
+        if let Some(error) = all_errors {
+            ParseResult::Partial(this, error)
+        } else {
+            ParseResult::Ok(this)
+        }
     }
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()>;
@@ -130,6 +127,62 @@ impl <T: Token + Spanned> KeywordToken for T {
         self.span()
     }
 }
+
+pub(crate) enum PartialResult<T, E> {
+    Ok(T),
+    Partial(T, E),
+    Err(E),
+}
+
+impl <T, E> PartialResult<T, E> {
+    #[cfg(test)]
+    pub(crate) fn err(self) -> Option<E> {
+        match self {
+            PartialResult::Ok(_) => None,
+            PartialResult::Partial(_, error)
+            | PartialResult::Err(error) => Some(error),
+        }
+    }
+
+    pub(crate) fn map<F, U>(self, f: F) -> PartialResult<U, E>
+        where F: FnOnce(T) -> U,
+    {
+        match self {
+            PartialResult::Ok(value) => PartialResult::Ok(f(value)),
+            PartialResult::Partial(value, error) => PartialResult::Partial(f(value), error),
+            PartialResult::Err(error) => PartialResult::Err(error),
+        }
+    }
+
+    pub(crate) fn ok(self) -> Option<T> {
+        match self {
+            PartialResult::Ok(value)
+            | PartialResult::Partial(value, _) => Some(value),
+            PartialResult::Err(_) => None,
+        }
+    }
+}
+
+impl <T, E: core::fmt::Debug> PartialResult<T, E> {
+    #[cfg(test)]
+    pub(crate) fn unwrap(self) -> T {
+        match self {
+            PartialResult::Ok(value) => value,
+            PartialResult::Partial(_, error) => panic!("called `PartialResult::unwrap() on a `Partial` value: {:?}", &error),
+            PartialResult::Err(error) => panic!("called `PartialResult::unwrap() on an `Err` value: {:?}", &error),
+        }
+    }
+
+    pub(crate) fn unwrap_tuple(self) -> (T, Option<E>) {
+        match self {
+            PartialResult::Ok(value) => (value, None),
+            PartialResult::Partial(value, error) => (value, Some(error)),
+            PartialResult::Err(error) => panic!("called `PartialResult::unwrap_tuple() on an `Err` value: {:?}", &error),
+        }
+    }
+}
+
+pub(crate) type ParseResult<T> = PartialResult<T, syn::Error>;
 
 pub(crate) trait TrySet<T> {
     fn try_set(self, to: &mut T) -> syn::Result<()>;
@@ -163,8 +216,8 @@ mod tests {
     use super::*;
     use syn::DeriveInput;
 
-    fn try_input(input: TokenStream) -> syn::Result<Input> {
-        Input::from_input(&syn::parse2::<DeriveInput>(input)?)
+    fn try_input(input: TokenStream) -> ParseResult<Input> {
+        Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap())
     }
 
     macro_rules! try_error (
@@ -296,6 +349,22 @@ mod tests {
             #[br(magic = 1i16)] B,
         }
     });
+
+    // Errors on one field should not prevent the parser from surfacing errors
+    // on other fields
+    #[test]
+    fn non_blocking_errors() {
+        let error = try_input(quote::quote! {
+            #[br(invalid_keyword_struct)]
+            struct Foo {
+                #[br(invalid_keyword_struct_field_a)]
+                a: i32,
+                #[br(invalid_keyword_struct_field_b)]
+                b: i32,
+            }
+        }).err().unwrap();
+        assert_eq!(error.into_iter().count(), 3);
+    }
 
     try_error!(repr_magic_conflict: "mutually exclusive" {
         #[br(repr = u8)]

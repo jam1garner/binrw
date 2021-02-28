@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use super::{FromAttrs, FromField, FromInput, Struct, TrySet, types::{Assert, CondEndian, Magic, Map, PassedArgs}};
+use super::{FromAttrs, FromField, FromInput, ParseResult, Struct, TrySet, types::{Assert, CondEndian, Magic, Map, PassedArgs}};
 
 attr_struct! {
     #[from(StructFieldAttr)]
@@ -61,7 +61,7 @@ attr_struct! {
 impl FromField for StructField {
     type In = syn::Field;
 
-    fn from_field(field: &Self::In) -> syn::Result<Self> {
+    fn from_field(field: &Self::In) -> ParseResult<Self> {
         Self::set_from_attrs(Self {
             ident: field.ident.clone(),
             ty: field.ty.clone(),
@@ -111,7 +111,7 @@ attr_struct! {
 impl FromField for UnitEnumField {
     type In = syn::Variant;
 
-    fn from_field(field: &Self::In) -> syn::Result<Self> {
+    fn from_field(field: &Self::In) -> ParseResult<Self> {
         Self::set_from_attrs(Self {
             ident: field.ident.clone(),
             magic: <_>::default(),
@@ -141,13 +141,15 @@ impl EnumVariant {
 impl FromField for EnumVariant {
     type In = syn::Variant;
 
-    fn from_field(variant: &Self::In) -> syn::Result<Self> {
-        Ok(match variant.fields {
-            syn::Fields::Named(_) | syn::Fields::Unnamed(_) => Self::Variant {
-                ident: variant.ident.clone(),
-                options: Struct::from_input(&variant.attrs, variant.fields.iter())?,
-            },
-            syn::Fields::Unit => Self::Unit(UnitEnumField::from_field(variant)?),
-        })
+    fn from_field(variant: &Self::In) -> ParseResult<Self> {
+        match variant.fields {
+            syn::Fields::Named(_) | syn::Fields::Unnamed(_) =>
+                Struct::from_input(&variant.attrs, variant.fields.iter())
+                    .map(|options| Self::Variant {
+                        ident: variant.ident.clone(),
+                        options,
+                    }),
+            syn::Fields::Unit => UnitEnumField::from_field(variant).map(Self::Unit),
+        }
     }
 }

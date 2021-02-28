@@ -2,22 +2,23 @@
 pub(crate) mod sanitization;
 mod read_options;
 
-use crate::parser::Input;
+use crate::parser::{Input, ParseResult};
 use proc_macro2::TokenStream;
 use quote::quote;
 #[allow(clippy::wildcard_imports)]
 use sanitization::*;
 
-pub(crate) fn generate_impl(derive_input: &syn::DeriveInput, binread_input: &syn::Result<Input>) -> TokenStream {
+pub(crate) fn generate_impl(derive_input: &syn::DeriveInput, binread_input: &ParseResult<Input>) -> TokenStream {
     let (arg_type, read_opt_impl) = match binread_input {
-        Ok(binread_input) => (
+        ParseResult::Ok(binread_input) => (
             binread_input.imports().types(),
             read_options::generate(&derive_input.ident, &binread_input),
         ),
         // If there is a parsing error, a BinRead impl still needs to be
         // generated to avoid misleading errors at all call sites that use the
         // BinRead trait
-        Err(error) => (quote! { () }, error.to_compile_error()),
+        ParseResult::Partial(_, error)
+        | ParseResult::Err(error) => (quote! { () }, error.to_compile_error()),
     };
 
     let name = &derive_input.ident;

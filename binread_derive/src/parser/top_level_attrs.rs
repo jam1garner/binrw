@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
-use super::{EnumVariant, FromInput, SpannedValue, StructField, TrySet, UnitEnumField, types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map}};
+use super::{EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField, types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map}};
 
 pub(crate) enum Input {
     Struct(Struct),
@@ -10,28 +10,28 @@ pub(crate) enum Input {
 }
 
 impl Input {
-    pub(crate) fn from_input(input: &syn::DeriveInput) -> syn::Result<Self> {
+    pub(crate) fn from_input(input: &syn::DeriveInput) -> ParseResult<Self> {
         let attrs = &input.attrs;
         match &input.data {
             syn::Data::Struct(st) => {
                 if matches!(st.fields, syn::Fields::Unit) {
-                    Ok(Self::UnitStruct(Struct::from_input(attrs, st.fields.iter())?))
+                    Struct::from_input(attrs, st.fields.iter()).map(Self::UnitStruct)
                 } else {
-                    Ok(Self::Struct(Struct::from_input(attrs, st.fields.iter())?))
+                    Struct::from_input(attrs, st.fields.iter()).map(Self::Struct)
                 }
             },
             syn::Data::Enum(en) => {
                 let variants = &en.variants;
                 if variants.is_empty() {
-                    Err(syn::Error::new(input.span(), "null enums are not supported"))
+                    ParseResult::Err(syn::Error::new(input.span(), "null enums are not supported"))
                 } else if variants.iter().all(|v| matches!(v.fields, syn::Fields::Unit)) {
-                    Ok(Self::UnitOnlyEnum(UnitOnlyEnum::from_input(attrs, variants.iter())?))
+                    UnitOnlyEnum::from_input(attrs, variants.iter()).map(Self::UnitOnlyEnum)
                 } else {
-                    Ok(Self::Enum(Enum::from_input(attrs, variants.iter())?))
+                    Enum::from_input(attrs, variants.iter()).map(Self::Enum)
                 }
             },
             syn::Data::Union(_) =>
-                Err(syn::Error::new(input.span(), "unions are not supported"))
+                ParseResult::Err(syn::Error::new(input.span(), "unions are not supported"))
         }
     }
 
