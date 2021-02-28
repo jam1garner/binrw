@@ -1,6 +1,6 @@
 ///! Utilities for helping sanitize macro
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, TokenStreamExt, ToTokens};
+use quote::{ToTokens, TokenStreamExt, format_ident, quote};
 
 macro_rules! ident_str {
     () => {};
@@ -38,7 +38,7 @@ ident_str! {
     pub(super) READER = "__binread_generated_var_reader";
     pub(super) OPT = "__binread_generated_var_options";
     pub(super) ARGS = "__binread_generated_var_arguments";
-    pub(super) DEFAULT = "core::default::Default::default";
+    pub(super) SAVED_POSITION = "__binread_generated_saved_position";
     pub(super) ASSERT_MAGIC = from_crate!(error::magic);
     pub(super) ASSERT = from_crate!(error::assert);
     pub(super) WRITE_START_STRUCT = from_crate!(binary_template::write_start_struct);
@@ -55,10 +55,8 @@ ident_str! {
     pub(super) ERROR_BASKET = "__binread_generated_error_basket";
 }
 
-pub fn closure_wrap<T: ToTokens>(value: T) -> TokenStream {
-    quote!(
-        (||{ #value })()
-    )
+pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
+    format_ident!("__binread_generated_{}_{}", kind, ident.to_string())
 }
 
 /// A string wrapper that converts the str to a $path `TokenStream`, allowing

@@ -122,7 +122,17 @@ attr_struct! {
 
 impl Struct {
     pub(crate) fn is_tuple(&self) -> bool {
-        self.fields.get(0).map_or(false, |field| field.ident.is_none())
+        self.fields.get(0).map_or(false, |field| field.generated_ident)
+    }
+
+    pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
+        self.fields.iter().filter_map(|field| {
+            if field.temp {
+                None
+            } else {
+                Some(&field.ident)
+            }
+        })
     }
 }
 

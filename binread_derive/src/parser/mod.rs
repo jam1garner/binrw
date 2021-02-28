@@ -66,7 +66,7 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
 pub(crate) trait FromField {
     type In;
 
-    fn from_field(field: &Self::In) -> ParseResult<Self> where Self: Sized;
+    fn from_field(field: &Self::In, index: usize) -> ParseResult<Self> where Self: Sized;
 }
 
 pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
@@ -75,8 +75,8 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     fn from_input<'input>(attrs: &'input [syn::Attribute], fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>) -> ParseResult<Self> where Self: Sized + Default {
         let (mut this, mut all_errors) = Self::try_from_attrs(attrs).unwrap_tuple();
 
-        for field in fields {
-            let (field, mut field_error) = Self::Field::from_field(field).unwrap_tuple();
+        for (index, field) in fields.enumerate() {
+            let (field, mut field_error) = Self::Field::from_field(field, index).unwrap_tuple();
             if field_error.is_none() {
                 field_error = this.push_field(field).err();
             }

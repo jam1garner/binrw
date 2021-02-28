@@ -5,7 +5,8 @@ attr_struct! {
     #[from(StructFieldAttr)]
     #[derive(Clone, Debug)]
     pub(crate) struct StructField {
-        pub(crate) ident: Option<syn::Ident>,
+        pub(crate) ident: syn::Ident,
+        pub(crate) generated_ident: bool,
         pub(crate) ty: syn::Type,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
@@ -61,9 +62,10 @@ attr_struct! {
 impl FromField for StructField {
     type In = syn::Field;
 
-    fn from_field(field: &Self::In) -> ParseResult<Self> {
+    fn from_field(field: &Self::In, index: usize) -> ParseResult<Self> {
         Self::set_from_attrs(Self {
-            ident: field.ident.clone(),
+            ident: field.ident.clone().unwrap_or_else(|| quote::format_ident!("self_{}", index)),
+            generated_ident: field.ident.is_none(),
             ty: field.ty.clone(),
             endian: <_>::default(),
             map: <_>::default(),
@@ -111,7 +113,7 @@ attr_struct! {
 impl FromField for UnitEnumField {
     type In = syn::Variant;
 
-    fn from_field(field: &Self::In) -> ParseResult<Self> {
+    fn from_field(field: &Self::In, _: usize) -> ParseResult<Self> {
         Self::set_from_attrs(Self {
             ident: field.ident.clone(),
             magic: <_>::default(),
@@ -141,7 +143,7 @@ impl EnumVariant {
 impl FromField for EnumVariant {
     type In = syn::Variant;
 
-    fn from_field(variant: &Self::In) -> ParseResult<Self> {
+    fn from_field(variant: &Self::In, index: usize) -> ParseResult<Self> {
         match variant.fields {
             syn::Fields::Named(_) | syn::Fields::Unnamed(_) =>
                 Struct::from_input(&variant.attrs, variant.fields.iter())
@@ -149,7 +151,7 @@ impl FromField for EnumVariant {
                         ident: variant.ident.clone(),
                         options,
                     }),
-            syn::Fields::Unit => UnitEnumField::from_field(variant).map(Self::Unit),
+            syn::Fields::Unit => UnitEnumField::from_field(variant, index).map(Self::Unit),
         }
     }
 }
