@@ -100,9 +100,6 @@ attr_struct! {
     #[derive(Clone, Debug)]
     pub(crate) struct UnitEnumField {
         pub(crate) ident: syn::Ident,
-        // TODO: Magic and PreAssert seem to be conflicting preconditions, in
-        // which case they should both be parsed into the same property instead
-        // of being separated.
         #[from(Magic)]
         pub(crate) magic: Magic,
         #[from(PreAssert)]

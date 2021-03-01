@@ -9,6 +9,7 @@ use super::{
     get_endian_tokens,
     get_magic_pre_assertion,
     get_passed_args,
+    get_prelude,
     get_read_options_override_keys,
     get_read_options_with_endian,
 };
@@ -51,20 +52,16 @@ pub(super) fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> TokenS
 }
 
 // TODO: Should not be public
-pub(super) fn generate_body(tla: &Input, field_attrs: &[StructField]) -> TokenStream {
-    let arg_vars = tla.imports().idents();
-    let options = get_read_options_with_endian(&tla.endian());
-    let magic_handler = get_magic_pre_assertion(&tla);
+pub(super) fn generate_body(tla: &Input, fields: &[StructField]) -> TokenStream {
+    let prelude = get_prelude(tla);
     let handle_error = debug_template::handle_error();
 
-    let fields = field_attrs.iter().map(|field| generate_field(field));
-    let after_parse = field_attrs.iter().map(|field| generate_after_parse(field));
+    let read_fields = fields.iter().map(|field| generate_field(field));
+    let after_parse = fields.iter().map(|field| generate_after_parse(field));
 
     quote! {
-        let #arg_vars = #ARGS;
-        let #OPT = #options;
-        #magic_handler
-        #(#fields)*
+        #prelude
+        #(#read_fields)*
         let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error?;
         #(#after_parse)*
         #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))#handle_error?;
@@ -74,7 +71,6 @@ pub(super) fn generate_body(tla: &Input, field_attrs: &[StructField]) -> TokenSt
 fn generate_after_parse(field: &StructField) -> TokenStream {
     let handle_error = debug_template::handle_error();
     let ident = &field.ident;
-    // TODO: Pass as args
     let args_var = make_ident(&field.ident, "args");
     let options_var = make_ident(&field.ident, "options");
     let offset_after = field.offset_after.as_ref().map(|offset| {

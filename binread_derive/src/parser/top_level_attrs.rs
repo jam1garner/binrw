@@ -49,7 +49,7 @@ impl Input {
             Input::Struct(s)
             | Input::UnitStruct(s) => &s.import,
             Input::Enum(e) => &e.import,
-            Input::UnitOnlyEnum(_) => &Imports::None,
+            Input::UnitOnlyEnum(e) => &e.import,
         }
     }
 
@@ -93,7 +93,7 @@ impl Input {
             Input::Struct(s)
             | Input::UnitStruct(s) => &s.pre_assert,
             Input::Enum(e) => &e.pre_assert,
-            Input::UnitOnlyEnum(_) => panic!("pre_assert on unit enum"),
+            Input::UnitOnlyEnum(_) => unimplemented!("`Input::pre_assert()` called on unit enum"),
         }
     }
 }
@@ -222,6 +222,8 @@ attr_struct! {
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,
+        #[from(Import, ImportTuple)]
+        pub(crate) import: Imports,
         #[from(Repr)]
         pub(crate) repr: Option<SpannedValue<TokenStream>>,
         pub(crate) fields: Vec<UnitEnumField>,

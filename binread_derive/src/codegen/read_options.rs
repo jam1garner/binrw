@@ -40,6 +40,18 @@ pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
 
 // TODO: replace all functions that are only passed tla with a method on TopLevelAttrs
 
+fn get_prelude(input: &Input) -> TokenStream {
+    let arg_vars = input.imports().idents();
+    let options = get_read_options_with_endian(&input.endian());
+    let magic_handler = get_magic_pre_assertion(&input);
+
+    quote! {
+        let #arg_vars = #ARGS;
+        let #OPT = #options;
+        #magic_handler
+    }
+}
+
 fn get_passed_args(args: &PassedArgs) -> TokenStream {
     match args {
         PassedArgs::List(list) => quote! { (#(#list,)*) },

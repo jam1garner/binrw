@@ -5,6 +5,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use super::{
     get_assertions,
+    get_prelude,
     get_read_options_with_endian,
 };
 
@@ -13,7 +14,7 @@ pub(super) fn generate_unit_enum(en: &UnitOnlyEnum) -> TokenStream {
 
     match &en.repr {
         Some(repr) => generate_unit_enum_repr(&options, repr, &en.fields),
-        None => generate_unit_enum_magic(&options, &en.fields),
+        None => generate_unit_enum_magic(&options, en, &en.fields),
     }
 }
 
@@ -38,23 +39,26 @@ fn generate_unit_enum_repr(options: &TokenStream, repr: &TokenStream, variants: 
     }
 }
 
-fn generate_unit_enum_magic(options: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
-    // TODO: The original code here looked as if it wanted to only handle magic
-    // on variants without a pre-assert condition, but this just ended up
-    // failing the generation with an early return whenever there was any
-    // pre-assert condition. So not sure what is the desired behaviour here.
-
+fn generate_unit_enum_magic(options: &TokenStream, en: &UnitOnlyEnum, variants: &[UnitEnumField]) -> TokenStream {
+    let imports = en.import.idents();
     let matches = variants.iter().filter_map(|field| {
         if let Some(magic) = &field.magic {
             let ident = &field.ident;
             let magic = &magic.1;
-            Some(quote! { #magic => Ok(Self::#ident) })
+            let condition = if field.pre_assert.is_empty() {
+                quote! { #magic }
+            } else {
+                let pre_asserts = field.pre_assert.iter().map(|assert| &assert.0);
+                quote! { #magic if true #(&& (#pre_asserts))* }
+            };
+            Some(quote! { #condition => Ok(Self::#ident) })
         } else {
             None
         }
     });
 
     quote! {
+        let #imports = #ARGS;
         let #OPT = #options;
         match #READ_METHOD(#READER, #OPT, ())? {
             #(#matches,)*
@@ -127,38 +131,39 @@ pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
 
 // TODO: This is distressingly close to generate_struct
 fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
-    let (fields, assertions, return_value);
-    match variant {
-        EnumVariant::Variant { ident, options: ds } => {
-            fields = &ds.fields[..];
-            assertions = {
-                let assertions = get_assertions(&en.assert).chain(get_assertions(&ds.assert));
-                quote! { #(#assertions)* }
-            };
-            // TODO: Unit kind would be here
-            let out_names = ds.iter_permanent_idents();
-            return_value = if ds.is_tuple() {
-                quote! { Self::#ident(#(#out_names),*) }
-            } else {
-                quote! { Self::#ident { #(#out_names),* } }
-            };
-        },
-        EnumVariant::Unit(options) => {
-            fields = &[];
-            assertions = TokenStream::new();
-            let ident = &options.ident;
-            return_value = quote! { Self::#ident };
-        },
-    }
-
     // TODO: Kind of expensive since the enum is containing all the fields
     // and this is a clone.
     let tla = Input::Enum(en.with_variant(variant));
-    // TODO: do not import this way, expose this functionality another way
-    let read_body = super::r#struct::generate_body(&tla, &fields);
-    quote! {
-        #read_body
-        #assertions
-        Ok(#return_value)
+
+    match variant {
+        EnumVariant::Variant { ident, options: ds } => {
+            // TODO: Should not be crossing the streams
+            let read_body = super::r#struct::generate_body(&tla, &ds.fields);
+            let assertions = get_assertions(&en.assert)
+                .chain(get_assertions(&ds.assert));
+            let return_value = {
+                let out_names = ds.iter_permanent_idents();
+                if ds.is_tuple() {
+                    quote! { Self::#ident(#(#out_names),*) }
+                } else {
+                    quote! { Self::#ident { #(#out_names),* } }
+                }
+            };
+
+            quote! {
+                #read_body
+                #(#assertions)*
+                Ok(#return_value)
+            }
+        },
+
+        EnumVariant::Unit(options) => {
+            let prelude = get_prelude(&tla);
+            let ident = &options.ident;
+            quote! {
+                #prelude
+                Ok(Self::#ident)
+            }
+        },
     }
 }
