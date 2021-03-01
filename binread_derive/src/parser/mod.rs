@@ -210,6 +210,13 @@ impl <T: Into<To> + KeywordToken, To> TrySet<Option<To>> for T {
     }
 }
 
+impl <T: std::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySet<Vec<To>> for T {
+    fn try_set(self, to: &mut Vec<To>) -> syn::Result<()> {
+        to.push(self.try_into()?);
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proc_macro2::TokenStream;

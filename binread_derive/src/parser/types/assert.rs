@@ -1,5 +1,5 @@
-use core::convert::{TryFrom, TryInto};
-use crate::parser::{KeywordToken, TrySet, attrs};
+use core::convert::TryFrom;
+use crate::parser::attrs;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::{parse::Parse, spanned::Spanned};
@@ -56,12 +56,5 @@ impl <K: Parse + Spanned> TryFrom<attrs::AssertLike<K>> for Assert {
             cond.into_token_stream(),
             message.map(ToTokens::into_token_stream)
         ))
-    }
-}
-
-impl <T: TryInto<Assert, Error = syn::Error> + KeywordToken> TrySet<Vec<Assert>> for T {
-    fn try_set(self, to: &mut Vec<Assert>) -> syn::Result<()> {
-        to.push(self.try_into()?);
-        Ok(())
     }
 }
