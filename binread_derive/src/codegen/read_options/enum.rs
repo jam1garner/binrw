@@ -94,33 +94,31 @@ pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
         }
     )};
 
-    let try_each_variant = en.variants
-        .iter()
-        .map(|variant| {
-            let body = generate_variant_impl(en, variant);
+    let try_each_variant = en.variants.iter().map(|variant| {
+        let body = generate_variant_impl(en, variant);
 
-            let handle_error = if return_all_errors {
-                let name = variant.ident().to_string();
-                quote! {
-                    #ERROR_BASKET.push((#name, #TEMP.err().unwrap()));
-                }
-            } else {
-                TokenStream::new()
-            };
-
+        let handle_error = if return_all_errors {
+            let name = variant.ident().to_string();
             quote! {
-                let #TEMP = (|| {
-                    #body
-                })();
-
-                if #TEMP.is_ok() {
-                    return #TEMP;
-                } else {
-                    #handle_error
-                    #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
-                }
+                #ERROR_BASKET.push((#name, #TEMP.err().unwrap()));
             }
-        });
+        } else {
+            TokenStream::new()
+        };
+
+        quote! {
+            let #TEMP = (|| {
+                #body
+            })();
+
+            if #TEMP.is_ok() {
+                return #TEMP;
+            } else {
+                #handle_error
+                #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
+            }
+        }
+    });
 
     quote! {
         #create_error_basket

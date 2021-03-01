@@ -112,14 +112,12 @@ fn get_read_options_with_endian(endian: &CondEndian) -> TokenStream {
 
 fn get_magic_pre_assertion(tla: &Input) -> TokenStream {
     let handle_error = debug_template::handle_error();
-    let magic = tla.magic()
-        .as_ref()
-        .map(|magic|{
-            let (_, ref magic) = **magic;
-            quote!{
-                #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
-            }
-        });
+    let magic = tla.magic().as_ref().map(|magic| {
+        let magic = &magic.1;
+        quote! {
+            #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
+        }
+    });
     let pre_asserts = get_assertions(&tla.pre_assert());
 
     quote! {
@@ -129,25 +127,15 @@ fn get_magic_pre_assertion(tla: &Input) -> TokenStream {
 }
 
 fn get_assertions(asserts: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
-    asserts
-        .iter()
-        .map(|Assert(assert, error)| {
-            let handle_error = debug_template::handle_error();
-            let error = error.as_ref().map_or_else(
-                || quote!{{
-                    let mut x = Some(||{});
-                    x = None;
-                    x
-                }},
-                |err|{
-                    quote!{Some(
-                        || { #err }
-                    )}
-                });
-            let assert_string = assert.to_string();
-
-            quote!{
-                #ASSERT(#READER, #assert, #assert_string, #error)#handle_error?;
-            }
-        })
+    asserts.iter().map(|Assert(assert, error)| {
+        let handle_error = debug_template::handle_error();
+        let error = error.as_ref().map_or_else(
+            || quote! { None::<fn() -> ()> },
+            |error| quote! { Some(|| { #error }) }
+        );
+        let assert_string = assert.to_string();
+        quote! {
+            #ASSERT(#READER, #assert, #assert_string, #error)#handle_error?;
+        }
+    })
 }
