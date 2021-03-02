@@ -42,12 +42,7 @@ ident_str! {
     pub(super) SAVED_POSITION = "__binread_generated_saved_position";
     pub(super) ASSERT_MAGIC = from_crate!(error::magic);
     pub(super) ASSERT = from_crate!(error::assert);
-    pub(super) READ_METHOD_NOP = from_crate!(error::nop3);
-    pub(super) READ_METHOD_DEFAULT = from_crate!(error::nop3_default);
-    pub(super) AFTER_PARSE_NOP = from_crate!(error::nop5);
     pub(super) AFTER_PARSE_TRY = from_crate!(error::try_after_parse);
-    pub(super) AFTER_PARSE_IDENTITY = from_crate!(error::identity_after_parse);
-    pub(super) TRY_CONVERSION = from_crate!(error::try_conversion);
     pub(super) TEMP = "__binread_temp";
     pub(super) POS = "__binread_generated_position_temp";
     pub(super) ERROR_BASKET = "__binread_generated_error_basket";
@@ -59,7 +54,7 @@ pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
 
 /// A string wrapper that converts the str to a $path `TokenStream`, allowing
 /// for constant-time idents that can be shared across threads
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IdentStr(&'static str);
 
 impl IdentStr {

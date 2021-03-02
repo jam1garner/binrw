@@ -1,7 +1,7 @@
 //! An enum to represent what endianness to read as
 
 /// An enum to represent what endianness to read as
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Endian {
     Big,
     Little,

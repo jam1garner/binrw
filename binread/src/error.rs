@@ -143,31 +143,6 @@ where
 }
 
 #[doc(hidden)]
-/// A no-op replacement for [`BinRead::read_options`](BinRead::read_options) that returns the unit type
-///
-/// **Intended for internal use only**
-pub fn nop3<T1, R: Read + Seek>(_: &mut R, _: &ReadOptions, _: T1) -> BinResult<()> {
-    Ok(())
-}
-
-#[doc(hidden)]
-/// A no-op replacement for [`BinRead::read_options`](BinRead::read_options) that returns the
-/// default value for the given type. Internally used for the `default` attribute.
-///
-/// **Intended for internal use only**
-pub fn nop3_default<T1, R: Read + Seek, D: Default>(_: &mut R, _: &ReadOptions, _: T1) -> BinResult<D> {
-    Ok(D::default())
-}
-
-#[doc(hidden)]
-/// A no-op replacement for [`BinRead::after_parse`](BinRead::after_parse)
-///
-/// **Intended for internal use only**
-pub fn nop5<T1, T2, R: Read + Seek>(_: &mut T1, _: &mut R, _: &ReadOptions, _: T2) -> BinResult<()> {
-    Ok(())
-}
-
-#[doc(hidden)]
 /// A replacement for [`BinRead::after_parse`](BinRead::after_parse) that runs after_parse only if
 /// a value is present.
 ///
@@ -187,38 +162,6 @@ pub fn try_after_parse<Reader, ValueType, ArgType>(
     }
 
     Ok(())
-}
-
-#[doc(hidden)]
-/// Functional wrapper to apply a [`BinRead::after_parse`](BinRead::after_parse) stand-in function
-/// to a value and then return the value if the [`after_parse`](BinRead::after_parse) function succeeds.
-///
-/// Used by the derive macro to optionally immediately dereference/postprocess the value when
-/// first parsed. In theory should be optimized out in case of no-op.
-///
-/// **Intended for internal use only**
-pub fn identity_after_parse<PostprocessFn, Reader, ValueType, ArgType>(
-    after_parse_fn: PostprocessFn,
-    mut item: ValueType,
-    reader: &mut Reader,
-    ro: &ReadOptions,
-    args: ArgType,
-) -> BinResult<ValueType>
-    where Reader: Read + Seek,
-          PostprocessFn: Fn(
-              &mut ValueType,
-              &mut Reader,
-              &ReadOptions,
-              ArgType,
-          ) -> BinResult<()>,
-{
-    after_parse_fn(&mut item, reader, ro, args)?;
-    Ok(item)
-}
-
-/// Conversion used internally by the `try` attribute to make parsing failures softer
-pub fn try_conversion<T>(result: BinResult<T>) -> BinResult<Option<T>> {
-    Ok(result.ok())
 }
 
 pub fn read_options_then_after_parse<Args, T, R>(
