@@ -71,8 +71,8 @@ fn get_endian_tokens(endian: &CondEndian) -> Option<(IdentStr, TokenStream)> {
         CondEndian::Fixed(Endian::Little) => Some((ENDIAN, quote! { #ENDIAN_ENUM::Little })),
         CondEndian::Cond(endian, condition) => {
             let (true_cond, false_cond) = match endian {
-                Endian::Big => (quote!{ #ENDIAN_ENUM::Big }, quote!{ #ENDIAN_ENUM::Little }),
-                Endian::Little => (quote!{ #ENDIAN_ENUM::Little }, quote!{ #ENDIAN_ENUM::Big }),
+                Endian::Big => (quote! { #ENDIAN_ENUM::Big }, quote! { #ENDIAN_ENUM::Little }),
+                Endian::Little => (quote! { #ENDIAN_ENUM::Little }, quote! { #ENDIAN_ENUM::Big }),
             };
 
             Some((ENDIAN, quote! {
