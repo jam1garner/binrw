@@ -1,31 +1,29 @@
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{Input, Map, Struct, StructField};
+use crate::parser::{Input, Map, PassedArgs, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::quote;
 use super::{
+    PreludeGenerator,
     debug_template,
     get_assertions,
     get_endian_tokens,
-    get_magic_pre_assertion,
-    get_passed_args,
     get_prelude,
     get_read_options_override_keys,
-    get_read_options_with_endian,
 };
 use syn::Ident;
 
-pub(super) fn generate_unit_struct(tla: &Input) -> TokenStream {
+pub(super) fn generate_unit_struct(input: &Input) -> TokenStream {
     // TODO: If this is only using endian, magic, and pre_assert, then it is
     // just like a unit enum field and should be parsed and handled that way.
-    let imports = tla.imports().idents();
-    let top_level_option = get_read_options_with_endian(&tla.endian());
-    let magic_handler = get_magic_pre_assertion(&tla);
+    let prelude = PreludeGenerator::new(input)
+        .add_imports()
+        .add_options()
+        .add_magic_pre_assertion()
+        .finish();
 
     quote! {
-        let #imports = #ARGS;
-        let #OPT = #top_level_option;
-        #magic_handler
+        #prelude
         Ok(Self)
     }
 }
@@ -74,7 +72,7 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
             let args_var = make_ident(&field.ident, "args");
             let options_var = make_ident(&field.ident, "options");
             AfterParseGenerator::new(field)
-                .get_value()
+                .get_value_from_ident()
                 .call_after_parse(after_parse_fn, &options_var, &args_var)
                 .wrap_condition()
                 .prefix_offset_options(&options_var)
@@ -100,17 +98,23 @@ fn generate_field(field: &StructField) -> TokenStream {
         .finish()
 }
 
-struct AfterParseGenerator<'field>(&'field StructField, TokenStream);
+struct AfterParseGenerator<'field> {
+    field: &'field StructField,
+    out: TokenStream,
+}
 
 impl <'field> AfterParseGenerator<'field> {
     fn new(field: &'field StructField) -> Self {
-        Self(field, TokenStream::new())
+        Self {
+            field,
+            out: TokenStream::new(),
+        }
     }
 
     fn call_after_parse(mut self, after_parse_fn: IdentStr, options_var: &Ident, args_var: &Ident) -> Self {
         let handle_error = debug_template::handle_error();
-        let value = &self.1;
-        self.1 = quote! {
+        let value = &self.out;
+        self.out = quote! {
             #after_parse_fn(#value, #READER, #options_var, #args_var.clone())#handle_error?;
         };
 
@@ -118,18 +122,12 @@ impl <'field> AfterParseGenerator<'field> {
     }
 
     fn finish(self) -> TokenStream {
-        self.1
+        self.out
     }
 
-    fn get_temp_value(mut self) -> Self {
-        self.1 = quote! { &mut #TEMP };
-
-        self
-    }
-
-    fn get_value(mut self) -> Self {
-        let ident = &self.0.ident;
-        self.1 = if self.0.if_cond.is_some() {
+    fn get_value_from_ident(mut self) -> Self {
+        let ident = &self.field.ident;
+        self.out = if self.field.if_cond.is_some() {
             quote! { #ident }
         } else {
             quote! { &mut #ident }
@@ -138,12 +136,18 @@ impl <'field> AfterParseGenerator<'field> {
         self
     }
 
+    fn get_value_from_temp(mut self) -> Self {
+        self.out = quote! { &mut #TEMP };
+
+        self
+    }
+
     fn prefix_offset_options(mut self, options_var: &Ident) -> Self {
-        if let Some(offset) = &self.0.offset_after {
-            let value = &self.1;
-            self.1 = quote! {
+        if let Some(offset) = &self.field.offset_after {
+            let value = &self.out;
+            self.out = quote! {
                 let #options_var = &{
-                    let mut #TEMP = #options_var.clone();
+                    let mut #TEMP = *#options_var;
                     #TEMP.offset = #offset;
                     #TEMP
                 };
@@ -155,10 +159,10 @@ impl <'field> AfterParseGenerator<'field> {
     }
 
     fn wrap_condition(mut self) -> Self {
-        if self.0.if_cond.is_some() {
-            let ident = &self.0.ident;
-            let value = &self.1;
-            self.1 = quote! {
+        if self.field.if_cond.is_some() {
+            let ident = &self.field.ident;
+            let value = &self.out;
+            self.out = quote! {
                 if let Some(#ident) = #ident.as_mut() {
                     #value
                 }
@@ -169,17 +173,25 @@ impl <'field> AfterParseGenerator<'field> {
     }
 }
 
-struct FieldGenerator<'field>(&'field StructField, TokenStream);
+struct FieldGenerator<'field> {
+    field: &'field StructField,
+    out: TokenStream,
+    emit_options_vars: bool,
+}
 
 impl <'field> FieldGenerator<'field> {
     fn new(field: &'field StructField) -> Self {
-        Self(field, TokenStream::new())
+        Self {
+            field,
+            out: TokenStream::new(),
+            emit_options_vars: get_after_parse_handler(field).is_some(),
+        }
     }
 
     fn append_assertions(mut self) -> Self {
-        let assertions = get_assertions(&self.0.assert);
-        let value = &self.1;
-        self.1 = quote! {
+        let assertions = get_assertions(&self.field.assert);
+        let value = &self.out;
+        self.out = quote! {
             #value
             #(#assertions)*
         };
@@ -188,31 +200,29 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn assign_to_var(mut self) -> Self {
-        let value = &self.1;
-        self.1 = if self.0.ignore {
-            quote! { let _: () = #value; }
-        } else {
-            let ident = &self.0.ident;
-            let ty = &self.0.ty;
-            quote! { let mut #ident: #ty = #value; }
+        let value = &self.out;
+        if !self.field.ignore {
+            let ident = &self.field.ident;
+            let ty = &self.field.ty;
+            self.out = quote! { let mut #ident: #ty = #value; };
         };
 
         self
     }
 
     fn deref_now(mut self, options_var: &Ident, args_var: &Ident) -> Self {
-        if !self.0.deref_now && !self.0.postprocess_now {
+        if !self.field.deref_now && !self.field.postprocess_now {
             return self;
         }
 
-        if let Some(after_parse) = get_after_parse_handler(&self.0) {
-            let after_parse = AfterParseGenerator::new(self.0)
-                .get_temp_value()
+        if let Some(after_parse) = get_after_parse_handler(&self.field) {
+            let after_parse = AfterParseGenerator::new(self.field)
+                .get_value_from_temp()
                 .call_after_parse(after_parse, options_var, args_var)
                 .finish();
 
-            let value = &self.1;
-            self.1 = quote! {{
+            let value = &self.out;
+            self.out = quote! {{
                 let mut #TEMP = #value;
                 #after_parse
                 #TEMP
@@ -223,7 +233,7 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn finish(self) -> TokenStream {
-        self.1
+        self.out
     }
 
     fn map_value(mut self) -> Self {
@@ -241,10 +251,10 @@ impl <'field> FieldGenerator<'field> {
             fn __binread_coerce<R, T, F>(f: F) -> F where F: Fn(T) -> R { f }
         };
 
-        let ty = &self.0.ty;
-        let value = &self.1;
+        let ty = &self.field.ty;
+        let value = &self.out;
 
-        self.1 = match &self.0.map {
+        self.out = match &self.field.map {
             Map::None => return self,
             Map::Map(map) => {
                 quote! {{
@@ -272,14 +282,16 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn prefix_args_and_options(mut self, options_var: &Ident, args_var: &Ident) -> Self {
-        let args = get_passed_args(&self.0.args);
-        let options = get_read_options_override_keys(get_name_option_pairs_ident_expr(self.0));
-        let value = &self.1;
-        self.1 = quote! {
-            let #args_var = #args;
-            let #options_var = #options;
-            #value
-        };
+        if self.emit_options_vars {
+            let args = get_passed_args(&self.field.args);
+            let options = get_read_options_override_keys(get_name_option_pairs_ident_expr(self.field));
+            let value = &self.out;
+            self.out = quote! {
+                let #args_var = #args;
+                let #options_var = #options;
+                #value
+            };
+        }
 
         self
     }
@@ -287,18 +299,20 @@ impl <'field> FieldGenerator<'field> {
     fn read_value(mut self, options_var: &Ident, args_var: &Ident) -> Self {
         // TODO: Parser needs to ensure invalid combinations of properties are
         // not used. ignore, default, parse_with, calc = cannot be combined!
-        self.1 = if self.0.ignore {
-            quote! { () }
-        } else if self.0.default {
+        self.out = if self.field.ignore {
+            return self;
+        } else if self.field.default {
             quote! { <_>::default() }
-        } else if let Some(ref expr) = self.0.calc {
+        } else if let Some(ref expr) = self.field.calc {
             quote! { #expr }
         } else {
-            let read_method = if let Some(parser) = &self.0.parse_with {
+            let read_method = if let Some(parser) = &self.field.parse_with {
                 parser.clone()
             } else {
                 quote! { #READ_METHOD }
             };
+
+            self.emit_options_vars = true;
 
             quote! {
                 #read_method(#READER, #options_var, #args_var.clone())
@@ -309,14 +323,14 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn try_conversion(mut self) -> Self {
-        let result = &self.1;
+        let result = &self.out;
         // TODO: Collapse these conditions into Field struct
-        if self.0.ignore || self.0.default || self.0.calc.is_some() {
-            if self.0.do_try {
-                self.1 = quote! { Some(#result) };
+        if self.field.ignore || self.field.default || self.field.calc.is_some() {
+            if self.field.do_try {
+                self.out = quote! { Some(#result) };
             }
         } else {
-            self.1 = if self.0.do_try {
+            self.out = if self.field.do_try {
                 quote! { #result.ok() }
             } else {
                 let handle_error = debug_template::handle_error();
@@ -328,9 +342,9 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn wrap_condition(mut self) -> Self {
-        if let Some(cond) = &self.0.if_cond {
-            let value = &self.1;
-            self.1 = quote! {
+        if let Some(cond) = &self.field.if_cond {
+            let value = &self.out;
+            self.out = quote! {
                 if #cond {
                     Some(#value)
                 } else {
@@ -343,19 +357,19 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn wrap_restore_position(mut self) -> Self {
-        if self.0.restore_position {
-            self.1 = wrap_save_restore(self.1);
+        if self.field.restore_position {
+            self.out = wrap_save_restore(self.out);
         }
 
         self
     }
 
     fn wrap_seek(mut self) -> Self {
-        let seek_before = generate_seek_before(self.0);
-        let seek_after = generate_seek_after(self.0);
+        let seek_before = generate_seek_before(self.field);
+        let seek_after = generate_seek_after(self.field);
         if !seek_before.is_empty() || !seek_after.is_empty() {
-            let value = &self.1;
-            self.1 = quote! {{
+            let value = &self.out;
+            self.out = quote! {{
                 #seek_before
                 let #TEMP = #value;
                 #seek_after
@@ -364,6 +378,14 @@ impl <'field> FieldGenerator<'field> {
         }
 
         self
+    }
+}
+
+fn get_passed_args(args: &PassedArgs) -> TokenStream {
+    match args {
+        PassedArgs::List(list) => quote! { (#(#list,)*) },
+        PassedArgs::Tuple(tuple) => tuple.clone(),
+        PassedArgs::None => quote! { () },
     }
 }
 

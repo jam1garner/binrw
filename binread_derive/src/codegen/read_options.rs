@@ -2,7 +2,7 @@ mod debug_template;
 mod r#enum;
 mod r#struct;
 
-use crate::parser::{Assert, CondEndian, Endian, Input, Map, PassedArgs};
+use crate::parser::{Assert, CondEndian, Endian, Input, Map};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use r#enum::{generate_data_enum, generate_unit_enum};
@@ -17,7 +17,7 @@ pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
             Input::UnitStruct(_) => generate_unit_struct(input),
             Input::Struct(s) => generate_struct(ident, input, s),
             Input::Enum(e) => generate_data_enum(e),
-            Input::UnitOnlyEnum(e) => generate_unit_enum(e),
+            Input::UnitOnlyEnum(e) => generate_unit_enum(input, e),
         },
         Map::Try(map) => quote! {
             #READ_METHOD(#READER, #OPT, #ARGS).and_then(#map)
@@ -38,26 +38,74 @@ pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
     }
 }
 
-// TODO: replace all functions that are only passed tla with a method on TopLevelAttrs
+struct PreludeGenerator<'input> {
+    input: &'input Input,
+    out: TokenStream,
+}
 
-fn get_prelude(input: &Input) -> TokenStream {
-    let arg_vars = input.imports().idents();
-    let options = get_read_options_with_endian(&input.endian());
-    let magic_handler = get_magic_pre_assertion(&input);
+impl <'input> PreludeGenerator<'input> {
+    fn new(input: &'input Input) -> Self {
+        Self {
+            input,
+            out: TokenStream::new()
+        }
+    }
 
-    quote! {
-        let #arg_vars = #ARGS;
-        let #OPT = #options;
-        #magic_handler
+    fn finish(self) -> TokenStream {
+        self.out
+    }
+
+    fn add_imports(mut self) -> Self {
+        if let Some(imports) = self.input.imports().idents() {
+            let value = &self.out;
+            self.out = quote! {
+                #value
+                let #imports = #ARGS;
+            };
+        }
+
+        self
+    }
+
+    fn add_options(mut self) -> Self {
+        let value = &self.out;
+        if let Some(options) = get_read_options_override_keys(get_endian_tokens(&self.input.endian()).into_iter()) {
+            self.out = quote! {
+                #value
+                let #OPT = #options;
+            };
+        }
+
+        self
+    }
+
+    fn add_magic_pre_assertion(mut self) -> Self {
+        let magic = self.input.magic().as_ref().map(|magic| {
+            let handle_error = debug_template::handle_error();
+            let magic = &magic.1;
+            quote! {
+                #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
+            }
+        });
+        let pre_asserts = get_assertions(&self.input.pre_assert());
+        let value = &self.out;
+
+        self.out = quote! {
+            #value
+            #magic
+            #(#pre_asserts)*
+        };
+
+        self
     }
 }
 
-fn get_passed_args(args: &PassedArgs) -> TokenStream {
-    match args {
-        PassedArgs::List(list) => quote! { (#(#list,)*) },
-        PassedArgs::Tuple(tuple) => tuple.clone(),
-        PassedArgs::None => quote! { () },
-    }
+fn get_prelude(input: &Input) -> TokenStream {
+    PreludeGenerator::new(input)
+        .add_imports()
+        .add_options()
+        .add_magic_pre_assertion()
+        .finish()
 }
 
 ident_str! {
@@ -86,7 +134,7 @@ fn get_endian_tokens(endian: &CondEndian) -> Option<(IdentStr, TokenStream)> {
     }
 }
 
-fn get_read_options_override_keys(options: impl Iterator<Item = (IdentStr, TokenStream)>) -> TokenStream {
+fn get_read_options_override_keys(options: impl Iterator<Item = (IdentStr, TokenStream)>) -> Option<TokenStream> {
     let mut set_options = options.map(|(key, value)| {
         quote! {
             #TEMP.#key = #value;
@@ -94,35 +142,15 @@ fn get_read_options_override_keys(options: impl Iterator<Item = (IdentStr, Token
     }).peekable();
 
     if set_options.peek().is_none() {
-        quote! { #OPT }
+        None
     } else {
-        quote! {
+        Some(quote! {
             &{
-                let mut #TEMP = #OPT.clone();
+                let mut #TEMP = *#OPT;
                 #(#set_options)*
                 #TEMP
             }
-        }
-    }
-}
-
-fn get_read_options_with_endian(endian: &CondEndian) -> TokenStream {
-    get_read_options_override_keys(get_endian_tokens(endian).into_iter())
-}
-
-fn get_magic_pre_assertion(tla: &Input) -> TokenStream {
-    let handle_error = debug_template::handle_error();
-    let magic = tla.magic().as_ref().map(|magic| {
-        let magic = &magic.1;
-        quote! {
-            #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
-        }
-    });
-    let pre_asserts = get_assertions(&tla.pre_assert());
-
-    quote! {
-        #magic
-        #(#pre_asserts)*
+        })
     }
 }
 

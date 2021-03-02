@@ -4,21 +4,19 @@ use crate::parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, Unit
 use proc_macro2::TokenStream;
 use quote::quote;
 use super::{
+    PreludeGenerator,
     get_assertions,
     get_prelude,
-    get_read_options_with_endian,
 };
 
-pub(super) fn generate_unit_enum(en: &UnitOnlyEnum) -> TokenStream {
-    let options = get_read_options_with_endian(&en.endian);
-
+pub(super) fn generate_unit_enum(input: &Input, en: &UnitOnlyEnum) -> TokenStream {
     match &en.repr {
-        Some(repr) => generate_unit_enum_repr(&options, repr, &en.fields),
-        None => generate_unit_enum_magic(&options, en, &en.fields),
+        Some(repr) => generate_unit_enum_repr(input, repr, &en.fields),
+        None => generate_unit_enum_magic(input, &en.fields),
     }
 }
 
-fn generate_unit_enum_repr(options: &TokenStream, repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_repr(input: &Input, repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
     let clauses = variants.iter().map(|variant| {
         let ident = &variant.ident;
         quote! {
@@ -28,8 +26,12 @@ fn generate_unit_enum_repr(options: &TokenStream, repr: &TokenStream, variants: 
         }
     });
 
+    let prelude = PreludeGenerator::new(input)
+        .add_options()
+        .finish();
+
     quote! {
-        let #OPT = #options;
+        #prelude
         let #TEMP: #repr = #READ_METHOD(#READER, #OPT, ())?;
         #(#clauses else)* {
             Err(#BIN_ERROR::NoVariantMatch {
@@ -39,8 +41,12 @@ fn generate_unit_enum_repr(options: &TokenStream, repr: &TokenStream, variants: 
     }
 }
 
-fn generate_unit_enum_magic(options: &TokenStream, en: &UnitOnlyEnum, variants: &[UnitEnumField]) -> TokenStream {
-    let imports = en.import.idents();
+fn generate_unit_enum_magic(input: &Input, variants: &[UnitEnumField]) -> TokenStream {
+    let prelude = PreludeGenerator::new(input)
+        .add_imports()
+        .add_options()
+        .finish();
+
     let matches = variants.iter().filter_map(|field| {
         if let Some(magic) = &field.magic {
             let ident = &field.ident;
@@ -58,8 +64,7 @@ fn generate_unit_enum_magic(options: &TokenStream, en: &UnitOnlyEnum, variants: 
     });
 
     quote! {
-        let #imports = #ARGS;
-        let #OPT = #options;
+        #prelude
         match #READ_METHOD(#READER, #OPT, ())? {
             #(#matches,)*
             _ => {

@@ -17,18 +17,22 @@ impl Default for Imports {
 }
 
 impl Imports {
-    pub fn idents(&self) -> TokenStream {
+    pub fn idents(&self) -> Option<TokenStream> {
         match self {
-            Imports::None => quote! { () },
+            Imports::None => None,
             Imports::List(idents, _) => {
-                let idents = idents.iter();
-                quote! {
-                    (#(mut #idents,)*)
+                if idents.is_empty() {
+                    None
+                } else {
+                    let idents = idents.iter();
+                    Some(quote! {
+                        (#(mut #idents,)*)
+                    })
                 }
             },
-            Imports::Tuple(ident, _) => quote! {
+            Imports::Tuple(ident, _) => Some(quote! {
                 mut #ident
-            }
+            })
         }
     }
 
