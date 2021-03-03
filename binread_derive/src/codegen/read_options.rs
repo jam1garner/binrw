@@ -14,7 +14,7 @@ use syn::Ident;
 pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
     let inner = match input.map() {
         Map::None => match input {
-            Input::UnitStruct(_) => generate_unit_struct(input),
+            Input::UnitStruct(_) => generate_unit_struct(input, None),
             Input::Struct(s) => generate_struct(ident, input, s),
             Input::Enum(e) => generate_data_enum(e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, e),
@@ -103,14 +103,6 @@ impl <'input> PreludeGenerator<'input> {
 
         self
     }
-}
-
-fn get_prelude(input: &Input) -> TokenStream {
-    PreludeGenerator::new(input)
-        .add_imports()
-        .add_options()
-        .add_magic_pre_assertion()
-        .finish()
 }
 
 fn get_assertions(asserts: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {

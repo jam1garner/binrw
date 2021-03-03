@@ -6,8 +6,7 @@ use quote::quote;
 use super::{
     PreludeGenerator,
     get_assertions,
-    get_prelude,
-    r#struct::StructGenerator,
+    r#struct::{StructGenerator, generate_unit_struct},
 };
 
 pub(super) fn generate_unit_enum(input: &Input, en: &UnitOnlyEnum) -> TokenStream {
@@ -148,12 +147,7 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
         },
 
         EnumVariant::Unit(options) => {
-            let prelude = get_prelude(&input);
-            let ident = &options.ident;
-            quote! {
-                #prelude
-                Ok(Self::#ident)
-            }
+            generate_unit_struct(&input, Some(&options.ident))
         },
     }
 }

@@ -3,27 +3,15 @@ use crate::codegen::sanitization::*;
 use crate::parser::{Input, Map, PassedArgs, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::quote;
-use super::{
-    PreludeGenerator,
-    ReadOptionsGenerator,
-    debug_template,
-    get_assertions,
-    get_prelude,
-};
+use super::{PreludeGenerator, ReadOptionsGenerator, debug_template, get_assertions};
 use syn::Ident;
 
-pub(super) fn generate_unit_struct(input: &Input) -> TokenStream {
-    // TODO: If this is only using endian, magic, and pre_assert, then it is
-    // just like a unit enum field and should be parsed and handled that way.
-    let prelude = PreludeGenerator::new(input)
-        .add_imports()
-        .add_options()
-        .add_magic_pre_assertion()
-        .finish();
-
+pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>) -> TokenStream {
+    let prelude = get_prelude(input);
+    let return_type = get_return_type(variant_ident);
     quote! {
         #prelude
-        Ok(Self)
+        Ok(#return_type)
     }
 }
 
@@ -84,15 +72,11 @@ impl <'input> StructGenerator<'input> {
 
     pub(super) fn return_value(mut self, variant_ident: Option<&Ident>) -> Self {
         let out_names = self.st.iter_permanent_idents();
-        let self_kw = variant_ident.map_or_else(
-            || quote! { Self },
-            |ident| quote! { Self::#ident }
-        );
-
+        let return_type = get_return_type(variant_ident);
         let return_value = if self.st.is_tuple() {
-            quote! { #self_kw(#(#out_names),*) }
+            quote! { #return_type(#(#out_names),*) }
         } else {
-            quote! { #self_kw { #(#out_names),* } }
+            quote! { #return_type { #(#out_names),* } }
         };
 
         let value = &self.out;
@@ -450,6 +434,14 @@ fn get_passed_args(args: &PassedArgs) -> TokenStream {
     }
 }
 
+fn get_prelude(input: &Input) -> TokenStream {
+    PreludeGenerator::new(input)
+        .add_imports()
+        .add_options()
+        .add_magic_pre_assertion()
+        .finish()
+}
+
 fn generate_seek_after(field: &StructField) -> TokenStream {
     let handle_error = debug_template::handle_error();
     let pad_size_to = field.pad_size_to.as_ref().map(|pad| quote! {{
@@ -501,6 +493,13 @@ fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
     } else {
         Some(AFTER_PARSE)
     }
+}
+
+fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {
+    variant_ident.map_or_else(
+        || quote! { Self },
+        |ident| quote! { Self::#ident }
+    )
 }
 
 fn map_align(align: &TokenStream) -> TokenStream {
