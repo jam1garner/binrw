@@ -5,11 +5,10 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use super::{
     PreludeGenerator,
+    ReadOptionsGenerator,
     debug_template,
     get_assertions,
-    get_endian_tokens,
     get_prelude,
-    get_read_options_override_keys,
 };
 use syn::Ident;
 
@@ -28,39 +27,96 @@ pub(super) fn generate_unit_struct(input: &Input) -> TokenStream {
     }
 }
 
-pub(super) fn generate_struct(ident: &Ident, tla: &Input, ds: &Struct) -> TokenStream {
-    let debug_tpl_start = debug_template::start(&ident);
-    let read_body = generate_body(tla, &ds.fields);
-    let debug_tpl_end = debug_template::end();
-    let assertions = get_assertions(&ds.assert);
-    let out_names = ds.iter_permanent_idents();
-    let return_value = if ds.is_tuple() {
-        quote! { Self(#(#out_names),*) }
-    } else {
-        quote! { Self { #(#out_names),* } }
-    };
-
-    quote! {
-        #debug_tpl_start
-        #read_body
-        #debug_tpl_end
-        #(#assertions)*
-        Ok(#return_value)
-    }
+pub(super) fn generate_struct(ident: &Ident, input: &Input, st: &Struct) -> TokenStream {
+    StructGenerator::new(input, st)
+        .read_fields()
+        .wrap_debug(ident)
+        .add_assertions(core::iter::empty())
+        .return_value(None)
+        .finish()
 }
 
-// TODO: Should not be public
-pub(super) fn generate_body(tla: &Input, fields: &[StructField]) -> TokenStream {
-    let prelude = get_prelude(tla);
-    let read_fields = fields.iter().map(|field| generate_field(field));
-    let after_parse = {
-        let after_parse = fields.iter().map(|field| generate_after_parse(field));
-        wrap_save_restore(quote!(#(#after_parse)*))
-    };
-    quote! {
-        #prelude
-        #(#read_fields)*
-        #after_parse
+pub(super) struct StructGenerator<'input> {
+    input: &'input Input,
+    st: &'input Struct,
+    out: TokenStream,
+}
+
+impl <'input> StructGenerator<'input> {
+    pub(super) fn new(input: &'input Input, st: &'input Struct) -> Self {
+        Self {
+            input,
+            st,
+            out: TokenStream::new(),
+        }
+    }
+
+    pub(super) fn finish(self) -> TokenStream {
+        self.out
+    }
+
+    pub(super) fn add_assertions(mut self, extra_assertions: impl Iterator<Item = TokenStream>) -> Self {
+        let assertions = get_assertions(&self.st.assert).chain(extra_assertions);
+        let value = &self.out;
+        self.out = quote! {
+            #value
+            #(#assertions)*
+        };
+
+        self
+    }
+
+    pub(super) fn read_fields(mut self) -> Self {
+        let prelude = get_prelude(self.input);
+        let read_fields = self.st.fields.iter().map(|field| generate_field(field));
+        let after_parse = {
+            let after_parse = self.st.fields.iter().map(|field| generate_after_parse(field));
+            wrap_save_restore(quote!(#(#after_parse)*))
+        };
+        self.out = quote! {
+            #prelude
+            #(#read_fields)*
+            #after_parse
+        };
+
+        self
+    }
+
+    pub(super) fn return_value(mut self, variant_ident: Option<&Ident>) -> Self {
+        let out_names = self.st.iter_permanent_idents();
+        let self_kw = variant_ident.map_or_else(
+            || quote! { Self },
+            |ident| quote! { Self::#ident }
+        );
+
+        let return_value = if self.st.is_tuple() {
+            quote! { #self_kw(#(#out_names),*) }
+        } else {
+            quote! { #self_kw { #(#out_names),* } }
+        };
+
+        let value = &self.out;
+        self.out = quote! {
+            #value
+            Ok(#return_value)
+        };
+
+        self
+    }
+
+    pub(super) fn wrap_debug(mut self, ident: &Ident) -> Self {
+        if cfg!(feature = "debug_template") {
+            let debug_tpl_start = debug_template::start(&ident);
+            let debug_tpl_end = debug_template::end();
+            let value = &self.out;
+            self.out = quote! {
+                #debug_tpl_start
+                #value
+                #debug_tpl_end
+            };
+        }
+
+        self
     }
 }
 
@@ -284,11 +340,16 @@ impl <'field> FieldGenerator<'field> {
     fn prefix_args_and_options(mut self, options_var: &Ident, args_var: &Ident) -> Self {
         if self.emit_options_vars {
             let args = get_passed_args(&self.field.args);
-            let options = get_read_options_override_keys(get_name_option_pairs_ident_expr(self.field));
+            let options = ReadOptionsGenerator::new(options_var)
+                .endian(&self.field.endian)
+                .offset(&self.field.offset)
+                .variable_name(&self.field.ident)
+                .count(&self.field.count)
+                .finish();
             let value = &self.out;
             self.out = quote! {
                 let #args_var = #args;
-                let #options_var = #options;
+                #options
                 #value
             };
         }
@@ -428,6 +489,7 @@ fn generate_seek_before(field: &StructField) -> TokenStream {
 }
 
 fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
+    // TODO: why is map listed here?
     let skip_after_parse =
         field.map.is_some() || field.ignore || field.default ||
         field.calc.is_some() || field.parse_with.is_some();
@@ -439,32 +501,6 @@ fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
     } else {
         Some(AFTER_PARSE)
     }
-}
-
-ident_str! {
-    VARIABLE_NAME = "variable_name";
-    COUNT = "count";
-    OFFSET = "offset";
-}
-
-fn get_name_option_pairs_ident_expr(field: &StructField) -> impl Iterator<Item = (IdentStr, TokenStream)> {
-    let endian = get_endian_tokens(&field.endian);
-
-    let offset = field.offset.as_ref().map(|offset| (OFFSET, offset.clone()));
-
-    let variable_name = if cfg!(feature = "debug_template") {
-        let name = field.ident.to_string();
-        Some((VARIABLE_NAME, quote!{ Some(#name) }))
-    } else {
-        None
-    };
-
-    let count = field.count.as_ref().map(|count| (COUNT, quote!{ Some((#count) as usize) }));
-
-    count.into_iter()
-        .chain(endian)
-        .chain(variable_name)
-        .chain(offset)
 }
 
 fn map_align(align: &TokenStream) -> TokenStream {

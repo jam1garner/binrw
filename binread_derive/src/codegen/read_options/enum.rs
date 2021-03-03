@@ -7,6 +7,7 @@ use super::{
     PreludeGenerator,
     get_assertions,
     get_prelude,
+    r#struct::StructGenerator,
 };
 
 pub(super) fn generate_unit_enum(input: &Input, en: &UnitOnlyEnum) -> TokenStream {
@@ -132,36 +133,22 @@ pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
     }
 }
 
-// TODO: This is distressingly close to generate_struct
 fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
     // TODO: Kind of expensive since the enum is containing all the fields
     // and this is a clone.
-    let tla = Input::Enum(en.with_variant(variant));
+    let input = Input::Enum(en.with_variant(variant));
 
     match variant {
-        EnumVariant::Variant { ident, options: ds } => {
-            // TODO: Should not be crossing the streams
-            let read_body = super::r#struct::generate_body(&tla, &ds.fields);
-            let assertions = get_assertions(&en.assert)
-                .chain(get_assertions(&ds.assert));
-            let return_value = {
-                let out_names = ds.iter_permanent_idents();
-                if ds.is_tuple() {
-                    quote! { Self::#ident(#(#out_names),*) }
-                } else {
-                    quote! { Self::#ident { #(#out_names),* } }
-                }
-            };
-
-            quote! {
-                #read_body
-                #(#assertions)*
-                Ok(#return_value)
-            }
+        EnumVariant::Variant { ident, options } => {
+            StructGenerator::new(&input, &options)
+                .read_fields()
+                .add_assertions(get_assertions(&en.assert))
+                .return_value(Some(ident))
+                .finish()
         },
 
         EnumVariant::Unit(options) => {
-            let prelude = get_prelude(&tla);
+            let prelude = get_prelude(&input);
             let ident = &options.ident;
             quote! {
                 #prelude

@@ -69,10 +69,15 @@ impl <'input> PreludeGenerator<'input> {
 
     fn add_options(mut self) -> Self {
         let value = &self.out;
-        if let Some(options) = get_read_options_override_keys(get_endian_tokens(&self.input.endian()).into_iter()) {
+
+        let options = ReadOptionsGenerator::new(OPT)
+            .endian(&self.input.endian())
+            .finish();
+
+        if !options.is_empty() {
             self.out = quote! {
                 #value
-                let #OPT = #options;
+                #options
             };
         }
 
@@ -108,52 +113,6 @@ fn get_prelude(input: &Input) -> TokenStream {
         .finish()
 }
 
-ident_str! {
-    ENDIAN = "endian";
-}
-
-fn get_endian_tokens(endian: &CondEndian) -> Option<(IdentStr, TokenStream)> {
-    match endian {
-        CondEndian::Inherited => None,
-        CondEndian::Fixed(Endian::Big) => Some((ENDIAN, quote! { #ENDIAN_ENUM::Big })),
-        CondEndian::Fixed(Endian::Little) => Some((ENDIAN, quote! { #ENDIAN_ENUM::Little })),
-        CondEndian::Cond(endian, condition) => {
-            let (true_cond, false_cond) = match endian {
-                Endian::Big => (quote! { #ENDIAN_ENUM::Big }, quote! { #ENDIAN_ENUM::Little }),
-                Endian::Little => (quote! { #ENDIAN_ENUM::Little }, quote! { #ENDIAN_ENUM::Big }),
-            };
-
-            Some((ENDIAN, quote! {
-                if (#condition) {
-                    #true_cond
-                } else {
-                    #false_cond
-                }
-            }))
-        }
-    }
-}
-
-fn get_read_options_override_keys(options: impl Iterator<Item = (IdentStr, TokenStream)>) -> Option<TokenStream> {
-    let mut set_options = options.map(|(key, value)| {
-        quote! {
-            #TEMP.#key = #value;
-        }
-    }).peekable();
-
-    if set_options.peek().is_none() {
-        None
-    } else {
-        Some(quote! {
-            &{
-                let mut #TEMP = *#OPT;
-                #(#set_options)*
-                #TEMP
-            }
-        })
-    }
-}
-
 fn get_assertions(asserts: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
     asserts.iter().map(|Assert(assert, error)| {
         let handle_error = debug_template::handle_error();
@@ -166,4 +125,104 @@ fn get_assertions(asserts: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ 
             #ASSERT(#READER, #assert, #assert_string, #error)#handle_error?;
         }
     })
+}
+
+struct ReadOptionsGenerator {
+    out: TokenStream,
+    options_var: TokenStream,
+}
+
+impl ReadOptionsGenerator {
+    fn new(options_var: impl quote::ToTokens) -> Self {
+        Self {
+            out: TokenStream::new(),
+            options_var: options_var.into_token_stream(),
+        }
+    }
+
+    fn count(mut self, count: &Option<TokenStream>) -> Self {
+        if let Some(count) = &count {
+            let value = &self.out;
+            self.out = quote! {
+                #value
+                #TEMP.count = Some((#count) as usize);
+            };
+        }
+
+        self
+    }
+
+    fn endian(mut self, endian: &CondEndian) -> Self {
+        let endian = match endian {
+            CondEndian::Inherited => return self,
+            CondEndian::Fixed(Endian::Big) => quote! { #ENDIAN_ENUM::Big },
+            CondEndian::Fixed(Endian::Little) => quote! { #ENDIAN_ENUM::Little },
+            CondEndian::Cond(endian, condition) => {
+                let (true_cond, false_cond) = match endian {
+                    Endian::Big => (quote! { #ENDIAN_ENUM::Big }, quote! { #ENDIAN_ENUM::Little }),
+                    Endian::Little => (quote! { #ENDIAN_ENUM::Little }, quote! { #ENDIAN_ENUM::Big }),
+                };
+
+                quote! {
+                    if (#condition) {
+                        #true_cond
+                    } else {
+                        #false_cond
+                    }
+                }
+            }
+        };
+
+        let value = &self.out;
+        self.out = quote! {
+            #value
+            #TEMP.endian = #endian;
+        };
+
+        self
+    }
+
+    fn finish(self) -> TokenStream {
+        let options_var = self.options_var;
+        if self.out.is_empty() {
+            quote! {
+                let #options_var = #OPT;
+            }
+        } else {
+            let value = &self.out;
+            quote! {
+                let #options_var = &{
+                    let mut #TEMP = *#OPT;
+                    #value
+                    #TEMP
+                };
+            }
+        }
+    }
+
+    fn offset(mut self, offset: &Option<TokenStream>) -> Self {
+        if let Some(offset) = &offset {
+            // TODO: Rename `value` to `head`, everywhere this pattern is used
+            let value = &self.out;
+            self.out = quote! {
+                #value
+                #TEMP.offset = #offset;
+            };
+        }
+
+        self
+    }
+
+    fn variable_name(mut self, ident: &Ident) -> Self {
+        if cfg!(feature = "debug_template") {
+            let ident = ident.to_string();
+            let value = &self.out;
+            self.out = quote! {
+                #value
+                #TEMP.variable_name = Some(#ident);
+            };
+        }
+
+        self
+    }
 }
