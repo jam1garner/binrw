@@ -131,6 +131,18 @@ fn deref_now() {
 }
 
 #[test]
+fn empty_imports() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import())]
+    struct Test {
+        a: u8,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\x01")).unwrap();
+    assert_eq!(result, Test { a: 1 });
+}
+
+#[test]
 fn pad_after_before() {
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {
