@@ -364,8 +364,6 @@ impl <'field> FieldGenerator<'field> {
     fn try_conversion(mut self) -> Self {
         let result = &self.out;
         if self.field.generated_value() {
-            // TODO: This condition does not make a lot of sense. If the value
-            // was generated, then there is no way it could have failed.
             if self.field.do_try {
                 self.out = quote! { Some(#result) };
             }
