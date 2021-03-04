@@ -112,8 +112,6 @@ attr_struct! {
         pub(crate) imports: Imports,
         #[from(Assert)]
         pub(crate) assertions: Vec<Assert>,
-        // TODO: Are Magic and PreAssert conflicting preconditions? Is PreAssert
-        // only for enum variants?
         #[from(PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
         pub(crate) fields: Vec<StructField>,
