@@ -170,7 +170,7 @@ use io::{Read, Seek, SeekFrom};
 /// Derive macro for BinRead. [Usage here](BinRead).
 pub use binread_derive::BinRead;
 
-/// Equivelant to `derive(BinRead)` but allows for temporary variables.
+/// Equivalent to `derive(BinRead)` but allows for temporary variables.
 pub use binread_derive::derive_binread;
 
 mod binread_impls;
