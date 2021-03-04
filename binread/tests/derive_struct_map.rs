@@ -64,6 +64,7 @@ fn try_map_field() {
     let result = Test::read(&mut Cursor::new(b"\xff\xff\xff\xff")).unwrap();
     assert_eq!(result.a, -1);
     let error = Test::read(&mut Cursor::new(b"\x7f\0\0\0")).expect_err("accepted bad data");
+    assert!(matches!(error, binread::error::Error::Custom { pos: 0, .. }));
     error.custom_err::<<i32 as ::core::convert::TryInto<i16>>::Error>().expect("wrong error type");
 }
 
