@@ -57,9 +57,9 @@ impl <'input> PreludeGenerator<'input> {
 
     fn add_imports(mut self) -> Self {
         if let Some(imports) = self.input.imports().idents() {
-            let value = &self.out;
+            let head = self.out;
             self.out = quote! {
-                #value
+                #head
                 let #imports = #ARGS;
             };
         }
@@ -68,15 +68,14 @@ impl <'input> PreludeGenerator<'input> {
     }
 
     fn add_options(mut self) -> Self {
-        let value = &self.out;
-
         let options = ReadOptionsGenerator::new(OPT)
             .endian(&self.input.endian())
             .finish();
 
         if !options.is_empty() {
+            let head = self.out;
             self.out = quote! {
-                #value
+                #head
                 #options
             };
         }
@@ -134,9 +133,9 @@ impl ReadOptionsGenerator {
 
     fn count(mut self, count: &Option<TokenStream>) -> Self {
         if let Some(count) = &count {
-            let value = &self.out;
+            let head = self.out;
             self.out = quote! {
-                #value
+                #head
                 #TEMP.count = Some((#count) as usize);
             };
         }
@@ -165,9 +164,9 @@ impl ReadOptionsGenerator {
             }
         };
 
-        let value = &self.out;
+        let head = self.out;
         self.out = quote! {
-            #value
+            #head
             #TEMP.endian = #endian;
         };
 
@@ -181,11 +180,11 @@ impl ReadOptionsGenerator {
                 let #options_var = #OPT;
             }
         } else {
-            let value = &self.out;
+            let setters = self.out;
             quote! {
                 let #options_var = &{
                     let mut #TEMP = *#OPT;
-                    #value
+                    #setters
                     #TEMP
                 };
             }
@@ -194,10 +193,9 @@ impl ReadOptionsGenerator {
 
     fn offset(mut self, offset: &Option<TokenStream>) -> Self {
         if let Some(offset) = &offset {
-            // TODO: Rename `value` to `head`, everywhere this pattern is used
-            let value = &self.out;
+            let head = self.out;
             self.out = quote! {
-                #value
+                #head
                 #TEMP.offset = #offset;
             };
         }
@@ -208,9 +206,9 @@ impl ReadOptionsGenerator {
     fn variable_name(mut self, ident: &Ident) -> Self {
         if cfg!(feature = "debug_template") {
             let ident = ident.to_string();
-            let value = &self.out;
+            let head = self.out;
             self.out = quote! {
-                #value
+                #head
                 #TEMP.variable_name = Some(#ident);
             };
         }

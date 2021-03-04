@@ -45,9 +45,9 @@ impl <'input> StructGenerator<'input> {
 
     pub(super) fn add_assertions(mut self, extra_assertions: impl Iterator<Item = TokenStream>) -> Self {
         let assertions = get_assertions(&self.st.assertions).chain(extra_assertions);
-        let value = &self.out;
+        let head = self.out;
         self.out = quote! {
-            #value
+            #head
             #(#assertions)*
         };
 
@@ -79,9 +79,9 @@ impl <'input> StructGenerator<'input> {
             quote! { #return_type { #(#out_names),* } }
         };
 
-        let value = &self.out;
+        let head = self.out;
         self.out = quote! {
-            #value
+            #head
             Ok(#return_value)
         };
 
@@ -92,10 +92,10 @@ impl <'input> StructGenerator<'input> {
         if cfg!(feature = "debug_template") {
             let debug_tpl_start = debug_template::start(&ident);
             let debug_tpl_end = debug_template::end();
-            let value = &self.out;
+            let body = self.out;
             self.out = quote! {
                 #debug_tpl_start
-                #value
+                #body
                 #debug_tpl_end
             };
         }
@@ -153,7 +153,7 @@ impl <'field> AfterParseGenerator<'field> {
 
     fn call_after_parse(mut self, after_parse_fn: IdentStr, options_var: &Ident, args_var: &Ident) -> Self {
         let handle_error = debug_template::handle_error();
-        let value = &self.out;
+        let value = self.out;
         self.out = quote! {
             #after_parse_fn(#value, #READER, #options_var, #args_var.clone())#handle_error?;
         };
@@ -184,14 +184,14 @@ impl <'field> AfterParseGenerator<'field> {
 
     fn prefix_offset_options(mut self, options_var: &Ident) -> Self {
         if let Some(offset) = &self.field.offset_after {
-            let value = &self.out;
+            let tail = self.out;
             self.out = quote! {
                 let #options_var = &{
                     let mut #TEMP = *#options_var;
                     #TEMP.offset = #offset;
                     #TEMP
                 };
-                #value
+                #tail
             };
         }
 
@@ -201,10 +201,10 @@ impl <'field> AfterParseGenerator<'field> {
     fn wrap_condition(mut self) -> Self {
         if self.field.if_cond.is_some() {
             let ident = &self.field.ident;
-            let value = &self.out;
+            let body = self.out;
             self.out = quote! {
                 if let Some(#ident) = #ident.as_mut() {
-                    #value
+                    #body
                 }
             };
         }
@@ -230,9 +230,9 @@ impl <'field> FieldGenerator<'field> {
 
     fn append_assertions(mut self) -> Self {
         let assertions = get_assertions(&self.field.assertions);
-        let value = &self.out;
+        let head = self.out;
         self.out = quote! {
-            #value
+            #head
             #(#assertions)*
         };
 
@@ -240,9 +240,9 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn assign_to_var(mut self) -> Self {
-        let value = &self.out;
         let ident = &self.field.ident;
         let ty = &self.field.ty;
+        let value = self.out;
         self.out = quote! { let mut #ident: #ty = #value; };
 
         self
@@ -259,7 +259,7 @@ impl <'field> FieldGenerator<'field> {
                 .call_after_parse(after_parse, options_var, args_var)
                 .finish();
 
-            let value = &self.out;
+            let value = self.out;
             self.out = quote! {{
                 let mut #TEMP = #value;
                 #after_parse
@@ -290,11 +290,11 @@ impl <'field> FieldGenerator<'field> {
         };
 
         let ty = &self.field.ty;
-        let value = &self.out;
 
         self.out = match &self.field.map {
             Map::None => return self,
             Map::Map(map) => {
+                let value = self.out;
                 quote! {{
                     #coerce_fn
                     (__binread_coerce::<#ty, _, _>(#map))(#value)
@@ -302,6 +302,7 @@ impl <'field> FieldGenerator<'field> {
             },
             Map::Try(try_map) => {
                 // TODO: Position should always just be saved once for a field if used
+                let value = self.out;
                 quote! {{
                     let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
 
@@ -328,11 +329,11 @@ impl <'field> FieldGenerator<'field> {
                 .variable_name(&self.field.ident)
                 .count(&self.field.count)
                 .finish();
-            let value = &self.out;
+            let tail = self.out;
             self.out = quote! {
                 let #args_var = #args;
                 #options
-                #value
+                #tail
             };
         }
 
@@ -362,12 +363,13 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn try_conversion(mut self) -> Self {
-        let result = &self.out;
         if self.field.generated_value() {
             if self.field.do_try {
-                self.out = quote! { Some(#result) };
+                let value = self.out;
+                self.out = quote! { Some(#value) };
             }
         } else {
+            let result = self.out;
             self.out = if self.field.do_try {
                 quote! { #result.ok() }
             } else {
@@ -381,7 +383,7 @@ impl <'field> FieldGenerator<'field> {
 
     fn wrap_condition(mut self) -> Self {
         if let Some(cond) = &self.field.if_cond {
-            let value = &self.out;
+            let value = self.out;
             self.out = quote! {
                 if #cond {
                     Some(#value)
@@ -406,7 +408,7 @@ impl <'field> FieldGenerator<'field> {
         let seek_before = generate_seek_before(self.field);
         let seek_after = generate_seek_after(self.field);
         if !seek_before.is_empty() || !seek_after.is_empty() {
-            let value = &self.out;
+            let value = self.out;
             self.out = quote! {{
                 #seek_before
                 let #TEMP = #value;
