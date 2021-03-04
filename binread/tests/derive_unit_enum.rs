@@ -20,6 +20,25 @@ fn unit_enum_magic() {
 }
 
 #[test]
+fn unit_enum_magic_bytes() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(big)]
+    enum Test {
+        #[br(magic(b"zero"))]
+        Zero,
+        #[allow(dead_code)]
+        One,
+        #[br(magic(b"two0"))]
+        Two,
+    }
+
+    assert_eq!(Test::read(&mut Cursor::new(b"zero")).unwrap(), Test::Zero);
+    let error = Test::read(&mut Cursor::new(b"oops")).expect_err("accepted bad data");
+    assert!(matches!(error, binread::Error::NoVariantMatch { .. }));
+    assert_eq!(Test::read(&mut Cursor::new(b"two0")).unwrap(), Test::Two);
+}
+
+#[test]
 fn unit_enum_magic_pre_assert() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(big, import(allow_zero: bool, forbid_zero: bool))]

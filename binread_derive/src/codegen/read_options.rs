@@ -86,7 +86,7 @@ impl <'input> PreludeGenerator<'input> {
     fn add_magic_pre_assertion(mut self) -> Self {
         let magic = self.input.magic().as_ref().map(|magic| {
             let handle_error = debug_template::handle_error();
-            let magic = &magic.1;
+            let magic = magic.deref_value();
             quote! {
                 #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
             }

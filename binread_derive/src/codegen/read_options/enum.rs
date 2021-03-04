@@ -12,7 +12,7 @@ use super::{
 pub(super) fn generate_unit_enum(input: &Input, en: &UnitOnlyEnum) -> TokenStream {
     match &en.repr {
         Some(repr) => generate_unit_enum_repr(input, repr, &en.fields),
-        None => generate_unit_enum_magic(input, &en.fields),
+        None => generate_unit_enum_magic(input, en, &en.fields),
     }
 }
 
@@ -41,7 +41,7 @@ fn generate_unit_enum_repr(input: &Input, repr: &TokenStream, variants: &[UnitEn
     }
 }
 
-fn generate_unit_enum_magic(input: &Input, variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_magic(input: &Input, en: &UnitOnlyEnum, variants: &[UnitEnumField]) -> TokenStream {
     let prelude = PreludeGenerator::new(input)
         .add_imports()
         .add_options()
@@ -50,7 +50,7 @@ fn generate_unit_enum_magic(input: &Input, variants: &[UnitEnumField]) -> TokenS
     let matches = variants.iter().filter_map(|field| {
         if let Some(magic) = &field.magic {
             let ident = &field.ident;
-            let magic = &magic.1;
+            let magic = magic.match_value();
             let condition = if field.pre_assertions.is_empty() {
                 quote! { #magic }
             } else {
@@ -63,15 +63,13 @@ fn generate_unit_enum_magic(input: &Input, variants: &[UnitEnumField]) -> TokenS
         }
     });
 
+    let amp = en.expected_field_magic.as_ref().map(|magic| magic.add_ref());
+
     quote! {
         #prelude
-        match #READ_METHOD(#READER, #OPT, ())? {
+        match #amp#READ_METHOD(#READER, #OPT, ())? {
             #(#matches,)*
-            _ => {
-                Err(#BIN_ERROR::NoVariantMatch {
-                    pos: #POS as _
-                })
-            }
+            _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS as _ })
         }
     }
 }

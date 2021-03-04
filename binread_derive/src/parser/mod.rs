@@ -199,10 +199,14 @@ impl <T: KeywordToken> TrySet<bool> for T {
     }
 }
 
-impl <T: Into<To> + KeywordToken, To> TrySet<Option<To>> for T {
+// TODO: This sucks, it should not be impossible to get syn::Error
+impl <T: core::convert::TryInto<To, Error = E> + KeywordToken, E: core::fmt::Display, To> TrySet<Option<To>> for T {
     fn try_set(self, to: &mut Option<To>) -> syn::Result<()> {
         if to.is_none() {
-            *to = Some(self.into());
+            let err_span = self.keyword_span();
+            *to = Some(self.try_into().map_err(|error| {
+                syn::Error::new(err_span, format!("{}", error))
+            })?);
             Ok(())
         } else {
             Err(syn::Error::new(self.keyword_span(), format!("conflicting {} keyword", self.dyn_display())))
@@ -210,7 +214,7 @@ impl <T: Into<To> + KeywordToken, To> TrySet<Option<To>> for T {
     }
 }
 
-impl <T: std::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySet<Vec<To>> for T {
+impl <T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySet<Vec<To>> for T {
     fn try_set(self, to: &mut Vec<To>) -> syn::Result<()> {
         to.push(self.try_into()?);
         Ok(())

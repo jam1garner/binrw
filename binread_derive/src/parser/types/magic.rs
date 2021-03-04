@@ -1,60 +1,75 @@
+use core::convert::TryFrom;
 use crate::parser::{attrs, KeywordToken};
 use proc_macro2::TokenStream;
-use quote::ToTokens;
+use quote::{ToTokens, quote};
 use super::SpannedValue;
 use syn::Lit;
 
 #[derive(PartialEq, Clone, Debug)]
 pub(crate) enum Kind {
-    Str,
-    ByteStr,
-    Byte,
+    ByteStr(String),
     Char,
-    Int(String),
-    Float,
-    Bool,
-    Verbatim,
+    Numeric(String),
 }
 
 impl core::fmt::Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
-            Kind::Str => "string",
-            Kind::ByteStr => "byte string",
-            Kind::Byte => "byte",
             Kind::Char => "char",
-            Kind::Int(suffix) => suffix,
-            Kind::Float => "float",
-            Kind::Bool => "bool",
-            Kind::Verbatim => "raw token literal",
+            Kind::ByteStr(ty) | Kind::Numeric(ty) => ty,
         })
     }
 }
 
-pub(crate) type Magic = Option<SpannedValue<(Kind, TokenStream)>>;
+pub(crate) type Magic = Option<SpannedValue<Inner>>;
 
-impl From<attrs::Magic> for SpannedValue<(Kind, TokenStream)> {
-    fn from(magic: attrs::Magic) -> Self {
+#[derive(Clone, Debug)]
+pub(crate) struct Inner(Kind, TokenStream);
+
+impl Inner {
+    pub(crate) fn add_ref(&self) -> TokenStream {
+        match &self.0 {
+            Kind::ByteStr(_) => quote! { & },
+            _ => TokenStream::new(),
+        }
+    }
+
+    pub(crate) fn deref_value(&self) -> TokenStream {
+        match self.0 {
+            Kind::ByteStr(_) => {
+                let value = &self.1;
+                quote! { *#value }
+            },
+            _ => self.1.clone(),
+        }
+    }
+
+    pub(crate) fn kind(&self) -> &Kind {
+        &self.0
+    }
+
+    pub(crate) fn match_value(&self) -> &TokenStream {
+        &self.1
+    }
+}
+
+impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
+    type Error = syn::Error;
+
+    fn try_from(magic: attrs::Magic) -> Result<Self, Self::Error> {
         let value = &magic.value;
-        let value = (match &value {
-            Lit::Str(_) => Kind::Str,
-            Lit::ByteStr(_) => Kind::ByteStr,
-            Lit::Byte(_) => Kind::Byte,
-            Lit::Char(_) => Kind::Char,
-            Lit::Int(i) => Kind::Int(i.suffix().to_owned()),
-            Lit::Float(_) => Kind::Float,
-            Lit::Bool(_) => Kind::Bool,
-            Lit::Verbatim(_) => Kind::Verbatim
-        }, {
-            if let Lit::Str(_) | Lit::ByteStr(_) = value {
-                quote::quote! {
-                    *#magic
-                }
-            } else {
-                value.to_token_stream()
-            }
-        });
 
-        SpannedValue::new(value, magic.keyword_span())
+        let kind = match &value {
+            Lit::ByteStr(bytes) => Kind::ByteStr(format!("[u8; {}]", bytes.value().len())),
+            Lit::Byte(_) => Kind::Numeric("u8".to_owned()),
+            Lit::Char(_) => Kind::Char,
+            Lit::Int(i) => Kind::Numeric(i.suffix().to_owned()),
+            Lit::Float(f) => Kind::Numeric(f.suffix().to_owned()),
+            Lit::Str(_) | Lit::Bool(_) | Lit::Verbatim(_) => {
+                return Err(syn::Error::new(value.span(), "expected byte string, byte, char, float, or int"))
+            },
+        };
+
+        Ok(Self::new(Inner(kind, value.to_token_stream()), magic.keyword_span()))
     }
 }
