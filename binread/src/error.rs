@@ -92,31 +92,6 @@ where
     }
 }
 
-// pub fn assert_eq<R, B, E, A>(reader: &mut R, expected: B, error: Option<E>) -> BinResult<()>
-//     where B: BinRead<Args=()> + std::fmt::Debug + PartialEq,
-//           R: io::Read + io::Seek,
-//           A: core::fmt::Debug + 'static,
-//           E: Fn() -> A,
-// {
-//     let pos = reader.seek(SeekFrom::Current(0))? as usize;
-//     let val = B::read(reader)?;
-//     if val == expected {
-//         Ok(())
-//     } else {
-//         error.map(|err|{
-//             Err(Error::Custom {
-//                 pos,
-//                 err: Box::new(err())
-//             })
-//         }).unwrap_or_else(||{
-//             Err(Error::AssertFail {
-//                 pos,
-//                 message: "Assertion failed".into()
-//             })
-//         })
-//     }
-// }
-
 /// Assert a condition is true and if not optionally apply a function to generate the error
 pub fn assert<R, E, A>(reader: &mut R, test: bool, message: &str, error: Option<E>) -> BinResult<()>
 where
