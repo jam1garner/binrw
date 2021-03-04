@@ -9,16 +9,19 @@ use quote::quote;
 use sanitization::*;
 
 pub(crate) fn generate_impl(derive_input: &syn::DeriveInput, binread_input: &ParseResult<Input>) -> TokenStream {
+    // If there is a parsing error, a BinRead impl still needs to be
+    // generated to avoid misleading errors at all call sites that use the
+    // BinRead trait
     let (arg_type, read_opt_impl) = match binread_input {
         ParseResult::Ok(binread_input) => (
             binread_input.imports().types(),
             read_options::generate(&derive_input.ident, &binread_input),
         ),
-        // If there is a parsing error, a BinRead impl still needs to be
-        // generated to avoid misleading errors at all call sites that use the
-        // BinRead trait
-        ParseResult::Partial(_, error)
-        | ParseResult::Err(error) => (quote! { () }, error.to_compile_error()),
+        ParseResult::Partial(binread_input, error) => (
+            binread_input.imports().types(),
+            error.to_compile_error(),
+        ),
+        ParseResult::Err(error) => (quote! { () }, error.to_compile_error()),
     };
 
     let name = &derive_input.ident;
