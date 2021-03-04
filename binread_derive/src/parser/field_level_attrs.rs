@@ -26,10 +26,8 @@ attr_struct! {
         pub(crate) offset_after: Option<TokenStream>,
         #[from(If)]
         pub(crate) if_cond: Option<TokenStream>,
-        #[from(DerefNow)]
+        #[from(DerefNow, PostProcessNow)]
         pub(crate) deref_now: bool,
-        #[from(PostProcessNow)]
-        pub(crate) postprocess_now: bool,
         #[from(RestorePosition)]
         pub(crate) restore_position: bool,
         #[from(Try)]
@@ -58,6 +56,10 @@ impl StructField {
         matches!(self.read_mode, ReadMode::Normal) && !self.map.is_some()
     }
 
+    pub(crate) fn should_use_after_parse(&self) -> bool {
+        !self.deref_now
+    }
+
     pub(crate) fn generated_value(&self) -> bool {
         matches!(self.read_mode, ReadMode::Calc(_) | ReadMode::Default)
     }
@@ -81,7 +83,6 @@ impl FromField for StructField {
             offset_after: <_>::default(),
             if_cond: <_>::default(),
             deref_now: <_>::default(),
-            postprocess_now: <_>::default(),
             restore_position: <_>::default(),
             do_try: <_>::default(),
             temp: <_>::default(),

@@ -105,9 +105,7 @@ impl <'input> StructGenerator<'input> {
 }
 
 fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
-    if field.deref_now || field.postprocess_now {
-        None
-    } else {
+    if field.should_use_after_parse() {
         get_after_parse_handler(&field).map(|after_parse_fn| {
             let args_var = make_ident(&field.ident, "args");
             let options_var = make_ident(&field.ident, "options");
@@ -118,6 +116,8 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
                 .prefix_offset_options(&options_var)
                 .finish()
         })
+    } else {
+        None
     }
 }
 
@@ -249,7 +249,7 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn deref_now(mut self, options_var: &Ident, args_var: &Ident) -> Self {
-        if !self.field.deref_now && !self.field.postprocess_now {
+        if self.field.should_use_after_parse() {
             return self;
         }
 
