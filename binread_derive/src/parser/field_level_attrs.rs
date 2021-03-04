@@ -41,7 +41,7 @@ attr_struct! {
         #[from(Temp)]
         pub(crate) temp: bool,
         #[from(Assert)]
-        pub(crate) assert: Vec<Assert>,
+        pub(crate) assertions: Vec<Assert>,
         #[from(PadBefore)]
         pub(crate) pad_before: Option<TokenStream>,
         #[from(PadAfter)]
@@ -83,7 +83,7 @@ impl FromField for StructField {
             restore_position: <_>::default(),
             do_try: <_>::default(),
             temp: <_>::default(),
-            assert: <_>::default(),
+            assertions: <_>::default(),
             pad_before: <_>::default(),
             pad_after: <_>::default(),
             align_before: <_>::default(),
@@ -103,7 +103,7 @@ attr_struct! {
         #[from(Magic)]
         pub(crate) magic: Magic,
         #[from(PreAssert)]
-        pub(crate) pre_assert: Vec<Assert>,
+        pub(crate) pre_assertions: Vec<Assert>,
     }
 }
 
@@ -114,7 +114,7 @@ impl FromField for UnitEnumField {
         Self::set_from_attrs(Self {
             ident: field.ident.clone(),
             magic: <_>::default(),
-            pre_assert: <_>::default(),
+            pre_assertions: <_>::default(),
         }, &field.attrs)
     }
 }

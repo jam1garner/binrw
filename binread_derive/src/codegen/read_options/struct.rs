@@ -44,7 +44,7 @@ impl <'input> StructGenerator<'input> {
     }
 
     pub(super) fn add_assertions(mut self, extra_assertions: impl Iterator<Item = TokenStream>) -> Self {
-        let assertions = get_assertions(&self.st.assert).chain(extra_assertions);
+        let assertions = get_assertions(&self.st.assertions).chain(extra_assertions);
         let value = &self.out;
         self.out = quote! {
             #value
@@ -229,7 +229,7 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn append_assertions(mut self) -> Self {
-        let assertions = get_assertions(&self.field.assert);
+        let assertions = get_assertions(&self.field.assertions);
         let value = &self.out;
         self.out = quote! {
             #value

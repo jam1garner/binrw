@@ -92,21 +92,21 @@ impl <'input> PreludeGenerator<'input> {
                 #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
             }
         });
-        let pre_asserts = get_assertions(&self.input.pre_assert());
+        let pre_assertions = get_assertions(&self.input.pre_assertions());
         let value = &self.out;
 
         self.out = quote! {
             #value
             #magic
-            #(#pre_asserts)*
+            #(#pre_assertions)*
         };
 
         self
     }
 }
 
-fn get_assertions(asserts: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
-    asserts.iter().map(|Assert(assert, error)| {
+fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
+    assertions.iter().map(|Assert(assert, error)| {
         let handle_error = debug_template::handle_error();
         let error = error.as_ref().map_or_else(
             || quote! { None::<fn() -> ()> },

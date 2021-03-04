@@ -51,11 +51,11 @@ fn generate_unit_enum_magic(input: &Input, variants: &[UnitEnumField]) -> TokenS
         if let Some(magic) = &field.magic {
             let ident = &field.ident;
             let magic = &magic.1;
-            let condition = if field.pre_assert.is_empty() {
+            let condition = if field.pre_assertions.is_empty() {
                 quote! { #magic }
             } else {
-                let pre_asserts = field.pre_assert.iter().map(|assert| &assert.0);
-                quote! { #magic if true #(&& (#pre_asserts))* }
+                let pre_assertions = field.pre_assertions.iter().map(|assert| &assert.0);
+                quote! { #magic if true #(&& (#pre_assertions))* }
             };
             Some(quote! { #condition => Ok(Self::#ident) })
         } else {
@@ -141,7 +141,7 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
         EnumVariant::Variant { ident, options } => {
             StructGenerator::new(&input, &options)
                 .read_fields()
-                .add_assertions(get_assertions(&en.assert))
+                .add_assertions(get_assertions(&en.assertions))
                 .return_value(Some(ident))
                 .finish()
         },

@@ -47,9 +47,9 @@ impl Input {
     pub(crate) fn imports(&self) -> &Imports {
         match self {
             Input::Struct(s)
-            | Input::UnitStruct(s) => &s.import,
-            Input::Enum(e) => &e.import,
-            Input::UnitOnlyEnum(e) => &e.import,
+            | Input::UnitStruct(s) => &s.imports,
+            Input::Enum(e) => &e.imports,
+            Input::UnitOnlyEnum(e) => &e.imports,
         }
     }
 
@@ -88,11 +88,11 @@ impl Input {
         }
     }
 
-    pub(crate) fn pre_assert(&self) -> &Vec<Assert> {
+    pub(crate) fn pre_assertions(&self) -> &Vec<Assert> {
         match self {
             Input::Struct(s)
-            | Input::UnitStruct(s) => &s.pre_assert,
-            Input::Enum(e) => &e.pre_assert,
+            | Input::UnitStruct(s) => &s.pre_assertions,
+            Input::Enum(e) => &e.pre_assertions,
             Input::UnitOnlyEnum(_) => unimplemented!("`Input::pre_assert()` called on unit enum"),
         }
     }
@@ -109,13 +109,13 @@ attr_struct! {
         #[from(Magic)]
         pub(crate) magic: Magic,
         #[from(Import, ImportTuple)]
-        pub(crate) import: Imports,
+        pub(crate) imports: Imports,
         #[from(Assert)]
-        pub(crate) assert: Vec<Assert>,
+        pub(crate) assertions: Vec<Assert>,
         // TODO: Are Magic and PreAssert conflicting preconditions? Is PreAssert
         // only for enum variants?
         #[from(PreAssert)]
-        pub(crate) pre_assert: Vec<Assert>,
+        pub(crate) pre_assertions: Vec<Assert>,
         pub(crate) fields: Vec<StructField>,
     }
 }
@@ -156,16 +156,16 @@ attr_struct! {
         #[from(Magic)]
         pub(crate) magic: Magic,
         #[from(Import, ImportTuple)]
-        pub(crate) import: Imports,
+        pub(crate) imports: Imports,
         // TODO: Does this make sense? It is not known what properties will
         // exist in order to construct a valid variant. The assertions all get
         // copied and used as if they were applied to each variant in the enum,
         // so the only way this ever works is if every variant contains the same
         // properties being checked by the assertion.
         #[from(Assert)]
-        pub(crate) assert: Vec<Assert>,
+        pub(crate) assertions: Vec<Assert>,
         #[from(PreAssert)]
-        pub(crate) pre_assert: Vec<Assert>,
+        pub(crate) pre_assertions: Vec<Assert>,
         #[from(ReturnAllErrors, ReturnUnexpectedError)]
         pub(crate) error_mode: EnumErrorMode,
         pub(crate) variants: Vec<EnumVariant>,
@@ -186,8 +186,8 @@ impl Enum {
                     out.magic = options.magic.clone();
                 }
 
-                out.pre_assert.extend_from_slice(&options.pre_assert);
-                out.assert.extend_from_slice(&options.assert);
+                out.pre_assertions.extend_from_slice(&options.pre_assertions);
+                out.assertions.extend_from_slice(&options.assertions);
             },
 
             EnumVariant::Unit(options) => {
@@ -195,7 +195,7 @@ impl Enum {
                     out.magic = options.magic.clone();
                 }
 
-                out.pre_assert.extend_from_slice(&options.pre_assert);
+                out.pre_assertions.extend_from_slice(&options.pre_assertions);
             }
         }
 
@@ -223,7 +223,7 @@ attr_struct! {
         #[from(Magic)]
         pub(crate) magic: Magic,
         #[from(Import, ImportTuple)]
-        pub(crate) import: Imports,
+        pub(crate) imports: Imports,
         #[from(Repr)]
         pub(crate) repr: Option<SpannedValue<TokenStream>>,
         pub(crate) fields: Vec<UnitEnumField>,
