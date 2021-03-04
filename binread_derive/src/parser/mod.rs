@@ -244,9 +244,9 @@ mod tests {
         };
     );
 
-    try_error!(conflicting_keyword_bool: "conflicting `ignore` keyword" {
+    try_error!(conflicting_keyword_bool: "conflicting `restore_position` keyword" {
         struct Foo {
-            #[br(ignore, ignore)]
+            #[br(restore_position, restore_position)]
             a: i32,
         }
     });
@@ -287,6 +287,13 @@ mod tests {
             a: i32,
             #[br(args(a), args_tuple = (a, ))]
             b: i32,
+        }
+    });
+
+    try_error!(conflicting_keyword_read_mode: "conflicting read mode keyword" {
+        struct Foo {
+            #[br(calc(1), default, ignore, parse_with = u8)]
+            a: i32,
         }
     });
 

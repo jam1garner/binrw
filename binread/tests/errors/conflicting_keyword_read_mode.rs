@@ -2,7 +2,7 @@ use binread::BinRead;
 
 #[derive(BinRead)]
 struct Foo {
-    #[br(restore_position, restore_position)]
+    #[br(calc(1), default, ignore, parse_with = u8)]
     a: i32,
 }
 

@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use super::{FromAttrs, FromField, FromInput, ParseResult, Struct, TrySet, types::{Assert, CondEndian, Magic, Map, PassedArgs}};
+use super::{FromAttrs, FromField, FromInput, ParseResult, Struct, TrySet, types::{Assert, CondEndian, Magic, Map, PassedArgs, ReadMode}};
 
 attr_struct! {
     #[from(StructFieldAttr)]
@@ -16,12 +16,8 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(Args, ArgsTuple)]
         pub(crate) args: PassedArgs,
-        #[from(Ignore)]
-        pub(crate) ignore: bool,
-        #[from(Default)]
-        pub(crate) default: bool,
-        #[from(Calc)]
-        pub(crate) calc: Option<TokenStream>,
+        #[from(Calc, Default, Ignore, ParseWith)]
+        pub(crate) read_mode: ReadMode,
         #[from(Count)]
         pub(crate) count: Option<TokenStream>,
         #[from(Offset)]
@@ -54,8 +50,16 @@ attr_struct! {
         pub(crate) seek_before: Option<TokenStream>,
         #[from(PadSizeTo)]
         pub(crate) pad_size_to: Option<TokenStream>,
-        #[from(ParseWith)]
-        pub(crate) parse_with: Option<TokenStream>,
+    }
+}
+
+impl StructField {
+    pub(crate) fn can_call_after_parse(&self) -> bool {
+        matches!(self.read_mode, ReadMode::Normal) && !self.map.is_some()
+    }
+
+    pub(crate) fn generated_value(&self) -> bool {
+        matches!(self.read_mode, ReadMode::Calc(_) | ReadMode::Default)
     }
 }
 
@@ -71,9 +75,7 @@ impl FromField for StructField {
             map: <_>::default(),
             magic: <_>::default(),
             args: <_>::default(),
-            ignore: <_>::default(),
-            default: <_>::default(),
-            calc: <_>::default(),
+            read_mode: <_>::default(),
             count: <_>::default(),
             offset: <_>::default(),
             offset_after: <_>::default(),
@@ -90,7 +92,6 @@ impl FromField for StructField {
             align_after: <_>::default(),
             seek_before: <_>::default(),
             pad_size_to: <_>::default(),
-            parse_with: <_>::default(),
         }, &field.attrs)
     }
 }

@@ -46,7 +46,7 @@ fn all_the_things() {
         #[br(if(offsets.0 == 0x20))]
         name: Option<FilePtr<u32, NullString>>,
 
-        #[br(ignore)]
+        #[br(calc(extra_val))]
         extra_val: u8,
     }
 
@@ -140,6 +140,30 @@ fn empty_imports() {
 
     let result = Test::read(&mut Cursor::new(b"\x01")).unwrap();
     assert_eq!(result, Test { a: 1 });
+}
+
+#[test]
+fn ignore_and_default() {
+    #[derive(Debug, Eq, PartialEq)]
+    struct One(u8);
+    impl Default for One {
+        fn default() -> Self {
+            Self(1)
+        }
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(big)]
+    struct Test {
+        a: u8,
+        #[br(default)]
+        b: One,
+        #[br(ignore)]
+        c: One,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\x02")).unwrap();
+    assert_eq!(result, Test { a: 2, b: <_>::default(), c: <_>::default() });
 }
 
 #[test]

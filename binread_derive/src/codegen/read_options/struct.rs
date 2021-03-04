@@ -1,6 +1,6 @@
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{Input, Map, PassedArgs, Struct, StructField};
+use crate::parser::{Input, Map, PassedArgs, ReadMode, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::quote;
 use super::{PreludeGenerator, ReadOptionsGenerator, debug_template, get_assertions};
@@ -241,11 +241,9 @@ impl <'field> FieldGenerator<'field> {
 
     fn assign_to_var(mut self) -> Self {
         let value = &self.out;
-        if !self.field.ignore {
-            let ident = &self.field.ident;
-            let ty = &self.field.ty;
-            self.out = quote! { let mut #ident: #ty = #value; };
-        };
+        let ident = &self.field.ident;
+        let ty = &self.field.ty;
+        self.out = quote! { let mut #ident: #ty = #value; };
 
         self
     }
@@ -342,25 +340,21 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn read_value(mut self, options_var: &Ident, args_var: &Ident) -> Self {
-        // TODO: Parser needs to ensure invalid combinations of properties are
-        // not used. ignore, default, parse_with, calc = cannot be combined!
-        self.out = if self.field.ignore {
-            return self;
-        } else if self.field.default {
-            quote! { <_>::default() }
-        } else if let Some(ref expr) = self.field.calc {
-            quote! { #expr }
-        } else {
-            let read_method = if let Some(parser) = &self.field.parse_with {
-                parser.clone()
-            } else {
-                quote! { #READ_METHOD }
-            };
+        self.out = match &self.field.read_mode {
+            ReadMode::Default => quote! { <_>::default() },
+            ReadMode::Calc(calc) => quote! { #calc },
+            ReadMode::Normal | ReadMode::ParseWith(_) => {
+                let read_method = if let ReadMode::ParseWith(parser) = &self.field.read_mode {
+                    parser.clone()
+                } else {
+                    quote! { #READ_METHOD }
+                };
 
-            self.emit_options_vars = true;
+                self.emit_options_vars = true;
 
-            quote! {
-                #read_method(#READER, #options_var, #args_var.clone())
+                quote! {
+                    #read_method(#READER, #options_var, #args_var.clone())
+                }
             }
         };
 
@@ -369,8 +363,9 @@ impl <'field> FieldGenerator<'field> {
 
     fn try_conversion(mut self) -> Self {
         let result = &self.out;
-        // TODO: Collapse these conditions into Field struct
-        if self.field.ignore || self.field.default || self.field.calc.is_some() {
+        if self.field.generated_value() {
+            // TODO: This condition does not make a lot of sense. If the value
+            // was generated, then there is no way it could have failed.
             if self.field.do_try {
                 self.out = quote! { Some(#result) };
             }
@@ -481,12 +476,7 @@ fn generate_seek_before(field: &StructField) -> TokenStream {
 }
 
 fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
-    // TODO: why is map listed here?
-    let skip_after_parse =
-        field.map.is_some() || field.ignore || field.default ||
-        field.calc.is_some() || field.parse_with.is_some();
-
-    if skip_after_parse {
+    if !field.can_call_after_parse() {
         None
     } else if field.do_try {
         Some(AFTER_PARSE_TRY)

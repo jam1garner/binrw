@@ -1,5 +1,5 @@
-error: conflicting `ignore` keyword
- --> $DIR/conflicting_keyword_bool.rs:5:18
+error: conflicting `restore_position` keyword
+ --> $DIR/conflicting_keyword_bool.rs:5:28
   |
-5 |     #[br(ignore, ignore)]
-  |                  ^^^^^^
+5 |     #[br(restore_position, restore_position)]
+  |                            ^^^^^^^^^^^^^^^^
