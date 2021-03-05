@@ -308,7 +308,7 @@ mod tests {
     });
 
     try_error!(invalid_assert_args: "too many arguments" {
-        #[br(assert(false, "message", "too", "many", "arguments"))]
+        #[br(assert(false, String::from("message"), "too", "many", "arguments"))]
         struct Foo;
     });
 

@@ -54,7 +54,7 @@ fn generate_unit_enum_magic(input: &Input, en: &UnitOnlyEnum, variants: &[UnitEn
             let condition = if field.pre_assertions.is_empty() {
                 quote! { #magic }
             } else {
-                let pre_assertions = field.pre_assertions.iter().map(|assert| &assert.0);
+                let pre_assertions = field.pre_assertions.iter().map(|assert| &assert.condition);
                 quote! { #magic if true #(&& (#pre_assertions))* }
             };
             Some(quote! { #condition => Ok(Self::#ident) })

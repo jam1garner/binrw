@@ -128,6 +128,10 @@ use alloc::{
     string::String,
 };
 
+#[doc(hidden)]
+#[path = "private.rs"]
+pub mod __private;
+
 pub mod io;
 pub mod error;
 pub mod endian;

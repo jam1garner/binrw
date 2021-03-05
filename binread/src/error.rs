@@ -93,6 +93,7 @@ where
 }
 
 /// Assert a condition is true and if not optionally apply a function to generate the error
+#[deprecated]
 pub fn assert<R, E, A>(reader: &mut R, test: bool, message: &str, error: Option<E>) -> BinResult<()>
 where
     R: io::Read + io::Seek,

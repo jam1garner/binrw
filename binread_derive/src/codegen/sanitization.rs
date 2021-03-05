@@ -41,7 +41,8 @@ ident_str! {
     pub(super) ARGS = "__binread_generated_var_arguments";
     pub(super) SAVED_POSITION = "__binread_generated_saved_position";
     pub(super) ASSERT_MAGIC = from_crate!(error::magic);
-    pub(super) ASSERT = from_crate!(error::assert);
+    pub(super) ASSERT = from_crate!(__private::assert);
+    pub(super) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
     pub(super) AFTER_PARSE_TRY = from_crate!(error::try_after_parse);
     pub(super) TEMP = "__binread_temp";
     pub(super) POS = "__binread_generated_position_temp";

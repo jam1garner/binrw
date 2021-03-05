@@ -2,7 +2,7 @@ mod debug_template;
 mod r#enum;
 mod r#struct;
 
-use crate::parser::{Assert, CondEndian, Endian, Input, Map};
+use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Map};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use r#enum::{generate_data_enum, generate_unit_enum};
@@ -105,15 +105,22 @@ impl <'input> PreludeGenerator<'input> {
 }
 
 fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
-    assertions.iter().map(|Assert(assert, error)| {
+    assertions.iter().map(|Assert { condition, consequent }| {
         let handle_error = debug_template::handle_error();
-        let error = error.as_ref().map_or_else(
-            || quote! { None::<fn() -> ()> },
-            |error| quote! { Some(|| { #error }) }
-        );
-        let assert_string = assert.to_string();
+
+        let error_fn = match &consequent {
+            Some(AssertionError::Message(message)) =>
+                quote! { #ASSERT_ERROR_FN::<_, fn() -> ()>::Message(|| { #message }) },
+            Some(AssertionError::Error(error)) =>
+                quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) },
+            None => {
+                let condition = condition.to_string();
+                quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> ()>(|| { #condition }) }
+            },
+        };
+
         quote! {
-            #ASSERT(#READER, #assert, #assert_string, #error)#handle_error?;
+            #ASSERT(#condition, #POS, #error_fn)#handle_error?;
         }
     })
 }

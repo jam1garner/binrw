@@ -65,10 +65,7 @@ fn assert() {
     let error = Test::read(&mut Cursor::new("\0")).expect_err("accepted bad data");
     match error {
         binread::Error::AssertFail { pos, message } => {
-            // TODO: This position is wrong, but fixing it requires a breaking API
-            // change to `binread::error::assert` since the position of the initial read
-            // must be passed as an argument.
-            assert_eq!(pos, 1);
+            assert_eq!(pos, 0);
             assert_eq!(message, "a == 1");
         },
         _ => panic!("bad error type"),
@@ -90,6 +87,25 @@ fn assert_custom_err() {
     let error = Test::read(&mut Cursor::new("\x02")).expect_err("accepted bad data");
     let error = error.custom_err::<Oops>().expect("bad error type");
     assert_eq!(error.0, 2);
+}
+
+#[test]
+fn assert_formatted() {
+    #[derive(BinRead, Debug)]
+    struct Test {
+        #[br(assert(a == 1, "a was {}", a))]
+        a: u8,
+    }
+
+    Test::read(&mut Cursor::new("\x01")).unwrap();
+    let error = Test::read(&mut Cursor::new("\0")).expect_err("accepted bad data");
+    match error {
+        binread::Error::AssertFail { pos, message } => {
+            assert_eq!(pos, 0);
+            assert_eq!(message, "a was 0");
+        },
+        _ => panic!("bad error type"),
+    }
 }
 
 #[test]
