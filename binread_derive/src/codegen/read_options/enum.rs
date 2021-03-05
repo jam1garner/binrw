@@ -35,7 +35,7 @@ fn generate_unit_enum_repr(input: &Input, repr: &TokenStream, variants: &[UnitEn
         let #TEMP: #repr = #READ_METHOD(#READER, #OPT, ())?;
         #(#clauses else)* {
             Err(#BIN_ERROR::NoVariantMatch {
-                pos: #POS as _,
+                pos: #POS,
             })
         }
     }
@@ -69,7 +69,7 @@ fn generate_unit_enum_magic(input: &Input, en: &UnitOnlyEnum, variants: &[UnitEn
         #prelude
         match #amp#READ_METHOD(#READER, #OPT, ())? {
             #(#matches,)*
-            _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS as _ })
+            _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS })
         }
     }
 }
@@ -84,7 +84,7 @@ pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
         },
         quote! {
             Err(#BIN_ERROR::EnumErrors {
-                pos: #POS as _,
+                pos: #POS,
                 variant_errors: #ERROR_BASKET
             })
         }
@@ -92,7 +92,7 @@ pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
         TokenStream::new(),
         quote! {
             Err(#BIN_ERROR::NoVariantMatch {
-                pos: #POS as _
+                pos: #POS
             })
         }
     )};

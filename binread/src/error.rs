@@ -7,28 +7,28 @@ pub enum Error {
     /// The magic value did not match the provided one
     BadMagic {
         // Position in number of bytes from the start of the reader
-        pos: usize,
+        pos: u64,
         // The value found. Use [`Any::downcast_ref`](core::any::Any::downcast_ref) to access
         found: Box<dyn Any + Sync + Send>,
     },
     /// The condition of an assertion without a custom type failed
     AssertFail {
-        pos: usize,
+        pos: u64,
         message: String
     },
     /// An error that occured while reading from, or seeking within, the reader
     Io(io::Error),
     /// A custom error, most often given from the second value passed into an [`assert`](attribute#Assert)
     Custom {
-        pos: usize,
+        pos: u64,
         err: Box<dyn Any + Sync + Send>,
     },
     /// No variant in the enum was successful in parsing the data
     NoVariantMatch {
-        pos: usize
+        pos: u64
     },
     EnumErrors {
-        pos: usize,
+        pos: u64,
         variant_errors: Vec<(/*variant name*/ &'static str, Error)>,
     }
 }
@@ -86,7 +86,7 @@ where
         Ok(())
     } else {
         Err(Error::BadMagic {
-            pos: pos as usize,
+            pos,
             found: Box::new(val) as _
         })
     }
@@ -100,7 +100,7 @@ where
     A: core::fmt::Debug + Sync + Send + 'static,
     E: Fn() -> A,
 {
-    let pos = reader.seek(SeekFrom::Current(0))? as usize;
+    let pos = reader.seek(SeekFrom::Current(0))?;
     if test {
         Ok(())
     } else {

@@ -309,7 +309,7 @@ impl <'field> FieldGenerator<'field> {
                     #coerce_fn
                     (__binread_coerce::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value).map_err(|e| {
                         #BIN_ERROR::Custom {
-                            pos: #SAVED_POSITION as _,
+                            pos: #SAVED_POSITION,
                             err: Box::new(e) as _,
                         }
                     })?

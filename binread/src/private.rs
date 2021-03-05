@@ -16,8 +16,8 @@ where
         Ok(())
     } else {
         Err(match error_fn {
-            AssertErrorFn::Message(error_fn) => Error::AssertFail { pos: pos as _, message: error_fn().into() },
-            AssertErrorFn::Error(error_fn) => Error::Custom { pos: pos as _, err: Box::new(error_fn()) },
+            AssertErrorFn::Message(error_fn) => Error::AssertFail { pos, message: error_fn().into() },
+            AssertErrorFn::Error(error_fn) => Error::Custom { pos, err: Box::new(error_fn()) },
         })
     }
 }
