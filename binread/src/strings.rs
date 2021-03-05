@@ -5,6 +5,8 @@ use super::*;
 //     ffi::CString,
 // };
 
+#[cfg(not(feature = "std"))]
+use alloc::{string::{String, ToString}, vec};
 use core::num::{NonZeroU8, NonZeroU16};
 
 /*
@@ -185,7 +187,7 @@ impl fmt::Debug for NullWideString {
     }
 }
 
-impl std::ops::Deref for NullString {
+impl core::ops::Deref for NullString {
     type Target = Vec<u8>;
 
     fn deref(&self) -> &Self::Target {
@@ -193,7 +195,7 @@ impl std::ops::Deref for NullString {
     }
 }
 
-impl std::ops::Deref for NullWideString {
+impl core::ops::Deref for NullWideString {
     type Target = Vec<u16>;
 
     fn deref(&self) -> &Self::Target {

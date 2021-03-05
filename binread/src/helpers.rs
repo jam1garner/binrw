@@ -1,3 +1,5 @@
+#[cfg(not(feature = "std"))]
+use alloc::{vec, vec::Vec};
 use crate::{BinResult, ReadOptions, io::{Read, Seek}};
 
 /// A helper for more efficiently mass-reading bytes

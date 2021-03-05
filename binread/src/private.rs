@@ -1,3 +1,5 @@
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, string::String};
 use crate::{BinRead, BinResult, Error, ReadOptions, io};
 
 pub enum AssertErrorFn<M, E> {

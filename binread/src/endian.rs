@@ -1,5 +1,8 @@
 //! An enum to represent what endianness to read as
 
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
+
 /// An enum to represent what endianness to read as
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Endian {

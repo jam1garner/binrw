@@ -1,6 +1,8 @@
 //! A module for [`Punctuated<T, P>`](Punctuated), a series of items to parse of type T separated
 //! by punction of type `P`.
 
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 use core::fmt;
 use crate::io::{Read, Seek};
 use crate::{BinRead, ReadOptions, BinResult};

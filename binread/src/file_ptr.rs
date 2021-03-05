@@ -26,7 +26,7 @@
 //!
 //! Use `offset` to change what the pointer is relative to (default: beginning of reader).
 use super::*;
-use std::fmt;
+use core::fmt;
 use core::ops::{Deref, DerefMut};
 
 /// A wrapper type for representing a layer of indirection within a file.

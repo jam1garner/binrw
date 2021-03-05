@@ -29,8 +29,7 @@
 //! a type from bytes and is already implemented for most primitives and simple collections.
 //!
 //! ```rust
-//! use binread::BinRead;
-//! use std::io::Cursor;
+//! use binread::{BinRead, io::Cursor};
 //!
 //! let mut reader = Cursor::new(b"\0\0\0\x01");
 //! let val = u32::read(&mut reader).unwrap();
@@ -237,7 +236,7 @@ pub trait BinRead: Sized {
 /// ```rust
 /// use binread::prelude::*; // BinReadExt is in the prelude
 /// use binread::endian::LE;
-/// use std::io::Cursor;
+/// use binread::io::Cursor;
 ///
 /// let mut reader = Cursor::new(b"\x07\0\0\0\xCC\0\0\x05");
 /// let x: u32 = reader.read_le().unwrap();
