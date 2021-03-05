@@ -113,6 +113,7 @@
 //! this is to bound `<T as BinRead>::Args` to `()` (no arguments), however it is also possible to
 //! either accept a specific set of arguments or be generic over the given arguments.
 #![cfg_attr(not(feature="std"), no_std)]
+#![warn(rust_2018_idioms)]
 
 #[cfg(feature = "std")]
 use std as alloc;

@@ -30,7 +30,7 @@ pub trait Read {
         Err(Error::new(ErrorKind::UnexpectedEof, "Out of bytes in reader"))
     }
 
-    fn iter_bytes(&mut self) -> Bytes<Self>
+    fn iter_bytes(&mut self) -> Bytes<'_, Self>
         where Self: Sized,
     {
         Bytes {

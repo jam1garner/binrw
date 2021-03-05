@@ -56,7 +56,7 @@ impl<T> core::ops::DerefMut for PosValue<T> {
 }
 
 impl<T: fmt::Debug> fmt::Debug for PosValue<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.val.fmt(f)
     }
 }

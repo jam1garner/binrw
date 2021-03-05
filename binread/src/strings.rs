@@ -176,13 +176,13 @@ impl BinRead for NullString {
 use core::fmt;
 
 impl fmt::Debug for NullString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "NullString({:?})", self.clone().into_string())
     }
 }
 
 impl fmt::Debug for NullWideString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "NullWideString({:?})", self.clone().into_string())
     }
 }

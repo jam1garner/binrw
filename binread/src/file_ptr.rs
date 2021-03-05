@@ -199,7 +199,7 @@ impl<Ptr, BR> fmt::Debug for FilePtr<Ptr, BR>
     where Ptr: BinRead<Args = ()> + IntoSeekFrom,
           BR: BinRead + fmt::Debug,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref value) = self.value {
             fmt::Debug::fmt(value, f)
         } else {
