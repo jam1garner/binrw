@@ -22,6 +22,15 @@ where
     }
 }
 
+// This validates the map function return value by trying to coerce it into
+// a function with the expected return type. If this is not done, the
+// compiler will emit the diagnostic on the `#[derive(BinRead)]` attribute
+// instead of the return statement of the map function. The simpler approach
+// of assigning the map function to a variable with a function pointer type
+// does not work for capturing closures since they are not compatible with
+// that type.
+pub fn coerce_fn<R, T, F>(f: F) -> F where F: Fn(T) -> R { f }
+
 pub fn try_after_parse<Reader, ValueType, ArgType>(
     item: &mut Option<ValueType>,
     reader: &mut Reader,

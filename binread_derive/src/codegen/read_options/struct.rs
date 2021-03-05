@@ -275,30 +275,13 @@ impl <'field> FieldGenerator<'field> {
     }
 
     fn map_value(mut self) -> Self {
-        // TODO: Coerce function should just be emitted once, or put into the
-        // binread library instead
-
-        // This validates the map function return value by trying to coerce it into
-        // a function with the expected return type. If this is not done, the
-        // compiler will emit the diagnostic on the `#[derive(BinRead)]` attribute
-        // instead of the return statement of the map function. The simpler approach
-        // of assigning the map function to a variable with a function pointer type
-        // does not work for capturing closures since they are not compatible with
-        // that type.
-        let coerce_fn = quote! {
-            fn __binread_coerce<R, T, F>(f: F) -> F where F: Fn(T) -> R { f }
-        };
-
         let ty = &self.field.ty;
 
         self.out = match &self.field.map {
             Map::None => return self,
             Map::Map(map) => {
                 let value = self.out;
-                quote! {{
-                    #coerce_fn
-                    (__binread_coerce::<#ty, _, _>(#map))(#value)
-                }}
+                quote! { (#COERCE_FN::<#ty, _, _>(#map))(#value) }
             },
             Map::Try(try_map) => {
                 // TODO: Position should always just be saved once for a field if used
@@ -306,8 +289,7 @@ impl <'field> FieldGenerator<'field> {
                 quote! {{
                     let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
 
-                    #coerce_fn
-                    (__binread_coerce::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value).map_err(|e| {
+                    (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value).map_err(|e| {
                         #BIN_ERROR::Custom {
                             pos: #SAVED_POSITION,
                             err: Box::new(e) as _,

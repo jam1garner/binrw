@@ -43,6 +43,7 @@ ident_str! {
     pub(super) ASSERT_MAGIC = from_crate!(error::magic);
     pub(super) ASSERT = from_crate!(__private::assert);
     pub(super) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
+    pub(super) COERCE_FN = from_crate!(__private::coerce_fn);
     pub(super) TRY_AFTER_PARSE = from_crate!(__private::try_after_parse);
     pub(super) TEMP = "__binread_temp";
     pub(super) POS = "__binread_generated_position_temp";
