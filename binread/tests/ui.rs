@@ -7,7 +7,7 @@
 // these tests all the time makes sense.
 #[rustversion::nightly]
 #[test]
-fn errors() {
+fn ui() {
     let t = trybuild::TestCases::new();
-    t.compile_fail("tests/errors/*.rs");
+    t.compile_fail("tests/ui/*.rs");
 }
