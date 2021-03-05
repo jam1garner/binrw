@@ -479,7 +479,7 @@ fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
     if !field.can_call_after_parse() {
         None
     } else if field.do_try {
-        Some(AFTER_PARSE_TRY)
+        Some(TRY_AFTER_PARSE)
     } else {
         Some(AFTER_PARSE)
     }

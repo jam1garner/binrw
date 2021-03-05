@@ -33,6 +33,18 @@ pub enum Error {
     }
 }
 
+impl Error {
+    /// Gets a custom error of type T from the Error. Returns `None` if the error type is not
+    /// custom or if the contained error is not of the desired type.
+    pub fn custom_err<T: Any>(&self) -> Option<&T> {
+        if let Error::Custom { err, .. } = self {
+            err.downcast_ref()
+        } else {
+            None
+        }
+    }
+}
+
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
         Self::Io(err)
@@ -118,28 +130,6 @@ where
     }
 }
 
-#[doc(hidden)]
-/// A replacement for [`BinRead::after_parse`](BinRead::after_parse) that runs after_parse only if
-/// a value is present.
-///
-/// **Intended for internal use only**
-pub fn try_after_parse<Reader, ValueType, ArgType>(
-    item: &mut Option<ValueType>,
-    reader: &mut Reader,
-    ro: &ReadOptions,
-    args: ArgType,
-) -> BinResult<()>
-    where Reader: Read + Seek,
-          ValueType: BinRead<Args = ArgType>,
-          ArgType: Copy + 'static,
-{
-    if let Some(value) = item.as_mut() {
-        value.after_parse(reader, ro, args)?;
-    }
-
-    Ok(())
-}
-
 pub fn read_options_then_after_parse<Args, T, R>(
     reader: &mut R,
     ro: &ReadOptions,
@@ -154,14 +144,3 @@ pub fn read_options_then_after_parse<Args, T, R>(
     Ok(val)
 }
 
-impl Error {
-    /// Gets a custom error of type T from the Error. Returns `None` if the error type is not
-    /// custom or if the contained error is not of the desired type.
-    pub fn custom_err<T: Any>(&self) -> Option<&T> {
-        if let Error::Custom { err, ..} = self {
-            err.downcast_ref()
-        } else {
-            None
-        }
-    }
-}
