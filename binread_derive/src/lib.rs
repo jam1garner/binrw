@@ -5,7 +5,7 @@ mod codegen;
 mod parser;
 
 use codegen::generate_impl;
-use parser::Input;
+use parser::{Input, is_binread_attr};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
@@ -74,7 +74,5 @@ fn clean_field_attrs(binread_input: &Option<Input>, variant_index: usize, fields
 }
 
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
-    attrs.retain(|attr| {
-        !attr.path.is_ident("br") && !attr.path.is_ident("binread")
-    });
+    attrs.retain(|attr| !is_binread_attr(attr));
 }

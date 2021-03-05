@@ -22,6 +22,10 @@ fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
     }
 }
 
+pub(crate) fn is_binread_attr(attr: &syn::Attribute) -> bool {
+    attr.path.is_ident("br") || attr.path.is_ident("binread")
+}
+
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
     fn try_from_attrs(attrs: &[syn::Attribute]) -> ParseResult<Self> where Self: Default + Sized {
         Self::set_from_attrs(Self::default(), attrs)
@@ -31,7 +35,7 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
         #[allow(clippy::filter_map)]
         let attrs = attrs
             .iter()
-            .filter(|attr| attr.path.is_ident("br") || attr.path.is_ident("binread"))
+            .filter(|attr| is_binread_attr(attr))
             .flat_map(|attr| {
                 match syn::parse2::<MetaAttrList<Attr>>(attr.tokens.clone()) {
                     Ok(list) => either::Either::Right(list.into_iter().map(Ok)),
