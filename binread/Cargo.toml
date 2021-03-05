@@ -11,7 +11,7 @@ documentation = "https://docs.rs/binread"
 
 [dependencies]
 binread_derive = { version = "2.0", path = "../binread_derive" }
-lazy_static = { version = "1.4" , optional=true }
+lazy_static = { version = "1.4", optional = true }
 
 [dev-dependencies]
 modular-bitfield = "0.9"
