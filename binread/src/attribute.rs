@@ -1,89 +1,149 @@
-//! A documentation-only module for attributes
+//! A documentation-only module for the possible directives used in `#[br]` and
+//! `#[binread]` attributes.
 //!
-//! # List of attributes
+//! # List of directives
 //!
-//! | Attribute | Supports | Description
-//! |-----------|------------------|------------
-//! | [big](#byteorder) | all | Set the endianness to big endian
-//! | [little](#byteorder) | all | Set the endianness to little endian
-//! | [map](#map) | all | Read a type from the reader and then apply a function to map it to the type to store in the struct. When used at the top-level the function must return Self.
-//! | [assert](#assert) | all | After parsing, check if a condition is true and, optionally, return a custom error if false. Allows multiple.
-//! | [magic](#magic) | top-level | At the start of parsing read a value and make sure it is equivalent to a constant value
-//! | [pre_assert](#pre-assert) | top-level, variant | Similar to assert, but checks the condition before parsing.
-//! | [import](#arguments) | top-level | Define the arguments for parsing the given type
-//! | [try_map](#map) | fields | Read a type from the reader and then apply a function, which may fail, to map it to the type to store in the struct.
-//! | [args](#arguments) | fields | Pass a set of arguments.
-//! | [default](#default) | fields | Set a field to the default value for the type
-//! | [ignore](#default) | fields | An alias for `default`
-//! | [temp](#temp) | fields | Don't store this field in the struct. Only usable with the [`derive_binread`](derive_binread) attribute macro
-//! | [postprocess_now](#postprocessing) | fields | Immediately run [`after_parse`](crate::BinRead::after_parse) after reading
-//! | [deref_now](#postprocessing) | fields | Alias for postprocess_now
-//! | [restore_position](#restore-position) | fields | Restore the reader position after reading the field
-//! | [try](#try) | fields | Attempt to parse a value and store `None` if parsing fails.
-//! | [parse_with](#custom-parsers) | fields | Use a custom parser function for reading from a file
-//! | [calc](#calculations) | fields | Compute an expression to store. Can use previously read values.
-//! | [count](#count) | fields | Set the length for a vector
-//! | [is_little](#byteorder) | fields | Conditionally set the endian to little
-//! | [is_big](#byteorder) | fields | Conditionally set the endian to big
-//! | [offset](#offset) | fields | Change the offset a [`FilePtr`](crate::FilePtr) is relative to
-//! | [if](#conditional-values) | fields | Used on an [`Option<T>`](core::option::Option) to read a value of type `T` only if the condition is met
-//! | [pad_before](#padding-and-alignment) | fields | Skip a constant number of bytes forward before reading
-//! | [pad_after](#padding-and-alignment) | fields | Skip a constant number of bytes forward after reading
-//! | [align_before](#padding-and-alignment) | fields | Skip to the next Nth byte before reading
-//! | [align_after](#padding-and-alignment) | fields | Skip to the next Nth byte after reading
-//! | [seek_before](#padding-and-alignment) | fields | Passes the given [`SeekFrom`](crate::io::SeekFrom) to [`Seek::seek`](crate::io::Seek::seek)
-//! | [pad_size_to](#padding-and-alignment) | fields | Ensures the cursor is at least N bytes after the starting position for this field
-//! | [repr](#repr) | enum-level | Specifies the underlying type for a unit-like (C-style) enum
-//! | [return_all_errors](#enum-errors) | enum-level | Use an error handling type in which enum failures return a [`Vec`](Vec) with an error for every variant
+//! | Directive | Supports | Description
+//! |-----------|----------|------------
+//! | [`align_after`](#padding-and-alignment) | field | Aligns the reader to the Nth byte after reading data.
+//! | [`align_before`](#padding-and-alignment) | field | Aligns the reader to the Nth byte before reading data.
+//! | [`args`](#arguments) | struct field, data variant | Passes arguments to another `BinRead` object.
+//! | [`args_tuple`](#arguments) | struct field, data variant | Like `args`, but specifies a tuple containing the arguments.
+//! | [`assert`](#assert) | struct, field, non-unit enum, data variant | Asserts that a condition is true. Can be used multiple times.
+//! | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
+//! | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.
+//! | [`count`](#count) | field | Sets the length of a vector.
+//! | [`default`](#default) | field | Uses the [`default`](core::default::Default) value for a field instead of reading data.
+//! | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
+//! | [`if`](#conditional-values) | field | Reads data into an [`Option`](core::option::Option) only if a condition is true.
+//! | [`ignore`](#default) | field | An alias for `default`.
+//! | [`import`](#arguments) | struct, non-unit enum, unit-like enum | Defines extra arguments for a struct or enum.
+//! | [`import_tuple`](#arguments) | struct, non-unit enum, unit-like enum | Like `import`, but receives the arguments as a tuple.
+//! | [`is_big`](#byte-order) | field | Conditionally sets the byte order to big-endian.
+//! | [`is_little`](#byte-order) | field | Conditionally set the byte order to little-endian.
+//! | [`little`](#byte-order) | all except unit variant | Sets the byte order to little-endian.
+//! | [`magic`](#magic) | all | Matches a magic number.
+//! | [`map`](#map) | all except unit variant | Maps a read value to a new value. When used on a struct or enum, the map function must return `Self`.
+//! | [`offset`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr).
+//! | [`pad_after`](#padding-and-alignment) | field | Skips N bytes after reading a field.
+//! | [`pad_before`](#padding-and-alignment) | field | Skips N bytes before reading a field.
+//! | [`pad_size_to`](#padding-and-alignment) | field | Ensures the reader is at least N bytes after the starting position for this field.
+//! | [`parse_with`](#custom-parsers) | field | Specifies a custom function for reading a field.
+//! | [`postprocess_now`](#postprocessing) | field | Calls [`after_parse`](crate::BinRead::after_parse) immediately after reading data instead of after all fields have been read.
+//! | [`pre_assert`](#pre-assert) | struct, non-unit enum, unit variant | Like `assert`, but checks the condition before parsing.
+//! | [`repr`](#repr) | unit-like enum | Specifies the underlying type for a unit-like (C-style) enum.
+//! | [`restore_position`](#restore-position) | field | Restores the reader’s position after reading a field.
+//! | [`return_all_errors`](#enum-errors) | non-unit enum | Returns a [`Vec`] containing the error which occurred on each variant of an enum on failure. This is the default.
+//! | [`return_unexpected_error`](#enum-errors) | non-unit enum | Returns a single generic error on failure.
+//! | [`seek_before`](#padding-and-alignment) | field | Moves the reader to a specific position before reading data.
+//! | [`temp`](#temp) | field | Uses a field as a temporary variable. Only usable with the [`derive_binread`] attribute macro.
+//! | [`try`](#try) | field | Reads data into an [`Option`](core::option::Option), but stores `None` if parsing fails instead of returning an error.
+//! | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`BinResult`](crate::BinResult).
 //!
-//! # Byteorder
+//! # Byte order
 //!
-//! You can use `big` or `little` at either the struct-level or the field-level in order
-//! to override the byte order of values.
-//! ```rust
+//! The `big` and `little` directives specify the [byte order](https://en.wikipedia.org/wiki/Endianness)
+//! of data in a struct, enum, variant, or field:
+//!
+//! ```text
+//! #[br(big)]
+//! #[br(little)]
+//! ```
+//!
+//! The `is_big` and `is_little` directives conditionally set the byte order of
+//! a struct field:
+//!
+//! ```text
+//! #[br(is_little = $cond:expr)] or #[br(is_little($cond:expr))]
+//! #[br(is_big = $cond:expr)] or #[br(is_big($cond:expr))]
+//! ```
+//!
+//! The `is_big` and `is_little` directives are primarily useful when byte order
+//! is defined in the data itself. Any earlier field or [import](#arguments) can
+//! be referenced in the condition. Conditional byte order directives can only
+//! be used on struct fields.
+//!
+//! The order of precedence (from highest to lowest) for determining byte order
+//! within an object is:
+//!
+//! 1. A directive on a field
+//! 2. A directive on an enum variant
+//! 3. A directive on the struct or enum
+//! 4. The [`endian`](crate::ReadOptions::endian) property of the
+//!    [`ReadOptions`](crate::ReadOptions) object passed to
+//!    [`BinRead::read_options`](crate::BinRead::read_options) by the caller
+//! 5. The host machine’s native byte order
+//!
+//! However, if a byte order directive is added to a struct or enum, that byte
+//! order will *always* be used, even if the object is embedded in another
+//! object or explicitly called with a different byte order:
+//!
+//! ```
+//! # use binread::{Endian, ReadOptions, prelude::*, io::Cursor};
+//! #[derive(BinRead, Debug, PartialEq)]
+//! #[br(little)] // ← this *forces* the struct to be little-endian
+//! struct Child(u32);
+//!
+//! #[derive(BinRead, Debug)]
+//! struct Parent {
+//!     #[br(big)] // ← this will be ignored
+//!     child: Child,
+//! };
+//!
+//! let mut options = ReadOptions::default();
+//! options.endian = Endian::Big; // ← this will be ignored
+//! # assert_eq!(
+//! Child::read_options(&mut Cursor::new(b"\x01\0\0\0"), &options, ())
+//! # .unwrap(), Child(1));
+//! ```
+//!
+//! When manually implementing
+//! [`BinRead::read_options`](crate::BinRead::read_options) or a
+//! [custom parser function](#custom-parsers), the byte order is accessible
+//! from [`ReadOptions::endian`](crate::ReadOptions::endian).
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! #[br(little)]
 //! struct MyType (
-//!     #[br(big)] u32, // will be big endian
-//!     u32, // will be little endian
+//!     #[br(big)] u32, // ← will be big-endian
+//!     u32, // ← will be little-endian
 //! );
 //! ```
-//! The order of precedence is: (from highed to lowest)
-//! 1. Field-level
-//! 2. Variant-level (for enums)
-//! 3. Top-level
-//! 4. Configured (i.e. what endianess was passed in)
-//! 5. Native endianess
-//! binread also offers the ability to conditionally set endianness for when the endianess
-//! is described within the data itself using `is_big` or `is_little`:
 //!
-//! ```rust
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! #[br(big)]
 //! struct MyType {
 //!     val: u8,
 //!     #[br(is_little = (val == 3))]
-//!     other_val: u16
+//!     other_val: u16 // ← little-endian if `val == 3`, otherwise big-endian
 //! }
 //!
 //! # assert_eq!(MyType::read(&mut Cursor::new(b"\x03\x01\x00")).unwrap(), MyType { val: 3, other_val: 1 });
 //! ```
 //!
-//! **Note:** `is_big` and `is_little` supports using previous fields
-//!
 //! # Magic
 //!
-//! Magic, or magic values, are constants used for sanity/integrity checking or simply for
-//! making file identification easier. Since these are such a common use case binread provides
-//! an attribute for handling this for you to save code/memory/time/etc.
+//! The `magic` directive matches [magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
+//! in data:
 //!
-//! The format is `magic = [lit]` where `[lit]` is any literal supported by Rust. This is allowed
-//! at the following levels: struct, enum, variant, and field.
+//! ```text
+//! #[br(magic = $magic:literal)] or #[br(magic($magic:literal))]
+//! ```
 //!
-//! **Examples:**
-//! ```rust
+//! The magic number can be a byte literal, byte string, char, float, or
+//! integer. When a magic number is matched, parsing begins with the first byte
+//! after the magic number in the data. When a magic number is not matched, an
+//! error is returned.
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug)]
 //! #[br(magic = b"TEST")]
@@ -103,19 +163,58 @@
 //! }
 //! ```
 //!
-//! Example error:
-//! ```text
-//! Error::BadMagic { pos: 0x30 }
-//! ```
-//! See [`binread::Error`](crate::Error::BadMagic) for more info.
+//! ## Errors
+//!
+//! If the specified magic number does not match the data, a
+//! [`BadMagic`](crate::Error::BadMagic) error is returned and the reader’s
+//! position is reset to where it was before parsing started.
 //!
 //! # Assert
 //!
-//! `assert` is the core of error handling in BinRead. It returns either an [`AssertFail`](crate::Error::AssertFail)
-//! or, optionally, a custom user-generated error, allowing you to attach context from before
-//! parsing failed.
+//! The `assert` directive validates objects and fields after they are read,
+//! returning an error if the assertion condition evaluates to `false`:
 //!
-//! **Custom Error Handling Example:**
+//! ```text
+//! #[br(assert($cond:expr $(,)?))]
+//! #[br(assert($cond:expr, $msg:literal $(,)?)]
+//! #[br(assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
+//! #[br(assert($cond:expr, $err:expr $(,)?)]
+//! ```
+//!
+//! Multiple assertion directives can be used; they will be combined and
+//! executed in order.
+//!
+//! Assertions added to the top of an enum will be checked against every variant
+//! in the enum.
+//!
+//! Any earlier field or [import](#arguments) can be referenced by expressions
+//! in the directive.
+//!
+//! ## Examples
+//!
+//! ### Formatted error
+//!
+//! ```rust
+//! # use binread::{prelude::*, io::Cursor};
+//! #[derive(Debug, PartialEq)]
+//! struct NotSmallerError(u32, u32);
+//!
+//! #[derive(BinRead, Debug)]
+//! #[br(assert(some_val > some_smaller_val, "oops! {} <= {}", some_val, some_smaller_val))]
+//! struct Test {
+//!     some_val: u32,
+//!     some_smaller_val: u32
+//! }
+//!
+//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").read_be::<Test>();
+//! assert!(error.is_err());
+//! let error = error.unwrap_err();
+//! let expected = "oops! 1 <= 255".to_string();
+//! assert!(matches!(error, binread::Error::AssertFail { message: expected, .. }));
+//! ```
+//!
+//! ### Custom error
+//!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(Debug, PartialEq)]
@@ -134,16 +233,39 @@
 //! assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
 //! ```
 //!
-//! **Note:** supports using previous fields
+//! ## Errors
+//!
+//! If the assertion fails and there is no second argument, or a string literal
+//! is given as the second argument, an [`AssertFail`](crate::Error::AssertFail)
+//! error is returned.
+//!
+//! If the assertion fails and an expression is given as the second argument,
+//! a [`Custom`](crate::Error::Custom) error containing the result of the
+//! expression is returned.
+//!
+//! Arguments other than the condition are not evaluated unless the assertion
+//! fails, so it is safe for them to contain expensive operations without
+//! impacting performance.
+//!
+//! In all cases, the reader’s position is reset to where it was before parsing
+//! started.
 //!
 //! # Pre-assert
 //!
-//! `pre_assert` is similar to [Assert](#assert), but it runs the condition
-//! before parsing. This can be used to ensure arguments are correct, or to find
-//! the correct branch to take in an enum.
+//! `pre_assert` works like [`assert`](#assert), but checks the condition before
+//! data is read instead of after. This is most useful when validating arguments
+//! or choosing an enum variant to parse.
 //!
-//! **Enum Handling Example:**
-//! ```rust
+//! ```text
+//! #[br(pre_assert($cond:expr $(,)?))]
+//! #[br(pre_assert($cond:expr, $msg:literal $(,)?)]
+//! #[br(pre_assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
+//! #[br(pre_assert($cond:expr, $err:expr $(,)?)]
+//! ```
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! #[br(import(ty: u8))]
@@ -167,13 +289,22 @@
 //! ```
 //!
 //! # Arguments
-//! One feature of binread is allowing arguments to be passed to the type in order to tell
-//! the type any info it needs to parse the data. To accept arguments when using the derive
-//! macro, you can use the `import` attribute and to pass arguments you can use the `args`
-//! attribute.
 //!
-//! **Example:**
-//! ```rust
+//! The `import` and `args` directives define the type of
+//! [`BinRead::Args`](crate::BinRead::Args) and the values passed in the `args`
+//! argument of a [`BinRead::read_options`](crate::BinRead::read_options) call,
+//! respectively:
+//!
+//! ```text
+//! #[br(import($($ident:ident : $ty:ty),* $(,)?))]
+//! #[br(args($($ident:ident),* $(,)?))]
+//! ```
+//!
+//! Any earlier field or [import](#arguments) can be referenced in `args`.
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::prelude::*;
 //! #[derive(BinRead)]
 //! #[br(import(val1: u32, val2: &'static str))]
@@ -188,11 +319,18 @@
 //!     test: ImportTest
 //! }
 //! ```
-//! **Note:** supports using previous fields
 //!
 //! # Default
 //!
-//! Set the field to the default value for the type.
+//! The `default` directive, and its alias `ignore`, sets the value of the field
+//! to its [`Default`](core::default::Default) instead of reading data from the
+//! reader:
+//!
+//! ```text
+//! #[br(default)] or #[br(ignore)]
+//! ```
+//!
+//! ## Examples
 //!
 //! ```rust
 //! # use binread::{BinRead, io::Cursor};
@@ -203,25 +341,36 @@
 //! }
 //!
 //! assert_eq!(
-//!     Test::read(&mut Cursor::new(vec![])).unwrap(),
+//!     Test::read(&mut Cursor::new(b"")).unwrap(),
 //!     Test { path: None }
 //! );
 //! ```
 //!
 //! # Temp
 //!
-//! Variables marked with `br(temp)` will not be included in the struct itself and are merely used
-//! while parsing the type. This allows for reading data that is necessary for parsing the file,
-//! but shouldn't actually be a field of the struct.
+//! **This directive can only be used with [`derive_binread`]. It will not work
+//! with `#[derive(BinRead)]`.**
 //!
-//! **Note:** This requires the [`derive_binread`](derive_binread) attribute in place of
-//! `derive(BinRead)` in order to allow the macro to remove the field.
+//! The `temp` directive causes a field to be treated as a temporary variable
+//! instead of an actual field. The field will be removed from the struct
+//! definition generated by [`derive_binread`]:
+//!
+//! ```text
+//! #[br(temp)]
+//! ```
+//!
+//! This allows data to be read which is necessary for parsing an object but
+//! which doesn’t need to be stored in the final object. To skip data, entirely
+//! use an [alignment directive](#padding-and-alignment) instead.
+//!
+//! ## Examples
 //!
 //! ```rust
 //! # use binread::{BinRead, io::Cursor, derive_binread};
 //! #[derive_binread]
 //! #[derive(Debug, PartialEq)]
 //! struct Test {
+//!     // Since `Vec` stores its own length, this field is redundant
 //!     #[br(temp, big)]
 //!     len: u32,
 //!
@@ -235,22 +384,34 @@
 //! );
 //! ```
 //!
-//! This can be used in combination with [`calc`](#calculations) to allow for parsing in one form
-//! then transforming to another to actually expose from the struct. It can also be used alongside
-//! [`count`](#count) in order to reduce redundant information being stored since a `Vec` will
-//! already be storing a length and thus a count field need not be preserved.
-//!
 //! # Postprocessing
 //!
-//! In binread postprocessing refers to the act of running [`after_parse`](crate::BinRead::after_parse) on
-//! a field. It is used in order to allow a field to take control of the reader temporarily in
-//! order to parse any values not stored inline.
+//! The `deref_now` directive, and its alias `postprocess_now`, cause a
+//! field’s [`after_parse`](crate::BinRead::after_parse) function to be called
+//! immediately after the field is parsed, instead of deferring the call until
+//! the entire parent object has been parsed:
 //!
-//! Postprocessing can be fast-tracked using either `deref_now` or `postprocess_now` (these are
-//! simply aliases for each other to allow). `deref_now` is recommended for [`FilePtr`](crate::FilePtr)'s,
-//! `post_process` is recommended for anything else.
+//! ```text
+//! #[br(deref_now)] or #[br(postprocess_now)]
+//! ```
 //!
-//! ```rust
+//! The [`BinRead::after_parse`](crate::BinRead::after_parse) function is
+//! normally used to perform additional work after the whole parent object has
+//! been parsed. For example, the [`FilePtr`](crate::FilePtr) type reads an
+//! object offset during parsing with
+//! [`read_options`](crate::BinRead::read_options), then actually seeks to and
+//! parses the pointed-to object in `after_parse`. This improves read
+//! performance by reading the whole parent object sequentially before seeking
+//! to read the pointed-to object.
+//!
+//! However, if another field in the parent object needs to access data from the
+//! pointed-to object, `after_parse` needs to be called earlier. Adding
+//! `deref_now` (or its alias, `postprocess_now`) to the earlier field causes
+//! this to happen.
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::{prelude::*, FilePtr32, NullString, io::Cursor};
 //! #[derive(BinRead, Debug)]
 //! #[br(big, magic = b"TEST")]
@@ -272,13 +433,21 @@
 //! # assert_eq!(test.ptr.to_string(), "Test string");
 //! ```
 //!
-//! # Restore Position
+//! # Restore position
 //!
-//! binread supports restoring the reader position after reading the field using the
-//! `restore_position` attribute.
+//! The `restore_position` directive restores the position of the reader after
+//! a field is read:
 //!
-//! **Example:**
-//! ```rust
+//! ```text
+//! #[br(restore_position)]
+//! ```
+//!
+//! To seek to an arbitrary position, use [`seek_before`](#padding-and-alignment)
+//! instead.
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
 //! struct MyType {
@@ -293,13 +462,27 @@
 //! # );
 //! ```
 //!
+//! ## Errors
+//!
+//! If querying or restoring the reader position fails, an
+//! [`Io`](crate::Error::Io) error is returned and the reader’s
+//! position is reset to where it was before parsing started.
+//!
 //! # Try
 //!
-//! When you want to optionally allow parsing to fail, wrap the type with [`Option`](std::option::Option)
-//! and use the `try` attribute. binread makes no guarantees about the position of the reader
-//! after a `try` in which parsing failed, so use with caution.
+//! The `try` directive allows parsing of an [`Option`] field to fail instead
+//! of returning an error:
 //!
-//! ```rust
+//! ```text
+//! #[br(try)]
+//! ```
+//!
+//! If the field cannot be parsed, the position of the reader will be restored
+//! and the value of the field will be set to [`None`].
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
@@ -312,10 +495,33 @@
 //!
 //! # Map
 //!
-//! Sometimes the form you read isn't the form you want to store. For that, you can use the `map`
-//! attribute in order to apply a mapping function to map it to the type of the field.
+//! The `map` and `try_map` directives allow data to be read using one type and
+//! stored as another:
 //!
-//! ```rust
+//! ```text
+//! #[br(map = $map_fn:expr)] or #[map($map_fn:expr))]
+//! #[br(try_map = $map_fn:expr)] or #[try_map($map_fn:expr))]
+//! ```
+//!
+//! When using `map` on a field, the map function must explicitly declare the
+//! type of the data to be read in its first parameter and return a value which
+//! matches the type of the field. The map function can be a plain function,
+//! closure, or call expression which returns a plain function or closure.
+//!
+//! When using `try_map` on a field, the same rules apply, except that the
+//! function must return a [`Result`] instead.
+//!
+//! When using `map` or `try_map` on a struct or enum, the map function must
+//! return `Self` or `Result<Self, E>`.
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! ## Examples
+//!
+//! ### Using `map` on a field
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
@@ -326,9 +532,9 @@
 //! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().int_str, "0");
 //! ```
 //!
-//! If the conversion is fallible, use `try_map` instead:
+//! ### Using `try_map` on a field
 //!
-//! ```rust
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! # use std::convert::TryInto;
 //! #[derive(BinRead)]
@@ -341,18 +547,16 @@
 //! # assert!(Cursor::new(b"\xff").read_be::<MyType>().is_err());
 //! ```
 //!
-//! **Note:** supports using previous fields (if you use a closure)
+//! ### Using `map` on a struct to create a bit field
 //!
-//! ## Map For Bitfields
+//! The [`modular-bitfield`](https://docs.rs/modular-bitfield) crate can be used
+//! along with `map` to create a struct out of raw bits.
 //!
-//! Here's an example of how a top-level `map` attribute can be used in order to handle bitfields
-//! using the [`modular-bitfield`](https://docs.rs/modular-bitfield) crate.
-//!
-//! ```rust
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! use modular_bitfield::prelude::*;
 //!
-//! // The following field is a single byte read from the Reader
+//! // This reads a single byte from the reader
 //! #[bitfield]
 //! #[derive(BinRead)]
 //! #[br(map = Self::from_bytes)]
@@ -366,15 +570,10 @@
 //!
 //! // example byte: 0x53
 //! // [good] [alive] [static] [fast] [status]
-//! //   0       1       0       1      0011
-//! //
-//! //  false  true    false    true     3
+//! //      0       1        0      1     0011
+//! //  false    true    false   true        3
 //!
 //! # let data = Cursor::new(b"\x53").read_le::<PackedData>().unwrap();
-//! # dbg!(data.is_good());
-//! # dbg!(data.is_alive());
-//! # dbg!(data.is_static());
-//! # dbg!(data.is_fast());
 //! # assert_eq!(data.is_good(), false);
 //! # assert_eq!(data.is_alive(), true);
 //! # assert_eq!(data.is_static(), false);
@@ -382,12 +581,34 @@
 //! # assert_eq!(data.status(), 3);
 //! ```
 //!
-//! # Custom Parsers
+//! ## Errors
 //!
-//! In some cases, you need more advanced logic than deriving BinRead provides. For that,
-//! binread provides the `parse_with` attribute to allow specifying custom parser functions.
+//! If `try_map` returns a [`binread::io::Error`] or [`std::io::Error`], an
+//! [`Io`](crate::Error::Io) error is returned. For any other error type, a
+//! [`Custom`](crate::Error::Custom) error is returned.
 //!
-//! ```rust
+//! In all cases, the reader’s position is reset to where it was before parsing
+//! started.
+//!
+//! # Custom parsers
+//!
+//! The `parse_with` directive specifies a custom parsing function which can be
+//! used to override the default [`BinRead`](crate::BinRead) implementation for
+//! a type, or to parse types which have no `BinRead` implementation at all:
+//!
+//! ```text
+//! #[br(parse_with = $parse_fn:expr)] or #[br(parse_with($parse_fn:expr))]
+//! ```
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive (for example, to construct a parser function at
+//! runtime by calling a function generator).
+//!
+//! ## Examples
+//!
+//! ### Using a custom parser to generate a [`HashMap`](std::collections::HashMap)
+//!
+//! ```
 //! # use binread::{prelude::*, io::*, ReadOptions};
 //! # use std::collections::HashMap;
 //! fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
@@ -410,10 +631,9 @@
 //! # assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().offsets.get(&0), Some(&1));
 //! ```
 //!
-//! This can also be used with [`FilePtr::parse`](crate::FilePtr::parse) in order to read and
-//! immediately dereference a [`FilePtr`](crate::FilePtr) to an owned value.
+//! ### Using `FilePtr::parse` to read a `NullString` without storing a `FilePtr`
 //!
-//! ```rust
+//! ```
 //! # use binread::{prelude::*, io::Cursor, FilePtr32, NullString};
 //! #[derive(BinRead)]
 //! struct MyType {
@@ -427,10 +647,17 @@
 //!
 //! # Calculations
 //!
-//! Sometimes you don't want to read a value from a file, but you want to set a field equal to an
-//! expression. Or you just want to initialize a value for a type that doesn't have a [`Default`](core::default::Default)
-//! implementation.
+//! The `calc` directive computes the value of a field instead of reading data
+//! from the reader:
 //!
+//! ```text
+//! #[br(calc = $value:expr)] or #[br(calc($value:expr))]
+//! ```
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! ## Examples
 //!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
@@ -443,15 +670,29 @@
 //!
 //! # assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().var_plus_3, 4);
 //! ```
-//! **Note:** supports using previous fields
 //!
 //! # Count
 //!
-//! The `count` attribute allows you to set the number of values to read for a [`Vec`](Vec). If
-//! you wish to use `count` with a custom parser or a type's [`BinRead`](crate::BinRead) implementation
-//! you can access it using the [`count`](crate::ReadOptions::count) field on the [`ReadOptions`](crate::ReadOptions) type.
+//! The `count` directive sets the number of values to read into a repeating
+//! collection type like a [`Vec`]:
 //!
-//! ```rust
+//! ```text
+//! #[br(count = $count:expr) or #[br(count($count:expr))]
+//! ```
+//!
+//! When manually implementing
+//! [`BinRead::read_options`](crate::BinRead::read_options) or a
+//! [custom parser function](#custom-parsers), the `count` value is accessible
+//! from [`ReadOptions::count`](crate::ReadOptions::count).
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! ## Examples
+//!
+//! ### Using `count` with [`Vec`]
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
 //! struct MyType {
@@ -466,8 +707,9 @@
 //! # );
 //! ```
 //!
-//! You can even combine `count` with [`FilePtr`](crate::FilePtr) to read a [`Vec`](Vec) at a particular offset.
-//! ```rust
+//! ### Using `count` with [`FilePtr`](crate::FilePtr) and `Vec`
+//!
+//! ```
 //! # use binread::{prelude::*, io::Cursor, FilePtr};
 //! #[derive(BinRead)]
 //! struct MyType {
@@ -481,15 +723,32 @@
 //! #    &[1u8, 2, 3, 4]
 //! # );
 //! ```
-//! **Note:** supports using previous fields
 //!
 //! # Offset
 //!
-//! Sometimes, when you use a [`FilePtr`](crate::FilePtr) you want it to represent a location that
-//! is relative to a certain location in the reader other than the start of the reader. For that
-//! you want to use one of two attributes: `offset` and `offset_after`.
+//! The `offset` and `offset_after` directives specify an additional relative
+//! offset to a value accessed by a `BinRead` implementation which reads data
+//! from an offset, like [`FilePtr`](crate::FilePtr):
 //!
-//! **Example:**
+//! ```text
+//! #[br(offset = $offset:expr)] or #[br(offset($offset:expr))]
+//! #[br(offset_after = $offset:expr)] or #[br(offset_after($offset:expr))]
+//! ```
+//!
+//! When manually implementing
+//! [`BinRead::read_options`](crate::BinRead::read_options) or a
+//! [custom parser function](#custom-parsers), the offset is accessible
+//! from [`ReadOptions::offset`](crate::ReadOptions::offset).
+//!
+//! For `offset`, any earlier field or [import](#arguments) can be referenced by
+//! the expression in the directive.
+//!
+//! For `offset_after`, *all* fields and imports can be referenced by the
+//! expression in the directive, but [`deref_now`](#postprocessing) cannot be
+//! used.
+//!
+//! ## Examples
+//!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor, FilePtr};
 //! #[derive(BinRead, Debug, PartialEq)]
@@ -504,17 +763,26 @@
 //! # );
 //! ```
 //!
-//! The only time you need to use `offset_after` is if, in your offset calculation, you use
-//! fields that are defined after your FilePtr. Otherwise use `offset` as `offset_after` doesn't
-//! support some features of binread due to order of execution.
+//! ## Errors
 //!
-//! **Note:** supports using previous fields
+//! If seeking to or reading from the offset fails, an [`Io`](crate::Error::Io)
+//! error is returned and the reader’s position is reset to where it was before
+//! parsing started.
 //!
-//! # Conditional Values
+//! # Conditional values
 //!
-//! binread also provides the ability to conditionally parse an [`Option<T>`](Option) field
-//! using the `if` attribute. If the condition is true it will parse the value and store it as
-//! `Some(T)`, otherwise it will store `None`.
+//! The `if` directive allows conditional parsing of an [`Option`] field,
+//! storing `Some(T)` if the condition is true and `None` if the condition is
+//! false:
+//!
+//! ```text
+//! #[br(if = $cond:expr)] or #[br(if($cond:expr))]
+//! ```
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! ## Examples
 //!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
@@ -533,15 +801,54 @@
 //! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, None);
 //! ```
 //!
-//! **Note:** supports using previous fields
+//! # Padding and alignment
 //!
-//! # Padding and Alignment
+//! BinRead offers different directives for common forms of
+//! [data structure alignment](https://en.wikipedia.org/wiki/Data_structure_alignment#Data_structure_padding).
 //!
-//! * `pad_before`/`pad_after` - skip a fixed number of bytes
-//! * `align_before`/`align_after` - skip bytes until aligned
-//! * `seek_before` - attribute form of calling [`Seek::seek`](crate::io::Seek::seek)
-//! * `pad_size_to` - skips to a certain number past the start of this field if that point hasn't
-//! already been passed
+//! The `pad_before` and `pad_after` directives skip a specific number of bytes
+//! either before or after reading a field, respectively:
+//!
+//! ```text
+//! #[br(pad_after = $skip_bytes:expr)] or #[br(pad_after($skip_bytes:expr))]
+//! #[br(pad_before = $skip_bytes:expr)] or #[br(pad_before($skip_bytes:expr))]
+//! ```
+//!
+//! The `align_before` and `align_after` directives align the next read to the
+//! given byte alignment either before or after reading a field, respectively:
+//!
+//! ```text
+//! #[br(align_after = $align_to:expr)] or #[br(align_after($align_to:expr))]
+//! #[br(align_before = $align_to:expr)] or #[br(align_before($align_to:expr))]
+//! ```
+//!
+//! The `seek_before` directive accepts a [`SeekFrom`](crate::io::SeekFrom)
+//! object and seeks the reader to an arbitrary position before reading a field:
+//!
+//! ```text
+//! #[br(seek_before = $seek_from:expr)] or #[br(seek_before($seek_from:expr))]
+//! ```
+//!
+//! The position of the reader will not be restored after the seek; use the
+//! [`restore_position`](#restore-position) directive for this.
+//!
+//! The `pad_size_to` directive will ensure that the reader has advanced at
+//! least the number of bytes given after the field has been read:
+//!
+//! ```text
+//! #[br(pad_size_to = $size:expr)] or #[br(pad_size_to($size:expr))]
+//! ```
+//!
+//! For example, if a format uses a null-terminated string, but always reserves
+//! at least 256 bytes for that string, [`NullString`](crate::NullString) will
+//! read the string and `pad_size_to(256)` will ensure the reader skips whatever
+//! padding, if any, remains. If the string is longer than 256 bytes, no padding
+//! will be skipped.
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expressions in any of these directives.
+//!
+//! ## Examples
 //!
 //! ```rust
 //! # use binread::{BinRead, NullString, io::SeekFrom};
@@ -558,16 +865,26 @@
 //! }
 //! ```
 //!
-//! **Note:** supports using previous fields
+//! ## Errors
+//!
+//! If seeking fails, an [`Io`](crate::Error::Io) error is returned and the
+//! reader’s position is reset to where it was before parsing started.
 //!
 //! # Repr
 //!
-//! When deriving binread on a unit-like (C-style) enum, this specifies the
-//! underlying type to use when reading the enum.
+//! The `repr` directive is used on a unit-like (C-style) enum to specify the
+//! underlying type to use when reading the field and matching variants:
 //!
+//! ```text
+//! #[br(repr = $ty:ty)] or #[br(repr($ty:ty))]
+//! ```
+//!
+//! ## Examples
+//!
+//! ```
 //! # use binread::BinRead;
 //! #[derive(BinRead)]
-//! #[br(repr = i16)]
+//! #[br(big, repr = i16)]
 //! enum FileKind {
 //!     Unknown = -1,
 //!     Text,
@@ -576,6 +893,15 @@
 //!     Picture,
 //! }
 //! ```
+//!
+//! ## Errors
+//!
+//! If a read fails, an [`Io`](crate::Error::Io) error is returned. If no
+//! variant matches, a [`NoVariantMatch`](crate::Error::NoVariantMatch) error
+//! is returned.
+//!
+//! In all cases, the reader’s position is reset to where it was before parsing
+//! started.
 
 #![allow(unused_imports)]
 
