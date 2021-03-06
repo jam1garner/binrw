@@ -583,9 +583,9 @@
 //!
 //! ## Errors
 //!
-//! If `try_map` returns a [`binread::io::Error`] or [`std::io::Error`], an
-//! [`Io`](crate::Error::Io) error is returned. For any other error type, a
-//! [`Custom`](crate::Error::Custom) error is returned.
+//! If the `try_map` function returns a [`binread::io::Error`](crate::io::Error)
+//! or [`std::io::Error`], an [`Io`](crate::Error::Io) error is returned. For
+//! any other error type, a [`Custom`](crate::Error::Custom) error is returned.
 //!
 //! In all cases, the reader’s position is reset to where it was before parsing
 //! started.
