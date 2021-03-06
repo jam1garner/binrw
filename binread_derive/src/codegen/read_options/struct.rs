@@ -3,7 +3,7 @@ use crate::codegen::sanitization::*;
 use crate::parser::{Input, Map, PassedArgs, ReadMode, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::quote;
-use super::{PreludeGenerator, ReadOptionsGenerator, debug_template, get_assertions};
+use super::{PreludeGenerator, ReadOptionsGenerator, debug_template, get_assertions, get_magic};
 use syn::Ident;
 
 pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>) -> TokenStream {
@@ -134,6 +134,7 @@ fn generate_field(field: &StructField) -> TokenStream {
         .assign_to_var()
         .append_assertions()
         .wrap_restore_position()
+        .prefix_magic(&options_var)
         .prefix_args_and_options(&options_var, &args_var)
         .finish()
 }
@@ -316,6 +317,18 @@ impl <'field> FieldGenerator<'field> {
             self.out = quote! {
                 let #args_var = #args;
                 #options
+                #tail
+            };
+        }
+
+        self
+    }
+
+    fn prefix_magic(mut self, options_var: &Ident) -> Self {
+        if let Some(magic) = get_magic(&self.field.magic, options_var) {
+            let tail = self.out;
+            self.out = quote! {
+                #magic
                 #tail
             };
         }

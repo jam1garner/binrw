@@ -218,6 +218,21 @@ fn magic_char() {
 }
 
 #[test]
+fn magic_field() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(magic(b"A"))]
+    struct Test {
+        b: u8,
+        #[br(magic(b"C"))]
+        d: u8,
+    }
+
+    Test::read(&mut Cursor::new(b"ABBB")).expect_err("accepted bad data");
+    let result = Test::read(&mut Cursor::new(b"ABCD")).unwrap();
+    assert_eq!(result, Test { b: b'B', d: b'D' });
+}
+
+#[test]
 fn pad_after_before() {
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {

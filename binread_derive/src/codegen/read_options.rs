@@ -2,13 +2,13 @@ mod debug_template;
 mod r#enum;
 mod r#struct;
 
-use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Map};
+use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use r#enum::{generate_data_enum, generate_unit_enum};
 use r#struct::{generate_struct, generate_unit_struct};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{ToTokens, quote};
 use syn::Ident;
 
 pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
@@ -84,18 +84,12 @@ impl <'input> PreludeGenerator<'input> {
     }
 
     fn add_magic_pre_assertion(mut self) -> Self {
-        let magic = self.input.magic().as_ref().map(|magic| {
-            let handle_error = debug_template::handle_error();
-            let magic = magic.deref_value();
-            quote! {
-                #ASSERT_MAGIC(#READER, #magic, #OPT)#handle_error?;
-            }
-        });
+        let magic = get_magic(self.input.magic(), &OPT);
         let pre_assertions = get_assertions(&self.input.pre_assertions());
-        let value = &self.out;
+        let head = self.out;
 
         self.out = quote! {
-            #value
+            #head
             #magic
             #(#pre_assertions)*
         };
@@ -121,6 +115,16 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
 
         quote! {
             #ASSERT(#condition, #POS, #error_fn)#handle_error?;
+        }
+    })
+}
+
+fn get_magic(magic: &Magic, options_var: &impl ToTokens) -> Option<TokenStream> {
+    magic.as_ref().map(|magic| {
+        let handle_error = debug_template::handle_error();
+        let magic = magic.deref_value();
+        quote! {
+            #ASSERT_MAGIC(#READER, #magic, #options_var)#handle_error?;
         }
     })
 }
