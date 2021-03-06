@@ -172,6 +172,21 @@ fn empty_imports() {
 }
 
 #[test]
+fn if_alternate() {
+    #[derive(BinRead, Debug)]
+    #[br(import(try_read: bool))]
+    struct Test {
+        #[br(if(try_read, 10))]
+        a: u8,
+    }
+
+    let result = Test::read_args(&mut Cursor::new(b"\x01"), (true, )).unwrap();
+    assert_eq!(result.a, 1);
+    let result = Test::read_args(&mut Cursor::new(b"\x01"), (false, )).unwrap();
+    assert_eq!(result.a, 10);
+}
+
+#[test]
 fn ignore_and_default() {
     #[derive(Debug, Eq, PartialEq)]
     struct One(u8);

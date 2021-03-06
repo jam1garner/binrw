@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use super::{FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet, types::{Assert, CondEndian, Magic, Map, PassedArgs, ReadMode}};
+use super::{FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet, types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode}};
 use syn::spanned::Spanned;
 
 attr_struct! {
@@ -26,7 +26,7 @@ attr_struct! {
         #[from(OffsetAfter)]
         pub(crate) offset_after: Option<SpannedValue<TokenStream>>,
         #[from(If)]
-        pub(crate) if_cond: Option<TokenStream>,
+        pub(crate) if_cond: Option<Condition>,
         #[from(DerefNow, PostProcessNow)]
         pub(crate) deref_now: SpannedValue<bool>,
         #[from(RestorePosition)]

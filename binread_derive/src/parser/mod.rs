@@ -340,6 +340,20 @@ mod tests {
         struct Foo;
     });
 
+    try_error!(invalid_if_args: "too many arguments" {
+        struct Foo {
+            #[br(if(false, 0, 1, 2, 3))]
+            a: u8,
+        }
+    });
+
+    try_error!(invalid_if_empty: "requires a boolean expression" {
+        struct Foo {
+            #[br(if())]
+            a: u8,
+        }
+    });
+
     try_error!(invalid_keyword_enum_variant: "expected one of" {
         enum Enum {
             #[br(invalid_enum_variant_keyword)]

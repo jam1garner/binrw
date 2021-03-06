@@ -112,7 +112,6 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
             AfterParseGenerator::new(field)
                 .get_value_from_ident()
                 .call_after_parse(after_parse_fn, &options_var, &args_var)
-                .wrap_condition()
                 .prefix_offset_options(&options_var)
                 .finish()
         })
@@ -168,11 +167,7 @@ impl <'field> AfterParseGenerator<'field> {
 
     fn get_value_from_ident(mut self) -> Self {
         let ident = &self.field.ident;
-        self.out = if self.field.if_cond.is_some() {
-            quote! { #ident }
-        } else {
-            quote! { &mut #ident }
-        };
+        self.out = quote! { &mut #ident };
 
         self
     }
@@ -194,20 +189,6 @@ impl <'field> AfterParseGenerator<'field> {
                     #TEMP
                 };
                 #tail
-            };
-        }
-
-        self
-    }
-
-    fn wrap_condition(mut self) -> Self {
-        if self.field.if_cond.is_some() {
-            let ident = &self.field.ident;
-            let body = self.out;
-            self.out = quote! {
-                if let Some(#ident) = #ident.as_mut() {
-                    #body
-                }
             };
         }
 
@@ -379,12 +360,14 @@ impl <'field> FieldGenerator<'field> {
 
     fn wrap_condition(mut self) -> Self {
         if let Some(cond) = &self.field.if_cond {
-            let value = self.out;
+            let condition = &cond.condition;
+            let consequent = self.out;
+            let alternate = &cond.alternate;
             self.out = quote! {
-                if #cond {
-                    Some(#value)
+                if #condition {
+                    #consequent
                 } else {
-                    None
+                    #alternate
                 }
             };
         }

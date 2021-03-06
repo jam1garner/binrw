@@ -15,7 +15,7 @@
 //! | [`count`](#count) | field | Sets the length of a vector.
 //! | [`default`](#default) | field | Uses the [`default`](core::default::Default) value for a field instead of reading data.
 //! | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
-//! | [`if`](#conditional-values) | field | Reads data into an [`Option`](core::option::Option) only if a condition is true.
+//! | [`if`](#conditional-values) | field | Reads data only if a condition is true.
 //! | [`ignore`](#default) | field | An alias for `default`.
 //! | [`import`](#arguments) | struct, non-unit enum, unit-like enum | Defines extra arguments for a struct or enum.
 //! | [`import_tuple`](#arguments) | struct, non-unit enum, unit-like enum | Like `import`, but receives the arguments as a tuple.
@@ -771,18 +771,29 @@
 //!
 //! # Conditional values
 //!
-//! The `if` directive allows conditional parsing of an [`Option`] field,
-//! storing `Some(T)` if the condition is true and `None` if the condition is
+//! The `if` directive allows conditional parsing of a field, reading from data
+//! if the condition is true and using a computed value if the condition is
 //! false:
 //!
 //! ```text
 //! #[br(if = $cond:expr)] or #[br(if($cond:expr))]
+//! #[br(if = $cond:expr, $alternate:expr)] or #[br(if($cond:expr, $alternate:expr))]
 //! ```
+//!
+//! If an alternate is provided, that value will be used when the condition is
+//! false; otherwise, the [`default`](core::default::Default) value for the type
+//! will be used.
+//!
+//! The alternate expression is not evaluated unless the condition is false, so
+//! it is safe for it to contain expensive operations without impacting
+//! performance.
 //!
 //! Any earlier field or [import](#arguments) can be referenced by the
 //! expression in the directive.
 //!
 //! ## Examples
+//!
+//! ### Using an [`Option`] field with no alternate
 //!
 //! ```rust
 //! # use binread::{prelude::*, io::Cursor};
@@ -799,6 +810,25 @@
 //!
 //! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().original_byte, Some(3));
 //! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, None);
+//! ```
+//!
+//! ### Using a scalar field with an explicit alternate
+//!
+//! ```rust
+//! # use binread::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     var: u32,
+//!
+//!     #[br(if(var == 1, 0))]
+//!     original_byte: u8,
+//!
+//!     #[br(if(var != 1, 42))]
+//!     other_byte: u8,
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().original_byte, 3);
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, 42);
 //! ```
 //!
 //! # Padding and alignment

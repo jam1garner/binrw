@@ -222,6 +222,23 @@ impl<T: BinRead> BinRead for Box<T> {
     }
 }
 
+impl<T: BinRead> BinRead for Option<T> {
+    type Args = T::Args;
+
+    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
+        Ok(Some(T::read_options(reader, options, args)?))
+    }
+
+    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: Self::Args)-> BinResult<()>
+        where R: Read + Seek,
+    {
+        match self {
+            Some(val) => val.after_parse(reader, ro, args),
+            None => Ok(())
+        }
+    }
+}
+
 impl<T> BinRead for core::marker::PhantomData<T> {
     type Args = ();
 
