@@ -185,6 +185,7 @@ impl <'field> AfterParseGenerator<'field> {
     fn prefix_offset_options(mut self, options_var: &Ident) -> Self {
         if let Some(offset) = &self.field.offset_after {
             let tail = self.out;
+            let offset = offset.as_ref();
             self.out = quote! {
                 let #options_var = &{
                     let mut #TEMP = *#options_var;

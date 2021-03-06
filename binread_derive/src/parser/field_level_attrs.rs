@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
-use super::{FromAttrs, FromField, FromInput, ParseResult, Struct, TrySet, types::{Assert, CondEndian, Magic, Map, PassedArgs, ReadMode}};
+use super::{FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet, types::{Assert, CondEndian, Magic, Map, PassedArgs, ReadMode}};
+use syn::spanned::Spanned;
 
 attr_struct! {
     #[from(StructFieldAttr)]
@@ -23,11 +24,11 @@ attr_struct! {
         #[from(Offset)]
         pub(crate) offset: Option<TokenStream>,
         #[from(OffsetAfter)]
-        pub(crate) offset_after: Option<TokenStream>,
+        pub(crate) offset_after: Option<SpannedValue<TokenStream>>,
         #[from(If)]
         pub(crate) if_cond: Option<TokenStream>,
         #[from(DerefNow, PostProcessNow)]
-        pub(crate) deref_now: bool,
+        pub(crate) deref_now: SpannedValue<bool>,
         #[from(RestorePosition)]
         pub(crate) restore_position: bool,
         #[from(Try)]
@@ -57,11 +58,21 @@ impl StructField {
     }
 
     pub(crate) fn should_use_after_parse(&self) -> bool {
-        !self.deref_now
+        !*self.deref_now
     }
 
     pub(crate) fn generated_value(&self) -> bool {
         matches!(self.read_mode, ReadMode::Calc(_) | ReadMode::Default)
+    }
+
+    fn validate(&self) -> syn::Result<()> {
+        if let (Some(offset_after), true) = (&self.offset_after, *self.deref_now) {
+            let offset_after_span = offset_after.span();
+            let span = offset_after_span.join(self.deref_now.span()).unwrap_or(offset_after_span);
+            Err(syn::Error::new(span, "`deref_now` and `offset_after` are mutually exclusive"))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -69,7 +80,7 @@ impl FromField for StructField {
     type In = syn::Field;
 
     fn from_field(field: &Self::In, index: usize) -> ParseResult<Self> {
-        Self::set_from_attrs(Self {
+        let result = Self::set_from_attrs(Self {
             ident: field.ident.clone().unwrap_or_else(|| quote::format_ident!("self_{}", index)),
             generated_ident: field.ident.is_none(),
             ty: field.ty.clone(),
@@ -93,7 +104,24 @@ impl FromField for StructField {
             align_after: <_>::default(),
             seek_before: <_>::default(),
             pad_size_to: <_>::default(),
-        }, &field.attrs)
+        }, &field.attrs);
+
+        match result {
+            ParseResult::Ok(this) => {
+                if let Err(error) = this.validate() {
+                    ParseResult::Partial(this, error)
+                } else {
+                    ParseResult::Ok(this)
+                }
+            },
+            ParseResult::Partial(this, mut parse_error) => {
+                if let Err(error) = this.validate() {
+                    parse_error.combine(error);
+                }
+                ParseResult::Partial(this, parse_error)
+            },
+            ParseResult::Err(error) => ParseResult::Err(error),
+        }
     }
 }
 

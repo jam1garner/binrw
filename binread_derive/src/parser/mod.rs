@@ -395,6 +395,13 @@ mod tests {
         }
     });
 
+    try_error!(deref_now_offset_after_conflict: "mutually exclusive" {
+        struct Foo {
+            #[br(deref_now, offset_after(1))]
+            a: u8,
+        }
+    });
+
     try_error!(unsupported_type_enum: "null enums are not supported" {
         enum Foo {}
     });
