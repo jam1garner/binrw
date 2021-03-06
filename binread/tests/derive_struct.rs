@@ -196,6 +196,28 @@ fn ignore_and_default() {
 }
 
 #[test]
+fn magic_byte() {
+    #[derive(BinRead, Debug)]
+    #[br(magic = b'a')]
+    struct Test;
+
+    Test::read(&mut Cursor::new(b"a")).unwrap();
+    Test::read(&mut Cursor::new(b"")).expect_err("accepted bad data");
+    Test::read(&mut Cursor::new(b"x")).expect_err("accepted bad data");
+}
+
+#[test]
+fn magic_char() {
+    #[derive(BinRead, Debug)]
+    #[br(magic = 'a')]
+    struct Test;
+
+    Test::read(&mut Cursor::new(b"a")).unwrap();
+    Test::read(&mut Cursor::new(b"")).expect_err("accepted bad data");
+    Test::read(&mut Cursor::new(b"x")).expect_err("accepted bad data");
+}
+
+#[test]
 fn pad_after_before() {
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {

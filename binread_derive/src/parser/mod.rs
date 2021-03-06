@@ -384,6 +384,11 @@ mod tests {
         }
     });
 
+    try_error!(invalid_magic_type: "expected byte string, byte, char, float, or int" {
+        #[br(magic = "invalid_type")]
+        struct Foo;
+    });
+
     try_error!(magic_conflict: "conflicting magic types" {
         enum Foo {
             #[br(magic = 0u8)] A,
