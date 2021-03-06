@@ -203,13 +203,32 @@ impl <T: KeywordToken> TrySet<bool> for T {
     }
 }
 
-// TODO: This sucks, it should not be impossible to get syn::Error
-impl <T: core::convert::TryInto<To, Error = E> + KeywordToken, E: core::fmt::Display, To> TrySet<Option<To>> for T {
+// TODO: This sucks
+pub(crate) enum TrySetError {
+    Infallible,
+    Syn(syn::Error),
+}
+
+impl From<core::convert::Infallible> for TrySetError {
+    fn from(_: core::convert::Infallible) -> Self {
+        Self::Infallible
+    }
+}
+
+impl From<syn::Error> for TrySetError {
+    fn from(error: syn::Error) -> Self {
+        Self::Syn(error)
+    }
+}
+
+impl <T: core::convert::TryInto<To, Error = E> + KeywordToken, E: Into<TrySetError>, To> TrySet<Option<To>> for T {
     fn try_set(self, to: &mut Option<To>) -> syn::Result<()> {
         if to.is_none() {
-            let err_span = self.keyword_span();
             *to = Some(self.try_into().map_err(|error| {
-                syn::Error::new(err_span, format!("{}", error))
+                match error.into() {
+                    TrySetError::Infallible => unreachable!(),
+                    TrySetError::Syn(error) => error,
+                }
             })?);
             Ok(())
         } else {
