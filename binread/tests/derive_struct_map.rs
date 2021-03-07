@@ -76,12 +76,14 @@ fn try_map_struct() {
         a: i16,
     }
 
+    struct Oops;
+
     impl Test {
-        fn from_bytes(bytes: [u8; 2]) -> binread::BinResult<Self> {
+        fn from_bytes(bytes: [u8; 2]) -> Result<Self, Oops> {
             if bytes[0] == 0 {
                 Ok(Self { a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8) })
             } else {
-                Err(binread::Error::Custom { pos: 0, err: Box::new("oops") })
+                Err(Oops)
             }
         }
     }
@@ -89,5 +91,5 @@ fn try_map_struct() {
     let result = Test::read(&mut Cursor::new(b"\0\x01")).unwrap();
     assert_eq!(result.a, 256);
     let error = Test::read(&mut Cursor::new(b"\x01\0")).expect_err("accepted bad data");
-    assert_eq!(*error.custom_err::<&str>().unwrap(), "oops");
+    error.custom_err::<Oops>().unwrap();
 }

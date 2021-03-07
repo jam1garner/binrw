@@ -19,8 +19,13 @@ pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
             Input::Enum(e) => generate_data_enum(e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, e),
         },
-        Map::Try(map) => quote! {
-            #READ_METHOD(#READER, #OPT, #ARGS).and_then(#map)
+        Map::Try(map) => {
+            let map_err = get_map_err(POS);
+            quote! {
+                #READ_METHOD(#READER, #OPT, #ARGS).and_then(|value| {
+                    #map(value)#map_err
+                })
+            }
         },
         Map::Map(map) => quote! {
             #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
@@ -127,6 +132,17 @@ fn get_magic(magic: &Magic, options_var: &impl ToTokens) -> Option<TokenStream> 
             #ASSERT_MAGIC(#READER, #magic, #options_var)#handle_error?;
         }
     })
+}
+
+fn get_map_err(pos: IdentStr) -> TokenStream {
+    quote! {
+        .map_err(|e| {
+            #BIN_ERROR::Custom {
+                pos: #pos,
+                err: Box::new(e) as _,
+            }
+        })
+    }
 }
 
 struct ReadOptionsGenerator {

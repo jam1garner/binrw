@@ -269,15 +269,11 @@ impl <'field> FieldGenerator<'field> {
             Map::Try(try_map) => {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
+                let map_err = super::get_map_err(SAVED_POSITION);
                 quote! {{
                     let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
 
-                    (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value).map_err(|e| {
-                        #BIN_ERROR::Custom {
-                            pos: #SAVED_POSITION,
-                            err: Box::new(e) as _,
-                        }
-                    })?
+                    (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value)#map_err?
                 }}
             },
         };
