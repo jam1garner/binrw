@@ -1,0 +1,22 @@
+name: Rust Build and Test
+
+on:
+  push:
+    branches: [ master ]
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Local-only setup
+      if: ${{ env.ACT }}
+      run: |
+        curl https://sh.rustup.rs -sSf | sh -s -- -y
+        ~/.cargo/bin/rustup install nightly-2020-04-10
+    - name: Build
+      run: ~/.cargo/bin/cargo build
+    - name: Test
+      run: ~/.cargo/bin/cargo test
+
