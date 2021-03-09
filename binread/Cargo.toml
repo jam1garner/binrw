@@ -6,7 +6,7 @@ edition = "2018"
 repository = "https://github.com/jam1garner/binread"
 license = "MIT"
 description = "A Rust crate for helping read structs from binary data using ✨macro magic✨"
-readme = "README.md"
+readme = "../README.md"
 documentation = "https://docs.rs/binread"
 
 [dependencies]
