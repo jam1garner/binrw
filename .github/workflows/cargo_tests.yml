@@ -13,9 +13,10 @@ jobs:
     - name: Local-only setup
       if: ${{ env.ACT }}
       run: |
+        # For local setups building with `act`, rustup likely won't be installed
         curl https://sh.rustup.rs -sSf | sh -s -- -y
-        ~/.cargo/bin/rustup install nightly-2020-04-10
     - name: Build
+      # Build/test uses absolute(ish) paths, to maintain compatibility with `act`
       run: ~/.cargo/bin/cargo build
     - name: Test
       run: ~/.cargo/bin/cargo test
