@@ -17,10 +17,10 @@ pub use Endian::{
     Native as NE
 };
 
-impl Into<String> for &Endian {
-    fn into(self) -> String {
+impl From<&Endian> for String {
+    fn from(endian: &Endian) -> String {
         String::from(
-            match self {
+            match endian {
                 Endian::Big => "Big",
                 Endian::Little => "Little",
                 Endian::Native => "Native",
@@ -32,5 +32,22 @@ impl Into<String> for &Endian {
 impl Default for Endian {
     fn default() -> Endian {
         Endian::Native
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn endian_to_string() {
+        for &(ref endian, string) in [
+            (Endian::Big, "Big"),
+            (Endian::Little, "Little"),
+            (Endian::Native, "Native"),
+        ].iter() {
+            let converted: String = endian.into();
+            assert_eq!(converted, string)
+        }
     }
 }
