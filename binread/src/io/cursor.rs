@@ -75,8 +75,7 @@ impl<T: AsRef<[u8]>> Seek for Cursor<T> {
     }
 }
 
-#[cfg(test)]
-#[cfg(std)]
+#[cfg(all(test, feature = "std"))]
 mod test {
     use super::*;
 
