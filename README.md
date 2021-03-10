@@ -3,7 +3,8 @@
 [![tests](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml/badge.svg)](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml)
 [![docs.rs](https://docs.rs/binread/badge.svg)](https://docs.rs/binread)
 [![codecov](https://codecov.io/gh/jam1garner/binread/branch/master/graph/badge.svg?token=UREOWI2KAY)](https://codecov.io/gh/jam1garner/binread) 
-[![discord](https://img.shields.io/discord/818723403871551509)](https://discord.gg/ABy4Qh549j)
+[![discord](https://img.shields.io/discord/818723403871551509?color=gray&label=%20&logo=discord)](https://discord.gg/ABy4Qh549j)
+[![matrix: #binrw:matrix.org](https://img.shields.io/badge/style-%23binrw:matrix.org-blue.svg?style=flat&label=[m])](https://matrix.to/#/#binrw:matrix.org)
 
 A Rust crate for helping parse structs from binary data using ✨macro magic✨
 
