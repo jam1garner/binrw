@@ -1,5 +1,10 @@
 # binread
 
+[![tests](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml/badge.svg)](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml)
+[![docs.rs](https://docs.rs/binread/badge.svg)](https://docs.rs/binread)
+[![codecov](https://codecov.io/gh/jam1garner/binread/branch/master/graph/badge.svg?token=UREOWI2KAY)](https://codecov.io/gh/jam1garner/binread) 
+[![discord](https://img.shields.io/discord/818723403871551509)](https://discord.gg/ABy4Qh549j)
+
 A Rust crate for helping parse structs from binary data using ✨macro magic✨
 
 
