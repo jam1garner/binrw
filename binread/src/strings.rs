@@ -68,29 +68,27 @@ impl NullWideString {
     }
 }
 
-impl Into<NullWideString> for Vec<NonZeroU16> {
-    fn into(self) -> NullWideString {
-        let vals: Vec<u16> = self.into_iter().map(|x| x.get()).collect();
-        NullWideString(vals)
+impl From<Vec<NonZeroU16>> for NullWideString {
+    fn from(v: Vec<NonZeroU16>) -> NullWideString {
+        NullWideString(v.into_iter().map(|x| x.get()).collect())
     }
 }
 
-impl Into<NullString> for Vec<NonZeroU8> {
-    fn into(self) -> NullString {
-        let vals: Vec<u8> = self.into_iter().map(|x| x.get()).collect();
-        NullString(vals)
+impl From<Vec<NonZeroU8>> for NullString {
+    fn from(v: Vec<NonZeroU8>) -> Self {
+        NullString(v.into_iter().map(|x| x.get()).collect())
     }
 }
 
-impl Into<Vec<u16>> for NullWideString {
-    fn into(self) -> Vec<u16> {
-        self.0
+impl From<NullWideString> for Vec<u16> {
+    fn from(s: NullWideString) -> Self {
+        s.0
     }
 }
 
-impl Into<Vec<u8>> for NullString {
-    fn into(self) -> Vec<u8> {
-        self.0
+impl From<NullString> for Vec<u8> {
+    fn from(s: NullString) -> Self {
+        s.0
     }
 }
 
