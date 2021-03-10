@@ -16,7 +16,7 @@ enum Repr {
 }
 
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ErrorKind {
     NotFound,
     PermissionDenied,
@@ -42,6 +42,12 @@ impl Error {
     pub fn new<A>(kind: ErrorKind, _: A) -> Self {
         Self {
             repr: Repr::Simple(kind)
+        }
+    }
+
+    pub fn kind(&self) -> ErrorKind {
+        match self.repr {
+            Repr::Simple(kind) => kind,
         }
     }
 }

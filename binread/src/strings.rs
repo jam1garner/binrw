@@ -27,7 +27,7 @@ impl BinRead for Vec<NonZeroU8> {
     fn read_options<R: Read + Seek>(reader: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self>
     {
         reader
-            .iter_bytes()
+            .bytes()
             .take_while(|x| !matches!(x, Ok(0)))
             .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
             .collect()
