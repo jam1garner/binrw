@@ -152,13 +152,13 @@ mod tests {
     #[derive(BinRead)]
     struct MissingCount {
         #[br(parse_with = Punctuated::separated)]
-        list: Punctuated<One, Two>,
+        _list: Punctuated<One, Two>,
     }
 
     #[derive(BinRead)]
     struct MissingCountTrailing {
         #[br(parse_with = Punctuated::separated_trailing)]
-        list: Punctuated<One, Two>,
+        _list: Punctuated<One, Two>,
     }
 
     const TEST_DATA: &[u8] = b"\x03\x01\x02\x01\x02\x01";

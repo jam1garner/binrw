@@ -87,14 +87,23 @@ mod tests {
 
     #[test]
     fn derive_code_coverage() {
-        let file = fs::File::open(
-            env::current_dir().unwrap()
+        let derive_tests_folder = env::current_dir().unwrap()
                 .join("..")
                 .join("binread")
                 .join("tests")
-                .join("derive_struct.rs")
-        ).unwrap();
+                .join("derive");
 
-        emulate_derive_expansion_fallible(file, "BinRead", super::derive_binread_internal).unwrap();
+        let mut run_success = true;
+        for entry in fs::read_dir(derive_tests_folder).unwrap() {
+            let entry = entry.unwrap();
+            if !entry.file_type().unwrap().is_file() {
+                continue
+            }
+            let file = fs::File::open(entry.path()).unwrap();
+            let is_ok = emulate_derive_expansion_fallible(file, "BinRead", super::derive_binread_internal).is_ok();
+            run_success &= is_ok;
+        }
+
+        assert!(run_success)
     }
 }
