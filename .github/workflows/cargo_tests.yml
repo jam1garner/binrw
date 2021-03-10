@@ -1,6 +1,8 @@
 name: Rust Build and Test
 
 on:
+  pull_request:
+    branches: [ master ]
   push:
     branches: [ master ]
 jobs:
