@@ -12,9 +12,12 @@ use syn::{DeriveInput, parse_macro_input};
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
 pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
-    let derive_input = parse_macro_input!(input as DeriveInput);
-    let binread_input = Input::from_input(&derive_input);
-    generate_impl(&derive_input, &binread_input).into()
+    derive_binread_internal(parse_macro_input!(input as DeriveInput)).into()
+}
+
+fn derive_binread_internal(input: DeriveInput) -> proc_macro2::TokenStream {
+    let binread_input = Input::from_input(&input);
+    generate_impl(&input, &binread_input)
 }
 
 #[proc_macro_attribute]
@@ -75,4 +78,23 @@ fn clean_field_attrs(binread_input: &Option<Input>, variant_index: usize, fields
 
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
     attrs.retain(|attr| !is_binread_attr(attr));
+}
+
+#[cfg(test)]
+mod tests {
+    use runtime_macros_derive::emulate_derive_expansion_fallible;
+    use std::{env, fs};
+
+    #[test]
+    fn derive_code_coverage() {
+        let file = fs::File::open(
+            env::current_dir().unwrap()
+                .join("..")
+                .join("binread")
+                .join("tests")
+                .join("derive_struct.rs")
+        ).unwrap();
+
+        emulate_derive_expansion_fallible(file, "BinRead", super::derive_binread_internal).unwrap();
+    }
 }
