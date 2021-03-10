@@ -15,6 +15,8 @@ either = "1.6"
 syn = { version = "1", features = ["extra-traits", "full"] }
 quote = "1"
 proc-macro2 = "1"
+
+[dev-dependencies]
 runtime-macros-derive = "0.4.0"
 
 [features]
