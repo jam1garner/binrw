@@ -23,8 +23,7 @@ jobs:
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.15.0'
-          # Exclusions are because tarpaulin doesn't handle our non-UI proc-macro stuff well
-          args: '--workspace --all-features --exclude-files binread_derive/src/codegen --exclude-files binread_derive/src/lib.rs'
+          args: '--workspace --all-features'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1.0.2
