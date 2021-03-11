@@ -1,4 +1,8 @@
+#[cfg(not(test))]
 use super::*;
+
+#[cfg(test)]
+use super::no_std::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct Cursor<T: AsRef<[u8]>> {
@@ -78,6 +82,9 @@ impl<T: AsRef<[u8]>> Seek for Cursor<T> {
 #[cfg(all(test, feature = "std"))]
 mod test {
     use super::*;
+
+    use std::io::{Read, Seek};
+    use crate::io::no_std::{Read as NoStdRead, Seek as NoStdSeek};
 
     #[test]
     fn cursor_test() {

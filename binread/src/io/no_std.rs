@@ -90,3 +90,17 @@ impl<S: Seek + ?Sized> Seek for &mut S {
         (**self).seek(pos)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_exact() {
+        const IN: &[u8] = b"ABCD";
+        let mut x = Cursor::new(IN);
+        let mut out = [0, 0, 0, 0];
+        x.read_exact(&mut out[..]).unwrap();
+        assert_eq!(out, IN);
+    }
+}
