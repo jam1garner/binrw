@@ -103,4 +103,66 @@ mod tests {
         x.read_exact(&mut out[..]).unwrap();
         assert_eq!(out, IN);
     }
+
+    #[test]
+    fn iter_bytes() {
+        const IN: &[u8] = b"ABCD";
+        let x = Cursor::new(IN);
+        let mut x = x.bytes();
+
+        assert_eq!(x.next().unwrap().unwrap(), b'A');
+        assert_eq!(x.next().unwrap().unwrap(), b'B');
+        assert_eq!(x.next().unwrap().unwrap(), b'C');
+        assert_eq!(x.next().unwrap().unwrap(), b'D');
+        assert!(x.next().is_none());
+        assert!(x.next().is_none());
+    }
+
+    #[test]
+    fn interupt_once() {
+        struct InteruptReader(bool);
+
+        impl Read for InteruptReader {
+            fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+                if self.0 {
+                    self.0 = false;
+                    Err(Error::new(ErrorKind::Interrupted, ()))
+                } else {
+                    buf.fill(0);
+                    Ok(buf.len())
+                }
+            }
+        }
+
+        let mut x = InteruptReader(true);
+        let mut out = [1, 2, 3, 4];
+        x.read_exact(&mut out).unwrap();
+
+        assert_eq!(out, [0, 0, 0, 0]);
+
+        let mut x = InteruptReader(true).bytes();
+        assert_eq!(x.next().unwrap().unwrap(), 0);
+        assert_eq!(x.next().unwrap().unwrap(), 0);
+        assert_eq!(x.next().unwrap().unwrap(), 0);
+        assert_eq!(x.next().unwrap().unwrap(), 0);
+    }
+
+    #[test]
+    fn return_error() {
+        struct ReturnError(Option<Error>);
+
+        impl Read for ReturnError {
+            fn read(&mut self, _buf: &mut [u8]) -> Result<usize> {
+                Err(self.0.take().unwrap())
+            }
+        }
+
+        let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+        let mut out = [0, 1, 2, 3];
+
+        assert_eq!(x.read_exact(&mut out).unwrap_err().kind(), ErrorKind::ConnectionRefused);
+
+        let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ()))).bytes();
+        assert_eq!(x.next().unwrap().unwrap_err().kind(), ErrorKind::ConnectionRefused);
+    }
 }
