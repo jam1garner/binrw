@@ -1,0 +1,28 @@
+[package]
+name = "binrw_derive"
+version = "0.2.0"
+authors = [
+    "jam1garner <8260240+jam1garner@users.noreply.github.com>",
+    "Colin Snover <github.com@zetafleet.com>",
+    "Kitlith <kitlith@kitl.pw>",
+    "roblabla <robinlambertz+dev@gmail.com>"
+]
+edition = "2018"
+description = "Derive macro for binrw"
+repository = "https://github.com/jam1garner/binrw"
+license = "MIT"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+either = "1.6"
+syn = { version = "1", features = ["extra-traits", "full"] }
+quote = "1"
+proc-macro2 = "1"
+
+[dev-dependencies]
+runtime-macros-derive = "0.4.0"
+
+[features]
+debug_template = []

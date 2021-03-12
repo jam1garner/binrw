@@ -1,0 +1,31 @@
+[package]
+name = "binrw"
+version = "0.2.0"
+authors = [
+    "jam1garner <8260240+jam1garner@users.noreply.github.com>",
+    "Colin Snover <github.com@zetafleet.com>",
+    "Kitlith <kitlith@kitl.pw>",
+    "roblabla <robinlambertz+dev@gmail.com>"
+]
+edition = "2018"
+repository = "https://github.com/jam1garner/binrw"
+license = "MIT"
+description = "A Rust crate for helping read structs from binary data using ✨macro magic✨"
+readme = "../README.md"
+documentation = "https://docs.rs/binrw"
+
+[dependencies]
+binrw_derive = { version = "0.2.0", path = "../binrw_derive" }
+
+# Only for debug templates
+lazy_static = { version = "1.4", optional = true }
+
+[dev-dependencies]
+modular-bitfield = "0.9"
+rustversion = "1.0"
+trybuild = "1.0"
+
+[features]
+default = ["std"]
+std = []
+debug_template = ["std", "lazy_static", "binrw_derive/debug_template"]
