@@ -1,5 +1,9 @@
 use super::*;
 
+use core::convert::TryInto;
+use core::any::Any;
+use crate::io;
+
 /// Internal macro for quickly implementing binread for types supporting from_bytes api
 macro_rules! binread_impl {
     ($($type_name:ty),*$(,)?) => {
@@ -49,6 +53,15 @@ impl BinRead for char {
 
 binread_impl!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
+fn not_enough_bytes<T>(_: T) -> Error {
+    Error::Io(
+        io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "not enough bytes in reader"
+        )
+    )
+}
+
 impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
     type Args = B::Args;
 
@@ -59,12 +72,28 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
             None => panic!("Missing count for Vec"),
         };
 
+        let mut list = Self::with_capacity(count);
 
-        (0..count)
-            .map(|_| {
-                B::read_options(reader, &options, args)
-            })
-            .collect()
+        if let Some(bytes) = Any::downcast_mut::<Vec<u8>>(&mut list) {
+            let byte_count = reader
+                .take(count.try_into().map_err(not_enough_bytes)?)
+                .read_to_end(bytes)?;
+
+            if byte_count == count {
+                Ok(list)
+            } else {
+                Err(not_enough_bytes(()))
+            }
+        } else {
+            (0..count)
+                .map(|_| {
+                    list.push(B::read_options(reader, &options, args)?);
+
+                    Ok(())
+                })
+                .collect::<Result<(), _>>()
+                .map(|_| list)
+        }
     }
 
     fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: Self::Args)-> BinResult<()>
@@ -180,7 +209,7 @@ impl<T: BinRead> BinRead for Option<T> {
     }
 }
 
-impl<T> BinRead for core::marker::PhantomData<T> {
+impl<T: 'static> BinRead for core::marker::PhantomData<T> {
     type Args = ();
 
     fn read_options<R: Read + Seek>(_: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self> {
