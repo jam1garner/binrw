@@ -4,7 +4,10 @@ on:
   pull_request:
     branches: [ master ]
   push:
-    branches: [ master ]
+    branches:
+        - master
+        # TODO: remove
+        - binread_remerge
 
 jobs:
   build:
