@@ -23,6 +23,3 @@ proc-macro2 = "1"
 
 [dev-dependencies]
 runtime-macros-derive = "0.4.0"
-
-[features]
-debug_template = []

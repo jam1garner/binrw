@@ -15,7 +15,7 @@ pub(crate) fn generate_impl(derive_input: &syn::DeriveInput, binread_input: &Par
     let (arg_type, read_opt_impl) = match binread_input {
         ParseResult::Ok(binread_input) => (
             binread_input.imports().types(),
-            read_options::generate(&derive_input.ident, &binread_input),
+            read_options::generate(&binread_input),
         ),
         ParseResult::Partial(binread_input, error) => (
             binread_input.imports().types(),

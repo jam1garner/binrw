@@ -1,4 +1,3 @@
-mod debug_template;
 mod r#enum;
 mod r#struct;
 
@@ -9,13 +8,12 @@ use r#enum::{generate_data_enum, generate_unit_enum};
 use r#struct::{generate_struct, generate_unit_struct};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
-use syn::Ident;
 
-pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
+pub(crate) fn generate(input: &Input) -> TokenStream {
     let inner = match input.map() {
         Map::None => match input {
             Input::UnitStruct(_) => generate_unit_struct(input, None),
-            Input::Struct(s) => generate_struct(ident, input, s),
+            Input::Struct(s) => generate_struct(input, s),
             Input::Enum(e) => generate_data_enum(e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, e),
         },
@@ -105,8 +103,6 @@ impl <'input> PreludeGenerator<'input> {
 
 fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
     assertions.iter().map(|Assert { condition, consequent }| {
-        let handle_error = debug_template::handle_error();
-
         let error_fn = match &consequent {
             Some(AssertionError::Message(message)) =>
                 quote! { #ASSERT_ERROR_FN::<_, fn() -> ()>::Message(|| { #message }) },
@@ -119,17 +115,16 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
         };
 
         quote! {
-            #ASSERT(#condition, #POS, #error_fn)#handle_error?;
+            #ASSERT(#condition, #POS, #error_fn)?;
         }
     })
 }
 
 fn get_magic(magic: &Magic, options_var: &impl ToTokens) -> Option<TokenStream> {
     magic.as_ref().map(|magic| {
-        let handle_error = debug_template::handle_error();
         let magic = magic.deref_value();
         quote! {
-            #ASSERT_MAGIC(#READER, #magic, #options_var)#handle_error?;
+            #ASSERT_MAGIC(#READER, #magic, #options_var)?;
         }
     })
 }
@@ -224,19 +219,6 @@ impl ReadOptionsGenerator {
             self.out = quote! {
                 #head
                 #TEMP.offset = #offset;
-            };
-        }
-
-        self
-    }
-
-    fn variable_name(mut self, ident: &Ident) -> Self {
-        if cfg!(feature = "debug_template") {
-            let ident = ident.to_string();
-            let head = self.out;
-            self.out = quote! {
-                #head
-                #TEMP.variable_name = Some(#ident);
             };
         }
 

@@ -142,26 +142,6 @@ impl BinRead for NullWideString {
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
         -> BinResult<Self>
     {
-        #[cfg(feature = "debug_template")]
-        let options = {
-            let mut options = *options;
-            let pos = reader.seek(SeekFrom::Current(0)).unwrap();
-
-            if !options.dont_output_to_template {
-                binary_template::write_named(
-                    options.endian,
-                    pos,
-                    "wstring",
-                    &options.variable_name
-                        .map(ToString::to_string)
-                        .unwrap_or_else(binary_template::get_next_var_name)
-                );
-
-            }
-            options.dont_output_to_template = true;
-            options
-        };
-
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
         <Vec<NonZeroU16>>::read_options(reader, &options, args)
@@ -175,21 +155,6 @@ impl BinRead for NullString {
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
         -> BinResult<Self>
     {
-        #[cfg(feature = "debug_template")] {
-            let pos = reader.seek(SeekFrom::Current(0)).unwrap();
-
-            if !options.dont_output_to_template {
-                binary_template::write_named(
-                    options.endian,
-                    pos,
-                    "string",
-                    &options.variable_name
-                            .map(ToString::to_string)
-                            .unwrap_or_else(binary_template::get_next_var_name)
-                );
-            }
-        }
-
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
         <Vec<NonZeroU8>>::read_options(reader, options, args)

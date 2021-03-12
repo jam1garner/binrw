@@ -87,12 +87,6 @@ where
     R: io::Read + io::Seek,
 {
     let pos = reader.seek(SeekFrom::Current(0))?;
-    #[cfg(feature = "debug_template")]
-    let options = {
-        let mut options = *options;
-        options.variable_name = Some("magic");
-        options
-    };
     let val = B::read_options(reader, &options, ())?;
     if val == expected {
         Ok(())

@@ -3,7 +3,7 @@ use crate::codegen::sanitization::*;
 use crate::parser::{Input, Map, PassedArgs, ReadMode, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::quote;
-use super::{PreludeGenerator, ReadOptionsGenerator, debug_template, get_assertions, get_magic};
+use super::{PreludeGenerator, ReadOptionsGenerator, get_assertions, get_magic};
 use syn::Ident;
 
 pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>) -> TokenStream {
@@ -15,10 +15,9 @@ pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>)
     }
 }
 
-pub(super) fn generate_struct(ident: &Ident, input: &Input, st: &Struct) -> TokenStream {
+pub(super) fn generate_struct(input: &Input, st: &Struct) -> TokenStream {
     StructGenerator::new(input, st)
         .read_fields()
-        .wrap_debug(ident)
         .add_assertions(core::iter::empty())
         .return_value(None)
         .finish()
@@ -87,21 +86,6 @@ impl <'input> StructGenerator<'input> {
 
         self
     }
-
-    pub(super) fn wrap_debug(mut self, ident: &Ident) -> Self {
-        if cfg!(feature = "debug_template") {
-            let debug_tpl_start = debug_template::start(&ident);
-            let debug_tpl_end = debug_template::end();
-            let body = self.out;
-            self.out = quote! {
-                #debug_tpl_start
-                #body
-                #debug_tpl_end
-            };
-        }
-
-        self
-    }
 }
 
 fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
@@ -152,10 +136,9 @@ impl <'field> AfterParseGenerator<'field> {
     }
 
     fn call_after_parse(mut self, after_parse_fn: IdentStr, options_var: &Ident, args_var: &Ident) -> Self {
-        let handle_error = debug_template::handle_error();
         let value = self.out;
         self.out = quote! {
-            #after_parse_fn(#value, #READER, #options_var, #args_var.clone())#handle_error?;
+            #after_parse_fn(#value, #READER, #options_var, #args_var.clone())?;
         };
 
         self
@@ -287,7 +270,6 @@ impl <'field> FieldGenerator<'field> {
             let options = ReadOptionsGenerator::new(options_var)
                 .endian(&self.field.endian)
                 .offset(&self.field.offset)
-                .variable_name(&self.field.ident)
                 .count(&self.field.count)
                 .finish();
             let tail = self.out;
@@ -346,8 +328,7 @@ impl <'field> FieldGenerator<'field> {
             self.out = if self.field.do_try {
                 quote! { #result.ok() }
             } else {
-                let handle_error = debug_template::handle_error();
-                quote! { #result#handle_error? }
+                quote! { #result? }
             };
         }
 
@@ -413,12 +394,11 @@ fn get_prelude(input: &Input) -> TokenStream {
 }
 
 fn generate_seek_after(field: &StructField) -> TokenStream {
-    let handle_error = debug_template::handle_error();
     let pad_size_to = field.pad_size_to.as_ref().map(|pad| quote! {{
         let pad = (#pad) as i64;
-        let size = (#SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error? - #POS) as i64;
+        let size = (#SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))? - #POS) as i64;
         if size < pad {
-            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(pad - size))#handle_error?;
+            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(pad - size))?;
         }
     }});
     let pad_after = field.pad_after.as_ref().map(map_pad);
@@ -432,14 +412,13 @@ fn generate_seek_after(field: &StructField) -> TokenStream {
 }
 
 fn generate_seek_before(field: &StructField) -> TokenStream {
-    let handle_error = debug_template::handle_error();
     let seek_before = field.seek_before.as_ref().map(|seek| quote! {
-        #SEEK_TRAIT::seek(#READER, #seek)#handle_error?;
+        #SEEK_TRAIT::seek(#READER, #seek)?;
     });
     let pad_before = field.pad_before.as_ref().map(map_pad);
     let align_before = field.align_before.as_ref().map(map_align);
     let pad_size_to_before = field.pad_size_to.as_ref().map(|_| quote! {
-        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error?;
+        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
     });
 
     quote! {
@@ -468,18 +447,16 @@ fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {
 }
 
 fn map_align(align: &TokenStream) -> TokenStream {
-    let handle_error = debug_template::handle_error();
     quote! {{
         let align = (#align) as i64;
-        let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error? as i64;
-        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current((align - (pos % align)) % align))#handle_error?;
+        let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))? as i64;
+        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current((align - (pos % align)) % align))?;
     }}
 }
 
 fn map_pad(pad: &TokenStream) -> TokenStream {
-    let handle_error = debug_template::handle_error();
     quote! {
-        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(#pad))#handle_error?;
+        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(#pad))?;
     }
 }
 
@@ -487,11 +464,10 @@ fn wrap_save_restore(value: TokenStream) -> TokenStream {
     if value.is_empty() {
         value
     } else {
-        let handle_error = debug_template::handle_error();
         quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error?;
+            let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
             #value
-            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))#handle_error?;
+            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))?;
         }
     }
 }

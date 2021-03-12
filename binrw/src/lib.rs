@@ -143,10 +143,6 @@ pub mod punctuated;
 #[doc(hidden)] pub mod strings;
 #[doc(hidden)] pub mod pos_value;
 
-#[cfg(feature = "std")]
-#[cfg(feature = "debug_template")]
-pub mod binary_template;
-
 use core::any::{Any, TypeId};
 
 #[doc(inline)]
