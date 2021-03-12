@@ -18,6 +18,7 @@ BinRead uses a derive macro for declaratively defining binary parsing methods fo
 #[br(magic = b"DOG", assert(name.len() != 0))]
 struct Dog {
     bone_pile_count: u8,
+<<<<<<< HEAD
 
     #[br(big, count = bone_pile_count)]
     bone_piles: Vec<u16>,
@@ -26,6 +27,16 @@ struct Dog {
     name: NullString
 }
 
+=======
+ 
+    #[br(big, count = bone_pile_count)]
+    bone_piles: Vec<u16>,
+ 
+    #[br(align_before = 0xA)]
+    name: NullString
+}
+ 
+>>>>>>> binrw/master
 let mut reader = Cursor::new(b"DOG\x02\x00\x01\x00\x12\0\0Rudy\0");
 let dog: Dog = reader.read_ne().unwrap();
 assert_eq!(dog.bone_piles, &[0x1, 0x12]);
