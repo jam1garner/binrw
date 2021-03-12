@@ -1,0 +1,5 @@
+error: conflicting map keyword
+ --> $DIR/conflicting_keyword_map.rs:5:23
+  |
+5 |     #[br(map = |_| 0, try_map = |_| Ok(0))]
+  |                       ^^^^^^^

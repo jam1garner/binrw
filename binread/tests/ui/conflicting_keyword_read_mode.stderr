@@ -1,0 +1,17 @@
+error: conflicting read mode keyword
+ --> $DIR/conflicting_keyword_read_mode.rs:5:19
+  |
+5 |     #[br(calc(1), default, ignore, parse_with = u8)]
+  |                   ^^^^^^^
+
+error: conflicting read mode keyword
+ --> $DIR/conflicting_keyword_read_mode.rs:5:28
+  |
+5 |     #[br(calc(1), default, ignore, parse_with = u8)]
+  |                            ^^^^^^
+
+error: conflicting read mode keyword
+ --> $DIR/conflicting_keyword_read_mode.rs:5:36
+  |
+5 |     #[br(calc(1), default, ignore, parse_with = u8)]
+  |                                    ^^^^^^^^^^

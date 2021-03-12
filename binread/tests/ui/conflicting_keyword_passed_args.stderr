@@ -1,0 +1,5 @@
+error: conflicting args keyword
+ --> $DIR/conflicting_keyword_passed_args.rs:6:19
+  |
+6 |     #[br(args(a), args_tuple = (a, ))]
+  |                   ^^^^^^^^^^

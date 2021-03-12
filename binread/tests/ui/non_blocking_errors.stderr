@@ -1,0 +1,17 @@
+error: expected one of: `big`, `little`, `map`, `try_map`, `magic`, `import`, `import_tuple`, `assert`, `pre_assert`
+ --> $DIR/non_blocking_errors.rs:6:6
+  |
+6 | #[br(invalid_keyword_struct)]
+  |      ^^^^^^^^^^^^^^^^^^^^^^
+
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `magic`, `args`, `args_tuple`, `calc`, `default`, `ignore`, `parse_with`, `count`, `offset`, `offset_after`, `if`, `deref_now`, `postprocess_now`, `restore_position`, `try`, `temp`, `assert`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`
+ --> $DIR/non_blocking_errors.rs:8:10
+  |
+8 |     #[br(invalid_keyword_struct_field_a)]
+  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `magic`, `args`, `args_tuple`, `calc`, `default`, `ignore`, `parse_with`, `count`, `offset`, `offset_after`, `if`, `deref_now`, `postprocess_now`, `restore_position`, `try`, `temp`, `assert`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`
+  --> $DIR/non_blocking_errors.rs:10:10
+   |
+10 |     #[br(invalid_keyword_struct_field_b)]
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

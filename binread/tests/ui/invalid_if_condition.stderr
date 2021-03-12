@@ -1,0 +1,5 @@
+error[E0308]: mismatched types
+ --> $DIR/invalid_if_condition.rs:5:13
+  |
+5 |     #[br(if("wrong type"))]
+  |             ^^^^^^^^^^^^ expected `bool`, found `&str`

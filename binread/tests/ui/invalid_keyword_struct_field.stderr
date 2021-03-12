@@ -1,0 +1,5 @@
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `magic`, `args`, `args_tuple`, `calc`, `default`, `ignore`, `parse_with`, `count`, `offset`, `offset_after`, `if`, `deref_now`, `postprocess_now`, `restore_position`, `try`, `temp`, `assert`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`
+ --> $DIR/invalid_keyword_struct_field.rs:5:10
+  |
+5 |     #[br(invalid_struct_field_keyword)]
+  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,0 +1,17 @@
+error[E0425]: cannot find value `does_not_exist` in this scope
+ --> $DIR/invalid_assert_variable.rs:4:13
+  |
+4 | #[br(assert(does_not_exist == 0))]
+  |             ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `a` in this scope
+  --> $DIR/invalid_assert_variable.rs:11:13
+   |
+11 | #[br(assert(a == 0))]
+   |             ^ help: a local variable with a similar name exists: `b`
+
+error[E0425]: cannot find value `a` in this scope
+  --> $DIR/invalid_assert_variable.rs:21:17
+   |
+21 |     #[br(assert(a == 0))]
+   |                 ^ help: a local variable with a similar name exists: `b`

@@ -1,0 +1,17 @@
+error: conflicting endianness keyword
+ --> $DIR/conflicting_keyword_cond_endian.rs:5:15
+  |
+5 |     #[br(big, little, is_big = true, is_little = true)]
+  |               ^^^^^^
+
+error: conflicting endianness keyword
+ --> $DIR/conflicting_keyword_cond_endian.rs:5:23
+  |
+5 |     #[br(big, little, is_big = true, is_little = true)]
+  |                       ^^^^^^
+
+error: conflicting endianness keyword
+ --> $DIR/conflicting_keyword_cond_endian.rs:5:38
+  |
+5 |     #[br(big, little, is_big = true, is_little = true)]
+  |                                      ^^^^^^^^^

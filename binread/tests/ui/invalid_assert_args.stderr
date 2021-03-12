@@ -1,0 +1,5 @@
+error: too many arguments
+ --> $DIR/invalid_assert_args.rs:4:45
+  |
+4 | #[br(assert(false, String::from("message"), "too", "many", "arguments"))]
+  |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^

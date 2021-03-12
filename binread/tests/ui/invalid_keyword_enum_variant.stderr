@@ -1,0 +1,5 @@
+error: expected one of: `big`, `little`, `map`, `try_map`, `magic`, `import`, `import_tuple`, `assert`, `pre_assert`
+ --> $DIR/invalid_keyword_enum_variant.rs:5:10
+  |
+5 |     #[br(invalid_enum_variant_keyword)]
+  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

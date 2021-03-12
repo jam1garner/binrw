@@ -1,0 +1,5 @@
+error: expected byte string, byte, char, float, or int
+ --> $DIR/invalid_magic_type.rs:4:14
+  |
+4 | #[br(magic = "invalid_type")]
+  |              ^^^^^^^^^^^^^^
