@@ -1,8 +1,8 @@
-# binread
+# binrw
 
-[![tests](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml/badge.svg)](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml)
-[![docs.rs](https://docs.rs/binread/badge.svg)](https://docs.rs/binread)
-[![codecov](https://codecov.io/gh/jam1garner/binread/branch/master/graph/badge.svg?token=UREOWI2KAY)](https://codecov.io/gh/jam1garner/binread) 
+[![tests](https://github.com/jam1garner/binrw/actions/workflows/cargo_tests.yml/badge.svg)](https://github.com/jam1garner/binrw/actions/workflows/cargo_tests.yml)
+[![docs.rs](https://docs.rs/binrw/badge.svg)](https://docs.rs/binrw)
+[![codecov](https://codecov.io/gh/jam1garner/binrw/branch/master/graph/badge.svg?token=UREOWI2KAY)](https://codecov.io/gh/jam1garner/binrw) 
 [![discord](https://img.shields.io/discord/818723403871551509?color=gray&label=%20&logo=discord)](https://discord.gg/ABy4Qh549j)
 [![matrix: #binrw:matrix.org](https://img.shields.io/badge/style-%23binrw:matrix.org-blue.svg?style=flat&label=[m])](https://matrix.to/#/#binrw:matrix.org)
 
@@ -31,4 +31,4 @@ assert_eq!(dog.bone_piles, &[0x1, 0x12]);
 assert_eq!(dog.name.into_string(), "Rudy")
 ```
 
-[More documentation can be found here](https://docs.rs/binread/)
+[More documentation can be found here](https://docs.rs/binrw)
