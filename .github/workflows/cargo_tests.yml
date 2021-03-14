@@ -9,6 +9,9 @@ on:
         # TODO: remove
         - binread_remerge
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,6 +26,8 @@ jobs:
     - name: Build
       # Build/test uses absolute(ish) paths, to maintain compatibility with `act`
       run: ~/.cargo/bin/cargo build
+    - name: Build no_std
+      run: ~/.cargo/bin/cargo build --no-default-features
     - name: Test
       run: ~/.cargo/bin/cargo test
 
