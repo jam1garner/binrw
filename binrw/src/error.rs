@@ -63,20 +63,15 @@ impl fmt::Debug for Error {
             Self::AssertFail { pos, message } => write!(f, "AssertFail at 0x{:X}: \"{}\"", pos, message),
             Self::Io(err) => write!(f, "Io({:?})", err),
             Self::Custom { pos, err } => write!(f, "Custom {{ pos: 0x{:X}, err: {:?} }}", pos, err),
-            _ => write!(f, "EnumErrors")
+            Self::NoVariantMatch { pos } => write!(f, "NoVariantMatch {{ pos: 0x{:X} }}", pos),
+            Self::EnumErrors { pos, variant_errors } => write!(f, "EnumErrors {{ pos: 0x{:X}, variant_errors: {:?} }}", pos, variant_errors)
         }
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::BadMagic { pos, .. } => write!(f, "BadMagic {{ pos: 0x{:X} }}", pos),
-            Self::AssertFail { pos, message } => write!(f, "AssertFail at 0x{:X}: \"{}\"", pos, message),
-            Self::Io(err) => write!(f, "Io({:?})", err),
-            Self::Custom { pos, err } => write!(f, "Custom {{ pos: 0x{:X}, err: {:?} }}", pos, err),
-            _ => write!(f, "EnumErrors")
-        }
+        fmt::Debug::fmt(self, f)
     }
 }
 
@@ -137,4 +132,3 @@ pub fn read_options_then_after_parse<Args, T, R>(
     val.after_parse(reader, ro, args)?;
     Ok(val)
 }
-
