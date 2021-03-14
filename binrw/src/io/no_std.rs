@@ -1,5 +1,8 @@
 pub use super::{cursor::Cursor, error::{Error, ErrorKind}};
 
+extern crate alloc;
+use alloc::vec::Vec;
+
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// A simplified version of [std::io::Read](std::io::Read) for use in no_std environments
@@ -22,6 +25,23 @@ pub trait Read {
             Err(Error::new(ErrorKind::UnexpectedEof, "failed to fill whole buffer"))
         } else {
             Ok(())
+        }
+    }
+
+    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<usize> {
+        let mut tmp = [0; 32];
+        let mut amt = 0;
+
+        loop {
+            match self.read(&mut tmp) {
+                Ok(0) => break Ok(amt),
+                Ok(n) => {
+                    amt += n;
+                    buf.extend_from_slice(&tmp[..n]);
+                }
+                Err(err) if err.kind() == ErrorKind::Interrupted => continue,
+                err @ Err(_) => return err
+            }
         }
     }
 
@@ -362,5 +382,92 @@ mod tests {
 
         let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ()))).bytes();
         assert_eq!(x.next().unwrap().unwrap_err().kind(), ErrorKind::ConnectionRefused);
+    }
+
+    #[test]
+    fn read_to_end() {
+        // Test happy path
+        const IN: &[u8] = b"ABCD";
+        let mut x = Cursor::new(IN);
+        let mut out = Vec::new();
+        assert_eq!(x.read_to_end(&mut out).unwrap(), IN.len());
+        assert_eq!(out, IN);
+
+        struct InteruptReader(bool);
+
+        impl Read for InteruptReader {
+            fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+                if self.0 {
+                    self.0 = false;
+                    Err(Error::new(ErrorKind::Interrupted, ()))
+                } else {
+                    buf.fill(0);
+                    Ok(buf.len())
+                }
+            }
+        }
+
+        // Test interuptions
+        const LIMIT: usize = 23;
+        let x = InteruptReader(true);
+        let mut out = Vec::new();
+        assert_eq!(x.take(LIMIT as _).read_to_end(&mut out).unwrap(), LIMIT);
+        assert_eq!(out.len(), 23);
+
+        // Test *actual* errors
+        struct ReturnError(Option<Error>);
+
+        impl Read for ReturnError {
+            fn read(&mut self, _buf: &mut [u8]) -> Result<usize> {
+                Err(self.0.take().unwrap())
+            }
+        }
+
+        let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+        let mut out = Vec::new();
+        assert_eq!(
+            x.read_to_end(&mut out).unwrap_err().kind(),
+            ErrorKind::ConnectionRefused
+        );
+    }
+
+    #[test]
+    fn take() {
+        const IN: &[u8] = b"ABCD";
+        const LIMIT: usize = 2;
+        let x = Cursor::new(IN);
+        let mut out = Vec::new();
+        assert_eq!(x.take(LIMIT as u64).read_to_end(&mut out).unwrap(), LIMIT);
+        assert_eq!(out, &IN[..LIMIT]);
+
+        // Test error handling
+        struct ReturnError(Option<Error>);
+
+        impl Read for ReturnError {
+            fn read(&mut self, _buf: &mut [u8]) -> Result<usize> {
+                Err(self.0.take().unwrap())
+            }
+        }
+
+        let x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+        let mut out = Vec::new();
+        assert_eq!(
+            x.take(LIMIT as _).read_to_end(&mut out).unwrap_err().kind(),
+            ErrorKind::ConnectionRefused
+        );
+
+        // Ensure EOF take works as expected (the tricky part)
+        // note: this shouldn't touch the inner reader, so even a "return error" reader
+        // *should* work, as the take limit will be 0
+        let x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+        let mut out = Vec::new();
+        assert_eq!(x.take(0).read_to_end(&mut out).unwrap(), 0);
+        assert_eq!(out.len(), 0);
+
+        let x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+        assert_eq!(
+            x.take(0).into_inner().read_to_end(&mut out).unwrap_err().kind(),
+            ErrorKind::ConnectionRefused
+        );
     }
 }
