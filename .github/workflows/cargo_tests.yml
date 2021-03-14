@@ -6,8 +6,6 @@ on:
   push:
     branches:
         - master
-        # TODO: remove
-        - binread_remerge
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,7 +25,9 @@ jobs:
       # Build/test uses absolute(ish) paths, to maintain compatibility with `act`
       run: ~/.cargo/bin/cargo build
     - name: Build no_std
-      run: ~/.cargo/bin/cargo build -p binrw --no-default-features
+      run: |
+          cd binrw
+          ~/.cargo/bin/cargo build --no-default-features
     - name: Test
       run: ~/.cargo/bin/cargo test
 
