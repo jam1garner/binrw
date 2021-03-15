@@ -94,6 +94,11 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
 
         Ok(Self { data, seperators })
     }
+
+    /// Discard the punctuating values and return just the values
+    pub fn into_values(self) -> Vec<T> {
+        self.data
+    }
 }
 
 impl<T: BinRead + fmt::Debug, P: BinRead> fmt::Debug for Punctuated<T, P> {
