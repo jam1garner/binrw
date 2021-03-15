@@ -1,7 +1,7 @@
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "io-test")))]
 use super::*;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "io-test"))]
 use super::no_std::*;
 
 #[derive(Clone, Debug, Default)]

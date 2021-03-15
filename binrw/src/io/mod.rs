@@ -4,11 +4,11 @@
 pub mod prelude;
 pub mod error;
 
-#[cfg(any(not(feature = "std"), test))]
+#[cfg(any(not(feature = "std"), feature = "io-test"))]
 pub mod cursor;
 
-#[cfg(any(not(feature = "std"), test))]
-mod no_std;
+#[cfg(any(not(feature = "std"), feature = "io-test"))]
+pub mod no_std;
 
 #[cfg(not(feature = "std"))]
 pub use no_std::*;

@@ -14,6 +14,11 @@ description = "A Rust crate for helping read structs from binary data using ✨m
 readme = "../README.md"
 documentation = "https://docs.rs/binrw"
 
+[[test]]
+name = "tests"
+path = "tests/lib.rs"
+required-features = ["io-test"]
+
 [dependencies]
 binrw_derive = { version = "0.2.0", path = "../binrw_derive" }
 
@@ -25,3 +30,4 @@ trybuild = "1.0"
 [features]
 default = ["std"]
 std = []
+io-test = []
