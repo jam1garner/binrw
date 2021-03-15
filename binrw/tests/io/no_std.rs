@@ -1,4 +1,4 @@
-use binrw::io::{Cursor, Error, ErrorKind, Read, Result};
+use binrw::io::no_std::{Cursor, Error, ErrorKind, Read, Result};
 
 #[derive(Debug)]
 struct MalfunctioningEddie<'data> {
