@@ -1,5 +1,10 @@
-use super::*;
 use core::fmt;
+use crate::{
+    io::{Read, Seek, SeekFrom},
+    BinRead,
+    ReadOptions,
+    BinResult
+};
 
 /// A wrapper where the position it was read from is stored alongside the value
 /// ```rust

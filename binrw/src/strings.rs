@@ -1,4 +1,10 @@
-use super::*;
+use crate::{
+    alloc::string::{FromUtf8Error, FromUtf16Error},
+    io::{Read, Seek},
+    BinRead,
+    ReadOptions,
+    BinResult,
+};
 
 // #[cfg(feature = "std")]
 // use std::{
@@ -79,7 +85,7 @@ impl NullString {
         String::from_utf8_lossy(&self.0).into()
     }
 
-    pub fn into_string_lossless(self) -> Result<String, alloc::string::FromUtf8Error> {
+    pub fn into_string_lossless(self) -> Result<String, FromUtf8Error> {
         String::from_utf8(self.0)
     }
 }
@@ -89,7 +95,7 @@ impl NullWideString {
         String::from_utf16_lossy(&self.0)
     }
 
-    pub fn into_string_lossless(self) -> Result<String, alloc::string::FromUtf16Error> {
+    pub fn into_string_lossless(self) -> Result<String, FromUtf16Error> {
         String::from_utf16(&self.0)
     }
 }

@@ -1,4 +1,4 @@
-use super::*;
+use super::Endian;
 
 /// Runtime-configured options for reading the type using [`BinRead`](BinRead)
 #[non_exhaustive]

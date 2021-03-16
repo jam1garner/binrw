@@ -1,5 +1,12 @@
 //! Error types and internal error handling functions
-use super::*;
+use crate::{
+    io::{self, Read, Seek, SeekFrom},
+    BinRead,
+    ReadOptions,
+    BinResult
+};
+
+use core::any::Any;
 
 /// An error while parsing a BinRead type
 #[non_exhaustive]

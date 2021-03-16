@@ -25,9 +25,15 @@
 //! ```
 //!
 //! Use `offset` to change what the pointer is relative to (default: beginning of reader).
-use super::*;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
+
+use crate::{
+    io::{Read, Seek, SeekFrom},
+    BinRead,
+    ReadOptions,
+    BinResult
+};
 
 /// A wrapper type for representing a layer of indirection within a file.
 ///

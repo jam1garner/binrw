@@ -1,8 +1,13 @@
-use super::*;
-
 use core::convert::TryInto;
 use core::any::Any;
-use crate::io;
+use crate::{
+    io::{self, Read, Seek, SeekFrom},
+    Endian,
+    Error,
+    BinRead,
+    ReadOptions,
+    BinResult
+};
 
 /// Internal macro for quickly implementing binread for types supporting from_bytes api
 macro_rules! binread_impl {
