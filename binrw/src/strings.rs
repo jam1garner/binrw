@@ -23,7 +23,7 @@ impl BinRead for Vec<NonZeroU8> {
         reader
             .bytes()
             .take_while(|x| !matches!(x, Ok(0)))
-            .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
+            .map(|x| Ok(x.map(|byte| NonZeroU8::new(byte).unwrap())?))
             .collect()
     }
 }
@@ -137,7 +137,7 @@ impl BinRead for Vec<NonZeroU16> {
             if val == 0 {
                 return Ok(values)
             }
-            values.push(unsafe { NonZeroU16::new_unchecked(val) });
+            values.push(NonZeroU16::new(val).unwrap());
         }
     }
 }
