@@ -1,7 +1,7 @@
 use crate::{Error, ReadOptions, Endian};
 use crate::io::{Read, Seek};
 
-use core::any::{Any, TypeId};
+use core::any::Any;
 
 /// A Result for any binread function that can return an error
 pub type BinResult<T> = core::result::Result<T, Error>;
@@ -44,13 +44,13 @@ pub trait BinRead: Sized + 'static {
     fn args_default() -> Option<Self::Args> {
         // Trick to effectively get specialization on stable, should constant-folded away
         // Returns `Some(())` if Self::Args == (), otherwise returns `None`
-        if TypeId::of::<Self::Args>() == TypeId::of::<()>() {
-            Some(unsafe{
-                core::mem::MaybeUninit::uninit().assume_init()
-            })
-        } else {
-            None
+        let mut temp = None::<Self::Args>;
+
+        if let Some(temp) = Any::downcast_mut::<Option<()>>(&mut temp) {
+            temp.replace(());
         }
+
+        temp
     }
 }
 
