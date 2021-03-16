@@ -6,13 +6,13 @@ use crate::{
     BinResult,
 };
 
-// #[cfg(feature = "std")]
-// use std::{
-//     ffi::CString,
-// };
-
 #[cfg(not(feature = "std"))]
-use alloc::{string::{String, ToString}, vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+    vec
+};
+
 use core::num::{NonZeroU8, NonZeroU16};
 
 impl BinRead for Vec<NonZeroU8> {

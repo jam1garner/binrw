@@ -121,13 +121,6 @@ use std as alloc;
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
-#[cfg(not(feature = "std"))]
-use alloc::{
-    boxed::Box,
-    vec::Vec,
-    string::String,
-};
-
 #[doc(hidden)]
 #[path = "private.rs"]
 pub mod __private;

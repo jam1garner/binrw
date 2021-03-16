@@ -9,6 +9,12 @@ use crate::{
     BinResult
 };
 
+#[cfg(not(feature = "std"))]
+use alloc::{
+    boxed::Box,
+    vec::Vec,
+};
+
 /// Internal macro for quickly implementing binread for types supporting from_bytes api
 macro_rules! binread_impl {
     ($($type_name:ty),*$(,)?) => {

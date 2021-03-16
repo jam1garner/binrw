@@ -7,6 +7,12 @@ use crate::{
 };
 
 use core::any::Any;
+#[cfg(not(feature = "std"))]
+use alloc::{
+    boxed::Box,
+    vec::Vec,
+    string::String,
+};
 
 /// An error while parsing a BinRead type
 #[non_exhaustive]
