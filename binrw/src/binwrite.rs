@@ -17,13 +17,10 @@ pub trait BinWrite {
     ///
     /// # Panics
     /// Panics if there is no [`args_default`](BinWrite::args_default) implementation
-    fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
-        let args = match Self::args_default() {
-            Some(args) => args,
-            None => panic!("Must pass args, no args_default implemented")
-        };
-
-        self.write_options(writer, &WriteOptions::default(), args)
+    fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
+        where Self::Args: Default
+    {
+        self.write_options(writer, &WriteOptions::default(), Self::Args::default())
     }
 
     /// Write the type to a writer while providing the default options
@@ -39,18 +36,4 @@ pub trait BinWrite {
         options: &WriteOptions,
         args: Self::Args,
     ) -> BinResult<()>;
-
-    /// The default arguments to be used when using the [`write`](BinWrite::write) shortcut method.
-    /// Override this for any type that optionally requries arguments
-    fn args_default() -> Option<Self::Args> {
-        // Trick to effectively get specialization on stable, should constant-folded away
-        // Returns `Some(())` if Self::Args == (), otherwise returns `None`
-        let mut args = None::<Self::Args>;
-
-        if let Some(args) = Any::downcast_mut::<Option<()>>(&mut args) {
-            args.replace(());
-        }
-
-        args
-    }
 }
