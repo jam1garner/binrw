@@ -1,10 +1,56 @@
 use crate::{
     io::{Write, Seek},
     BinResult,
+    WriteOptions
 };
 
-pub trait BinWrite {
-    fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
+use core::any::Any;
 
+pub trait BinWrite {
+    /// The type of arguments needed to be supplied in order to write this type, usually a tuple.
+    ///
+    /// **NOTE:** For types that don't require any arguments, use the unit (`()`) type. This will allow [`read`](BinRead::read) to be used.
+    type Args: Any + Copy;
+
+
+    /// Write a type to a writer while assuming no arguments are needed.
+    ///
+    /// # Panics
+    /// Panics if there is no [`args_default`](BinWrite::args_default) implementation
+    fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
+        let args = match Self::args_default() {
+            Some(args) => args,
+            None => panic!("Must pass args, no args_default implemented")
+        };
+
+        self.write_options(writer, &WriteOptions::default(), args)
+    }
+
+    /// Write the type to a writer while providing the default options
+    fn write_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+        self.write_options(writer, &WriteOptions::default(), args)
+    }
+
+    /// Write the type to a writer, given the options on how to write it and the type-specific
+    /// arguments
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        options: &WriteOptions,
+        args: Self::Args,
+    ) -> BinResult<()>;
+
+    /// The default arguments to be used when using the [`write`](BinWrite::write) shortcut method.
+    /// Override this for any type that optionally requries arguments
+    fn args_default() -> Option<Self::Args> {
+        // Trick to effectively get specialization on stable, should constant-folded away
+        // Returns `Some(())` if Self::Args == (), otherwise returns `None`
+        let mut args = None::<Self::Args>;
+
+        if let Some(args) = Any::downcast_mut::<Option<()>>(&mut args) {
+            args.replace(());
+        }
+
+        args
     }
 }
