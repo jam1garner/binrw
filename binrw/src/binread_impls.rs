@@ -73,7 +73,7 @@ fn not_enough_bytes<T>(_: T) -> Error {
     )
 }
 
-impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
+impl<B: BinRead> BinRead for Vec<B> {
     type Args = B::Args;
 
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
@@ -97,7 +97,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
             }
         } else {
             for _ in 0..count {
-                list.push(B::read_options(reader, &options, args)?);
+                list.push(B::read_options(reader, &options, args.clone())?);
             }
             Ok(list)
         }
@@ -107,7 +107,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
         where R: Read + Seek,
     {
         for val in self.iter_mut() {
-            val.after_parse(reader, ro, args)?;
+            val.after_parse(reader, ro, args.clone())?;
         }
 
         Ok(())
@@ -117,22 +117,22 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
 macro_rules! binread_array_impl {
     ($($size:literal),*$(,)?) => {
         $(
-            impl<C: Copy + 'static, B: BinRead<Args = C> + Default> BinRead for [B; $size] {
+            impl<B: BinRead + Default> BinRead for [B; $size] {
                 type Args = B::Args;
 
                 fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
                     let mut arr: [B; $size] = Default::default();
                     for elem in arr.iter_mut() {
-                        *elem = BinRead::read_options(reader, options, args)?;
+                        *elem = BinRead::read_options(reader, options, args.clone())?;
                     }
                     Ok(arr)
                 }
 
-                fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args)-> BinResult<()>
+                fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: Self::Args)-> BinResult<()>
                     where R: Read + Seek,
                 {
                     for val in self.iter_mut() {
-                        val.after_parse(reader, ro, args)?;
+                        val.after_parse(reader, ro, args.clone())?;
                     }
 
                     Ok(())

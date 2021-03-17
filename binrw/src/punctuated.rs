@@ -33,7 +33,7 @@ pub struct Punctuated<T: BinRead, P: BinRead> {
     pub seperators: Vec<P>,
 }
 
-impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<T, P> {
+impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// A parser for values seperated by another value, with no trailing punctuation.
     ///
     /// Requires a specified count.
@@ -56,7 +56,7 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
     /// # assert_eq!(*y.x, vec![3, 2, 1]);
     /// # assert_eq!(y.x.seperators, vec![0, 1]);
     /// ```
-    pub fn separated<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: C) -> BinResult<Self> {
+    pub fn separated<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: T::Args) -> BinResult<Self> {
         let count = match options.count {
             Some(x) => x,
             None => panic!("Missing count for Punctuated"),
@@ -66,7 +66,7 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
         let mut seperators = Vec::with_capacity(count.max(1) - 1);
 
         for i in 0..count {
-            data.push(T::read_options(reader, &options, args)?);
+            data.push(T::read_options(reader, &options, args.clone())?);
             if i + 1 != count {
                 seperators.push(P::read_options(reader, options, ())?);
             }
@@ -78,7 +78,7 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
     /// A parser for values seperated by another value, with trailing punctuation.
     ///
     /// Requires a specified count.
-    pub fn separated_trailing<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: C) -> BinResult<Self> {
+    pub fn separated_trailing<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: T::Args) -> BinResult<Self> {
         let count = match options.count {
             Some(x) => x,
             None => panic!("Missing count for Punctuated"),
@@ -88,7 +88,7 @@ impl<C: Copy + 'static, T: BinRead<Args = C>, P: BinRead<Args = ()>> Punctuated<
         let mut seperators = Vec::with_capacity(count);
 
         for _ in 0..count {
-            data.push(T::read_options(reader, &options, args)?);
+            data.push(T::read_options(reader, &options, args.clone())?);
             seperators.push(P::read_options(reader, options, ())?);
         }
 
