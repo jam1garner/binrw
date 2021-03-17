@@ -14,4 +14,4 @@ pub mod no_std;
 pub use no_std::*;
 
 #[cfg(feature = "std")]
-pub use std::io::{Bytes, Cursor, Error, ErrorKind, Read, Result, Seek, SeekFrom};
+pub use std::io::{Bytes, Cursor, Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
