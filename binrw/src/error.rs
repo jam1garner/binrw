@@ -106,32 +106,6 @@ where
     }
 }
 
-/// Assert a condition is true and if not optionally apply a function to generate the error
-#[deprecated]
-pub fn assert<R, E, A>(reader: &mut R, test: bool, message: &str, error: Option<E>) -> BinResult<()>
-where
-    R: io::Read + io::Seek,
-    A: core::fmt::Debug + Sync + Send + 'static,
-    E: Fn() -> A,
-{
-    let pos = reader.seek(SeekFrom::Current(0))?;
-    if test {
-        Ok(())
-    } else {
-        error.map(|err|{
-            Err(Error::Custom {
-                pos,
-                err: Box::new(err())
-            })
-        }).unwrap_or_else(||{
-            Err(Error::AssertFail {
-                pos,
-                message: message.into()
-            })
-        })
-    }
-}
-
 pub fn read_options_then_after_parse<Args, T, R>(
     reader: &mut R,
     ro: &ReadOptions,
