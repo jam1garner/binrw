@@ -1,0 +1,105 @@
+name: Rust Build and Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: Lint ${{ matrix.features.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - name: all features
+            value: --all-features
+          - name: no_std
+            value: --no-default-features --manifest-path binrw/Cargo.toml
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy
+      - name: Run clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: ${{ matrix.features.value }} -- -D warnings
+      - name: Build documentation
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustdoc
+          args: --manifest-path binrw/Cargo.toml -- -D warnings
+
+  test:
+    name: Test ${{ matrix.features.name }} on Rust ${{ matrix.rust }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - nightly
+        features:
+          - name: all features
+            value: --all-features
+          - name: no_std
+            value: --no-default-features --manifest-path binrw/Cargo.toml
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Build workspace
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: ${{ matrix.features.value }}
+      # Testing is separated just to more clearly differentiate in the CI
+      # whether the build failed or a test failed
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: ${{ matrix.features.value }}
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Run tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: >
+            --workspace --manifest-path binrw/Cargo.toml
+            --exclude-files binrw/tests
+      # https://github.com/actions/runner/issues/520
+      - name: Determine whether codecov.io secret is available
+        id: has_codecov
+        run: echo '::set-output name=result::${{ secrets.CODECOV_TOKEN }}'
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+        if: steps.has_codecov.outputs.result != 0
