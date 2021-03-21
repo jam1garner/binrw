@@ -85,6 +85,9 @@ impl<U, T: PartialEq<U>> PartialEq<U> for PosValue<T> {
 mod tests {
     use crate as binrw;
 
+    #[cfg(not(feature = "std"))]
+    use alloc::format;
+
     #[test]
     fn pos_value() {
         use binrw::{BinRead, PosValue, BinReaderExt, io::Cursor};

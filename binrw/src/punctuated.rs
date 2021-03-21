@@ -126,6 +126,9 @@ mod tests {
     use super::*;
     use crate as binrw;
 
+    #[cfg(not(feature = "std"))]
+    use alloc::format;
+
     use binrw::{BinRead, BinReaderExt, io::Cursor};
 
     #[derive(BinRead, Clone, Copy, Debug)]
