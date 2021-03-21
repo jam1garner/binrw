@@ -6,8 +6,8 @@ use crate::{
         get_assertions, get_passed_args,
         sanitization::{
             make_ident, IdentStr, AFTER_PARSE, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT,
-            COERCE_FN, MAP_ARGS_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD, SAVED_POSITION,
-            SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+            COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD,
+            SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
         },
     },
     parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
@@ -143,6 +143,7 @@ fn generate_field(
         .wrap_seek()
         .wrap_condition()
         .assign_to_var()
+        .append_debug()
         .append_assertions()
         .wrap_restore_position()
         .prefix_magic()
@@ -235,6 +236,25 @@ impl<'field> FieldGenerator<'field> {
             args_var,
             options_var,
         }
+    }
+
+    fn append_debug(mut self) -> Self {
+        if self.field.debug.is_some() {
+            let head = self.out;
+            let ident = &self.field.ident;
+            self.out = quote! {
+                let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+
+                #head
+
+                #DBG_EPRINTLN!(
+                    "[{}:{} | offset {:#x?}] {} = {:#x?}",
+                    ::core::file!(), ::core::line!(), #SAVED_POSITION, ::core::stringify!(#ident), &#ident
+                );
+            };
+        }
+
+        self
     }
 
     fn append_assertions(mut self) -> Self {

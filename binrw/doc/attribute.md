@@ -79,6 +79,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
 | rw  | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.
 | r   | [`count`](#count) | field | Sets the length of a vector.
+| r   | [`dbg`](#debug) | field | Prints out the parsed value and offset to help debug
 | r   | [`default`](#ignore) | field | An alias for `ignore`.
 | r   | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
 | r   | [`err_context`](#backtrace) | field | Adds additional context to errors.

@@ -92,6 +92,7 @@ ident_str! {
     pub(crate) READ_FUNCTION = "__binrw_generated_read_function";
     pub(crate) WRITE_FUNCTION = "__binrw_generated_write_function";
     pub(crate) BEFORE_POS = "__binrw_generated_before_pos";
+    pub(crate) DBG_EPRINTLN = from_crate!(__private::eprintln);
 }
 
 pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {

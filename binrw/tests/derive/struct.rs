@@ -573,3 +573,22 @@ fn tuple_calc_temp_field() {
     // compilation would fail if it weren’t due to missing a second item
     assert_eq!(result, Test(5u32));
 }
+
+#[cfg(feature = "std")]
+#[test]
+fn debug() {
+    #[allow(dead_code)]
+    #[binread]
+    #[br(big)]
+    struct Test {
+        before: u16,
+        #[br(dbg, big)]
+        value: u32,
+    }
+
+    let _ = Test::read(&mut Cursor::new(b"\0\0\0\0\0\x04")).unwrap();
+
+    // outputs:
+    //
+    // [binrw/tests/derive/structs.rs:383 | offset 0x2] value = 0x4
+}

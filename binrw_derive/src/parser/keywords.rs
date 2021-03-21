@@ -20,6 +20,7 @@ define_keywords! {
     bw,
     calc,
     count,
+    dbg,
     default,
     deref_now,
     err_context,
