@@ -49,6 +49,8 @@ attr_struct! {
         pub(crate) seek_before: Option<TokenStream>,
         #[from(PadSizeTo)]
         pub(crate) pad_size_to: Option<TokenStream>,
+        #[from(Debug)]
+        pub (crate) debug: bool,
     }
 }
 
@@ -104,6 +106,7 @@ impl FromField for StructField {
             align_after: <_>::default(),
             seek_before: <_>::default(),
             pad_size_to: <_>::default(),
+            debug: <_>::default(),
         }, &field.attrs);
 
         match result {

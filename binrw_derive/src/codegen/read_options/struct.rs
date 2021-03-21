@@ -115,6 +115,7 @@ fn generate_field(field: &StructField) -> TokenStream {
         .wrap_seek()
         .wrap_condition()
         .assign_to_var()
+        .append_debug()
         .append_assertions()
         .wrap_restore_position()
         .prefix_magic(&options_var)
@@ -192,6 +193,25 @@ impl <'field> FieldGenerator<'field> {
             out: TokenStream::new(),
             emit_options_vars: get_after_parse_handler(field).is_some(),
         }
+    }
+
+    fn append_debug(mut self) -> Self {
+        if self.field.debug {
+            let head = self.out;
+            let ident = &self.field.ident;
+            self.out = quote! {
+                let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+
+                #head
+                
+                #DBG_EPRINTLN!(
+                    "[{}:{} | offset {:#x?}] {} = {:#x?}",
+                    ::core::file!(), ::core::line!(), #SAVED_POSITION, ::core::stringify!(#ident), &#ident
+                );
+            };
+        }
+
+        self
     }
 
     fn append_assertions(mut self) -> Self {

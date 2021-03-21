@@ -42,4 +42,5 @@ define_keywords! {
     seek_before,
     temp,
     try_map,
+    dbg,
 }
