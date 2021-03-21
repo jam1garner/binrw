@@ -177,3 +177,18 @@ pub fn write_zeroes<W: Write>(writer: &mut W, count: u64) -> BinResult<()> {
 
     Ok(())
 }
+
+#[cfg(feature = "std")]
+pub use std::eprintln;
+
+#[cfg(not(feature = "std"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! eprintln {
+    ($($tt:tt)*) => {
+        compile_error!("dbg requires feature `std`")
+    };
+}
+
+#[cfg(not(feature = "std"))]
+pub use crate::eprintln;

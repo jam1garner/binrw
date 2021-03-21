@@ -58,6 +58,8 @@ attr_struct! {
         pub(crate) seek_before: Option<TokenStream>,
         #[from(RW:PadSizeTo)]
         pub(crate) pad_size_to: Option<TokenStream>,
+        #[from(RO:Debug)] // TODO is this really RO?
+        pub(crate) debug: Option<()>,
     }
 }
 
@@ -237,6 +239,7 @@ impl FromField for StructField {
             pad_size_to: <_>::default(),
             keyword_spans: <_>::default(),
             err_context: <_>::default(),
+            debug: <_>::default(),
         };
 
         let result = if options.write {

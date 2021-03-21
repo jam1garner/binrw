@@ -16,6 +16,7 @@ pub(super) type Assert = AssertLike<kw::assert>;
 pub(super) type Big = MetaVoid<kw::big>;
 pub(super) type Calc = MetaExpr<kw::calc>;
 pub(super) type Count = MetaExpr<kw::count>;
+pub(super) type Debug = MetaVoid<kw::dbg>;
 pub(super) type Default = MetaVoid<kw::default>;
 pub(super) type DerefNow = MetaVoid<kw::deref_now>;
 pub(super) type ErrContext = MetaList<kw::err_context, Expr>;
