@@ -76,7 +76,13 @@ fn try_map_struct() {
         a: i16,
     }
 
+    #[derive(Debug)]
     struct Oops;
+    impl core::fmt::Display for Oops {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            core::fmt::Debug::fmt(self, f)
+        }
+    }
 
     impl Test {
         fn from_bytes(bytes: [u8; 2]) -> Result<Self, Oops> {

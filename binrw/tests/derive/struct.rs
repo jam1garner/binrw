@@ -76,6 +76,11 @@ fn assert() {
 fn assert_custom_err() {
     #[derive(Debug)]
     struct Oops(u8);
+    impl core::fmt::Display for Oops {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "oops!")
+        }
+    }
 
     #[derive(BinRead, Debug)]
     struct Test {
@@ -85,6 +90,7 @@ fn assert_custom_err() {
 
     Test::read(&mut Cursor::new("\x01")).unwrap();
     let error = Test::read(&mut Cursor::new("\x02")).expect_err("accepted bad data");
+    assert_eq!(format!("{}", error), "oops! at 0x0");
     let error = error.custom_err::<Oops>().expect("bad error type");
     assert_eq!(error.0, 2);
 }
