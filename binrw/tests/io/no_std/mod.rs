@@ -1,4 +1,6 @@
-use binrw::io::no_std::{Cursor, Error, ErrorKind, Read, Result};
+mod cursor;
+
+use binrw::io::{Cursor, Error, ErrorKind, Read, Result};
 
 #[derive(Debug)]
 struct MalfunctioningEddie<'data> {
@@ -90,37 +92,17 @@ fn read_exact() {
 
     // EOF reads should not succeed
     assert_eq!(cursor.read_exact(&mut raw_read_data).unwrap_err().kind(), ErrorKind::UnexpectedEof);
-
-    const IN: &[u8] = b"ABCD";
-    let mut x = Cursor::new(IN);
-    let mut out = [0, 0, 0, 0];
-    x.read_exact(&mut out[..]).unwrap();
-    assert_eq!(out, IN);
 }
 
 #[test]
-fn iter_bytes() {
-    const IN: &[u8] = b"ABCD";
-    let x = Cursor::new(IN);
-    let mut x = x.bytes();
+fn interrupt_once() {
+    struct InterruptReader(bool);
 
-    assert_eq!(x.next().unwrap().unwrap(), b'A');
-    assert_eq!(x.next().unwrap().unwrap(), b'B');
-    assert_eq!(x.next().unwrap().unwrap(), b'C');
-    assert_eq!(x.next().unwrap().unwrap(), b'D');
-    assert!(x.next().is_none());
-    assert!(x.next().is_none());
-}
-
-#[test]
-fn interupt_once() {
-    struct InteruptReader(bool);
-
-    impl Read for InteruptReader {
+    impl Read for InterruptReader {
         fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
             if self.0 {
                 self.0 = false;
-                Err(Error::new(ErrorKind::Interrupted, ()))
+                Err(Error::from(ErrorKind::Interrupted))
             } else {
                 buf.fill(0);
                 Ok(buf.len())
@@ -128,13 +110,13 @@ fn interupt_once() {
         }
     }
 
-    let mut x = InteruptReader(true);
+    let mut x = InterruptReader(true);
     let mut out = [1, 2, 3, 4];
     x.read_exact(&mut out).unwrap();
 
     assert_eq!(out, [0, 0, 0, 0]);
 
-    let mut x = InteruptReader(true).bytes();
+    let mut x = InterruptReader(true).bytes();
     assert_eq!(x.next().unwrap().unwrap(), 0);
     assert_eq!(x.next().unwrap().unwrap(), 0);
     assert_eq!(x.next().unwrap().unwrap(), 0);
@@ -151,12 +133,12 @@ fn return_error() {
         }
     }
 
-    let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+    let mut x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused)));
     let mut out = [0, 1, 2, 3];
 
     assert_eq!(x.read_exact(&mut out).unwrap_err().kind(), ErrorKind::ConnectionRefused);
 
-    let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ()))).bytes();
+    let mut x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused))).bytes();
     assert_eq!(x.next().unwrap().unwrap_err().kind(), ErrorKind::ConnectionRefused);
 }
 
@@ -169,13 +151,13 @@ fn read_to_end() {
     assert_eq!(x.read_to_end(&mut out).unwrap(), IN.len());
     assert_eq!(out, IN);
 
-    struct InteruptReader(bool);
+    struct InterruptReader(bool);
 
-    impl Read for InteruptReader {
+    impl Read for InterruptReader {
         fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
             if self.0 {
                 self.0 = false;
-                Err(Error::new(ErrorKind::Interrupted, ()))
+                Err(Error::from(ErrorKind::Interrupted))
             } else {
                 buf.fill(0);
                 Ok(buf.len())
@@ -183,9 +165,9 @@ fn read_to_end() {
         }
     }
 
-    // Test interuptions
+    // Test interruptions
     const LIMIT: usize = 23;
-    let x = InteruptReader(true);
+    let x = InterruptReader(true);
     let mut out = Vec::new();
     assert_eq!(x.take(LIMIT as _).read_to_end(&mut out).unwrap(), LIMIT);
     assert_eq!(out.len(), 23);
@@ -199,7 +181,7 @@ fn read_to_end() {
         }
     }
 
-    let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+    let mut x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused)));
     let mut out = Vec::new();
     assert_eq!(
         x.read_to_end(&mut out).unwrap_err().kind(),
@@ -225,7 +207,7 @@ fn take() {
         }
     }
 
-    let x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+    let x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused)));
     let mut out = Vec::new();
     assert_eq!(
         x.take(LIMIT as _).read_to_end(&mut out).unwrap_err().kind(),
@@ -235,12 +217,12 @@ fn take() {
     // Ensure EOF take works as expected (the tricky part)
     // note: this shouldn't touch the inner reader, so even a "return error" reader
     // *should* work, as the take limit will be 0
-    let x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+    let x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused)));
     let mut out = Vec::new();
     assert_eq!(x.take(0).read_to_end(&mut out).unwrap(), 0);
     assert_eq!(out.len(), 0);
 
-    let x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
+    let x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused)));
     assert_eq!(
         x.take(0).into_inner().read_to_end(&mut out).unwrap_err().kind(),
         ErrorKind::ConnectionRefused

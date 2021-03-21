@@ -1,11 +1,8 @@
-pub use crate::io::{
-    cursor::Cursor,
-    error::{Error, ErrorKind}
-};
+mod cursor;
+mod error;
 
-extern crate alloc;
+pub use {cursor::Cursor, error::{Error, ErrorKind}};
 use alloc::vec::Vec;
-
 use core::fmt;
 
 pub type Result<T> = core::result::Result<T, Error>;
