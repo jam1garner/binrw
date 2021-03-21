@@ -149,7 +149,10 @@ pub use {
         FilePtr64,
         FilePtr128,
     },
-    options::ReadOptions,
+    options::{
+        ReadOptions,
+        WriteOptions
+    },
     strings::{
         NullString,
         NullWideString
@@ -167,6 +170,9 @@ pub use binread_impls::*;
 
 mod binread;
 pub use binread::*;
+
+mod binwrite;
+pub use binwrite::*;
 
 /// The collection of traits and types you'll likely need when working with binread and are
 /// unlikely to cause name conflicts.
