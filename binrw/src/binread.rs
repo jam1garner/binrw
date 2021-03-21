@@ -28,7 +28,7 @@ pub type BinResult<T> = core::result::Result<T, Error>;
 /// [temporary fields].
 ///
 /// [temporary fields]: crate::attribute#temp
-pub trait BinRead: Sized + 'static {
+pub trait BinRead: Sized {
     /// The type used for the `args` parameter of [`read_args()`] and
     /// [`read_options()`].
     ///

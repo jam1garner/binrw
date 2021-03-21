@@ -65,7 +65,7 @@ fn not_enough_bytes<T>(_: T) -> Error {
     ))
 }
 
-impl<B: BinRead> BinRead for Vec<B> {
+impl<B: BinRead + 'static> BinRead for Vec<B> {
     type Args = B::Args;
 
     fn read_options<R: Read + Seek>(
@@ -82,21 +82,18 @@ impl<B: BinRead> BinRead for Vec<B> {
         let mut list = Self::with_capacity(count);
 
         if let Some(bytes) = <dyn Any>::downcast_mut::<Vec<u8>>(&mut list) {
-            let byte_count = reader
-                .take(count.try_into().map_err(not_enough_bytes)?)
-                .read_to_end(bytes)?;
+            let byte_count = reader.take(count.try_into().unwrap()).read_to_end(bytes)?;
 
-            if byte_count == count {
-                Ok(list)
-            } else {
-                Err(not_enough_bytes(()))
+            if byte_count != count {
+                return Err(not_enough_bytes(()));
             }
         } else {
             for _ in 0..count {
                 list.push(B::read_options(reader, &options, args.clone())?);
             }
-            Ok(list)
         }
+
+        Ok(list)
     }
 
     fn after_parse<R>(
@@ -236,7 +233,7 @@ impl<T: BinRead> BinRead for Option<T> {
     }
 }
 
-impl<T: 'static> BinRead for core::marker::PhantomData<T> {
+impl<T> BinRead for core::marker::PhantomData<T> {
     type Args = ();
 
     fn read_options<R: Read + Seek>(_: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self> {
