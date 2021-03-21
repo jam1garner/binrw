@@ -940,4 +940,9 @@
 
 #![allow(unused_imports)]
 
+#[cfg(all(doc, not(feature = "std")))]
+extern crate std;
+#[cfg(all(doc, not(feature = "std")))]
+use alloc::vec::Vec;
+
 use crate::derive_binread;

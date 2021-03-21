@@ -1,3 +1,6 @@
+#[cfg(doc)]
+extern crate std;
+
 mod cursor;
 mod error;
 
@@ -78,7 +81,7 @@ pub trait Read {
     ///
     /// [`File`]s implement `Read`:
     ///
-    /// [`File`]: crate::fs::File
+    /// [`File`]: std::fs::File
     /// [`Ok(0)`]: Ok
     /// [`read()`]: Read::read
     ///
