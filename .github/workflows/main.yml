@@ -17,7 +17,7 @@ jobs:
       matrix:
         features:
           - name: all features
-            value: --all-features
+            value: --all-features --manifest-path binrw/Cargo.toml
             check_formatting: True
           - name: no_std
             value: --no-default-features --manifest-path binrw/Cargo.toml
@@ -48,7 +48,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: rustdoc
-          args: --manifest-path binrw/Cargo.toml -- -D warnings
+          args: ${{ matrix.features.value }} -- -D warnings
 
   test:
     name: Test ${{ matrix.features.name }} on Rust ${{ matrix.rust }}
