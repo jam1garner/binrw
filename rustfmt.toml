@@ -1,0 +1,3 @@
+# rustfmt will search all the way up the directory tree to find a config
+# file. This file stops rustfmt from going beyond the top of the repo.
+# It is intentionally empty.
