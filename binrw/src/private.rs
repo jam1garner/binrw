@@ -1,6 +1,6 @@
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String};
-use crate::{BinRead, BinResult, Error, ReadOptions, io};
+use crate::{BinRead, BinResult, Error, ReadOptions, error::CustomError, io};
 
 pub enum AssertErrorFn<M, E> {
     Message(M),
@@ -12,7 +12,7 @@ where
     MsgFn: Fn() -> Msg,
     Msg: Into<String> + Sized,
     ErrorFn: Fn() -> Err,
-    Err: core::any::Any + Sync + Send + 'static,
+    Err: CustomError,
 {
     if test {
         Ok(())

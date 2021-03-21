@@ -219,6 +219,11 @@
 //! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(Debug, PartialEq)]
 //! struct NotSmallerError(u32, u32);
+//! impl core::fmt::Display for NotSmallerError {
+//!     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+//!         write!(f, "{} <= {}", self.0, self.1)
+//!     }
+//! }
 //!
 //! #[derive(BinRead, Debug)]
 //! #[br(assert(some_val > some_smaller_val, NotSmallerError(some_val, some_smaller_val)))]

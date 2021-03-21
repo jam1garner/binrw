@@ -1,28 +1,52 @@
 //! Error types and internal error handling functions
-use crate::{
-    io::{self, Read, Seek, SeekFrom},
-    BinRead,
-    ReadOptions,
-    BinResult
-};
-
-use core::any::Any;
 #[cfg(not(feature = "std"))]
-use alloc::{
-    boxed::Box,
-    vec::Vec,
-    string::String,
-};
+use alloc::{boxed::Box, string::String, vec::Vec};
+use core::{any::Any, fmt};
+use crate::{BinRead, BinResult, ReadOptions, io};
+
+pub trait CustomError: Any + fmt::Display + fmt::Debug + Send + Sync + 'static {
+    fn as_any(&self) -> &(dyn Any + Send + Sync);
+    fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync>;
+}
+impl <T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
+    fn as_any(&self) -> &(dyn Any + Send + Sync) {
+        self
+    }
+    fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync> {
+        self
+    }
+}
+impl dyn CustomError {
+    pub fn downcast<T: Any>(self: Box<Self>) -> Result<Box<T>, Box<Self>> {
+        if self.is::<T>() {
+            unsafe {
+                let raw: *mut dyn Any = Box::into_raw(self.as_box_any());
+                Ok(Box::from_raw(raw as *mut T))
+            }
+        } else {
+            Err(self)
+        }
+    }
+
+    pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
+        self.as_any().downcast_ref()
+    }
+
+    pub fn is<T: Any>(&self) -> bool {
+        core::any::TypeId::of::<T>() == self.type_id()
+    }
+}
 
 /// An error while parsing a BinRead type
 #[non_exhaustive]
+#[derive(Debug)]
 pub enum Error {
     /// The magic value did not match the provided one
     BadMagic {
         // Position in number of bytes from the start of the reader
         pos: u64,
         // The value found. Use [`Any::downcast_ref`](core::any::Any::downcast_ref) to access
-        found: Box<dyn Any + Sync + Send>,
+        found: Box<dyn fmt::Debug + Send + Sync>,
     },
     /// The condition of an assertion without a custom type failed
     AssertFail {
@@ -34,7 +58,7 @@ pub enum Error {
     /// A custom error, most often given from the second value passed into an [`assert`](crate::attribute#assert)
     Custom {
         pos: u64,
-        err: Box<dyn Any + Sync + Send>,
+        err: Box<dyn CustomError>,
     },
     /// No variant in the enum was successful in parsing the data
     NoVariantMatch {
@@ -64,37 +88,35 @@ impl From<io::Error> for Error {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Error {}
-
-use core::fmt;
-
-impl fmt::Debug for Error {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::BadMagic { pos, .. } => write!(f, "BadMagic {{ pos: 0x{:X} }}", pos),
-            Self::AssertFail { pos, message } => write!(f, "AssertFail at 0x{:X}: \"{}\"", pos, message),
-            Self::Io(err) => write!(f, "Io({:?})", err),
-            Self::Custom { pos, err } => write!(f, "Custom {{ pos: 0x{:X}, err: {:?} }}", pos, err),
-            Self::NoVariantMatch { pos } => write!(f, "NoVariantMatch {{ pos: 0x{:X} }}", pos),
-            Self::EnumErrors { pos, variant_errors } => write!(f, "EnumErrors {{ pos: 0x{:X}, variant_errors: {:?} }}", pos, variant_errors)
+            Error::BadMagic { pos, found } => write!(f, "bad magic at 0x{:x}: {:?}", pos, found),
+            Error::AssertFail { pos, message } => write!(f, "{} at 0x{:x}", message, pos),
+            Error::Io(err) => fmt::Display::fmt(err, f),
+            Error::Custom { pos, err } => write!(f, "{} at 0x{:x}", err, pos),
+            Error::NoVariantMatch { pos } => write!(f, "no variants matched at 0x{:x}", pos),
+            Error::EnumErrors { pos, variant_errors } => {
+                write!(f, "no variants matched at 0x{:x}:", pos)?;
+                for (name, err) in variant_errors {
+                    write!(f, "\n  {}: {}", name, err)?;
+                }
+                Ok(())
+            }
         }
     }
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
-    }
-}
+#[cfg(feature = "std")]
+impl std::error::Error for Error {}
 
 /// Read a value then check if it is the expected value
 pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
 where
-    B: BinRead<Args = ()> + PartialEq + Sync + Send + 'static,
+    B: BinRead<Args = ()> + fmt::Debug + PartialEq + Sync + Send + 'static,
     R: io::Read + io::Seek,
 {
-    let pos = reader.seek(SeekFrom::Current(0))?;
+    let pos = reader.seek(io::SeekFrom::Current(0))?;
     let val = B::read_options(reader, &options, ())?;
     if val == expected {
         Ok(())
@@ -113,7 +135,7 @@ pub fn read_options_then_after_parse<Args, T, R>(
 ) -> BinResult<T>
     where Args: Copy + 'static,
           T: BinRead<Args = Args>,
-          R: Read + Seek,
+          R: io::Read + io::Seek,
 {
     let mut val = T::read_options(reader, ro, args)?;
     val.after_parse(reader, ro, args)?;
