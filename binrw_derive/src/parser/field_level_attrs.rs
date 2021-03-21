@@ -1,5 +1,8 @@
+use super::{
+    types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode},
+    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
+};
 use proc_macro2::TokenStream;
-use super::{FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet, types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode}};
 use syn::spanned::Spanned;
 
 attr_struct! {
@@ -68,8 +71,13 @@ impl StructField {
     fn validate(&self) -> syn::Result<()> {
         if let (Some(offset_after), true) = (&self.offset_after, *self.deref_now) {
             let offset_after_span = offset_after.span();
-            let span = offset_after_span.join(self.deref_now.span()).unwrap_or(offset_after_span);
-            Err(syn::Error::new(span, "`deref_now` and `offset_after` are mutually exclusive"))
+            let span = offset_after_span
+                .join(self.deref_now.span())
+                .unwrap_or(offset_after_span);
+            Err(syn::Error::new(
+                span,
+                "`deref_now` and `offset_after` are mutually exclusive",
+            ))
         } else {
             Ok(())
         }
@@ -80,31 +88,37 @@ impl FromField for StructField {
     type In = syn::Field;
 
     fn from_field(field: &Self::In, index: usize) -> ParseResult<Self> {
-        let result = Self::set_from_attrs(Self {
-            ident: field.ident.clone().unwrap_or_else(|| quote::format_ident!("self_{}", index)),
-            generated_ident: field.ident.is_none(),
-            ty: field.ty.clone(),
-            endian: <_>::default(),
-            map: <_>::default(),
-            magic: <_>::default(),
-            args: <_>::default(),
-            read_mode: <_>::default(),
-            count: <_>::default(),
-            offset: <_>::default(),
-            offset_after: <_>::default(),
-            if_cond: <_>::default(),
-            deref_now: <_>::default(),
-            restore_position: <_>::default(),
-            do_try: <_>::default(),
-            temp: <_>::default(),
-            assertions: <_>::default(),
-            pad_before: <_>::default(),
-            pad_after: <_>::default(),
-            align_before: <_>::default(),
-            align_after: <_>::default(),
-            seek_before: <_>::default(),
-            pad_size_to: <_>::default(),
-        }, &field.attrs);
+        let result = Self::set_from_attrs(
+            Self {
+                ident: field
+                    .ident
+                    .clone()
+                    .unwrap_or_else(|| quote::format_ident!("self_{}", index)),
+                generated_ident: field.ident.is_none(),
+                ty: field.ty.clone(),
+                endian: <_>::default(),
+                map: <_>::default(),
+                magic: <_>::default(),
+                args: <_>::default(),
+                read_mode: <_>::default(),
+                count: <_>::default(),
+                offset: <_>::default(),
+                offset_after: <_>::default(),
+                if_cond: <_>::default(),
+                deref_now: <_>::default(),
+                restore_position: <_>::default(),
+                do_try: <_>::default(),
+                temp: <_>::default(),
+                assertions: <_>::default(),
+                pad_before: <_>::default(),
+                pad_after: <_>::default(),
+                align_before: <_>::default(),
+                align_after: <_>::default(),
+                seek_before: <_>::default(),
+                pad_size_to: <_>::default(),
+            },
+            &field.attrs,
+        );
 
         match result {
             ParseResult::Ok(this) => {
@@ -113,13 +127,13 @@ impl FromField for StructField {
                 } else {
                     ParseResult::Ok(this)
                 }
-            },
+            }
             ParseResult::Partial(this, mut parse_error) => {
                 if let Err(error) = this.validate() {
                     parse_error.combine(error);
                 }
                 ParseResult::Partial(this, parse_error)
-            },
+            }
             ParseResult::Err(error) => ParseResult::Err(error),
         }
     }
@@ -141,20 +155,20 @@ impl FromField for UnitEnumField {
     type In = syn::Variant;
 
     fn from_field(field: &Self::In, _: usize) -> ParseResult<Self> {
-        Self::set_from_attrs(Self {
-            ident: field.ident.clone(),
-            magic: <_>::default(),
-            pre_assertions: <_>::default(),
-        }, &field.attrs)
+        Self::set_from_attrs(
+            Self {
+                ident: field.ident.clone(),
+                magic: <_>::default(),
+                pre_assertions: <_>::default(),
+            },
+            &field.attrs,
+        )
     }
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum EnumVariant {
-    Variant {
-        ident: syn::Ident,
-        options: Struct,
-    },
+    Variant { ident: syn::Ident, options: Struct },
     Unit(UnitEnumField),
 }
 
@@ -172,12 +186,14 @@ impl FromField for EnumVariant {
 
     fn from_field(variant: &Self::In, index: usize) -> ParseResult<Self> {
         match variant.fields {
-            syn::Fields::Named(_) | syn::Fields::Unnamed(_) =>
-                Struct::from_input(&variant.attrs, variant.fields.iter())
-                    .map(|options| Self::Variant {
+            syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
+                Struct::from_input(&variant.attrs, variant.fields.iter()).map(|options| {
+                    Self::Variant {
                         ident: variant.ident.clone(),
                         options,
-                    }),
+                    }
+                })
+            }
             syn::Fields::Unit => UnitEnumField::from_field(variant, index).map(Self::Unit),
         }
     }

@@ -1,4 +1,4 @@
-use crate::parser::{KeywordToken, TrySet, attrs};
+use crate::parser::{attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
@@ -33,10 +33,13 @@ impl From<attrs::TryMap> for Map {
     }
 }
 
-impl <T: Into<Map> + KeywordToken> TrySet<Map> for T {
+impl<T: Into<Map> + KeywordToken> TrySet<Map> for T {
     fn try_set(self, to: &mut Map) -> syn::Result<()> {
         if to.is_some() {
-            Err(syn::Error::new(self.keyword_span(), "conflicting map keyword"))
+            Err(syn::Error::new(
+                self.keyword_span(),
+                "conflicting map keyword",
+            ))
         } else {
             *to = self.into();
             Ok(())

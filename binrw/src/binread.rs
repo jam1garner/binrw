@@ -1,5 +1,5 @@
-use crate::{Error, ReadOptions, Endian};
 use crate::io::{Read, Seek};
+use crate::{Endian, Error, ReadOptions};
 
 /// A Result for any binread function that can return an error
 pub type BinResult<T> = core::result::Result<T, Error>;
@@ -14,7 +14,8 @@ pub trait BinRead: Sized + 'static {
 
     /// Read the type from the reader while assuming no arguments have been passed
     fn read<R: Read + Seek>(reader: &mut R) -> BinResult<Self>
-        where Self::Args: Default,
+    where
+        Self::Args: Default,
     {
         Self::read_options(reader, &ReadOptions::default(), Self::Args::default())
     }
@@ -25,9 +26,18 @@ pub trait BinRead: Sized + 'static {
     }
 
     /// Read the type from the reader
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self>;
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self>;
 
-    fn after_parse<R: Read + Seek>(&mut self, _: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<()> {
+    fn after_parse<R: Read + Seek>(
+        &mut self,
+        _: &mut R,
+        _: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<()> {
         Ok(())
     }
 }
@@ -50,37 +60,41 @@ pub trait BinRead: Sized + 'static {
 pub trait BinReaderExt: Read + Seek + Sized {
     /// Read the given type from the reader using the given endianness.
     fn read_type<T: BinRead>(&mut self, endian: Endian) -> BinResult<T>
-        where T::Args: Default
+    where
+        T::Args: Default,
     {
         self.read_type_args(endian, T::Args::default())
     }
 
     /// Read the given type from the reader with big endian byte order
     fn read_be<T: BinRead>(&mut self) -> BinResult<T>
-        where T::Args: Default
+    where
+        T::Args: Default,
     {
         self.read_type(Endian::Big)
     }
 
     /// Read the given type from the reader with little endian byte order
     fn read_le<T: BinRead>(&mut self) -> BinResult<T>
-        where T::Args: Default
+    where
+        T::Args: Default,
     {
         self.read_type(Endian::Little)
     }
 
     /// Read the given type from the reader with the native byte order
     fn read_ne<T: BinRead>(&mut self) -> BinResult<T>
-        where T::Args: Default
+    where
+        T::Args: Default,
     {
         self.read_type(Endian::Native)
     }
 
     /// Read the given type from the reader using the given endianness.
-    fn read_type_args<T: BinRead>(&mut self, endian: Endian, args: T::Args) -> BinResult<T>
-    {
+    fn read_type_args<T: BinRead>(&mut self, endian: Endian, args: T::Args) -> BinResult<T> {
         let options = ReadOptions {
-            endian, ..Default::default()
+            endian,
+            ..Default::default()
         };
 
         let mut res = T::read_options(self, &options, args.clone())?;
@@ -91,22 +105,19 @@ pub trait BinReaderExt: Read + Seek + Sized {
 
     /// Read the given type from the reader with big endian byte order and
     /// arguments
-    fn read_be_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T>
-    {
+    fn read_be_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
         self.read_type_args(Endian::Big, args)
     }
 
     /// Read the given type from the reader with little endian byte order
     /// and arguments
-    fn read_le_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T>
-    {
+    fn read_le_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
         self.read_type_args(Endian::Little, args)
     }
 
     /// Read the given type from the reader with the native byte order
     /// and arguments
-    fn read_ne_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T>
-    {
+    fn read_ne_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
         self.read_type_args(Endian::Native, args)
     }
 }

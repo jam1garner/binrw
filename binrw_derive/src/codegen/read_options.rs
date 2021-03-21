@@ -1,13 +1,13 @@
 mod r#enum;
 mod r#struct;
 
-use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
+use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map};
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
 use r#enum::{generate_data_enum, generate_unit_enum};
 use r#struct::{generate_struct, generate_unit_struct};
-use proc_macro2::TokenStream;
-use quote::{ToTokens, quote};
 
 pub(crate) fn generate(input: &Input) -> TokenStream {
     let inner = match input.map() {
@@ -24,7 +24,7 @@ pub(crate) fn generate(input: &Input) -> TokenStream {
                     #map(value)#map_err
                 })
             }
-        },
+        }
         Map::Map(map) => quote! {
             #READ_METHOD(#READER, #OPT, #ARGS).map(#map)
         },
@@ -46,11 +46,11 @@ struct PreludeGenerator<'input> {
     out: TokenStream,
 }
 
-impl <'input> PreludeGenerator<'input> {
+impl<'input> PreludeGenerator<'input> {
     fn new(input: &'input Input) -> Self {
         Self {
             input,
-            out: TokenStream::new()
+            out: TokenStream::new(),
         }
     }
 
@@ -102,23 +102,29 @@ impl <'input> PreludeGenerator<'input> {
 }
 
 fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
-    assertions.iter().map(|Assert { condition, consequent }| {
-        let error_fn = match &consequent {
-            Some(AssertionError::Message(message)) => {
-                quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
-            },
-            Some(AssertionError::Error(error)) =>
-                quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) },
-            None => {
-                let condition = condition.to_string();
-                quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
-            },
-        };
+    assertions.iter().map(
+        |Assert {
+             condition,
+             consequent,
+         }| {
+            let error_fn = match &consequent {
+                Some(AssertionError::Message(message)) => {
+                    quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
+                }
+                Some(AssertionError::Error(error)) => {
+                    quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) }
+                }
+                None => {
+                    let condition = condition.to_string();
+                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
+                }
+            };
 
-        quote! {
-            #ASSERT(#condition, #POS, #error_fn)?;
-        }
-    })
+            quote! {
+                #ASSERT(#condition, #POS, #error_fn)?;
+            }
+        },
+    )
 }
 
 fn get_magic(magic: &Magic, options_var: &impl ToTokens) -> Option<TokenStream> {
@@ -173,8 +179,14 @@ impl ReadOptionsGenerator {
             CondEndian::Fixed(Endian::Little) => quote! { #ENDIAN_ENUM::Little },
             CondEndian::Cond(endian, condition) => {
                 let (true_cond, false_cond) = match endian {
-                    Endian::Big => (quote! { #ENDIAN_ENUM::Big }, quote! { #ENDIAN_ENUM::Little }),
-                    Endian::Little => (quote! { #ENDIAN_ENUM::Little }, quote! { #ENDIAN_ENUM::Big }),
+                    Endian::Big => (
+                        quote! { #ENDIAN_ENUM::Big },
+                        quote! { #ENDIAN_ENUM::Little },
+                    ),
+                    Endian::Little => (
+                        quote! { #ENDIAN_ENUM::Little },
+                        quote! { #ENDIAN_ENUM::Big },
+                    ),
                 };
 
                 quote! {

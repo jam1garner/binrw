@@ -1,25 +1,26 @@
 use crate::{
-    alloc::string::{FromUtf8Error, FromUtf16Error},
+    alloc::string::{FromUtf16Error, FromUtf8Error},
     io::{Read, Seek},
-    BinRead,
-    ReadOptions,
-    BinResult,
+    BinRead, BinResult, ReadOptions,
 };
 
 #[cfg(not(feature = "std"))]
 use alloc::{
     string::{String, ToString},
+    vec,
     vec::Vec,
-    vec
 };
 
-use core::num::{NonZeroU8, NonZeroU16};
+use core::num::{NonZeroU16, NonZeroU8};
 
 impl BinRead for Vec<NonZeroU8> {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        _: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<Self> {
         reader
             .bytes()
             .take_while(|x| !matches!(x, Ok(0)))
@@ -127,15 +128,17 @@ impl From<NullString> for Vec<u8> {
 impl BinRead for Vec<NonZeroU16> {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args)
-        -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<Self> {
         let mut values = vec![];
 
         loop {
             let val = <u16>::read_options(reader, options, ())?;
             if val == 0 {
-                return Ok(values)
+                return Ok(values);
             }
             values.push(NonZeroU16::new(val).unwrap());
         }
@@ -145,26 +148,28 @@ impl BinRead for Vec<NonZeroU16> {
 impl BinRead for NullWideString {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
-        -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self> {
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
-        <Vec<NonZeroU16>>::read_options(reader, &options, args)
-            .map(|chars| chars.into())
+        <Vec<NonZeroU16>>::read_options(reader, &options, args).map(|chars| chars.into())
     }
 }
 
 impl BinRead for NullString {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
-        -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self> {
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
-        <Vec<NonZeroU8>>::read_options(reader, options, args)
-            .map(|chars| chars.into())
+        <Vec<NonZeroU8>>::read_options(reader, options, args).map(|chars| chars.into())
     }
 }
 

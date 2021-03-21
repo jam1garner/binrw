@@ -1,4 +1,4 @@
-use crate::parser::{KeywordToken, TrySet, attrs};
+use crate::parser::{attrs, KeywordToken, TrySet};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum EnumErrorMode {
@@ -25,13 +25,16 @@ impl From<attrs::ReturnUnexpectedError> for EnumErrorMode {
     }
 }
 
-impl <T: Into<EnumErrorMode> + KeywordToken> TrySet<EnumErrorMode> for T {
+impl<T: Into<EnumErrorMode> + KeywordToken> TrySet<EnumErrorMode> for T {
     fn try_set(self, to: &mut EnumErrorMode) -> syn::Result<()> {
         if *to == EnumErrorMode::Default {
             *to = self.into();
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), "conflicting error handling keyword"))
+            Err(syn::Error::new(
+                self.keyword_span(),
+                "conflicting error handling keyword",
+            ))
         }
     }
 }

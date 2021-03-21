@@ -1,4 +1,7 @@
-use super::{keywords as kw, meta_types::{IdentPatType, MetaExpr, MetaList, MetaLit, MetaType, MetaValue}};
+use super::{
+    keywords as kw,
+    meta_types::{IdentPatType, MetaExpr, MetaList, MetaLit, MetaType, MetaValue},
+};
 use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;

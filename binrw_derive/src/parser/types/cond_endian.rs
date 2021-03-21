@@ -1,4 +1,4 @@
-use crate::{parser::{KeywordToken, TrySet, attrs}};
+use crate::parser::{attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
@@ -51,13 +51,16 @@ impl From<attrs::IsLittle> for CondEndian {
     }
 }
 
-impl <T: Into<CondEndian> + KeywordToken> TrySet<CondEndian> for T {
+impl<T: Into<CondEndian> + KeywordToken> TrySet<CondEndian> for T {
     fn try_set(self, to: &mut CondEndian) -> syn::Result<()> {
         if matches!(*to, CondEndian::Inherited) {
             *to = self.into();
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), "conflicting endianness keyword"))
+            Err(syn::Error::new(
+                self.keyword_span(),
+                "conflicting endianness keyword",
+            ))
         }
     }
 }

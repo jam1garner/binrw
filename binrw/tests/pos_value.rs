@@ -2,14 +2,14 @@
 extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::format;
-use binrw::{BinRead, PosValue, BinReaderExt, io::Cursor};
+use binrw::{io::Cursor, BinRead, BinReaderExt, PosValue};
 
 #[test]
 fn pos_value() {
     #[derive(BinRead)]
     struct MyType {
         a: u16,
-        b: PosValue<u8>
+        b: PosValue<u8>,
     }
 
     let mut val = Cursor::new(b"\xFF\xFE\xFD").read_be::<MyType>().unwrap();

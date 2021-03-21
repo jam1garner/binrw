@@ -1,9 +1,12 @@
 mod cursor;
 mod error;
 
-pub use {cursor::Cursor, error::{Error, ErrorKind}};
 use alloc::vec::Vec;
 use core::fmt;
+pub use {
+    cursor::Cursor,
+    error::{Error, ErrorKind},
+};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -24,7 +27,10 @@ pub trait Read {
             }
         }
         if !buf.is_empty() {
-            Err(Error::new(ErrorKind::UnexpectedEof, "failed to fill whole buffer"))
+            Err(Error::new(
+                ErrorKind::UnexpectedEof,
+                "failed to fill whole buffer",
+            ))
         } else {
             Ok(())
         }
@@ -42,7 +48,7 @@ pub trait Read {
                     buf.extend_from_slice(&tmp[..n]);
                 }
                 Err(err) if err.kind() == ErrorKind::Interrupted => continue,
-                err @ Err(_) => return err
+                err @ Err(_) => return err,
             }
         }
     }
@@ -274,7 +280,7 @@ impl<R: Read + ?Sized> Read for &mut R {
 
 #[derive(Debug)]
 pub struct Bytes<R: Read> {
-    inner: R
+    inner: R,
 }
 
 impl<R: Read> Iterator for Bytes<R> {
@@ -320,7 +326,10 @@ pub trait Write {
         while !buf.is_empty() {
             match self.write(buf) {
                 Ok(0) => {
-                    return Err(Error::new(ErrorKind::WriteZero, "failed to write whole buffer"));
+                    return Err(Error::new(
+                        ErrorKind::WriteZero,
+                        "failed to write whole buffer",
+                    ));
                 }
                 Ok(n) => buf = &buf[n..],
                 Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
@@ -350,7 +359,10 @@ pub trait Write {
             }
         }
 
-        let mut output = Adaptor { inner: self, error: Ok(()) };
+        let mut output = Adaptor {
+            inner: self,
+            error: Ok(()),
+        };
         match fmt::write(&mut output, fmt) {
             Ok(()) => Ok(()),
             Err(..) => {

@@ -1,6 +1,6 @@
 ///! Utilities for helping sanitize macro
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{ToTokens, TokenStreamExt, format_ident, quote};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
 macro_rules! ident_str {
     () => {};
@@ -17,12 +17,18 @@ macro_rules! ident_str {
 }
 
 macro_rules! from_crate {
-    ($path:path) => { concat!("binrw::", stringify!($path)) };
+    ($path:path) => {
+        concat!("binrw::", stringify!($path))
+    };
 }
 
 macro_rules! from_trait {
-    () => { from_crate!(BinRead) };
-    ($path:path) => { concat!("binrw::BinRead::", stringify!($path)) };
+    () => {
+        from_crate!(BinRead)
+    };
+    ($path:path) => {
+        concat!("binrw::BinRead::", stringify!($path))
+    };
 }
 
 ident_str! {
@@ -67,9 +73,10 @@ impl IdentStr {
 
 impl ToTokens for IdentStr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let idents = self.0.split("::").map(|ident| {
-            Ident::new(ident, Span::call_site())
-        });
+        let idents = self
+            .0
+            .split("::")
+            .map(|ident| Ident::new(ident, Span::call_site()));
         tokens.append_separated(idents, quote!(::));
     }
 }

@@ -1,4 +1,4 @@
-use binrw::{BinRead, io::Cursor};
+use binrw::{io::Cursor, BinRead};
 
 #[test]
 fn unit_struct_magic() {
@@ -17,7 +17,8 @@ fn unit_struct_import_pre_assert() {
     #[br(import(succeed: bool), pre_assert(succeed))]
     struct Test;
 
-    Test::read_args(&mut Cursor::new(b""), (true, )).unwrap();
-    let error = Test::read_args(&mut Cursor::new(b""), (false, )).expect_err("accepted negative pre-assert");
+    Test::read_args(&mut Cursor::new(b""), (true,)).unwrap();
+    let error =
+        Test::read_args(&mut Cursor::new(b""), (false,)).expect_err("accepted negative pre-assert");
     assert!(matches!(error, binrw::Error::AssertFail { .. }));
 }

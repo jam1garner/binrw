@@ -1,4 +1,4 @@
-use binrw::{BinRead, io::Cursor};
+use binrw::{io::Cursor, BinRead};
 use core::convert::TryInto;
 
 #[test]
@@ -13,7 +13,7 @@ fn map_closure() {
         a: i16,
     }
 
-    let result = Test::read_args(&mut Cursor::new("\x01"), (5, )).unwrap();
+    let result = Test::read_args(&mut Cursor::new("\x01"), (5,)).unwrap();
     assert_eq!(result.a, 6);
 }
 
@@ -27,7 +27,7 @@ fn map_expr() {
     }
 
     fn make_map(extra: u8) -> impl Fn(u8) -> i16 {
-        move |value: u8| { (value + extra).into() }
+        move |value: u8| (value + extra).into()
     }
 
     let result = Test::read(&mut Cursor::new("\x01")).unwrap();
@@ -44,7 +44,9 @@ fn map_struct() {
 
     impl Test {
         fn from_bytes(bytes: [u8; 2]) -> Self {
-            Self { a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8) }
+            Self {
+                a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8),
+            }
         }
     }
 
@@ -65,7 +67,9 @@ fn try_map_field() {
     assert_eq!(result.a, -1);
     let error = Test::read(&mut Cursor::new(b"\x7f\0\0\0")).expect_err("accepted bad data");
     assert!(matches!(error, binrw::Error::Custom { pos: 0, .. }));
-    error.custom_err::<<i32 as ::core::convert::TryInto<i16>>::Error>().expect("wrong error type");
+    error
+        .custom_err::<<i32 as ::core::convert::TryInto<i16>>::Error>()
+        .expect("wrong error type");
 }
 
 #[test]
@@ -87,7 +91,9 @@ fn try_map_struct() {
     impl Test {
         fn from_bytes(bytes: [u8; 2]) -> Result<Self, Oops> {
             if bytes[0] == 0 {
-                Ok(Self { a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8) })
+                Ok(Self {
+                    a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8),
+                })
             } else {
                 Err(Oops)
             }

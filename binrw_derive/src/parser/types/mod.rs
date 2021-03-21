@@ -20,7 +20,10 @@ pub(crate) use passed_args::PassedArgs;
 pub(crate) use read_mode::ReadMode;
 pub(crate) use spanned_value::SpannedValue;
 
-fn assert_all_args_consumed<Iter, IterItem>(args: Iter, default_span: proc_macro2::Span) -> syn::Result<()>
+fn assert_all_args_consumed<Iter, IterItem>(
+    args: Iter,
+    default_span: proc_macro2::Span,
+) -> syn::Result<()>
 where
     IterItem: syn::spanned::Spanned,
     Iter: Iterator<Item = IterItem>,
@@ -43,5 +46,7 @@ where
         }
     }
 
-    extra_span.map_or(Ok(()), |span| Err(syn::Error::new(span, "too many arguments")))
+    extra_span.map_or(Ok(()), |span| {
+        Err(syn::Error::new(span, "too many arguments"))
+    })
 }

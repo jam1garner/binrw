@@ -1,4 +1,4 @@
-use crate::parser::{KeywordToken, TrySet, attrs};
+use crate::parser::{attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
@@ -6,7 +6,7 @@ use quote::ToTokens;
 pub(crate) enum PassedArgs {
     None,
     List(Vec<TokenStream>),
-    Tuple(TokenStream)
+    Tuple(TokenStream),
 }
 
 impl Default for PassedArgs {
@@ -17,7 +17,12 @@ impl Default for PassedArgs {
 
 impl From<attrs::Args> for PassedArgs {
     fn from(args: attrs::Args) -> Self {
-        Self::List(args.fields.iter().map(ToTokens::into_token_stream).collect())
+        Self::List(
+            args.fields
+                .iter()
+                .map(ToTokens::into_token_stream)
+                .collect(),
+        )
     }
 }
 
@@ -27,13 +32,16 @@ impl From<attrs::ArgsTuple> for PassedArgs {
     }
 }
 
-impl <T: Into<PassedArgs> + KeywordToken> TrySet<PassedArgs> for T {
+impl<T: Into<PassedArgs> + KeywordToken> TrySet<PassedArgs> for T {
     fn try_set(self, to: &mut PassedArgs) -> syn::Result<()> {
         if matches!(*to, PassedArgs::None) {
             *to = self.into();
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), "conflicting args keyword"))
+            Err(syn::Error::new(
+                self.keyword_span(),
+                "conflicting args keyword",
+            ))
         }
     }
 }

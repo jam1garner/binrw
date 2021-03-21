@@ -1,4 +1,8 @@
-use binrw::{BinRead, BinResult, derive_binread, io::{Cursor, Read, Seek, SeekFrom}, FilePtr, NullString, ReadOptions};
+use binrw::{
+    derive_binread,
+    io::{Cursor, Read, Seek, SeekFrom},
+    BinRead, BinResult, FilePtr, NullString, ReadOptions,
+};
 
 #[test]
 fn all_the_things() {
@@ -18,15 +22,17 @@ fn all_the_things() {
         start_as_none: Option<PlainObject>,
 
         #[br(calc = 1 + 2)]
-        calc_test: u32
+        calc_test: u32,
     }
 
-    fn read_offsets<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
-        -> BinResult<(u16, u16)>
-    {
+    fn read_offsets<R: Read + Seek>(
+        reader: &mut R,
+        ro: &ReadOptions,
+        _: (),
+    ) -> BinResult<(u16, u16)> {
         Ok((
             u16::read_options(reader, ro, ())?,
-            u16::read_options(reader, ro, ())?
+            u16::read_options(reader, ro, ())?,
         ))
     }
 
@@ -67,7 +73,7 @@ fn assert() {
         binrw::Error::AssertFail { pos, message } => {
             assert_eq!(pos, 0);
             assert_eq!(message, "a == 1");
-        },
+        }
         _ => panic!("bad error type"),
     }
 }
@@ -109,7 +115,7 @@ fn assert_formatted() {
         binrw::Error::AssertFail { pos, message } => {
             assert_eq!(pos, 0);
             assert_eq!(message, "a was 0");
-        },
+        }
         _ => panic!("bad error type"),
     }
 }
@@ -130,7 +136,12 @@ fn calc_temp_field() {
     let result = Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap();
     // This also indirectly checks that `temp` is actually working since
     // compilation would fail if it weren’t due to missing the `len` field
-    assert_eq!(result, Test { vec: Vec::from(&b"ABCDE"[..]) });
+    assert_eq!(
+        result,
+        Test {
+            vec: Vec::from(&b"ABCDE"[..])
+        }
+    );
 }
 
 #[test]
@@ -159,10 +170,16 @@ fn deref_now() {
     }
 
     let result = Test::read(&mut Cursor::new(include_bytes!("data/deref_now.bin"))).unwrap();
-    assert_eq!(result, Test {
-        a: FilePtr { ptr: 0x10, value: Some(NullString(b"Test string".to_vec())) },
-        b: -1,
-    });
+    assert_eq!(
+        result,
+        Test {
+            a: FilePtr {
+                ptr: 0x10,
+                value: Some(NullString(b"Test string".to_vec()))
+            },
+            b: -1,
+        }
+    );
 }
 
 #[test]
@@ -186,9 +203,9 @@ fn if_alternate() {
         a: u8,
     }
 
-    let result = Test::read_args(&mut Cursor::new(b"\x01"), (true, )).unwrap();
+    let result = Test::read_args(&mut Cursor::new(b"\x01"), (true,)).unwrap();
     assert_eq!(result.a, 1);
-    let result = Test::read_args(&mut Cursor::new(b"\x01"), (false, )).unwrap();
+    let result = Test::read_args(&mut Cursor::new(b"\x01"), (false,)).unwrap();
     assert_eq!(result.a, 10);
 }
 
@@ -213,7 +230,14 @@ fn ignore_and_default() {
     }
 
     let result = Test::read(&mut Cursor::new(b"\x02")).unwrap();
-    assert_eq!(result, Test { a: 2, b: <_>::default(), c: <_>::default() });
+    assert_eq!(
+        result,
+        Test {
+            a: 2,
+            b: <_>::default(),
+            c: <_>::default()
+        }
+    );
 }
 
 #[test]
@@ -352,13 +376,13 @@ fn try_directive() {
     #[br(big)]
     struct Test {
         #[br(try)]
-        a: Option<[ i32; 2 ]>,
+        a: Option<[i32; 2]>,
     }
 
     let result = Test::read(&mut Cursor::new(b"\0\0\0\0")).unwrap();
     assert!(result.a.is_none());
     let result = Test::read(&mut Cursor::new(b"\xff\xff\xff\xff\0\0\0\0")).unwrap();
-    assert_eq!(result.a, Some([ -1, 0 ]));
+    assert_eq!(result.a, Some([-1, 0]));
 }
 
 #[test]

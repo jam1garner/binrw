@@ -112,7 +112,7 @@
 //! In order to parse generically, we have to (in some way) bound `Args`. The easiest way to do
 //! this is to bound `<T as BinRead>::Args` to `()` (no arguments), however it is also possible to
 //! either accept a specific set of arguments or be generic over the given arguments.
-#![cfg_attr(not(feature="std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(rust_2018_idioms)]
 
 #[cfg(feature = "std")]
@@ -125,35 +125,28 @@ extern crate alloc;
 #[path = "private.rs"]
 pub mod __private;
 
-pub mod io;
-pub mod error;
-pub mod endian;
-pub mod helpers;
-pub mod file_ptr;
 pub mod attribute;
+pub mod endian;
+pub mod error;
+pub mod file_ptr;
+pub mod helpers;
+pub mod io;
+#[doc(hidden)]
+pub mod options;
+#[doc(hidden)]
+pub mod pos_value;
 pub mod punctuated;
-#[doc(hidden)] pub mod options;
-#[doc(hidden)] pub mod strings;
-#[doc(hidden)] pub mod pos_value;
+#[doc(hidden)]
+pub mod strings;
 
 #[doc(inline)]
 pub use {
-    error::Error,
     endian::Endian,
-    pos_value::PosValue,
-    file_ptr::{
-        FilePtr,
-        FilePtr8,
-        FilePtr16,
-        FilePtr32,
-        FilePtr64,
-        FilePtr128,
-    },
+    error::Error,
+    file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
     options::ReadOptions,
-    strings::{
-        NullString,
-        NullWideString
-    }
+    pos_value::PosValue,
+    strings::{NullString, NullWideString},
 };
 
 /// Derive macro for BinRead. [Usage here](BinRead).

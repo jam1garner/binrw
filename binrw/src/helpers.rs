@@ -1,6 +1,9 @@
+use crate::{
+    io::{Read, Seek},
+    BinResult, ReadOptions,
+};
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
-use crate::{BinResult, ReadOptions, io::{Read, Seek}};
 
 /// A helper for more efficiently mass-reading bytes
 ///
@@ -18,10 +21,14 @@ use crate::{BinResult, ReadOptions, io::{Read, Seek}};
 /// # let x: BunchaBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[0, 1, 2, 3, 4]);
 /// ```
-pub fn read_bytes<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: ()) -> BinResult<Vec<u8>> {
+pub fn read_bytes<R: Read + Seek>(
+    reader: &mut R,
+    options: &ReadOptions,
+    _: (),
+) -> BinResult<Vec<u8>> {
     let count = match options.count {
         Some(x) => x,
-        None => panic!("Missing count for read_bytes")
+        None => panic!("Missing count for read_bytes"),
     };
     let mut buf = vec![0; count];
     reader.read_exact(&mut buf)?;

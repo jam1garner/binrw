@@ -1,14 +1,14 @@
 //! Error types and internal error handling functions
+use crate::{io, BinRead, BinResult, ReadOptions};
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{any::Any, fmt};
-use crate::{BinRead, BinResult, ReadOptions, io};
 
 pub trait CustomError: Any + fmt::Display + fmt::Debug + Send + Sync + 'static {
     fn as_any(&self) -> &(dyn Any + Send + Sync);
     fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync>;
 }
-impl <T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
+impl<T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
     fn as_any(&self) -> &(dyn Any + Send + Sync) {
         self
     }
@@ -49,25 +49,17 @@ pub enum Error {
         found: Box<dyn fmt::Debug + Send + Sync>,
     },
     /// The condition of an assertion without a custom type failed
-    AssertFail {
-        pos: u64,
-        message: String
-    },
+    AssertFail { pos: u64, message: String },
     /// An error that occured while reading from, or seeking within, the reader
     Io(io::Error),
     /// A custom error, most often given from the second value passed into an [`assert`](crate::attribute#assert)
-    Custom {
-        pos: u64,
-        err: Box<dyn CustomError>,
-    },
+    Custom { pos: u64, err: Box<dyn CustomError> },
     /// No variant in the enum was successful in parsing the data
-    NoVariantMatch {
-        pos: u64
-    },
+    NoVariantMatch { pos: u64 },
     EnumErrors {
         pos: u64,
         variant_errors: Vec<(/*variant name*/ &'static str, Error)>,
-    }
+    },
 }
 
 impl Error {
@@ -96,7 +88,10 @@ impl fmt::Display for Error {
             Error::Io(err) => fmt::Display::fmt(err, f),
             Error::Custom { pos, err } => write!(f, "{} at 0x{:x}", err, pos),
             Error::NoVariantMatch { pos } => write!(f, "no variants matched at 0x{:x}", pos),
-            Error::EnumErrors { pos, variant_errors } => {
+            Error::EnumErrors {
+                pos,
+                variant_errors,
+            } => {
                 write!(f, "no variants matched at 0x{:x}:", pos)?;
                 for (name, err) in variant_errors {
                     write!(f, "\n  {}: {}", name, err)?;
@@ -123,7 +118,7 @@ where
     } else {
         Err(Error::BadMagic {
             pos,
-            found: Box::new(val) as _
+            found: Box::new(val) as _,
         })
     }
 }
@@ -133,9 +128,10 @@ pub fn read_options_then_after_parse<Args, T, R>(
     ro: &ReadOptions,
     args: T::Args,
 ) -> BinResult<T>
-    where Args: Copy + 'static,
-          T: BinRead<Args = Args>,
-          R: io::Read + io::Seek,
+where
+    Args: Copy + 'static,
+    T: BinRead<Args = Args>,
+    R: io::Read + io::Seek,
 {
     let mut val = T::read_options(reader, ro, args)?;
     val.after_parse(reader, ro, args)?;

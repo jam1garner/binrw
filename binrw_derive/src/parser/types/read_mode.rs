@@ -1,4 +1,4 @@
-use crate::parser::{KeywordToken, TrySet, attrs};
+use crate::parser::{attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
@@ -40,13 +40,16 @@ impl From<attrs::ParseWith> for ReadMode {
     }
 }
 
-impl <T: Into<ReadMode> + KeywordToken> TrySet<ReadMode> for T {
+impl<T: Into<ReadMode> + KeywordToken> TrySet<ReadMode> for T {
     fn try_set(self, to: &mut ReadMode) -> syn::Result<()> {
         if matches!(*to, ReadMode::Normal) {
             *to = self.into();
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), "conflicting read mode keyword"))
+            Err(syn::Error::new(
+                self.keyword_span(),
+                "conflicting read mode keyword",
+            ))
         }
     }
 }

@@ -1,6 +1,9 @@
+use super::{
+    types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
+    EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
+};
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
-use super::{EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField, types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map}};
 
 pub(crate) enum Input {
     Struct(Struct),
@@ -19,26 +22,32 @@ impl Input {
                 } else {
                     Struct::from_input(attrs, st.fields.iter()).map(Self::Struct)
                 }
-            },
+            }
             syn::Data::Enum(en) => {
                 let variants = &en.variants;
                 if variants.is_empty() {
-                    ParseResult::Err(syn::Error::new(input.span(), "null enums are not supported"))
-                } else if variants.iter().all(|v| matches!(v.fields, syn::Fields::Unit)) {
+                    ParseResult::Err(syn::Error::new(
+                        input.span(),
+                        "null enums are not supported",
+                    ))
+                } else if variants
+                    .iter()
+                    .all(|v| matches!(v.fields, syn::Fields::Unit))
+                {
                     UnitOnlyEnum::from_input(attrs, variants.iter()).map(Self::UnitOnlyEnum)
                 } else {
                     Enum::from_input(attrs, variants.iter()).map(Self::Enum)
                 }
-            },
-            syn::Data::Union(_) =>
+            }
+            syn::Data::Union(_) => {
                 ParseResult::Err(syn::Error::new(input.span(), "unions are not supported"))
+            }
         }
     }
 
     pub(crate) fn endian(&self) -> &CondEndian {
         match self {
-            Input::Struct(s)
-            | Input::UnitStruct(s) => &s.endian,
+            Input::Struct(s) | Input::UnitStruct(s) => &s.endian,
             Input::Enum(e) => &e.endian,
             Input::UnitOnlyEnum(e) => &e.endian,
         }
@@ -46,8 +55,7 @@ impl Input {
 
     pub(crate) fn imports(&self) -> &Imports {
         match self {
-            Input::Struct(s)
-            | Input::UnitStruct(s) => &s.imports,
+            Input::Struct(s) | Input::UnitStruct(s) => &s.imports,
             Input::Enum(e) => &e.imports,
             Input::UnitOnlyEnum(e) => &e.imports,
         }
@@ -56,24 +64,20 @@ impl Input {
     pub(crate) fn is_temp_field(&self, variant_index: usize, index: usize) -> bool {
         match self {
             Input::Struct(s) => s.fields.get(index).map_or(false, |field| field.temp),
-            Input::Enum(e) => {
-                e.variants.get(variant_index).map_or(false, |variant| {
-                    if let EnumVariant::Variant { options, .. } = variant {
-                        options.fields.get(index).map_or(false, |field| field.temp)
-                    } else {
-                        false
-                    }
-                })
-            },
-            Input::UnitStruct(_)
-            | Input::UnitOnlyEnum(_) => false,
+            Input::Enum(e) => e.variants.get(variant_index).map_or(false, |variant| {
+                if let EnumVariant::Variant { options, .. } = variant {
+                    options.fields.get(index).map_or(false, |field| field.temp)
+                } else {
+                    false
+                }
+            }),
+            Input::UnitStruct(_) | Input::UnitOnlyEnum(_) => false,
         }
     }
 
     pub(crate) fn map(&self) -> &Map {
         match self {
-            Input::Struct(s)
-            | Input::UnitStruct(s) => &s.map,
+            Input::Struct(s) | Input::UnitStruct(s) => &s.map,
             Input::Enum(e) => &e.map,
             Input::UnitOnlyEnum(e) => &e.map,
         }
@@ -81,8 +85,7 @@ impl Input {
 
     pub(crate) fn magic(&self) -> &Magic {
         match self {
-            Input::Struct(s)
-            | Input::UnitStruct(s) => &s.magic,
+            Input::Struct(s) | Input::UnitStruct(s) => &s.magic,
             Input::Enum(e) => &e.magic,
             Input::UnitOnlyEnum(e) => &e.magic,
         }
@@ -90,8 +93,7 @@ impl Input {
 
     pub(crate) fn pre_assertions(&self) -> &Vec<Assert> {
         match self {
-            Input::Struct(s)
-            | Input::UnitStruct(s) => &s.pre_assertions,
+            Input::Struct(s) | Input::UnitStruct(s) => &s.pre_assertions,
             Input::Enum(e) => &e.pre_assertions,
             Input::UnitOnlyEnum(_) => unimplemented!("`Input::pre_assert()` called on unit enum"),
         }
@@ -120,17 +122,15 @@ attr_struct! {
 
 impl Struct {
     pub(crate) fn is_tuple(&self) -> bool {
-        self.fields.get(0).map_or(false, |field| field.generated_ident)
+        self.fields
+            .get(0)
+            .map_or(false, |field| field.generated_ident)
     }
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
-        self.fields.iter().filter_map(|field| {
-            if field.temp {
-                None
-            } else {
-                Some(&field.ident)
-            }
-        })
+        self.fields
+            .iter()
+            .filter_map(|field| if field.temp { None } else { Some(&field.ident) })
     }
 }
 
@@ -184,16 +184,18 @@ impl Enum {
                     out.magic = options.magic.clone();
                 }
 
-                out.pre_assertions.extend_from_slice(&options.pre_assertions);
+                out.pre_assertions
+                    .extend_from_slice(&options.pre_assertions);
                 out.assertions.extend_from_slice(&options.assertions);
-            },
+            }
 
             EnumVariant::Unit(options) => {
                 if options.magic.is_some() {
                     out.magic = options.magic.clone();
                 }
 
-                out.pre_assertions.extend_from_slice(&options.pre_assertions);
+                out.pre_assertions
+                    .extend_from_slice(&options.pre_assertions);
             }
         }
 
@@ -242,19 +244,30 @@ impl FromInput<UnitEnumAttr> for UnitOnlyEnum {
         if let (Some(repr), Some(magic)) = (self.repr.as_ref(), field.magic.as_ref()) {
             let magic_span = magic.span();
             let span = magic_span.join(repr.span()).unwrap_or(magic_span);
-            Err(syn::Error::new(span, "`repr` and `magic` are mutually exclusive"))
+            Err(syn::Error::new(
+                span,
+                "`repr` and `magic` are mutually exclusive",
+            ))
         } else {
             let expected_magic = self.expected_field_magic.as_ref();
             match (expected_magic, field.magic.as_ref()) {
                 (Some(expected_magic), Some(magic)) => {
                     if expected_magic.kind() != magic.kind() {
                         let magic_span = magic.match_value().span();
-                        let span = magic_span.join(expected_magic.match_value().span()).unwrap_or(magic_span);
-                        return Err(syn::Error::new(span, format!("conflicting magic types; expected {}", expected_magic.kind())));
+                        let span = magic_span
+                            .join(expected_magic.match_value().span())
+                            .unwrap_or(magic_span);
+                        return Err(syn::Error::new(
+                            span,
+                            format!(
+                                "conflicting magic types; expected {}",
+                                expected_magic.kind()
+                            ),
+                        ));
                     }
-                },
+                }
                 (None, Some(_)) => self.expected_field_magic = field.magic.clone(),
-                _ => {},
+                _ => {}
             }
 
             self.fields.push(field);

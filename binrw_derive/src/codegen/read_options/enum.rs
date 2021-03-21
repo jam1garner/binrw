@@ -1,13 +1,13 @@
+use super::{
+    get_assertions,
+    r#struct::{generate_unit_struct, StructGenerator},
+    PreludeGenerator,
+};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
 use proc_macro2::TokenStream;
 use quote::quote;
-use super::{
-    PreludeGenerator,
-    get_assertions,
-    r#struct::{StructGenerator, generate_unit_struct},
-};
 
 pub(super) fn generate_unit_enum(input: &Input, en: &UnitOnlyEnum) -> TokenStream {
     match &en.repr {
@@ -16,7 +16,11 @@ pub(super) fn generate_unit_enum(input: &Input, en: &UnitOnlyEnum) -> TokenStrea
     }
 }
 
-fn generate_unit_enum_repr(input: &Input, repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_repr(
+    input: &Input,
+    repr: &TokenStream,
+    variants: &[UnitEnumField],
+) -> TokenStream {
     let clauses = variants.iter().map(|variant| {
         let ident = &variant.ident;
         quote! {
@@ -26,9 +30,7 @@ fn generate_unit_enum_repr(input: &Input, repr: &TokenStream, variants: &[UnitEn
         }
     });
 
-    let prelude = PreludeGenerator::new(input)
-        .add_options()
-        .finish();
+    let prelude = PreludeGenerator::new(input).add_options().finish();
 
     quote! {
         #prelude
@@ -41,7 +43,11 @@ fn generate_unit_enum_repr(input: &Input, repr: &TokenStream, variants: &[UnitEn
     }
 }
 
-fn generate_unit_enum_magic(input: &Input, en: &UnitOnlyEnum, variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_magic(
+    input: &Input,
+    en: &UnitOnlyEnum,
+    variants: &[UnitEnumField],
+) -> TokenStream {
     let prelude = PreludeGenerator::new(input)
         .add_imports()
         .add_options()
@@ -63,7 +69,10 @@ fn generate_unit_enum_magic(input: &Input, en: &UnitOnlyEnum, variants: &[UnitEn
         }
     });
 
-    let amp = en.expected_field_magic.as_ref().map(|magic| magic.add_ref());
+    let amp = en
+        .expected_field_magic
+        .as_ref()
+        .map(|magic| magic.add_ref());
 
     quote! {
         #prelude
@@ -77,25 +86,29 @@ fn generate_unit_enum_magic(input: &Input, en: &UnitOnlyEnum, variants: &[UnitEn
 pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
     let return_all_errors = en.error_mode != EnumErrorMode::ReturnUnexpectedError;
 
-    let (create_error_basket, return_error) = if return_all_errors {(
-        quote! {
-            extern crate alloc;
-            let mut #ERROR_BASKET: alloc::vec::Vec<(&'static str, #BIN_ERROR)> = alloc::vec::Vec::new();
-        },
-        quote! {
-            Err(#BIN_ERROR::EnumErrors {
-                pos: #POS,
-                variant_errors: #ERROR_BASKET
-            })
-        }
-    )} else {(
-        TokenStream::new(),
-        quote! {
-            Err(#BIN_ERROR::NoVariantMatch {
-                pos: #POS
-            })
-        }
-    )};
+    let (create_error_basket, return_error) = if return_all_errors {
+        (
+            quote! {
+                extern crate alloc;
+                let mut #ERROR_BASKET: alloc::vec::Vec<(&'static str, #BIN_ERROR)> = alloc::vec::Vec::new();
+            },
+            quote! {
+                Err(#BIN_ERROR::EnumErrors {
+                    pos: #POS,
+                    variant_errors: #ERROR_BASKET
+                })
+            },
+        )
+    } else {
+        (
+            TokenStream::new(),
+            quote! {
+                Err(#BIN_ERROR::NoVariantMatch {
+                    pos: #POS
+                })
+            },
+        )
+    };
 
     let try_each_variant = en.variants.iter().map(|variant| {
         let body = generate_variant_impl(en, variant);
@@ -136,16 +149,12 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
     let input = Input::Enum(en.with_variant(variant));
 
     match variant {
-        EnumVariant::Variant { ident, options } => {
-            StructGenerator::new(&input, &options)
-                .read_fields()
-                .add_assertions(get_assertions(&en.assertions))
-                .return_value(Some(ident))
-                .finish()
-        },
+        EnumVariant::Variant { ident, options } => StructGenerator::new(&input, &options)
+            .read_fields()
+            .add_assertions(get_assertions(&en.assertions))
+            .return_value(Some(ident))
+            .finish(),
 
-        EnumVariant::Unit(options) => {
-            generate_unit_struct(&input, Some(&options.ident))
-        },
+        EnumVariant::Unit(options) => generate_unit_struct(&input, Some(&options.ident)),
     }
 }

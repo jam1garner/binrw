@@ -1,7 +1,7 @@
 use core::fmt;
 
 pub struct Error {
-    repr: Repr
+    repr: Repr,
 }
 
 impl fmt::Debug for Error {
@@ -47,7 +47,7 @@ pub enum ErrorKind {
 impl Error {
     pub fn new<A>(kind: ErrorKind, _: A) -> Self {
         Self {
-            repr: Repr::Simple(kind)
+            repr: Repr::Simple(kind),
         }
     }
 
@@ -60,6 +60,8 @@ impl Error {
 
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Self {
-        Self { repr: Repr::Simple(kind) }
+        Self {
+            repr: Repr::Simple(kind),
+        }
     }
 }

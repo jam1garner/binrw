@@ -1,8 +1,8 @@
-use core::convert::TryFrom;
-use crate::parser::{attrs, KeywordToken};
-use proc_macro2::TokenStream;
-use quote::{ToTokens, quote};
 use super::SpannedValue;
+use crate::parser::{attrs, KeywordToken};
+use core::convert::TryFrom;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
 use syn::Lit;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -14,10 +14,14 @@ pub(crate) enum Kind {
 
 impl core::fmt::Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Kind::Char => "char",
-            Kind::ByteStr(ty) | Kind::Numeric(ty) => ty,
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Kind::Char => "char",
+                Kind::ByteStr(ty) | Kind::Numeric(ty) => ty,
+            }
+        )
     }
 }
 
@@ -39,7 +43,7 @@ impl Inner {
             Kind::ByteStr(_) => {
                 let value = &self.1;
                 quote! { *#value }
-            },
+            }
             _ => self.1.clone(),
         }
     }
@@ -66,10 +70,16 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
             Lit::Int(i) => Kind::Numeric(i.suffix().to_owned()),
             Lit::Float(f) => Kind::Numeric(f.suffix().to_owned()),
             Lit::Str(_) | Lit::Bool(_) | Lit::Verbatim(_) => {
-                return Err(syn::Error::new(value.span(), "expected byte string, byte, char, float, or int"))
-            },
+                return Err(syn::Error::new(
+                    value.span(),
+                    "expected byte string, byte, char, float, or int",
+                ))
+            }
         };
 
-        Ok(Self::new(Inner(kind, value.to_token_stream()), magic.keyword_span()))
+        Ok(Self::new(
+            Inner(kind, value.to_token_stream()),
+            magic.keyword_span(),
+        ))
     }
 }

@@ -8,8 +8,8 @@ mod top_level_attrs;
 mod types;
 
 pub(crate) use field_level_attrs::*;
-use proc_macro2::Span;
 use meta_types::MetaAttrList;
+use proc_macro2::Span;
 use syn::{spanned::Spanned, token::Token};
 pub(crate) use top_level_attrs::*;
 pub(crate) use types::*;
@@ -27,21 +27,27 @@ pub(crate) fn is_binread_attr(attr: &syn::Attribute) -> bool {
 }
 
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
-    fn try_from_attrs(attrs: &[syn::Attribute]) -> ParseResult<Self> where Self: Default + Sized {
+    fn try_from_attrs(attrs: &[syn::Attribute]) -> ParseResult<Self>
+    where
+        Self: Default + Sized,
+    {
         Self::set_from_attrs(Self::default(), attrs)
     }
 
-    fn set_from_attrs(mut self, attrs: &[syn::Attribute]) -> ParseResult<Self> where Self: Sized {
+    fn set_from_attrs(mut self, attrs: &[syn::Attribute]) -> ParseResult<Self>
+    where
+        Self: Sized,
+    {
         #[allow(clippy::filter_map)]
         let attrs = attrs
             .iter()
             .filter(|attr| is_binread_attr(attr))
-            .flat_map(|attr| {
-                match syn::parse2::<MetaAttrList<Attr>>(attr.tokens.clone()) {
+            .flat_map(
+                |attr| match syn::parse2::<MetaAttrList<Attr>>(attr.tokens.clone()) {
                     Ok(list) => either::Either::Right(list.into_iter().map(Ok)),
                     Err(err) => either::Either::Left(core::iter::once(Err(err))),
-                }
-            });
+                },
+            );
 
         let mut all_errors = None::<syn::Error>;
         for attr in attrs {
@@ -70,13 +76,21 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
 pub(crate) trait FromField {
     type In;
 
-    fn from_field(field: &Self::In, index: usize) -> ParseResult<Self> where Self: Sized;
+    fn from_field(field: &Self::In, index: usize) -> ParseResult<Self>
+    where
+        Self: Sized;
 }
 
 pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     type Field: FromField + 'static;
 
-    fn from_input<'input>(attrs: &'input [syn::Attribute], fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>) -> ParseResult<Self> where Self: Sized + Default {
+    fn from_input<'input>(
+        attrs: &'input [syn::Attribute],
+        fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>,
+    ) -> ParseResult<Self>
+    where
+        Self: Sized + Default,
+    {
         let (mut this, mut all_errors) = Self::try_from_attrs(attrs).unwrap_tuple();
 
         for (index, field) in fields.enumerate() {
@@ -124,7 +138,7 @@ pub(crate) trait KeywordToken {
     fn keyword_span(&self) -> Span;
 }
 
-impl <T: Token + Spanned> KeywordToken for T {
+impl<T: Token + Spanned> KeywordToken for T {
     type Token = T;
 
     fn keyword_span(&self) -> Span {
@@ -138,18 +152,18 @@ pub(crate) enum PartialResult<T, E> {
     Err(E),
 }
 
-impl <T, E> PartialResult<T, E> {
+impl<T, E> PartialResult<T, E> {
     #[cfg(test)]
     pub(crate) fn err(self) -> Option<E> {
         match self {
             PartialResult::Ok(_) => None,
-            PartialResult::Partial(_, error)
-            | PartialResult::Err(error) => Some(error),
+            PartialResult::Partial(_, error) | PartialResult::Err(error) => Some(error),
         }
     }
 
     pub(crate) fn map<F, U>(self, f: F) -> PartialResult<U, E>
-        where F: FnOnce(T) -> U,
+    where
+        F: FnOnce(T) -> U,
     {
         match self {
             PartialResult::Ok(value) => PartialResult::Ok(f(value)),
@@ -160,20 +174,25 @@ impl <T, E> PartialResult<T, E> {
 
     pub(crate) fn ok(self) -> Option<T> {
         match self {
-            PartialResult::Ok(value)
-            | PartialResult::Partial(value, _) => Some(value),
+            PartialResult::Ok(value) | PartialResult::Partial(value, _) => Some(value),
             PartialResult::Err(_) => None,
         }
     }
 }
 
-impl <T, E: core::fmt::Debug> PartialResult<T, E> {
+impl<T, E: core::fmt::Debug> PartialResult<T, E> {
     #[cfg(test)]
     pub(crate) fn unwrap(self) -> T {
         match self {
             PartialResult::Ok(value) => value,
-            PartialResult::Partial(_, error) => panic!("called `PartialResult::unwrap() on a `Partial` value: {:?}", &error),
-            PartialResult::Err(error) => panic!("called `PartialResult::unwrap() on an `Err` value: {:?}", &error),
+            PartialResult::Partial(_, error) => panic!(
+                "called `PartialResult::unwrap() on a `Partial` value: {:?}",
+                &error
+            ),
+            PartialResult::Err(error) => panic!(
+                "called `PartialResult::unwrap() on an `Err` value: {:?}",
+                &error
+            ),
         }
     }
 
@@ -181,7 +200,10 @@ impl <T, E: core::fmt::Debug> PartialResult<T, E> {
         match self {
             PartialResult::Ok(value) => (value, None),
             PartialResult::Partial(value, error) => (value, Some(error)),
-            PartialResult::Err(error) => panic!("called `PartialResult::unwrap_tuple() on an `Err` value: {:?}", &error),
+            PartialResult::Err(error) => panic!(
+                "called `PartialResult::unwrap_tuple() on an `Err` value: {:?}",
+                &error
+            ),
         }
     }
 }
@@ -192,10 +214,13 @@ pub(crate) trait TrySet<T> {
     fn try_set(self, to: &mut T) -> syn::Result<()>;
 }
 
-impl <T: KeywordToken> TrySet<bool> for T {
+impl<T: KeywordToken> TrySet<bool> for T {
     fn try_set(self, to: &mut bool) -> syn::Result<()> {
         if *to {
-            Err(syn::Error::new(self.keyword_span(), format!("conflicting {} keyword", self.dyn_display())))
+            Err(syn::Error::new(
+                self.keyword_span(),
+                format!("conflicting {} keyword", self.dyn_display()),
+            ))
         } else {
             *to = true;
             Ok(())
@@ -221,23 +246,26 @@ impl From<syn::Error> for TrySetError {
     }
 }
 
-impl <T: core::convert::TryInto<To, Error = E> + KeywordToken, E: Into<TrySetError>, To> TrySet<Option<To>> for T {
+impl<T: core::convert::TryInto<To, Error = E> + KeywordToken, E: Into<TrySetError>, To>
+    TrySet<Option<To>> for T
+{
     fn try_set(self, to: &mut Option<To>) -> syn::Result<()> {
         if to.is_none() {
-            *to = Some(self.try_into().map_err(|error| {
-                match error.into() {
-                    TrySetError::Infallible => unreachable!(),
-                    TrySetError::Syn(error) => error,
-                }
+            *to = Some(self.try_into().map_err(|error| match error.into() {
+                TrySetError::Infallible => unreachable!(),
+                TrySetError::Syn(error) => error,
             })?);
             Ok(())
         } else {
-            Err(syn::Error::new(self.keyword_span(), format!("conflicting {} keyword", self.dyn_display())))
+            Err(syn::Error::new(
+                self.keyword_span(),
+                format!("conflicting {} keyword", self.dyn_display()),
+            ))
         }
     }
 }
 
-impl <T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySet<Vec<To>> for T {
+impl<T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySet<Vec<To>> for T {
     fn try_set(self, to: &mut Vec<To>) -> syn::Result<()> {
         to.push(self.try_into()?);
         Ok(())
@@ -246,8 +274,8 @@ impl <T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TryS
 
 #[cfg(test)]
 mod tests {
-    use proc_macro2::TokenStream;
     use super::*;
+    use proc_macro2::TokenStream;
     use syn::DeriveInput;
 
     fn try_input(input: TokenStream) -> ParseResult<Input> {
@@ -422,7 +450,9 @@ mod tests {
                 #[br(invalid_keyword_struct_field_b)]
                 b: i32,
             }
-        }).err().unwrap();
+        })
+        .err()
+        .unwrap();
         assert_eq!(error.into_iter().count(), 3);
     }
 

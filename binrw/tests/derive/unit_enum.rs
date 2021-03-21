@@ -1,4 +1,7 @@
-use binrw::{BinRead, io::{Cursor, Seek, SeekFrom}};
+use binrw::{
+    io::{Cursor, Seek, SeekFrom},
+    BinRead,
+};
 
 #[test]
 fn unit_enum_magic() {
@@ -54,12 +57,22 @@ fn unit_enum_magic_pre_assert() {
         OtherZero,
     }
 
-    assert_eq!(Test::read_args(&mut Cursor::new(b"\0\0"), (true, false)).unwrap(), Test::Zero);
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b"\0\0"), (true, false)).unwrap(),
+        Test::Zero
+    );
     // Tests allow_zero condition actually applies
-    assert_eq!(Test::read_args(&mut Cursor::new(b"\0\0"), (true, true)).unwrap(), Test::OtherZero);
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b"\0\0"), (true, true)).unwrap(),
+        Test::OtherZero
+    );
     // Tests forbid_zero condition actually applies
-    assert_eq!(Test::read_args(&mut Cursor::new(b"\0\0"), (false, true)).unwrap(), Test::OtherZero);
-    let error = Test::read_args(&mut Cursor::new(b"\0\x01"), (false, true)).expect_err("accepted bad data");
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b"\0\0"), (false, true)).unwrap(),
+        Test::OtherZero
+    );
+    let error =
+        Test::read_args(&mut Cursor::new(b"\0\x01"), (false, true)).expect_err("accepted bad data");
     assert!(matches!(error, binrw::Error::NoVariantMatch { .. }));
 }
 
@@ -73,7 +86,10 @@ fn unit_enum_repr() {
         Two = 2,
     }
 
-    assert_eq!(Test::read(&mut Cursor::new(b"\xff\xff")).unwrap(), Test::Neg1);
+    assert_eq!(
+        Test::read(&mut Cursor::new(b"\xff\xff")).unwrap(),
+        Test::Neg1
+    );
     let error = Test::read(&mut Cursor::new(b"\0\x01")).expect_err("accepted bad data");
     assert!(matches!(error, binrw::Error::NoVariantMatch { .. }));
     assert_eq!(Test::read(&mut Cursor::new(b"\0\x02")).unwrap(), Test::Two);

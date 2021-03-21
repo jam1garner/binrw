@@ -8,7 +8,10 @@ use quote::quote;
 #[allow(clippy::wildcard_imports)]
 use sanitization::*;
 
-pub(crate) fn generate_impl(derive_input: &syn::DeriveInput, binread_input: &ParseResult<Input>) -> TokenStream {
+pub(crate) fn generate_impl(
+    derive_input: &syn::DeriveInput,
+    binread_input: &ParseResult<Input>,
+) -> TokenStream {
     // If there is a parsing error, a BinRead impl still needs to be
     // generated to avoid misleading errors at all call sites that use the
     // BinRead trait
@@ -17,10 +20,9 @@ pub(crate) fn generate_impl(derive_input: &syn::DeriveInput, binread_input: &Par
             binread_input.imports().types(),
             read_options::generate(&binread_input),
         ),
-        ParseResult::Partial(binread_input, error) => (
-            binread_input.imports().types(),
-            error.to_compile_error(),
-        ),
+        ParseResult::Partial(binread_input, error) => {
+            (binread_input.imports().types(), error.to_compile_error())
+        }
         ParseResult::Err(error) => (quote! { () }, error.to_compile_error()),
     };
 

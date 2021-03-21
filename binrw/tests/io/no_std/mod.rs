@@ -8,7 +8,7 @@ struct MalfunctioningEddie<'data> {
     data: Cursor<&'data [u8]>,
 }
 
-impl <'data> MalfunctioningEddie<'data> {
+impl<'data> MalfunctioningEddie<'data> {
     fn new(data: &'data [u8]) -> Self {
         Self {
             error: None,
@@ -77,7 +77,10 @@ fn bytes() {
     // Errors other than Interrupted should be returned
     cursor.trigger_fatal_error();
     let mut bytes = cursor.bytes();
-    assert_eq!(bytes.next().unwrap().unwrap_err().kind(), ErrorKind::BrokenPipe);
+    assert_eq!(
+        bytes.next().unwrap().unwrap_err().kind(),
+        ErrorKind::BrokenPipe
+    );
 }
 
 #[test]
@@ -95,7 +98,10 @@ fn read_exact() {
 
     // Errors other than Interrupted should be returned
     cursor.trigger_fatal_error();
-    assert_eq!(cursor.read_exact(&mut raw_read_data).unwrap_err().kind(), ErrorKind::BrokenPipe);
+    assert_eq!(
+        cursor.read_exact(&mut raw_read_data).unwrap_err().kind(),
+        ErrorKind::BrokenPipe
+    );
 
     // Read through a mutable reference should work as if it were directly on
     // the cursor
@@ -103,7 +109,10 @@ fn read_exact() {
     assert_eq!(raw_read_data, [4, 5]);
 
     // EOF reads should not succeed
-    assert_eq!(cursor.read_exact(&mut raw_read_data).unwrap_err().kind(), ErrorKind::UnexpectedEof);
+    assert_eq!(
+        cursor.read_exact(&mut raw_read_data).unwrap_err().kind(),
+        ErrorKind::UnexpectedEof
+    );
 }
 
 #[test]
@@ -148,10 +157,16 @@ fn return_error() {
     let mut x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused)));
     let mut out = [0, 1, 2, 3];
 
-    assert_eq!(x.read_exact(&mut out).unwrap_err().kind(), ErrorKind::ConnectionRefused);
+    assert_eq!(
+        x.read_exact(&mut out).unwrap_err().kind(),
+        ErrorKind::ConnectionRefused
+    );
 
     let mut x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused))).bytes();
-    assert_eq!(x.next().unwrap().unwrap_err().kind(), ErrorKind::ConnectionRefused);
+    assert_eq!(
+        x.next().unwrap().unwrap_err().kind(),
+        ErrorKind::ConnectionRefused
+    );
 }
 
 #[test]
@@ -236,7 +251,11 @@ fn take() {
 
     let x = ReturnError(Some(Error::from(ErrorKind::ConnectionRefused)));
     assert_eq!(
-        x.take(0).into_inner().read_to_end(&mut out).unwrap_err().kind(),
+        x.take(0)
+            .into_inner()
+            .read_to_end(&mut out)
+            .unwrap_err()
+            .kind(),
         ErrorKind::ConnectionRefused
     );
 }

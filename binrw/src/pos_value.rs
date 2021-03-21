@@ -1,10 +1,8 @@
-use core::fmt;
 use crate::{
     io::{Read, Seek, SeekFrom},
-    BinRead,
-    ReadOptions,
-    BinResult
+    BinRead, BinResult, ReadOptions,
 };
+use core::fmt;
 
 /// A wrapper where the position it was read from is stored alongside the value
 /// ```rust
@@ -22,26 +20,31 @@ use crate::{
 /// ```
 pub struct PosValue<T> {
     pub val: T,
-    pub pos: u64
+    pub pos: u64,
 }
 
 impl<T: BinRead> BinRead for PosValue<T> {
     type Args = T::Args;
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: T::Args)
-        -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: T::Args,
+    ) -> BinResult<Self> {
         let pos = reader.seek(SeekFrom::Current(0))?;
 
         Ok(PosValue {
             pos,
-            val: T::read_options(reader, options, args)?
+            val: T::read_options(reader, options, args)?,
         })
     }
 
-    fn after_parse<R: Read + Seek>(&mut self, reader: &mut R, options: &ReadOptions, args: Self::Args)
-        -> BinResult<()>
-    {
+    fn after_parse<R: Read + Seek>(
+        &mut self,
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<()> {
         self.val.after_parse(reader, options, args)
     }
 }
@@ -70,7 +73,7 @@ impl<T: Clone> Clone for PosValue<T> {
     fn clone(&self) -> Self {
         Self {
             val: self.val.clone(),
-            pos: self.pos
+            pos: self.pos,
         }
     }
 }
