@@ -42,7 +42,19 @@ impl Read for MalfunctioningEddie<'_> {
 }
 
 #[test]
-fn bytes_asdjaldjslkajdlksajdlk() {
+// Since binread re-exports std types when the std feature is turned on, make
+// sure we are not accidentally testing the std implementation
+fn sanity_check() {
+    use core::any::TypeId;
+    assert!(TypeId::of::<Cursor<[u8; 0]>>() != TypeId::of::<std::io::Cursor<[u8; 0]>>());
+    assert!(TypeId::of::<Error>() != TypeId::of::<std::io::Error>());
+    assert!(TypeId::of::<ErrorKind>() != TypeId::of::<std::io::ErrorKind>());
+    assert!(TypeId::of::<dyn Read>() != TypeId::of::<dyn std::io::Read>());
+    assert!(TypeId::of::<Result<()>>() != TypeId::of::<std::io::Result<()>>());
+}
+
+#[test]
+fn bytes() {
     let mut cursor = MalfunctioningEddie::new(b"\0\x01\x02\x03\x04\x05");
     {
         let mut bytes = cursor.by_ref().bytes();
