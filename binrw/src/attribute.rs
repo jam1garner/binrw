@@ -13,6 +13,7 @@
 //! | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
 //! | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.
 //! | [`count`](#count) | field | Sets the length of a vector.
+//! | [`dbg`](#debug) | field | Prints out the parsed value and offset to help debug
 //! | [`default`](#default) | field | Uses the [`default`](core::default::Default) value for a field instead of reading data.
 //! | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
 //! | [`if`](#conditional-values) | field | Reads data only if a condition is true.
@@ -643,6 +644,31 @@
 //!
 //! # let val: MyType = Cursor::new(b"\0\0\0\x04Test\0").read_be().unwrap();
 //! # assert_eq!(val.some_string.to_string(), "Test");
+//! ```
+//!
+//! # Debug
+//!
+//! The `dbg` directive prints out information to stderr to help with quick-and-dirty debugging.
+//!
+//! The information printed out:
+//! * Source filename
+//! * Line number in source file
+//! * Offset in reader (in hex)
+//! * Contents of parsed value (using hex format when available)
+//!
+//! ```ignore
+//! #[derive(BinRead)]
+//! struct DbgExample {
+//!     first_value: u32,
+//!     #[br(dbg)]
+//!     second_value: u32,
+//! }
+//! ```
+//!
+//! Which will output something like...
+//!
+//! ```text
+//! [src/main.rs:5 | offset 0x4] second_value = 0xFFFE76
 //! ```
 //!
 //! # Calculations
