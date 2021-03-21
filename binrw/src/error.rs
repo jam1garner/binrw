@@ -31,7 +31,7 @@ pub enum Error {
     },
     /// An error that occured while reading from, or seeking within, the reader
     Io(io::Error),
-    /// A custom error, most often given from the second value passed into an [`assert`](attribute#Assert)
+    /// A custom error, most often given from the second value passed into an [`assert`](crate::attribute#assert)
     Custom {
         pos: u64,
         err: Box<dyn Any + Sync + Send>,

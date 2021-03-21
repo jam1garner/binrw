@@ -6,12 +6,12 @@ use core::any::Any;
 /// A Result for any binread function that can return an error
 pub type BinResult<T> = core::result::Result<T, Error>;
 
-/// A `BinRead` trait allows reading a structure from anything that implements [`io::Read`](io::Read) and [`io::Seek`](io::Seek)
+/// A `BinRead` trait allows reading a structure from anything that implements [`io::Read`](crate::io::Read) and [`io::Seek`](crate::io::Seek)
 /// BinRead is implemented on the type to be read out of the given reader
 pub trait BinRead: Sized + 'static {
     /// The type of arguments needed to be supplied in order to read this type, usually a tuple.
     ///
-    /// **NOTE:** For types that don't require any arguments, use the unit (`()`) type. This will allow [`read`](BinRead::read) to be used.
+    /// **NOTE:** For types that don't require any arguments, use the unit (`()`) type. This will allow [`read`](crate::BinRead::read) to be used.
     type Args: Any + Copy;
 
     /// Read the type from the reader while assuming no arguments have been passed
@@ -34,7 +34,7 @@ pub trait BinRead: Sized + 'static {
     }
 }
 
-/// An extension trait for [`io::Read`](io::Read) to provide methods for reading a value directly
+/// An extension trait for [`io::Read`](crate::io::Read) to provide methods for reading a value directly
 ///
 /// ## Example
 /// ```rust
