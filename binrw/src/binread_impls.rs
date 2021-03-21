@@ -85,7 +85,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
 
         let mut list = Self::with_capacity(count);
 
-        if let Some(bytes) = Any::downcast_mut::<Vec<u8>>(&mut list) {
+        if let Some(bytes) = <dyn Any>::downcast_mut::<Vec<u8>>(&mut list) {
             let byte_count = reader
                 .take(count.try_into().map_err(not_enough_bytes)?)
                 .read_to_end(bytes)?;
@@ -96,14 +96,10 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
                 Err(not_enough_bytes(()))
             }
         } else {
-            (0..count)
-                .map(|_| {
-                    list.push(B::read_options(reader, &options, args)?);
-
-                    Ok(())
-                })
-                .collect::<Result<(), _>>()
-                .map(|_| list)
+            for _ in 0..count {
+                list.push(B::read_options(reader, &options, args)?);
+            }
+            Ok(list)
         }
     }
 
