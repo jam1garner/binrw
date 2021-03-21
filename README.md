@@ -1,6 +1,6 @@
 # binrw
 
-[![tests](https://github.com/jam1garner/binrw/actions/workflows/cargo_tests.yml/badge.svg)](https://github.com/jam1garner/binrw/actions/workflows/cargo_tests.yml)
+[![tests](https://github.com/jam1garner/binrw/actions/workflows/main.yml/badge.svg)](https://github.com/jam1garner/binrw/actions/workflows/main.yml)
 [![docs.rs](https://docs.rs/binrw/badge.svg)](https://docs.rs/binrw)
 [![codecov](https://codecov.io/gh/jam1garner/binrw/branch/master/graph/badge.svg?token=UREOWI2KAY)](https://codecov.io/gh/jam1garner/binrw) 
 [![discord](https://img.shields.io/discord/818723403871551509?color=gray&label=%20&logo=discord)](https://discord.gg/ABy4Qh549j)
