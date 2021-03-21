@@ -133,7 +133,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
     }
 }
 
-/// Used to allow any convert any type castable to i64 into a [`SeekFrom::Current`](io::SeekFrom::Current)
+/// Used to allow any convert any type castable to i64 into a [`SeekFrom::Current`](crate::io::SeekFrom::Current)
 pub trait IntoSeekFrom: Copy {
     fn into_seek_from(self) -> SeekFrom;
 }
