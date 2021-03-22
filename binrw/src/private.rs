@@ -48,6 +48,23 @@ where
     f
 }
 
+pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
+where
+    B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + 'static,
+    R: io::Read + io::Seek,
+{
+    let pos = reader.seek(io::SeekFrom::Current(0))?;
+    let val = B::read_options(reader, &options, ())?;
+    if val == expected {
+        Ok(())
+    } else {
+        Err(Error::BadMagic {
+            pos,
+            found: Box::new(val) as _,
+        })
+    }
+}
+
 pub fn try_after_parse<Reader, ValueType, ArgType>(
     item: &mut Option<ValueType>,
     reader: &mut Reader,

@@ -46,7 +46,7 @@ ident_str! {
     pub(super) OPT = "__binrw_generated_var_options";
     pub(super) ARGS = "__binrw_generated_var_arguments";
     pub(super) SAVED_POSITION = "__binrw_generated_saved_position";
-    pub(super) ASSERT_MAGIC = from_crate!(error::magic);
+    pub(super) ASSERT_MAGIC = from_crate!(__private::magic);
     pub(super) ASSERT = from_crate!(__private::assert);
     pub(super) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
     pub(super) COERCE_FN = from_crate!(__private::coerce_fn);

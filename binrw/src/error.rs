@@ -2,7 +2,7 @@
 
 #[cfg(all(doc, not(feature = "std")))]
 extern crate std;
-use crate::{io, BinRead, BinResult, ReadOptions};
+use crate::io;
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{any::Any, fmt};
@@ -186,41 +186,6 @@ impl fmt::Display for Error {
 
 #[cfg(feature = "std")]
 impl std::error::Error for Error {}
-
-/// Read a value then check if it is the expected value
-pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
-where
-    B: BinRead<Args = ()> + fmt::Debug + PartialEq + Sync + Send + 'static,
-    R: io::Read + io::Seek,
-{
-    let pos = reader.seek(io::SeekFrom::Current(0))?;
-    let val = B::read_options(reader, &options, ())?;
-    if val == expected {
-        Ok(())
-    } else {
-        Err(Error::BadMagic {
-            pos,
-            found: Box::new(val) as _,
-        })
-    }
-}
-
-/// Reads a value, then immediately finalizes it by running
-/// [`after_parse()`](crate::BinRead::after_parse).
-pub fn read_options_then_after_parse<Args, T, R>(
-    reader: &mut R,
-    ro: &ReadOptions,
-    args: T::Args,
-) -> BinResult<T>
-where
-    Args: Copy + 'static,
-    T: BinRead<Args = Args>,
-    R: io::Read + io::Seek,
-{
-    let mut val = T::read_options(reader, ro, args)?;
-    val.after_parse(reader, ro, args)?;
-    Ok(val)
-}
 
 mod private {
     use core::{any::Any, fmt};
