@@ -100,7 +100,12 @@ fn enum_return_all_errors() {
             assert_eq!(pos, 0);
             assert_eq!(variant_errors.len(), 2);
             assert_eq!(variant_errors[0].0, "One");
-            assert!(matches!(variant_errors[0].1, binrw::Error::BadMagic { .. }));
+            if let binrw::Error::BadMagic { pos, found } = &variant_errors[0].1 {
+                assert_eq!(pos, &0);
+                assert_eq!(&format!("{:?}", found), "1");
+            } else {
+                panic!("expected BadMagic; got {:?}", variant_errors[0].1);
+            }
             assert_eq!(variant_errors[1].0, "Two");
             assert!(matches!(variant_errors[1].1, binrw::Error::Io(..)));
         }
