@@ -44,8 +44,6 @@ macro_rules! binread_impl {
     }
 }
 
-const DEFAULT_ARGS: () = ();
-
 impl BinRead for char {
     type Args = ();
 
@@ -55,7 +53,7 @@ impl BinRead for char {
         _: Self::Args,
     ) -> BinResult<Self> {
         // TODO: somehow do proper unicode handling?
-        Ok(<u8>::read_options(reader, options, DEFAULT_ARGS)? as char)
+        Ok(<u8>::read_options(reader, options, ())? as char)
     }
 }
 
