@@ -1,7 +1,8 @@
 //! Functions and type definitions for handling errors.
-use crate::{io, BinRead, BinResult, ReadOptions};
+
 #[cfg(all(doc, not(feature = "std")))]
 extern crate std;
+use crate::{io, BinRead, BinResult, ReadOptions};
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{any::Any, fmt};
@@ -13,7 +14,11 @@ use core::{any::Any, fmt};
 /// same traits as [`std::error::Error`], so anything you would normally use as
 /// an error in other code is also a valid `CustomError`, with the additional
 /// restriction that it must also be [`Send`] + [`Sync`].
-pub trait CustomError: Any + fmt::Display + fmt::Debug + Send + Sync + 'static {
+///
+/// This trait is Sealed.
+pub trait CustomError:
+    Any + fmt::Display + fmt::Debug + Send + Sync + private::Sealed + 'static
+{
     #[doc(hidden)]
     fn as_any(&self) -> &(dyn Any + Send + Sync);
 
@@ -215,4 +220,10 @@ where
     let mut val = T::read_options(reader, ro, args)?;
     val.after_parse(reader, ro, args)?;
     Ok(val)
+}
+
+mod private {
+    use core::{any::Any, fmt};
+    pub trait Sealed {}
+    impl<T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> Sealed for T {}
 }
