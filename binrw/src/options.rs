@@ -1,4 +1,4 @@
-#[cfg(not(feature = "std"))]
+#[cfg(all(doc, not(feature = "std")))]
 extern crate alloc;
 use super::Endian;
 #[cfg(all(doc, not(feature = "std")))]
