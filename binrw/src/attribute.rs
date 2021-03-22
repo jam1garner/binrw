@@ -1,4 +1,4 @@
-//! A documentation-only module for the possible directives used in `#[br]` and
+//! A documentation-only module for directives used in the `#[br]` and
 //! `#[binread]` attributes.
 //!
 //! # List of directives

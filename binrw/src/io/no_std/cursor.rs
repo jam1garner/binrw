@@ -1,5 +1,7 @@
 use super::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
 
+/// A `Cursor` wraps an in-memory buffer and provides it with a
+/// [`Seek`] implementation.
 #[derive(Clone, Debug, Default)]
 pub struct Cursor<T: AsRef<[u8]>> {
     inner: T,
@@ -7,26 +9,32 @@ pub struct Cursor<T: AsRef<[u8]>> {
 }
 
 impl<T: AsRef<[u8]>> Cursor<T> {
+    /// Gets a mutable reference to the underlying value in this cursor.
     pub fn get_mut(&mut self) -> &mut T {
         &mut self.inner
     }
 
+    /// Gets a reference to the underlying value in this cursor.
     pub fn get_ref(&self) -> &T {
         &self.inner
     }
 
+    /// Consumes this cursor, returning the underlying value.
     pub fn into_inner(self) -> T {
         self.inner
     }
 
+    /// Creates a new cursor wrapping the provided underlying in-memory buffer.
     pub fn new(inner: T) -> Self {
         Self { inner, pos: 0 }
     }
 
+    /// Returns the current position of this cursor.
     pub fn position(&self) -> u64 {
         self.pos
     }
 
+    /// Sets the position of this cursor.
     pub fn set_position(&mut self, pos: u64) {
         self.pos = pos;
     }

@@ -11,12 +11,16 @@ pub use {
     error::{Error, ErrorKind},
 };
 
+/// A specialized [`Result`] type for I/O operations.
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// A simplified version of [std::io::Read](std::io::Read) for use in no_std environments
+/// The `Read` trait allows for reading bytes from a source.
 pub trait Read {
+    /// Pull some bytes from this source into the specified buffer, returning
+    /// how many bytes were read.
     fn read(&mut self, buf: &mut [u8]) -> Result<usize>;
 
+    /// Read the exact number of bytes required to fill `buf`.
     fn read_exact(&mut self, mut buf: &mut [u8]) -> Result<()> {
         while !buf.is_empty() {
             match self.read(buf) {
@@ -39,6 +43,7 @@ pub trait Read {
         }
     }
 
+    /// Read all bytes until EOF in this source, placing them into `buf`.
     fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<usize> {
         let mut tmp = [0; 32];
         let mut amt = 0;
@@ -56,6 +61,7 @@ pub trait Read {
         }
     }
 
+    /// Transforms this `Read` instance to an [`Iterator`] over its bytes.
     fn bytes(self) -> Bytes<Self>
     where
         Self: Sized,
@@ -63,6 +69,7 @@ pub trait Read {
         Bytes { inner: self }
     }
 
+    /// Creates a "by reference" adaptor for this instance of `Read`.
     fn by_ref(&mut self) -> &mut Self
     where
         Self: Sized,
@@ -71,36 +78,6 @@ pub trait Read {
     }
 
     /// Creates an adaptor which will read at most `limit` bytes from it.
-    ///
-    /// This function returns a new instance of `Read` which will read at most
-    /// `limit` bytes, after which it will always return EOF ([`Ok(0)`]). Any
-    /// read errors will not count towards the number of bytes read and future
-    /// calls to [`read()`] may succeed.
-    ///
-    /// # Examples
-    ///
-    /// [`File`]s implement `Read`:
-    ///
-    /// [`File`]: std::fs::File
-    /// [`Ok(0)`]: Ok
-    /// [`read()`]: Read::read
-    ///
-    /// ```no_run
-    /// use std::io;
-    /// use std::io::prelude::*;
-    /// use std::fs::File;
-    ///
-    /// fn main() -> io::Result<()> {
-    ///     let mut f = File::open("foo.txt")?;
-    ///     let mut buffer = [0; 5];
-    ///
-    ///     // read at most five bytes
-    ///     let mut handle = f.take(5);
-    ///
-    ///     handle.read(&mut buffer)?;
-    ///     Ok(())
-    /// }
-    /// ```
     fn take(self, limit: u64) -> Take<Self>
     where
         Self: Sized,
@@ -124,29 +101,6 @@ pub struct Take<T> {
 impl<T> Take<T> {
     /// Returns the number of bytes that can be read before this instance will
     /// return EOF.
-    ///
-    /// # Note
-    ///
-    /// This instance may reach `EOF` after reading fewer bytes than indicated by
-    /// this method if the underlying [`Read`] instance reaches EOF.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use std::io;
-    /// use std::io::prelude::*;
-    /// use std::fs::File;
-    ///
-    /// fn main() -> io::Result<()> {
-    ///     let f = File::open("foo.txt")?;
-    ///
-    ///     // read at most five bytes
-    ///     let handle = f.take(5);
-    ///
-    ///     println!("limit: {}", handle.limit());
-    ///     Ok(())
-    /// }
-    /// ```
     pub fn limit(&self) -> u64 {
         self.limit
     }
@@ -155,101 +109,21 @@ impl<T> Take<T> {
     /// return EOF. This is the same as constructing a new `Take` instance, so
     /// the amount of bytes read and the previous limit value don't matter when
     /// calling this method.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use std::io;
-    /// use std::io::prelude::*;
-    /// use std::fs::File;
-    ///
-    /// fn main() -> io::Result<()> {
-    ///     let f = File::open("foo.txt")?;
-    ///
-    ///     // read at most five bytes
-    ///     let mut handle = f.take(5);
-    ///     handle.set_limit(10);
-    ///
-    ///     assert_eq!(handle.limit(), 10);
-    ///     Ok(())
-    /// }
-    /// ```
     pub fn set_limit(&mut self, limit: u64) {
         self.limit = limit;
     }
 
     /// Consumes the `Take`, returning the wrapped reader.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use std::io;
-    /// use std::io::prelude::*;
-    /// use std::fs::File;
-    ///
-    /// fn main() -> io::Result<()> {
-    ///     let mut file = File::open("foo.txt")?;
-    ///
-    ///     let mut buffer = [0; 5];
-    ///     let mut handle = file.take(5);
-    ///     handle.read(&mut buffer)?;
-    ///
-    ///     let file = handle.into_inner();
-    ///     Ok(())
-    /// }
-    /// ```
     pub fn into_inner(self) -> T {
         self.inner
     }
 
     /// Gets a reference to the underlying reader.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use std::io;
-    /// use std::io::prelude::*;
-    /// use std::fs::File;
-    ///
-    /// fn main() -> io::Result<()> {
-    ///     let mut file = File::open("foo.txt")?;
-    ///
-    ///     let mut buffer = [0; 5];
-    ///     let mut handle = file.take(5);
-    ///     handle.read(&mut buffer)?;
-    ///
-    ///     let file = handle.get_ref();
-    ///     Ok(())
-    /// }
-    /// ```
     pub fn get_ref(&self) -> &T {
         &self.inner
     }
 
     /// Gets a mutable reference to the underlying reader.
-    ///
-    /// Care should be taken to avoid modifying the internal I/O state of the
-    /// underlying reader as doing so may corrupt the internal limit of this
-    /// `Take`.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use std::io;
-    /// use std::io::prelude::*;
-    /// use std::fs::File;
-    ///
-    /// fn main() -> io::Result<()> {
-    ///     let mut file = File::open("foo.txt")?;
-    ///
-    ///     let mut buffer = [0; 5];
-    ///     let mut handle = file.take(5);
-    ///     handle.read(&mut buffer)?;
-    ///
-    ///     let file = handle.get_mut();
-    ///     Ok(())
-    /// }
-    /// ```
     pub fn get_mut(&mut self) -> &mut T {
         &mut self.inner
     }
@@ -281,6 +155,7 @@ impl<R: Read + ?Sized> Read for &mut R {
     }
 }
 
+/// An iterator over `u8` values of a reader.
 #[derive(Debug)]
 pub struct Bytes<R: Read> {
     inner: R,
@@ -302,14 +177,23 @@ impl<R: Read> Iterator for Bytes<R> {
     }
 }
 
+/// Enumeration of possible methods to seek within an I/O object.
 #[derive(Debug, Clone, Copy)]
 pub enum SeekFrom {
+    /// Sets the offset to the provided number of bytes.
     Start(u64),
+    /// Sets the offset to the size of this object plus the specified number of
+    /// bytes.
     End(i64),
+    /// Sets the offset to the current position plus the specified number of
+    /// bytes.
     Current(i64),
 }
 
+/// The `Seek` trait provides a cursor which can be moved within a stream of
+/// bytes.
 pub trait Seek {
+    /// Seek to an offset, in bytes, in a stream.
     fn seek(&mut self, pos: SeekFrom) -> Result<u64>;
 }
 
@@ -320,11 +204,16 @@ impl<S: Seek + ?Sized> Seek for &mut S {
     }
 }
 
+/// A trait for objects which are byte-oriented sinks.
 pub trait Write {
+    /// Write a buffer into this writer, returning how many bytes were written.
     fn write(&mut self, buf: &[u8]) -> Result<usize>;
 
+    /// Flush this output stream, ensuring that all intermediately buffered
+    /// contents reach their destination.
     fn flush(&mut self) -> Result<()>;
 
+    /// Attempts to write an entire buffer into this writer.
     fn write_all(&mut self, mut buf: &[u8]) -> Result<()> {
         while !buf.is_empty() {
             match self.write(buf) {
@@ -342,6 +231,8 @@ pub trait Write {
         Ok(())
     }
 
+    /// Writes a formatted string into this writer, returning any error
+    /// encountered.
     fn write_fmt(&mut self, fmt: fmt::Arguments<'_>) -> Result<()> {
         // Create a shim which translates a Write to a fmt::Write and saves
         // off I/O errors. instead of discarding them
@@ -379,6 +270,7 @@ pub trait Write {
         }
     }
 
+    /// Creates a "by reference" adaptor for this instance of `Write`.
     fn by_ref(&mut self) -> &mut Self
     where
         Self: Sized,

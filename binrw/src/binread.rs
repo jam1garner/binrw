@@ -1,18 +1,52 @@
 use crate::io::{Read, Seek};
 use crate::{Endian, Error, ReadOptions};
 
-/// A Result for any binread function that can return an error
+/// A specialized [`Result`] type for BinRead operations.
 pub type BinResult<T> = core::result::Result<T, Error>;
 
-/// A `BinRead` trait allows reading a structure from anything that implements [`io::Read`](crate::io::Read) and [`io::Seek`](crate::io::Seek)
-/// BinRead is implemented on the type to be read out of the given reader
+/// The `BinRead` trait reads data from streams and converts it into objects.
+///
+/// [`io`]: crate::io
+///
+/// This trait is usually derived, but can also be manually implemented by
+/// writing an appropriate [`Args`] type and [`read_options()`] function.
+///
+/// [`Args`]: Self::Args
+/// [`read_options()`]: Self::read_options
+///
+/// # Derivable
+///
+/// This trait can be used with `#[derive]` or `#[derive_binread]`. Each field
+/// of a derived type must either implement `BinRead` or be annotated with an
+/// attribute containing a [`map`], [`try_map`], or [`parse_with`] directive.
+///
+/// [`map`]: crate::attribute#map
+/// [`parse_with`]: crate::attribute#parse_with
+/// [`try_map`]: crate::attribute#map
+///
+/// Using `#[derive_binread]` instead of `#[derive]` is required when using
+/// [temporary fields].
+///
+/// [temporary fields]: crate::attribute#temp
 pub trait BinRead: Sized + 'static {
-    /// The type of arguments needed to be supplied in order to read this type, usually a tuple.
+    /// The type used for the `args` parameter of [`read_args()`] and
+    /// [`read_options()`].
     ///
-    /// **NOTE:** For types that don't require any arguments, use the unit (`()`) type. This will allow [`read`](crate::BinRead::read) to be used.
+    /// When the given type implements [`Default`], convenience functions like
+    /// [`read()`] are enabled. `BinRead` implementations that don’t receive any
+    /// arguments should use the `()` type.
+    ///
+    /// When `BinRead` is derived, the [`import`] and [`import_tuple`]
+    /// directives define this type.
+    ///
+    /// [`import`]: crate::attribute#arguments
+    /// [`import_tuple`]: crate::attribute#arguments
+    /// [`read()`]: Self::read
+    /// [`read_args()`]: Self::read_args
+    /// [`read_options()`]: Self::read_options
     type Args: Clone;
 
-    /// Read the type from the reader while assuming no arguments have been passed
+    /// Read `Self` from the reader using default arguments.
     fn read<R: Read + Seek>(reader: &mut R) -> BinResult<Self>
     where
         Self::Args: Default,
@@ -20,18 +54,21 @@ pub trait BinRead: Sized + 'static {
         Self::read_options(reader, &ReadOptions::default(), Self::Args::default())
     }
 
-    /// Read the type from the reader using the specified arguments
+    /// Read `Self` from the reader using the given arguments.
     fn read_args<R: Read + Seek>(reader: &mut R, args: Self::Args) -> BinResult<Self> {
         Self::read_options(reader, &ReadOptions::default(), args)
     }
 
-    /// Read the type from the reader
+    /// Read `Self` from the reader using the given [`ReadOptions`] and
+    /// arguments.
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
         args: Self::Args,
     ) -> BinResult<Self>;
 
+    /// Runs any post-processing steps required to finalize construction of the
+    /// object.
     fn after_parse<R: Read + Seek>(
         &mut self,
         _: &mut R,
@@ -42,11 +79,12 @@ pub trait BinRead: Sized + 'static {
     }
 }
 
-/// An extension trait for [`io::Read`](crate::io::Read) to provide methods for reading a value directly
+/// Extension methods for reading [`BinRead`] objects directly from a reader.
 ///
-/// ## Example
+/// # Examples
+///
 /// ```rust
-/// use binrw::prelude::*; // BinReadExt is in the prelude
+/// use binrw::BinReaderExt;
 /// use binrw::endian::LE;
 /// use binrw::io::Cursor;
 ///
@@ -58,7 +96,7 @@ pub trait BinRead: Sized + 'static {
 /// assert_eq!((x, y, z), (7u32, 0xCCu16, 5u16));
 /// ```
 pub trait BinReaderExt: Read + Seek + Sized {
-    /// Read the given type from the reader using the given endianness.
+    /// Read `T` from the reader with the given byte order.
     fn read_type<T: BinRead>(&mut self, endian: Endian) -> BinResult<T>
     where
         T::Args: Default,
@@ -66,7 +104,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
         self.read_type_args(endian, T::Args::default())
     }
 
-    /// Read the given type from the reader with big endian byte order
+    /// Read `T` from the reader assuming big-endian byte order.
     fn read_be<T: BinRead>(&mut self) -> BinResult<T>
     where
         T::Args: Default,
@@ -74,7 +112,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
         self.read_type(Endian::Big)
     }
 
-    /// Read the given type from the reader with little endian byte order
+    /// Read `T` from the reader assuming little-endian byte order.
     fn read_le<T: BinRead>(&mut self) -> BinResult<T>
     where
         T::Args: Default,
@@ -82,7 +120,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
         self.read_type(Endian::Little)
     }
 
-    /// Read the given type from the reader with the native byte order
+    /// Read `T` from the reader assuming native-endian byte order.
     fn read_ne<T: BinRead>(&mut self) -> BinResult<T>
     where
         T::Args: Default,
@@ -90,7 +128,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
         self.read_type(Endian::Native)
     }
 
-    /// Read the given type from the reader using the given endianness.
+    /// Read `T` from the reader with the given byte order and arguments.
     fn read_type_args<T: BinRead>(&mut self, endian: Endian, args: T::Args) -> BinResult<T> {
         let options = ReadOptions {
             endian,
@@ -103,20 +141,20 @@ pub trait BinReaderExt: Read + Seek + Sized {
         Ok(res)
     }
 
-    /// Read the given type from the reader with big endian byte order and
-    /// arguments
+    /// Read `T` from the reader, assuming big-endian byte order, using the
+    /// given arguments.
     fn read_be_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
         self.read_type_args(Endian::Big, args)
     }
 
-    /// Read the given type from the reader with little endian byte order
-    /// and arguments
+    /// Read `T` from the reader, assuming little-endian byte order, using the
+    /// given arguments.
     fn read_le_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
         self.read_type_args(Endian::Little, args)
     }
 
-    /// Read the given type from the reader with the native byte order
-    /// and arguments
+    /// Read `T` from the reader, assuming native-endian byte order, using the
+    /// given arguments.
     fn read_ne_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
         self.read_type_args(Endian::Native, args)
     }

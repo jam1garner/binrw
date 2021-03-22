@@ -1,10 +1,70 @@
-//! A Rust crate for helping parse binary data using ✨macro magic✨.
+//! binrw helps you write maintainable & easy-to-read declarative binary data
+//! parsers using ✨macro magic✨.
 //!
-//! # Example
+//! Adding `#[derive(BinRead)]` to any struct or enum generates a parser that
+//! can read that type from raw data:
+//!
+//! ```
+//! # use binrw::{BinRead, io::Cursor};
+//! # #[derive(Debug, PartialEq)]
+//! #[derive(BinRead)]
+//! #[br(little)]
+//! struct Point(i16, i16);
+//!
+//! let point = Point::read(&mut Cursor::new(b"\x80\x02\xe0\x01")).unwrap();
+//! assert_eq!(point, Point(640, 480));
+//!
+//! # #[derive(Debug, PartialEq)]
+//! #[derive(BinRead)]
+//! #[br(big, magic = b"SHAP")]
+//! enum Shape {
+//!     #[br(magic(0u8))] Rect { left: i16, top: i16, right: i16, bottom: i16 },
+//!     #[br(magic(1u8))] Oval { origin: Point, rx: u8, ry: u8 }
+//! }
+//!
+//! let oval = Shape::read(&mut Cursor::new(b"SHAP\x01\x80\x02\xe0\x01\x2a\x15")).unwrap();
+//! assert_eq!(oval, Shape::Oval { origin: Point(640, 480), rx: 42, ry: 21 });
+//! ```
+//!
+//! Types that can’t implement `BinRead` directly (e.g. types from third party
+//! crates) can also be read using
+//! [free parser functions](attribute#custom-parsers) or by
+//! [mapping values](attribute#map).
+//!
+//! Unlike “zero-copy” libraries, the in-memory representation of binrw structs
+//! doesn’t need to match the raw data. This can allow for better memory
+//! performance, especially on architectures where unaligned memory access is
+//! slow. Also, because data is never [transmuted](core::mem::transmute), there
+//! is no risk of undefined behaviour.
+//!
+//! # Input
+//!
+//! `BinRead` reads data from any object that implements [`io::Read`] +
+//! [`io::Seek`]. This means that data can come from memory, network, disk, or
+//! any other streaming source. It also means that low-level data operations
+//! like buffering and compression are efficient and easy to implement.
+//!
+//! `BinRead` also includes an [extension trait](BinReaderExt) for reading types
+//! directly from input objects:
+//!
+//! ```rust
+//! use binrw::{BinReaderExt, io::Cursor};
+//!
+//! let mut reader = Cursor::new(b"\x00\x0A");
+//! let val: u16 = reader.read_be().unwrap();
+//! assert_eq!(val, 10);
+//! ```
+//!
+//! # Directives
+//!
+//! Handling things like magic numbers, byte ordering, and padding & alignment
+//! is typical when working with binary data, so binrw includes a variety of
+//! [built-in directives](attribute) for these common cases that can be applied
+//! using the `#[br]` attribute:
 //!
 //! ```
 //! # use binrw::{prelude::*, io::Cursor, NullString};
-//!
+//! #
 //! #[derive(BinRead)]
 //! #[br(magic = b"DOG", assert(name.len() != 0))]
 //! struct Dog {
@@ -17,109 +77,48 @@
 //!     name: NullString
 //! }
 //!
-//! let mut reader = Cursor::new(b"DOG\x02\x00\x01\x00\x12\0\0Rudy\0");
-//! let dog: Dog = reader.read_ne().unwrap();
+//! let mut data = Cursor::new(b"DOG\x02\x00\x01\x00\x12\0\0Rudy\0");
+//! let dog = Dog::read(&mut data).unwrap();
 //! assert_eq!(dog.bone_piles, &[0x1, 0x12]);
 //! assert_eq!(dog.name.into_string(), "Rudy")
 //! ```
 //!
-//! # The Basics
+//! Directives can also reference earlier fields by name. For tuple types,
+//! earlier fields are addressable by `self_N`, where `N` is the index of the
+//! field.
 //!
-//! At the core of `binread` is the [`BinRead`](BinRead) trait. It defines how to read
-//! a type from bytes and is already implemented for most primitives and simple collections.
+//! See the [attribute module](attribute) for the full list of available
+//! directives.
 //!
-//! ```rust
-//! use binrw::{BinRead, io::Cursor};
+//! # Built-in implementations
 //!
-//! let mut reader = Cursor::new(b"\0\0\0\x01");
-//! let val = u32::read(&mut reader).unwrap();
-//! ```
+//! Implementations for all primitive data types, arrays, tuples, and standard
+//! Rust types like [`Vec`] are included, along with parsers for other
+//! frequently used binary data patterns like
+//! [null-terminated strings](NullString) and
+//! [indirect addressing using offsets](FilePtr). Convenient access into
+//! bitfields is possible using crates like
+//! [modular-bitfield](attribute#using-map-on-a-struct-to-create-a-bit-field).
 //!
-//! However, [`read`](BinRead::read) is intentionally simple and, as a result, doesn't even
-//! allow you to configure the byte order. For that you need [`read_options`](BinRead::read_options)
-//! which, while more powerful, isn't exactly ergonomics.
+//! See the [`BinRead` trait](BinRead#foreign-impls) for the full list of
+//! built-in implementations.
 //!
-//! So, as a balance between ergonomics and configurability you have the [`BinReaderExt`](BinReaderExt)
-//! trait. It is an extension for readers to allow for you to directly read any BinRead types from
-//! any reader.
+//! # no_std support
 //!
-//! Example:
-//! ```rust
-//! use binrw::{BinReaderExt, io::Cursor};
-//!
-//! let mut reader = Cursor::new(b"\x00\x0A");
-//! let val: u16 = reader.read_be().unwrap();
-//! assert_eq!(val, 10);
-//! ```
-//!
-//! It even works for tuples and arrays of BinRead types for up to size 32.
-//!
-//! # Derive Macro
-//!
-//! The most significant feature of binread is its ability to use the Derive macro to
-//! implement [`BinRead`](BinRead) for your own types. This allows you to replace repetitive
-//! imperative code with declarative struct definitions for your binary data parsing.
-//!
-//! ## Basic Derive Example
-//! ```rust
-//! # use binrw::BinRead;
-//! #[derive(BinRead)]
-//! struct MyType {
-//!     first: u32,
-//!     second: u32
-//! }
-//!
-//! // Also works with tuple types!
-//! #[derive(BinRead)]
-//! struct MyType2(u32, u32);
-//! ```
-//! ## Attributes
-//! The BinRead derive macro uses attributes in order to allow for more complicated parsers. For
-//! example you can use `big` or `little` at either the struct-level or the field-level in order
-//! to override the byte order of values.
-//! ```rust
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! #[br(little)]
-//! struct MyType (
-//!     #[br(big)] u32, // will be big endian
-//!     u32, // will be little endian
-//! );
-//! ```
-//! The order of precedence is: (from highest to lowest)
-//! 1. Field-level
-//! 2. Variant-level (for enums)
-//! 3. Top-level
-//! 4. Configured (i.e. what endianess was passed in)
-//! 5. Native endianess
-//!
-//! For a list of attributes see the [`attribute`](attribute) module
-//!
-//! ## Generics
-//! The BinRead derive macro also allows for generic parsing. That way you can build up
-//! higher-level parsers that can have their type swapped out to allow greater reuse of code.
-//!
-//! ```rust
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! struct U32CountVec<T: BinRead<Args=()>> {
-//!     count: u32,
-//!     #[br(count = count)]
-//!     data: Vec<T>,
-//! }
-//! ```
-//!
-//! In order to parse generically, we have to (in some way) bound `Args`. The easiest way to do
-//! this is to bound `<T as BinRead>::Args` to `()` (no arguments), however it is also possible to
-//! either accept a specific set of arguments or be generic over the given arguments.
+//! binrw supports no_std and includes a compatible subset of [`io`]
+//! functionality. The [`alloc`] crate is required.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(rust_2018_idioms)]
+#![warn(missing_docs)]
 
 #[cfg(feature = "std")]
 use std as alloc;
 
 #[cfg(not(feature = "std"))]
 extern crate alloc;
+#[cfg(all(doc, not(feature = "std")))]
+use alloc::vec::Vec;
 
 #[doc(hidden)]
 #[path = "private.rs"]
@@ -149,10 +148,11 @@ pub use {
     strings::{NullString, NullWideString},
 };
 
-/// Derive macro for BinRead. [Usage here](BinRead).
+/// The derive macro for [`BinRead`].
 pub use binrw_derive::BinRead;
 
-/// Equivalent to `derive(BinRead)` but allows for temporary variables.
+/// The attribute version of the derive macro for [`BinRead`]. Use this instead
+/// of `#[derive(BinRead)]` to enable [temporary variables](attribute#temp).
 pub use binrw_derive::derive_binread;
 
 mod binread_impls;
@@ -161,9 +161,17 @@ pub use binread_impls::*;
 mod binread;
 pub use binread::*;
 
-/// The collection of traits and types you'll likely need when working with binread and are
-/// unlikely to cause name conflicts.
 pub mod prelude {
+    //! The binrw prelude.
+    //!
+    //! A collection of traits and types you’ll likely need when working with
+    //! binrw and are unlikely to cause name conflicts.
+    //!
+    //! ```
+    //! # #![allow(unused_imports)]
+    //! use binrw::prelude::*;
+    //! ```
+
     pub use crate::BinRead;
     pub use crate::BinReaderExt;
     pub use crate::BinResult;

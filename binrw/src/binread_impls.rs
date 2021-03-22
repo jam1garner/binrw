@@ -8,7 +8,6 @@ use core::convert::TryInto;
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
 
-/// Internal macro for quickly implementing binread for types supporting from_bytes api
 macro_rules! binread_impl {
     ($($type_name:ty),*$(,)?) => {
         $(
@@ -150,8 +149,6 @@ binread_array_impl!(
     26, 27, 28, 29, 30, 31, 32
 );
 
-/// Internal macro to recursively implement BinRead for every size tuple given
-/// in the invocation
 macro_rules! binread_tuple_impl {
     ($type1:ident $(, $types:ident)*) => {
         #[allow(non_camel_case_types)]

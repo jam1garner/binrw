@@ -1,13 +1,16 @@
-//! An enum to represent what endianness to read as
+//! Type definitions for byte order handling.
 
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
 
-/// An enum to represent what endianness to read as
+/// Defines the order of bytes in a multi-byte type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Endian {
+    /// The most significant byte is stored first.
     Big,
+    /// The least significant byte is stored first.
     Little,
+    /// The byte order is determined by the host CPU.
     Native,
 }
 

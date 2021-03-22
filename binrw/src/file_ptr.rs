@@ -1,30 +1,6 @@
-//! A wrapper type for representing a layer of indirection within a file.
-//!
-//! A `FilePtr<P, T>` is composed of two types: a pointer type `P` and a value type `T` where
-//! the pointer type describes an offset to read the value type from. Once read from the file
-//! it can be dereferenced to yield the value it points to.
-//!
-//! ## Example
-//! ```rust
-//! use binrw::{prelude::*, io::Cursor, FilePtr};
-//!
-//! #[derive(BinRead)]
-//! struct Test {
-//!     pointer: FilePtr<u32, u8>
-//! }
-//!
-//! let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
-//! assert_eq!(test.pointer.ptr, 8);
-//! assert_eq!(*test.pointer, 0xFF);
-//! ```
-//!
-//! Example data mapped out:
-//! ```hex
-//!           [pointer]           [value]
-//! 00000000: 0000 0008 0000 0000 ff                   ............
-//! ```
-//!
-//! Use `offset` to change what the pointer is relative to (default: beginning of reader).
+//! Type definitions for wrappers which represent a layer of indirection within
+//! a file.
+
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 
@@ -33,52 +9,66 @@ use crate::{
     BinRead, BinResult, ReadOptions,
 };
 
-/// A wrapper type for representing a layer of indirection within a file.
+/// A wrapper type which represents a layer of indirection within a file.
 ///
-/// A `FilePtr<P, T>` is composed of two types: a pointer type `P` and a value type `T` where
-/// the pointer type describes and offset to read the value type from. Once read from the file
-/// it can be dereferenced to yeild the value it points to.
+/// `FilePtr<P, T>` is composed of two types. The pointer type `P` is the
+/// absolute offset to a value within the data, and the value type `T` is
+/// the actual pointed-to value. Once a `FilePtr` has been
+/// [finalized](crate::BinRead::after_parse), [dereferencing] it will yield the
+/// pointed-to value.
 ///
-/// ## Example
+/// When deriving `BinRead`, [offset](crate::attribute#offset) directives
+/// can be used to adjust the offset before the pointed-to value is read.
+///
+/// [dereferencing]: core::ops::Deref
+///
+/// # Examples
+///
 /// ```rust
-/// use binrw::{prelude::*, io::Cursor, FilePtr};
-///
+/// # use binrw::{prelude::*, io::Cursor, FilePtr};
+/// #
 /// #[derive(BinRead)]
 /// struct Test {
-///     pointer: FilePtr<u32, u8>
+///     indirect_value: FilePtr<u32, u8>
 /// }
 ///
 /// let test: Test = Cursor::new(b"\0\0\0\x08\0\0\0\0\xff").read_be().unwrap();
-/// assert_eq!(test.pointer.ptr, 8);
-/// assert_eq!(*test.pointer, 0xFF);
+/// assert_eq!(test.indirect_value.ptr, 8);
+/// assert_eq!(*test.indirect_value, 0xFF);
 /// ```
 ///
 /// Example data mapped out:
+///
 /// ```hex
 ///           [pointer]           [value]
 /// 00000000: 0000 0008 0000 0000 ff                   ............
 /// ```
-///
-/// Use `offset` to change what the pointer is relative to (default: beginning of reader).
 pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
+    /// The raw offset to the value.
     pub ptr: Ptr,
+
+    /// The pointed-to value.
     pub value: Option<BR>,
 }
 
-/// Type alias for 8-bit pointers
+/// A type alias for [`FilePtr`] with 8-bit offsets.
 pub type FilePtr8<T> = FilePtr<u8, T>;
-/// Type alias for 16-bit pointers
+/// A type alias for [`FilePtr`] with 16-bit offsets.
 pub type FilePtr16<T> = FilePtr<u16, T>;
-/// Type alias for 32-bit pointers
+/// A type alias for [`FilePtr`] with 32-bit offsets.
 pub type FilePtr32<T> = FilePtr<u32, T>;
-/// Type alias for 64-bit pointers
+/// A type alias for [`FilePtr`] with 64-bit offsets.
 pub type FilePtr64<T> = FilePtr<u64, T>;
-/// Type alias for 128-bit pointers
+/// A type alias for [`FilePtr`] with 128-bit offsets.
 pub type FilePtr128<T> = FilePtr<u128, T>;
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
     type Args = BR::Args;
 
+    /// Reads the offset of the value from the reader.
+    ///
+    /// The actual value will not be read until
+    /// [`after_parse()`](Self::after_parse) is called.
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
@@ -90,6 +80,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
         })
     }
 
+    /// Finalizes the `FilePtr` by seeking to and reading the pointed-to value.
     fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: BR::Args) -> BinResult<()>
     where
         R: Read + Seek,
@@ -111,8 +102,10 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
 }
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
-    /// Custom parser designed for use with the `parse_with` attribute ([example](crate::attribute#custom-parsers))
-    /// that reads a [`FilePtr`](FilePtr) then immediately dereferences it into an owned value
+    /// Custom parser for use with the
+    /// [`parse_with`](crate::attribute#custom-parsers) directive that reads
+    /// and then immediately finalizes a [`FilePtr`], returning the pointed-to
+    /// value as the result.
     pub fn parse<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
@@ -125,18 +118,21 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
         Ok(ptr.into_inner())
     }
 
-    /// Consume the pointer and return the inner type
+    /// Consumes this object, returning the pointed-to value.
     ///
     /// # Panics
     ///
-    /// Will panic if the file pointer hasn't been properly postprocessed
+    /// Will panic if `FilePtr` hasn’t been finalized by calling
+    /// [`after_parse()`](Self::after_parse).
     pub fn into_inner(self) -> BR {
         self.value.unwrap()
     }
 }
 
-/// Used to allow any convert any type castable to i64 into a [`SeekFrom::Current`](crate::io::SeekFrom::Current)
+/// A trait to convert from an integer into
+/// [`SeekFrom::Current`](crate::io::SeekFrom::Current).
 pub trait IntoSeekFrom: Copy {
+    /// Converts the value.
     fn into_seek_from(self) -> SeekFrom;
 }
 
@@ -154,8 +150,12 @@ macro_rules! impl_into_seek_from {
 
 impl_into_seek_from!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
-/// ## Panics
-/// Will panic if the FilePtr has not been read yet using [`BinRead::after_parse`](BinRead::after_parse)
+/// Dereferences the value.
+///
+/// # Panics
+///
+/// Will panic if `FilePtr` hasn’t been finalized by calling
+/// [`after_parse()`](Self::after_parse).
 impl<Ptr: IntoSeekFrom, BR: BinRead> Deref for FilePtr<Ptr, BR> {
     type Target = BR;
 

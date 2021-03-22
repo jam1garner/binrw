@@ -1,5 +1,4 @@
-//! A module for [`Punctuated<T, P>`](Punctuated), a series of items to parse of type T separated
-//! by punction of type `P`.
+//! Type definitions for wrappers which parse interleaved data.
 
 use crate::io::{Read, Seek};
 use crate::{BinRead, BinResult, ReadOptions};
@@ -7,10 +6,20 @@ use crate::{BinRead, BinResult, ReadOptions};
 use alloc::vec::Vec;
 use core::fmt;
 
-/// A type for seperated data. Since parsing for this type is ambiguous, you must manually specify
-/// a parser using the `parse_with` attribute.
+/// A parser for data which consists of values of type `T` interleaved with
+/// other values of type `P`.
 ///
-/// ## Example
+/// To use this parser, you must specify the parsing strategy by selecting
+/// either [`separated()`] or [`separated_trailing()`] using [`parse_with`].
+///
+/// [`separated()`]: Self::separated
+/// [`separated_trailing()`]: Self::separated_trailing
+/// [`parse_with`]: crate::attribute#custom-parsers
+///
+/// Consider using a `Vec<(T, P)>` or `(Vec<(T, P)>, Option<T>>)` instead if you
+/// do not need the parsed data to be transformed into a structure of arrays.
+///
+/// # Examples
 ///
 /// ```rust
 /// # use binrw::{*, io::*};
@@ -29,16 +38,20 @@ use core::fmt;
 /// # assert_eq!(y.x.seperators, vec![0, 1]);
 /// ```
 pub struct Punctuated<T: BinRead, P: BinRead> {
+    /// The data values.
     data: Vec<T>,
+
+    /// The separator values.
     pub seperators: Vec<P>,
 }
 
 impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
-    /// A parser for values seperated by another value, with no trailing punctuation.
+    /// Parses values of type `T` separated by values of type `P` without a
+    /// trailing separator value.
     ///
-    /// Requires a specified count.
+    /// Requires [`count`](crate::ReadOptions::count).
     ///
-    /// ## Example
+    /// # Example
     ///
     /// ```rust
     /// # use binrw::{*, io::*};
@@ -79,9 +92,10 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
         Ok(Self { data, seperators })
     }
 
-    /// A parser for values seperated by another value, with trailing punctuation.
+    /// Parses values of type `T` interleaved with values of type `P`, including
+    /// a trailing `P`.
     ///
-    /// Requires a specified count.
+    /// Requires [`count`](crate::ReadOptions::count).
     pub fn separated_trailing<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
@@ -103,7 +117,14 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
         Ok(Self { data, seperators })
     }
 
-    /// Discard the punctuating values and return just the values
+    /// Consumes this object, returning the data values while dropping the
+    /// separator values.
+    ///
+    /// If you never use the separator values, consider using the [`pad_after`]
+    /// directive to skip over data while parsing instead of reading it into
+    /// memory and then discarding it.
+    ///
+    /// [`pad_after`]: crate::attribute#padding-and-alignment
     pub fn into_values(self) -> Vec<T> {
         self.data
     }

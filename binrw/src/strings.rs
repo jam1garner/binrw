@@ -1,3 +1,5 @@
+//! Type definitions for string readers.
+
 use crate::{
     alloc::string::{FromUtf16Error, FromUtf8Error},
     io::{Read, Seek},
@@ -29,11 +31,11 @@ impl BinRead for Vec<NonZeroU8> {
     }
 }
 
-/// A null terminated UTF-8 string designed to make reading any null-terminated data easier.
+/// A null-terminated 8-bit string.
 ///
-/// **Note:** Result does not include the null, but the null is consumed from the Reader.
+/// The null terminator is consumed and not included in the value.
 ///
-/// ```rust
+/// ```
 /// use binrw::{BinRead, BinReaderExt, NullString, io::Cursor};
 ///
 /// let mut null_separated_strings = Cursor::new(b"null terminated strings? in my system's language?\0no thanks\0");
@@ -49,15 +51,17 @@ impl BinRead for Vec<NonZeroU8> {
 /// );
 /// ```
 #[derive(Clone, PartialEq, Default)]
-pub struct NullString(pub Vec<u8>);
+pub struct NullString(
+    /// The raw byte string.
+    pub Vec<u8>,
+);
 
-/// A null terminated UTF-16 string designed to make reading any 16 bit wide null-terminated data easier.
+/// A null-terminated 16-bit string.
 ///
-/// **Note:** Does not include the null.
+/// The null terminator must also be 16-bits, and is consumed and not included
+/// in the value.
 ///
-/// **Note:** This is endian dependent on a per-character basis. Will read `u16`s until a `0u16` is found.
-///
-/// ```rust
+/// ```
 /// use binrw::{BinRead, BinReaderExt, NullWideString, io::Cursor};
 ///
 /// const WIDE_STRINGS: &[u8] = b"w\0i\0d\0e\0 \0s\0t\0r\0i\0n\0g\0s\0\0\0";
@@ -79,7 +83,10 @@ pub struct NullString(pub Vec<u8>);
 /// );
 /// ```
 #[derive(Clone, PartialEq, Default)]
-pub struct NullWideString(pub Vec<u16>);
+pub struct NullWideString(
+    /// The raw wide byte string.
+    pub Vec<u16>,
+);
 
 impl NullString {
     pub fn into_string(self) -> String {

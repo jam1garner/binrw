@@ -1,22 +1,38 @@
-//! Error types and internal error handling functions
+//! Functions and type definitions for handling errors.
 use crate::{io, BinRead, BinResult, ReadOptions};
+#[cfg(all(doc, not(feature = "std")))]
+extern crate std;
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{any::Any, fmt};
 
+/// The `CustomError` trait describes types that are usable as custom errors
+/// in a [`BinResult`](crate::BinResult).
+///
+/// This trait is automatically implemented for any type which implements the
+/// same traits as [`std::error::Error`], so anything you would normally use as
+/// an error in other code is also a valid `CustomError`, with the additional
+/// restriction that it must also be [`Send`] + [`Sync`].
 pub trait CustomError: Any + fmt::Display + fmt::Debug + Send + Sync + 'static {
+    #[doc(hidden)]
     fn as_any(&self) -> &(dyn Any + Send + Sync);
+
+    #[doc(hidden)]
     fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync>;
 }
+
 impl<T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
     fn as_any(&self) -> &(dyn Any + Send + Sync) {
         self
     }
+
     fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync> {
         self
     }
 }
+
 impl dyn CustomError {
+    /// Attempts to downcast a boxed error to a concrete type.
     pub fn downcast<T: Any>(self: Box<Self>) -> Result<Box<T>, Box<Self>> {
         if self.is::<T>() {
             unsafe {
@@ -28,43 +44,104 @@ impl dyn CustomError {
         }
     }
 
+    /// Returns some reference to the boxed value if it is of type `T`, or
+    /// `None` if it isn’t.
     pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
         self.as_any().downcast_ref()
     }
 
+    /// Returns `true` if the boxed type is the same as `T`.
     pub fn is<T: Any>(&self) -> bool {
         core::any::TypeId::of::<T>() == self.type_id()
     }
 }
 
-/// An error while parsing a BinRead type
+/// The error type used by [`BinRead`](crate::BinRead).
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
-    /// The magic value did not match the provided one
+    /// An expected [magic number](crate::attribute#magic) was not found.
     BadMagic {
-        // Position in number of bytes from the start of the reader
+        /// The byte position of the unexpected magic in the reader.
         pos: u64,
-        // The value found. Use [`Any::downcast_ref`](core::any::Any::downcast_ref) to access
+
+        /// The value which was actually read.
         found: Box<dyn fmt::Debug + Send + Sync>,
     },
-    /// The condition of an assertion without a custom type failed
-    AssertFail { pos: u64, message: String },
-    /// An error that occured while reading from, or seeking within, the reader
-    Io(io::Error),
-    /// A custom error, most often given from the second value passed into an [`assert`](crate::attribute#assert)
-    Custom { pos: u64, err: Box<dyn CustomError> },
-    /// No variant in the enum was successful in parsing the data
-    NoVariantMatch { pos: u64 },
-    EnumErrors {
+
+    /// An assertion failed.
+    ///
+    /// This variant is used for [`assert`] directives which use a string
+    /// literal instead of an error object. Assertions that use error objects
+    /// are represented by the [`Custom`] variant.
+    ///
+    /// [`assert`]: crate::attribute#assert
+    /// [`Custom`]: Self::Custom
+    AssertFail {
+        /// The byte position of the start of the field or object that raised
+        /// an error.
         pos: u64,
-        variant_errors: Vec<(/*variant name*/ &'static str, Error)>,
+
+        /// The failure message.
+        message: String,
+    },
+
+    /// An error occurred in the underlying reader while reading or seeking to
+    /// data.
+    Io(io::Error),
+
+    /// A user-generated error.
+    ///
+    /// This variant is used for [`assert`] directives which use an error object
+    /// instead of a string literal. Assertions that use string literals are
+    /// represented by the [`AssertFail`] variant.
+    ///
+    /// [`assert`]: crate::attribute#assert
+    /// [`AssertFail`]: Self::AssertFail
+    Custom {
+        /// The byte position of the start of the field or object that raised
+        /// an error.
+        pos: u64,
+
+        /// The original error.
+        err: Box<dyn CustomError>,
+    },
+
+    /// None of the variants of an enum could successfully be parsed from the
+    /// data in the reader.
+    ///
+    /// This variant is used when the [`return_unexpected_error`] directive is
+    /// set on an enum.
+    ///
+    /// [`return_unexpected_error`]: crate::attribute#enum-errors
+    NoVariantMatch {
+        /// The byte position of the unparsable data in the reader.
+        pos: u64,
+    },
+
+    /// None of the variants of an enum could successfully be parsed from the
+    /// data in the reader.
+    ///
+    /// This variant is used when the [`return_all_errors`] directive is
+    /// set on an enum (which is the default).
+    ///
+    /// [`return_all_errors`]: crate::attribute#enum-errors
+    EnumErrors {
+        /// The byte position of the unparsable data in the reader.
+        pos: u64,
+
+        /// The original errors which occurred when trying to parse each
+        /// variant.
+        ///
+        /// The first field of the tuple is the name of the variant, and the
+        /// second field is the error that occurred when parsing that variant.
+        variant_errors: Vec<(&'static str, Error)>,
     },
 }
 
 impl Error {
-    /// Gets a custom error of type T from the Error. Returns `None` if the error type is not
-    /// custom or if the contained error is not of the desired type.
+    /// Returns a reference to the boxed error object if this `Error` is a
+    /// custom error of type `T`, or `None` if it isn’t.
     pub fn custom_err<T: Any>(&self) -> Option<&T> {
         if let Error::Custom { err, .. } = self {
             err.downcast_ref()
@@ -123,6 +200,8 @@ where
     }
 }
 
+/// Reads a value, then immediately finalizes it by running
+/// [`after_parse()`](crate::BinRead::after_parse).
 pub fn read_options_then_after_parse<Args, T, R>(
     reader: &mut R,
     ro: &ReadOptions,

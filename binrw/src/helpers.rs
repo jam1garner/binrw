@@ -1,3 +1,5 @@
+//! Helper functions for reading data.
+
 use crate::{
     io::{Read, Seek},
     BinResult, ReadOptions,
@@ -5,11 +7,11 @@ use crate::{
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
 
-/// A helper for more efficiently mass-reading bytes
+/// A helper for more efficiently mass-reading bytes.
 ///
-///## Example:
+/// # Examples
 ///
-/// ```rust
+/// ```
 /// # use binrw::{BinRead, helpers::read_bytes, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
 /// struct BunchaBytes {
@@ -21,6 +23,7 @@ use alloc::{vec, vec::Vec};
 /// # let x: BunchaBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[0, 1, 2, 3, 4]);
 /// ```
+#[deprecated(since = "0.2.0", note = "Use Vec<u8> instead.")]
 pub fn read_bytes<R: Read + Seek>(
     reader: &mut R,
     options: &ReadOptions,

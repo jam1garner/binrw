@@ -4,8 +4,11 @@ use crate::{
 };
 use core::fmt;
 
-/// A wrapper where the position it was read from is stored alongside the value
-/// ```rust
+/// A wrapper that stores a value’s position alongside the value.
+///
+/// # Examples
+///
+/// ```
 /// use binrw::{BinRead, PosValue, BinReaderExt, io::Cursor};
 ///
 /// #[derive(BinRead)]
@@ -19,7 +22,10 @@ use core::fmt;
 /// assert_eq!(*val.b, 0xFD);
 /// ```
 pub struct PosValue<T> {
+    /// The read value.
     pub val: T,
+
+    /// The byte position of the start of the value.
     pub pos: u64,
 }
 

@@ -6,12 +6,28 @@
 [![discord](https://img.shields.io/discord/818723403871551509?color=gray&label=%20&logo=discord)](https://discord.gg/ABy4Qh549j)
 [![matrix: #binrw:matrix.org](https://img.shields.io/badge/style-%23binrw:matrix.org-blue.svg?style=flat&label=[m])](https://matrix.to/#/#binrw:matrix.org)
 
-A Rust crate for helping parse structs from binary data using ✨macro magic✨
+binrw helps you write maintainable & easy-to-read declarative binary data
+parsers using ✨macro magic✨.
 
+## Features
+
+* Generates efficient data parsers for structs and enums using `#[derive]`
+* Reads data from any source using standard `io::Read + io::Seek` streams
+* [Directives in attributes](https://docs.rs/binrw/latest/binrw/attribute)
+  handle common binary parsing tasks like matching magic numbers, byte ordering,
+  padding & alignment, data validation, and more
+* Includes reusable types for common data structures like
+  [null-terminated strings](https://docs.rs/binrw/latest/binrw/struct.NullString.html) and
+  [data indirection using offsets](https://docs.rs/binrw/latest/binrw/struct.FilePtr.html)
+* Parses types from third-party crates using
+  [free functions](https://docs.rs/binrw/latest/binrw/attribute#custom-parsers)
+  or [value maps](https://docs.rs/binrw/latest/binrw/attribute#map)
+* Uses efficient in-memory representations (does not require `#[repr(C)]` or
+  `#[repr(packed)]`)
+* Code in attributes is written as code, not as strings
+* Supports no_std
 
 ## Usage
-
-BinRead uses a derive macro for declaratively defining binary parsing methods for structs.
 
 ```rust
 #[derive(BinRead)]
@@ -31,4 +47,5 @@ assert_eq!(dog.bone_piles, &[0x1, 0x12]);
 assert_eq!(dog.name.into_string(), "Rudy")
 ```
 
-[More documentation can be found here](https://docs.rs/binrw)
+For more information, including a more detailed overview of binrw,
+[visit the documentation](https://docs.rs/binrw).
