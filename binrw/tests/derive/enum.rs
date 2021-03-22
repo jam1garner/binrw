@@ -64,6 +64,23 @@ fn enum_endianness() {
 }
 
 #[test]
+fn enum_magic() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(big, magic(0x1234u16))]
+    enum Test {
+        #[br(magic(0u8))]
+        Zero { a: u16 },
+        // Fail on the second field to actually test that a rewind happens
+        // to the beginning of the enum data, not to before the enum magic
+        #[br(magic(1u8))]
+        One { a: u16 },
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\x12\x34\x01\x02\x03")).unwrap();
+    assert_eq!(result, Test::One { a: 515 });
+}
+
+#[test]
 fn enum_return_all_errors() {
     #[derive(BinRead, Debug)]
     #[br(big, return_all_errors)]

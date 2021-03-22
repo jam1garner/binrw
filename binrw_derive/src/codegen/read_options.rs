@@ -14,7 +14,7 @@ pub(crate) fn generate(input: &Input) -> TokenStream {
         Map::None => match input {
             Input::UnitStruct(_) => generate_unit_struct(input, None),
             Input::Struct(s) => generate_struct(input, s),
-            Input::Enum(e) => generate_data_enum(e),
+            Input::Enum(e) => generate_data_enum(input, e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, e),
         },
         Map::Try(map) => {
@@ -87,14 +87,25 @@ impl<'input> PreludeGenerator<'input> {
     }
 
     fn add_magic_pre_assertion(mut self) -> Self {
+        let head = self.out;
         let magic = get_magic(self.input.magic(), &OPT);
         let pre_assertions = get_assertions(&self.input.pre_assertions());
-        let head = self.out;
-
         self.out = quote! {
             #head
             #magic
             #(#pre_assertions)*
+        };
+
+        self
+    }
+
+    fn reset_position_after_magic(mut self) -> Self {
+        if self.input.magic().is_some() {
+            let head = self.out;
+            self.out = quote! {
+                #head
+                let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+            };
         };
 
         self

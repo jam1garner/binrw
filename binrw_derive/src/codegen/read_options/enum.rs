@@ -83,7 +83,7 @@ fn generate_unit_enum_magic(
     }
 }
 
-pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
+pub(super) fn generate_data_enum(input: &Input, en: &Enum) -> TokenStream {
     let return_all_errors = en.error_mode != EnumErrorMode::ReturnUnexpectedError;
 
     let (create_error_basket, return_error) = if return_all_errors {
@@ -109,6 +109,13 @@ pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
             },
         )
     };
+
+    let prelude = PreludeGenerator::new(input)
+        .add_imports()
+        .add_options()
+        .add_magic_pre_assertion()
+        .reset_position_after_magic()
+        .finish();
 
     let try_each_variant = en.variants.iter().map(|variant| {
         let body = generate_variant_impl(en, variant);
@@ -137,6 +144,7 @@ pub(super) fn generate_data_enum(en: &Enum) -> TokenStream {
     });
 
     quote! {
+        #prelude
         #create_error_basket
         #(#try_each_variant)*
         #return_error
