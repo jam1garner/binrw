@@ -35,14 +35,14 @@ use core::fmt;
 /// # let mut x = Cursor::new(b"\0\x03\0\0\x02\x01\0\x01");
 /// # let y: MyList = x.read_be().unwrap();
 /// # assert_eq!(*y.x, vec![3, 2, 1]);
-/// # assert_eq!(y.x.seperators, vec![0, 1]);
+/// # assert_eq!(y.x.separators, vec![0, 1]);
 /// ```
 pub struct Punctuated<T: BinRead, P: BinRead> {
     /// The data values.
     data: Vec<T>,
 
     /// The separator values.
-    pub seperators: Vec<P>,
+    pub separators: Vec<P>,
 }
 
 impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
@@ -67,7 +67,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// # let mut x = Cursor::new(b"\0\x03\0\0\x02\x01\0\x01");
     /// # let y: MyList = x.read_be().unwrap();
     /// # assert_eq!(*y.x, vec![3, 2, 1]);
-    /// # assert_eq!(y.x.seperators, vec![0, 1]);
+    /// # assert_eq!(y.x.separators, vec![0, 1]);
     /// ```
     pub fn separated<R: Read + Seek>(
         reader: &mut R,
@@ -80,16 +80,16 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
         };
 
         let mut data = Vec::with_capacity(count);
-        let mut seperators = Vec::with_capacity(count.max(1) - 1);
+        let mut separators = Vec::with_capacity(count.max(1) - 1);
 
         for i in 0..count {
             data.push(T::read_options(reader, &options, args.clone())?);
             if i + 1 != count {
-                seperators.push(P::read_options(reader, options, ())?);
+                separators.push(P::read_options(reader, options, ())?);
             }
         }
 
-        Ok(Self { data, seperators })
+        Ok(Self { data, separators })
     }
 
     /// Parses values of type `T` interleaved with values of type `P`, including
@@ -107,14 +107,14 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
         };
 
         let mut data = Vec::with_capacity(count);
-        let mut seperators = Vec::with_capacity(count);
+        let mut separators = Vec::with_capacity(count);
 
         for _ in 0..count {
             data.push(T::read_options(reader, &options, args.clone())?);
-            seperators.push(P::read_options(reader, options, ())?);
+            separators.push(P::read_options(reader, options, ())?);
         }
 
-        Ok(Self { data, seperators })
+        Ok(Self { data, separators })
     }
 
     /// Consumes this object, returning the data values while dropping the
