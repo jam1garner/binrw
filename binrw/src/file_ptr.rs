@@ -131,7 +131,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
 
 /// A trait to convert from an integer into
 /// [`SeekFrom::Current`](crate::io::SeekFrom::Current).
-pub trait IntoSeekFrom: Copy {
+pub trait IntoSeekFrom: Copy + fmt::Debug {
     /// Converts the value.
     fn into_seek_from(self) -> SeekFrom;
 }
@@ -191,7 +191,7 @@ where
         if let Some(ref value) = self.value {
             fmt::Debug::fmt(value, f)
         } else {
-            write!(f, "UnreadPointer")
+            f.debug_tuple("UnreadPointer").field(&self.ptr).finish()
         }
     }
 }
