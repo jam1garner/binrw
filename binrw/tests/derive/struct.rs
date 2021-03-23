@@ -291,6 +291,50 @@ fn pad_after_before() {
 }
 
 #[test]
+fn parse_with_default_args() {
+    #[derive(Clone)]
+    struct Args(u8);
+    impl Default for Args {
+        fn default() -> Self {
+            Self(42)
+        }
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(in_a: u8))]
+    struct InnerImport {
+        #[br(calc(in_a))]
+        a: u8,
+        b: u8,
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import_tuple = args: Args)]
+    struct InnerImportTuple {
+        #[br(calc(args.0))]
+        a: u8,
+        b: u8,
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        #[br(parse_with = InnerImport::read_options)]
+        inner: InnerImport,
+        #[br(parse_with = InnerImportTuple::read_options)]
+        inner_tuple: InnerImportTuple,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\x02\x04")).unwrap();
+    assert_eq!(
+        result,
+        Test {
+            inner: InnerImport { a: 0, b: 2 },
+            inner_tuple: InnerImportTuple { a: 42, b: 4 }
+        }
+    );
+}
+
+#[test]
 fn import_tuple() {
     #[derive(BinRead, Debug)]
     struct Test {

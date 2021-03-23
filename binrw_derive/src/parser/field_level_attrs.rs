@@ -56,16 +56,27 @@ attr_struct! {
 }
 
 impl StructField {
+    /// Returns true if this field is read from a parser with an `after_parse`
+    /// method.
     pub(crate) fn can_call_after_parse(&self) -> bool {
         matches!(self.read_mode, ReadMode::Normal) && !self.map.is_some()
     }
 
+    /// Returns true if the code generator should emit `BinRead::after_parse()`
+    /// after all fields have been read.
     pub(crate) fn should_use_after_parse(&self) -> bool {
         !*self.deref_now
     }
 
+    /// Returns true if this field is generated using a calculated value instead
+    /// of a parser.
     pub(crate) fn generated_value(&self) -> bool {
         matches!(self.read_mode, ReadMode::Calc(_) | ReadMode::Default)
+    }
+
+    /// Returns true if the field needs `ReadOptions` to be parsed.
+    pub(crate) fn needs_options(&self) -> bool {
+        !self.generated_value() || self.magic.is_some()
     }
 
     fn validate(&self) -> syn::Result<()> {

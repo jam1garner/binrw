@@ -96,45 +96,38 @@ impl<'input> StructGenerator<'input> {
 }
 
 fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
-    if field.should_use_after_parse() {
-        get_after_parse_handler(&field).map(|after_parse_fn| {
-            let args_var = make_ident(&field.ident, "args");
-            let options_var = make_ident(&field.ident, "options");
-            AfterParseGenerator::new(field)
-                .get_value_from_ident()
-                .call_after_parse(after_parse_fn, &options_var, &args_var)
-                .prefix_offset_options(&options_var)
-                .finish()
-        })
-    } else {
-        None
-    }
+    get_after_parse_handler(&field).map(|after_parse_fn| {
+        let (args_var, options_var) = make_field_vars(field);
+        AfterParseCallGenerator::new(field)
+            .get_value_from_ident()
+            .call_after_parse(after_parse_fn, &options_var, &args_var)
+            .prefix_offset_options(&options_var)
+            .finish()
+    })
 }
 
 fn generate_field(field: &StructField) -> TokenStream {
-    let args_var = make_ident(&field.ident, "args");
-    let options_var = make_ident(&field.ident, "options");
     FieldGenerator::new(&field)
-        .read_value(&options_var, &args_var)
+        .read_value()
         .try_conversion()
         .map_value()
-        .deref_now(&options_var, &args_var)
+        .deref_now()
         .wrap_seek()
         .wrap_condition()
         .assign_to_var()
         .append_assertions()
         .wrap_restore_position()
-        .prefix_magic(&options_var)
-        .prefix_args_and_options(&options_var, &args_var)
+        .prefix_magic()
+        .prefix_args_and_options()
         .finish()
 }
 
-struct AfterParseGenerator<'field> {
+struct AfterParseCallGenerator<'field> {
     field: &'field StructField,
     out: TokenStream,
 }
 
-impl<'field> AfterParseGenerator<'field> {
+impl<'field> AfterParseCallGenerator<'field> {
     fn new(field: &'field StructField) -> Self {
         Self {
             field,
@@ -145,12 +138,16 @@ impl<'field> AfterParseGenerator<'field> {
     fn call_after_parse(
         mut self,
         after_parse_fn: IdentStr,
-        options_var: &Ident,
-        args_var: &Ident,
+        options_var: &Option<Ident>,
+        args_var: &Option<Ident>,
     ) -> Self {
         let value = self.out;
+        let options_var = options_var.as_ref().expect(
+            "called `AfterParseCallGenerator::call_after_parse` but no `options_var` was generated",
+        );
+        let args_arg = get_args_argument(args_var);
         self.out = quote! {
-            #after_parse_fn(#value, #READER, #options_var, #args_var.clone())?;
+            #after_parse_fn(#value, #READER, #options_var, #args_arg)?;
         };
 
         self
@@ -173,8 +170,8 @@ impl<'field> AfterParseGenerator<'field> {
         self
     }
 
-    fn prefix_offset_options(mut self, options_var: &Ident) -> Self {
-        if let Some(offset) = &self.field.offset_after {
+    fn prefix_offset_options(mut self, options_var: &Option<Ident>) -> Self {
+        if let (Some(options_var), Some(offset)) = (options_var, &self.field.offset_after) {
             let tail = self.out;
             let offset = offset.as_ref();
             self.out = quote! {
@@ -194,15 +191,19 @@ impl<'field> AfterParseGenerator<'field> {
 struct FieldGenerator<'field> {
     field: &'field StructField,
     out: TokenStream,
-    emit_options_vars: bool,
+    args_var: Option<Ident>,
+    options_var: Option<Ident>,
 }
 
 impl<'field> FieldGenerator<'field> {
     fn new(field: &'field StructField) -> Self {
+        let (args_var, options_var) = make_field_vars(field);
+
         Self {
             field,
             out: TokenStream::new(),
-            emit_options_vars: get_after_parse_handler(field).is_some(),
+            args_var,
+            options_var,
         }
     }
 
@@ -226,15 +227,15 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
-    fn deref_now(mut self, options_var: &Ident, args_var: &Ident) -> Self {
+    fn deref_now(mut self) -> Self {
         if self.field.should_use_after_parse() {
             return self;
         }
 
         if let Some(after_parse) = get_after_parse_handler(&self.field) {
-            let after_parse = AfterParseGenerator::new(self.field)
+            let after_parse = AfterParseCallGenerator::new(self.field)
                 .get_value_from_temp()
-                .call_after_parse(after_parse, options_var, args_var)
+                .call_after_parse(after_parse, &self.options_var, &self.args_var)
                 .finish();
 
             let value = self.out;
@@ -276,38 +277,48 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
-    fn prefix_args_and_options(mut self, options_var: &Ident, args_var: &Ident) -> Self {
-        if self.emit_options_vars {
+    fn prefix_args_and_options(mut self) -> Self {
+        let args = self.args_var.as_ref().map(|args_var| {
             let args = get_passed_args(&self.field.args);
-            let options = ReadOptionsGenerator::new(options_var)
+            quote! {
+                let #args_var = #args;
+            }
+        });
+
+        let options = self.options_var.as_ref().map(|options_var| {
+            ReadOptionsGenerator::new(options_var)
                 .endian(&self.field.endian)
                 .offset(&self.field.offset)
                 .count(&self.field.count)
-                .finish();
-            let tail = self.out;
-            self.out = quote! {
-                let #args_var = #args;
-                #options
-                #tail
-            };
+                .finish()
+        });
+
+        let tail = self.out;
+
+        self.out = quote! {
+            #args
+            #options
+            #tail
+        };
+
+        self
+    }
+
+    fn prefix_magic(mut self) -> Self {
+        if let Some(options_var) = &self.options_var {
+            if let Some(magic) = get_magic(&self.field.magic, options_var) {
+                let tail = self.out;
+                self.out = quote! {
+                    #magic
+                    #tail
+                };
+            }
         }
 
         self
     }
 
-    fn prefix_magic(mut self, options_var: &Ident) -> Self {
-        if let Some(magic) = get_magic(&self.field.magic, options_var) {
-            let tail = self.out;
-            self.out = quote! {
-                #magic
-                #tail
-            };
-        }
-
-        self
-    }
-
-    fn read_value(mut self, options_var: &Ident, args_var: &Ident) -> Self {
+    fn read_value(mut self) -> Self {
         self.out = match &self.field.read_mode {
             ReadMode::Default => quote! { <_>::default() },
             ReadMode::Calc(calc) => quote! { #calc },
@@ -318,10 +329,11 @@ impl<'field> FieldGenerator<'field> {
                     quote! { #READ_METHOD }
                 };
 
-                self.emit_options_vars = true;
+                let args_arg = get_args_argument(&self.args_var);
+                let options_var = &self.options_var;
 
                 quote! {
-                    #read_method(#READER, #options_var, #args_var.clone())
+                    #read_method(#READER, #options_var, #args_arg)
                 }
             }
         };
@@ -389,11 +401,18 @@ impl<'field> FieldGenerator<'field> {
     }
 }
 
-fn get_passed_args(args: &PassedArgs) -> TokenStream {
+fn get_args_argument(args_var: &Option<Ident>) -> TokenStream {
+    args_var.as_ref().map_or_else(
+        || quote! { <_>::default() },
+        |args_var| quote! { #args_var.clone() },
+    )
+}
+
+fn get_passed_args(args: &PassedArgs) -> Option<TokenStream> {
     match args {
-        PassedArgs::List(list) => quote! { (#(#list,)*) },
-        PassedArgs::Tuple(tuple) => tuple.clone(),
-        PassedArgs::None => quote! { () },
+        PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
+        PassedArgs::Tuple(tuple) => Some(tuple.clone()),
+        PassedArgs::None => None,
     }
 }
 
@@ -459,6 +478,22 @@ fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
 
 fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {
     variant_ident.map_or_else(|| quote! { Self }, |ident| quote! { Self::#ident })
+}
+
+fn make_field_vars(field: &StructField) -> (Option<Ident>, Option<Ident>) {
+    let args_var = if field.args.is_some() {
+        Some(make_ident(&field.ident, "args"))
+    } else {
+        None
+    };
+
+    let options_var = if field.needs_options() {
+        Some(make_ident(&field.ident, "options"))
+    } else {
+        None
+    };
+
+    (args_var, options_var)
 }
 
 fn map_align(align: &TokenStream) -> TokenStream {

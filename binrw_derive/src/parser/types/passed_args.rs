@@ -9,6 +9,12 @@ pub(crate) enum PassedArgs {
     Tuple(TokenStream),
 }
 
+impl PassedArgs {
+    pub(crate) fn is_some(&self) -> bool {
+        !matches!(self, Self::None)
+    }
+}
+
 impl Default for PassedArgs {
     fn default() -> Self {
         PassedArgs::None
