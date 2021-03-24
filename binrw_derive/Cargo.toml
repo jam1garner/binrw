@@ -2,7 +2,7 @@
 name = "binrw_derive"
 version = "0.2.0"
 authors = [
-    "jam1garner <8260240+jam1garner@users.noreply.github.com>",
+    "jam1garner <jam@jam1.re>",
     "Colin Snover <github.com@zetafleet.com>",
     "Kitlith <kitlith@kitl.pw>",
     "roblabla <robinlambertz+dev@gmail.com>"
