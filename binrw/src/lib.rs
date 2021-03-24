@@ -1,3 +1,15 @@
+//! **Maintainer's Note:** binrw is in a rather early state. Lots of work is being
+//! done in order to make a great library before holding it to too many stability guarantees.
+//! Expect a bit of churn, if you're looking for a stable alternative, check out [`binread`].
+//! If you're interested in getting involved, join us on [discord] or [matrix]! (whichever you
+//! prefer, they're bridged together)
+//!
+//! ---
+//!
+//! [`binread`]: https://docs.rs/binread
+//! [discord]: https://discord.gg/ABy4Qh549j
+//! [matrix]: https://matrix.to/#/#binrw:matrix.org
+//!
 //! binrw helps you write maintainable & easy-to-read declarative binary data
 //! parsers using ✨macro magic✨.
 //!
