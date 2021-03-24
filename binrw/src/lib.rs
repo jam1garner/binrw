@@ -173,6 +173,9 @@ pub use binread_impls::*;
 mod binread;
 pub use binread::*;
 
+mod builder_types;
+pub use builder_types::*;
+
 pub mod prelude {
     //! The binrw prelude.
     //!
