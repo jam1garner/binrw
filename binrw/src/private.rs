@@ -16,7 +16,7 @@ where
     MsgFn: Fn() -> Msg,
     Msg: Into<String> + Sized,
     ErrorFn: Fn() -> Err,
-    Err: CustomError,
+    Err: CustomError + 'static,
 {
     if test {
         Ok(())

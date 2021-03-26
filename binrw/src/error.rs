@@ -16,18 +16,23 @@ use core::{any::Any, fmt};
 /// restriction that it must also be [`Send`] + [`Sync`].
 ///
 /// This trait is Sealed.
-pub trait CustomError:
-    Any + fmt::Display + fmt::Debug + Send + Sync + private::Sealed + 'static
-{
+pub trait CustomError: fmt::Display + fmt::Debug + Send + Sync + private::Sealed {
     #[doc(hidden)]
     fn as_any(&self) -> &(dyn Any + Send + Sync);
+
+    #[doc(hidden)]
+    fn as_any_mut(&mut self) -> &mut (dyn Any + Send + Sync);
 
     #[doc(hidden)]
     fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync>;
 }
 
-impl<T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
+impl<T: fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
     fn as_any(&self) -> &(dyn Any + Send + Sync) {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut (dyn Any + Send + Sync) {
         self
     }
 
@@ -36,10 +41,15 @@ impl<T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for
     }
 }
 
+// The intent here is to allow any object which is compatible with
+// `std::error::Error + Send + Sync` to be stored in errors, including no_std
+// mode.
 impl dyn CustomError {
     /// Attempts to downcast a boxed error to a concrete type.
-    pub fn downcast<T: Any>(self: Box<Self>) -> Result<Box<T>, Box<Self>> {
+    pub fn downcast<T: CustomError + 'static>(self: Box<Self>) -> Result<Box<T>, Box<Self>> {
         if self.is::<T>() {
+            // Safety: This cast only occurs after a check that the object is
+            // actually convertible into T, so is always safe.
             unsafe {
                 let raw: *mut dyn Any = Box::into_raw(self.as_box_any());
                 Ok(Box::from_raw(raw as *mut T))
@@ -49,15 +59,21 @@ impl dyn CustomError {
         }
     }
 
+    /// Returns some mutable reference to the boxed value if it is of type `T`, or
+    /// `None` if it isn't.
+    pub fn downcast_mut<T: CustomError + 'static>(&mut self) -> Option<&mut T> {
+        self.as_any_mut().downcast_mut()
+    }
+
     /// Returns some reference to the boxed value if it is of type `T`, or
     /// `None` if it isn’t.
-    pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
+    pub fn downcast_ref<T: CustomError + 'static>(&self) -> Option<&T> {
         self.as_any().downcast_ref()
     }
 
     /// Returns `true` if the boxed type is the same as `T`.
-    pub fn is<T: Any>(&self) -> bool {
-        core::any::TypeId::of::<T>() == self.type_id()
+    pub fn is<T: CustomError + 'static>(&self) -> bool {
+        core::any::TypeId::of::<T>() == self.as_any().type_id()
     }
 }
 
@@ -147,7 +163,7 @@ pub enum Error {
 impl Error {
     /// Returns a reference to the boxed error object if this `Error` is a
     /// custom error of type `T`, or `None` if it isn’t.
-    pub fn custom_err<T: Any>(&self) -> Option<&T> {
+    pub fn custom_err<T: CustomError + 'static>(&self) -> Option<&T> {
         if let Error::Custom { err, .. } = self {
             err.downcast_ref()
         } else {
