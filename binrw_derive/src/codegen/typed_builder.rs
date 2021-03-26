@@ -1,5 +1,5 @@
 use syn::{Ident, Type};
-use quote::quote;
+use quote::{quote, ToTokens};
 use proc_macro2::TokenStream;
 
 use crate::codegen::sanitization::*;
@@ -27,12 +27,17 @@ impl<'a> Builder<'a> {
     pub(crate) fn generate(&self) -> TokenStream {
         let builder_name = self.builder_name;
         let name = self.result_name;
-        let fields = self.generate_fields();
+        let fields = self.generate_result_fields();
+        let builder_fields = self.generate_builder_fields();
         let initial = self.generate_builder_initial();
         let generics = self.generate_generics();
         let initial_generics = self.generate_initial_generics();
+        let setters = self.generate_setters();
         let satisfied = std::iter::repeat(SATISFIED_OR_OPTIONAL);
+        let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
+        let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
         quote!(
+            #[derive(Debug)]
             pub struct #name {
                 #fields
             }
@@ -43,20 +48,40 @@ impl<'a> Builder<'a> {
                 }
             }
 
+            #( #setters )*
+
             pub struct #builder_name < #( #generics ),* > {
-                #fields
+                #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
 
             impl< #( #generics : #satisfied ),* > #builder_name < #( #generics ),* > {
                 pub fn finalize(self) -> #name {
-                    todo!()
+                    let #builder_name {
+                        #(
+                            #field_names,
+                        )*
+                        ..
+                    } = self;
+
+                    #name {
+                        #(
+                            #field_names #possible_unwrap,
+                        )*
+                    }
                 }
             }
         )
     }
 
-    fn generate_fields(&self) -> TokenStream {
+    fn generate_builder_fields(&self) -> TokenStream {
+        let fields = self.fields.iter().map(|field| field.generate_builder_field());
+        quote!(
+            #( #fields )*
+        )
+    }
+
+    fn generate_result_fields(&self) -> TokenStream {
         let fields = self.fields.iter().map(|field| field.generate_result_field());
         quote!(
             #( #fields )*
@@ -87,16 +112,85 @@ impl<'a> Builder<'a> {
             .map(BuilderField::initial_generic)
             .collect()
     }
+
+    fn generate_setters(&self) -> Vec<TokenStream> {
+        let builder_name = self.builder_name;
+        self.fields
+            .iter()
+            .enumerate()
+            .map(|(i, field)| {
+                let generics = self.generate_generics();
+
+                // The current field is not generic
+                let mut generic_params = generics.clone();
+                generic_params.remove(i);
+
+                // The generics required for the builder should be generic for all parameters
+                // except the current field, which is set to its initial state
+                let mut required_generics: Vec<_> = generics.clone()
+                    .into_iter()
+                    .map(ToTokens::into_token_stream)
+                    .collect();
+                required_generics[i] = field.initial_generic();
+
+                // the resulting generics should be the same as before, but with the type for
+                // the current field being marked as satisfied.
+                let mut resulting_generics = required_generics.clone();
+                resulting_generics[i] = quote!( #SATISFIED );
+
+                let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
+                let field_name = &field.name;
+                let ty = &field.ty;
+
+                let field_result = match field.kind {
+                    BuilderFieldKind::Required => quote!( Some(val) ),
+                    BuilderFieldKind::Optional { .. } => quote!( val ),
+                };
+
+                quote!(
+                    impl< #( #generic_params ),* > #builder_name < #( #required_generics ),* > {
+                        pub fn #field_name(
+                            self, val: #ty
+                        ) -> #builder_name < #( #resulting_generics ),* > {
+                            let #builder_name {
+                                #(
+                                    #field_names,
+                                )*
+                                ..
+                            } = self;
+
+                            let #field_name = #field_result;
+
+                            #builder_name {
+                                #(
+                                    #field_names,
+                                )*
+                                __bind_generics: ::core::marker::PhantomData
+                            }
+                        }
+                    }
+                )
+            })
+            .collect()
+    }
 }
 
 impl BuilderField {
-    fn generate_result_field(&self) -> TokenStream {
+    fn generate_builder_field(&self) -> TokenStream {
         let name = &self.name;
         let ty = &self.ty;
         let ty = match self.kind {
             BuilderFieldKind::Required => quote!(Option<#ty>),
             BuilderFieldKind::Optional { .. } => quote!(#ty),
         };
+        quote!(
+            #name: #ty,
+        )
+    }
+
+    fn generate_result_field(&self) -> TokenStream {
+        let name = &self.name;
+        let ty = &self.ty;
         quote!(
             #name: #ty,
         )
@@ -122,6 +216,14 @@ impl BuilderField {
         match self.kind {
             BuilderFieldKind::Required => quote!( #NEEDED ),
             BuilderFieldKind::Optional { .. } => quote!( #OPTIONAL ),
+        }
+    }
+
+    fn possible_unwrap(&self) -> TokenStream {
+        let name = &self.name;
+        match self.kind {
+            BuilderFieldKind::Required => quote!( : #name.unwrap() ),
+            BuilderFieldKind::Optional { .. } => quote!(),
         }
     }
 }

@@ -52,6 +52,7 @@ ident_str! {
     pub(super) COERCE_FN = from_crate!(__private::coerce_fn);
     pub(super) TRY_AFTER_PARSE = from_crate!(__private::try_after_parse);
     pub(super) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
+    pub(super) SATISFIED = from_crate!(Satisfied);
     pub(super) NEEDED = from_crate!(Needed);
     pub(super) OPTIONAL = from_crate!(Optional);
     pub(super) TEMP = "__binrw_temp";
