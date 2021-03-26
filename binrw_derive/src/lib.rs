@@ -7,7 +7,7 @@ mod parser;
 use codegen::generate_impl;
 use parser::{is_binread_attr, Input, ParseResult};
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote, format_ident};
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
@@ -22,6 +22,30 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
 #[cfg(not(tarpaulin_include))]
 pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
+}
+
+use codegen::typed_builder::*;
+
+#[proc_macro]
+pub fn test_typed_builder(_: TokenStream) -> TokenStream {
+    Builder {
+        result_name: &format_ident!("TestStruct"),
+        builder_name: &format_ident!("TestStructBuilder"),
+        fields: &[
+            BuilderField {
+                name: format_ident!("field1"),
+                ty: syn::parse_quote!(u32),
+                kind: BuilderFieldKind::Required,
+            },
+            BuilderField {
+                name: format_ident!("field2"),
+                ty: syn::parse_quote!(u16),
+                kind: BuilderFieldKind::Optional {
+                    default: syn::parse_quote!(5)
+                },
+            }
+        ],
+    }.generate().into()
 }
 
 fn clean_field_attrs(

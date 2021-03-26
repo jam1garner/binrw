@@ -4,52 +4,53 @@ use proc_macro2::TokenStream;
 
 use crate::codegen::sanitization::*;
 
-enum BuilderFieldKind {
+pub(crate) enum BuilderFieldKind {
     Required,
     Optional {
         default: syn::Expr,
     },
 }
 
-struct BuilderField {
-    name: Ident,
-    ty: Type,
-    kind: BuilderFieldKind,
+pub(crate) struct BuilderField {
+    pub(crate) name: Ident,
+    pub(crate) ty: Type,
+    pub(crate) kind: BuilderFieldKind,
 }
 
-struct Builder<'a> {
-    builder_name: &'a Ident,
-    result_name: &'a Ident,
-    fields: &'a [BuilderField],
+pub(crate) struct Builder<'a> {
+    pub(crate) builder_name: &'a Ident,
+    pub(crate) result_name: &'a Ident,
+    pub(crate) fields: &'a [BuilderField],
 }
 
 impl<'a> Builder<'a> {
-    fn generate(&self) -> TokenStream {
+    pub(crate) fn generate(&self) -> TokenStream {
         let builder_name = self.builder_name;
         let name = self.result_name;
         let fields = self.generate_fields();
         let initial = self.generate_builder_initial();
         let generics = self.generate_generics();
+        let initial_generics = self.generate_initial_generics();
         let satisfied = std::iter::repeat(SATISFIED_OR_OPTIONAL);
         quote!(
-            struct #name {
+            pub struct #name {
                 #fields
             }
 
             impl #name {
-                fn builder() -> #builder_name {
+                pub fn builder() -> #builder_name < #( #initial_generics ),* > {
                     #initial
                 }
             }
 
-            struct #builder_name < #( #generics ),* > {
-                #fields,
-                __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>,
+            pub struct #builder_name < #( #generics ),* > {
+                #fields
+                __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
 
             impl< #( #generics : #satisfied ),* > #builder_name < #( #generics ),* > {
-                fn finalize(self) -> #name {
-
+                pub fn finalize(self) -> #name {
+                    todo!()
                 }
             }
         )
@@ -75,8 +76,16 @@ impl<'a> Builder<'a> {
         quote!(
             #name {
                 #( #defaults )*
+                __bind_generics: ::core::marker::PhantomData
             }
         )
+    }
+
+    fn generate_initial_generics(&self) -> Vec<TokenStream> {
+        self.fields
+            .iter()
+            .map(BuilderField::initial_generic)
+            .collect()
     }
 }
 
@@ -106,6 +115,13 @@ impl BuilderField {
             BuilderFieldKind::Optional { ref default } => quote!(
                 #name: #default,
             )
+        }
+    }
+
+    fn initial_generic(&self) -> TokenStream {
+        match self.kind {
+            BuilderFieldKind::Required => quote!( #NEEDED ),
+            BuilderFieldKind::Optional { .. } => quote!( #OPTIONAL ),
         }
     }
 }

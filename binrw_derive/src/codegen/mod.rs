@@ -1,7 +1,7 @@
 #[macro_use]
 pub(crate) mod sanitization;
 mod read_options;
-mod typed_builder;
+pub(crate) mod typed_builder;
 
 use crate::parser::{Input, ParseResult};
 use proc_macro2::TokenStream;
