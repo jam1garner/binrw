@@ -1,8 +1,5 @@
 //! Type definitions for byte order handling.
 
-#[cfg(not(feature = "std"))]
-use alloc::string::String;
-
 /// Defines the order of bytes in a multi-byte type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Endian {
@@ -16,13 +13,13 @@ pub enum Endian {
 
 pub use Endian::{Big as BE, Little as LE, Native as NE};
 
-impl From<&Endian> for String {
-    fn from(endian: &Endian) -> String {
-        String::from(match endian {
-            Endian::Big => "Big",
-            Endian::Little => "Little",
-            Endian::Native => "Native",
-        })
+impl core::fmt::Display for Endian {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Big => write!(f, "Big"),
+            Self::Little => write!(f, "Little"),
+            Self::Native => write!(f, "Native"),
+        }
     }
 }
 
