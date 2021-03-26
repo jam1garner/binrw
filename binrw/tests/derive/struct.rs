@@ -291,6 +291,19 @@ fn pad_after_before() {
 }
 
 #[test]
+fn pad_size_to() {
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        #[br(pad_before = 1, pad_size_to = 2)]
+        a: u8,
+        b: u8,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\x01\0\x02")).unwrap();
+    assert_eq!(result, Test { a: 1, b: 2 });
+}
+
+#[test]
 fn parse_with_default_args() {
     #[derive(Clone)]
     struct Args(u8);
