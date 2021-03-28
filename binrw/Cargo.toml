@@ -1,6 +1,6 @@
 [package]
 name = "binrw"
-version = "0.2.1"
+version = "0.3.0"
 authors = [
     "jam1garner <jam@jam1.re>",
     "Colin Snover <github.com@zetafleet.com>",
