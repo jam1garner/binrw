@@ -48,12 +48,7 @@ impl dyn CustomError {
     /// Attempts to downcast a boxed error to a concrete type.
     pub fn downcast<T: CustomError + 'static>(self: Box<Self>) -> Result<Box<T>, Box<Self>> {
         if self.is::<T>() {
-            // Safety: This cast only occurs after a check that the object is
-            // actually convertible into T, so is always safe.
-            unsafe {
-                let raw: *mut dyn Any = Box::into_raw(self.as_box_any());
-                Ok(Box::from_raw(raw as *mut T))
-            }
+            Ok(self.as_box_any().downcast().unwrap())
         } else {
             Err(self)
         }
