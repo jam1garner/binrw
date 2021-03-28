@@ -116,7 +116,7 @@ impl<B: BinRead> BinRead for Vec<B> {
     }
 }
 
-impl<C: Copy + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N] {
+impl<C: Clone + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N] {
     type Args = B::Args;
 
     fn read_options<R: Read + Seek>(
@@ -124,7 +124,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N]
         options: &ReadOptions,
         args: Self::Args,
     ) -> BinResult<Self> {
-        let arr = array_init::try_array_init(|_| BinRead::read_options(reader, options, args))?;
+        let arr = array_init::try_array_init(|_| BinRead::read_options(reader, options, args.clone()))?;
         Ok(arr)
     }
 
@@ -133,7 +133,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N]
         R: Read + Seek,
     {
         for val in self.iter_mut() {
-            val.after_parse(reader, ro, args)?;
+            val.after_parse(reader, ro, args.clone())?;
         }
 
         Ok(())
