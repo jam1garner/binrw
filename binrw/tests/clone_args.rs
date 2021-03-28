@@ -5,8 +5,7 @@ struct OnlyCloneable;
 
 #[derive(BinRead)]
 #[br(import(needs_clone: OnlyCloneable))]
-struct ArgsNeedClone {
-}
+struct ArgsNeedClone {}
 
 #[derive(BinRead)]
 struct TestCloneArray {

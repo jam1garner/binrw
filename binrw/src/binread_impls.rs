@@ -124,8 +124,7 @@ impl<C: Clone + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N
         options: &ReadOptions,
         args: Self::Args,
     ) -> BinResult<Self> {
-        let arr = array_init::try_array_init(|_| BinRead::read_options(reader, options, args.clone()))?;
-        Ok(arr)
+        array_init::try_array_init(|_| BinRead::read_options(reader, options, args.clone()))
     }
 
     fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args) -> BinResult<()>
