@@ -116,38 +116,29 @@ impl<B: BinRead> BinRead for Vec<B> {
     }
 }
 
-macro_rules! binread_array_impl {
-    ($($size:literal),*$(,)?) => {
-        $(
-            impl<B: BinRead + Default> BinRead for [B; $size] {
-                type Args = B::Args;
+impl<C: Copy + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N] {
+    type Args = B::Args;
 
-                fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
-                    let mut arr: [B; $size] = Default::default();
-                    for elem in arr.iter_mut() {
-                        *elem = BinRead::read_options(reader, options, args.clone())?;
-                    }
-                    Ok(arr)
-                }
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self> {
+        let arr = array_init::try_array_init(|_| BinRead::read_options(reader, options, args))?;
+        Ok(arr)
+    }
 
-                fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: Self::Args)-> BinResult<()>
-                    where R: Read + Seek,
-                {
-                    for val in self.iter_mut() {
-                        val.after_parse(reader, ro, args.clone())?;
-                    }
+    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args) -> BinResult<()>
+    where
+        R: Read + Seek,
+    {
+        for val in self.iter_mut() {
+            val.after_parse(reader, ro, args)?;
+        }
 
-                    Ok(())
-                }
-            }
-        )*
+        Ok(())
     }
 }
-
-binread_array_impl!(
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-    26, 27, 28, 29, 30, 31, 32
-);
 
 macro_rules! binread_tuple_impl {
     ($type1:ident $(, $types:ident)*) => {
