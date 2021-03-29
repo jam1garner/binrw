@@ -10,7 +10,11 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
 
-pub(super) fn generate_unit_enum(input: &Input, name: Option<&Ident>, en: &UnitOnlyEnum) -> TokenStream {
+pub(super) fn generate_unit_enum(
+    input: &Input,
+    name: Option<&Ident>,
+    en: &UnitOnlyEnum,
+) -> TokenStream {
     match &en.repr {
         Some(repr) => generate_unit_enum_repr(input, repr, &en.fields),
         None => generate_unit_enum_magic(input, name, en, &en.fields),

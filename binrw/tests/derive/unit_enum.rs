@@ -64,7 +64,8 @@ fn unit_enum_magic_pre_assert() {
                 .allow_zero(true)
                 .forbid_zero(false)
                 .finalize()
-        ).unwrap(),
+        )
+        .unwrap(),
         Test::Zero
     );
     // Tests allow_zero condition actually applies
@@ -75,7 +76,8 @@ fn unit_enum_magic_pre_assert() {
                 .allow_zero(true)
                 .forbid_zero(true)
                 .finalize()
-        ).unwrap(),
+        )
+        .unwrap(),
         Test::OtherZero
     );
     // Tests forbid_zero condition actually applies
@@ -86,17 +88,18 @@ fn unit_enum_magic_pre_assert() {
                 .allow_zero(false)
                 .forbid_zero(true)
                 .finalize()
-        ).unwrap(),
+        )
+        .unwrap(),
         Test::OtherZero
     );
-    let error =
-        Test::read_args(
-            &mut Cursor::new(b"\0\x01"),
-            <Test as BinRead>::Args::builder()
-                .allow_zero(false)
-                .forbid_zero(true)
-                .finalize()
-        ).expect_err("accepted bad data");
+    let error = Test::read_args(
+        &mut Cursor::new(b"\0\x01"),
+        <Test as BinRead>::Args::builder()
+            .allow_zero(false)
+            .forbid_zero(true)
+            .finalize(),
+    )
+    .expect_err("accepted bad data");
 
     assert!(matches!(error, binrw::Error::NoVariantMatch { .. }));
 }

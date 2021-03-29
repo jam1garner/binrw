@@ -6,7 +6,11 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
 
-pub(super) fn generate_unit_struct(input: &Input, name: Option<&Ident>, variant_ident: Option<&Ident>) -> TokenStream {
+pub(super) fn generate_unit_struct(
+    input: &Input,
+    name: Option<&Ident>,
+    variant_ident: Option<&Ident>,
+) -> TokenStream {
     let prelude = get_prelude(input, name);
     let return_type = get_return_type(variant_ident);
     quote! {
@@ -413,7 +417,7 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
     match args {
         PassedArgs::Named(fields) => Some({
             if fields.is_empty() {
-                return None
+                return None;
             }
             let ty = &field.ty;
             let (names, exprs): (Vec<_>, Vec<_>) = fields.into_iter().cloned().unzip();

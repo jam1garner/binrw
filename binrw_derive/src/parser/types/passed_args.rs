@@ -24,12 +24,7 @@ impl Default for PassedArgs {
 
 impl From<attrs::Args> for PassedArgs {
     fn from(args: attrs::Args) -> Self {
-        Self::Named(
-            args.fields
-                .into_iter()
-                .map(Into::into)
-                .collect(),
-        )
+        Self::Named(args.fields.into_iter().map(Into::into).collect())
     }
 }
 

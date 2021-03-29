@@ -21,12 +21,10 @@ pub(crate) fn generate_impl(
             binread_input.imports().args_type(&derive_input.ident),
             read_options::generate(&binread_input, derive_input),
         ),
-        ParseResult::Partial(binread_input, error) => {
-            (
-                binread_input.imports().args_type(&derive_input.ident),
-                error.to_compile_error()
-            )
-        }
+        ParseResult::Partial(binread_input, error) => (
+            binread_input.imports().args_type(&derive_input.ident),
+            error.to_compile_error(),
+        ),
         ParseResult::Err(error) => ((quote! { () }, quote!()), error.to_compile_error()),
     };
 

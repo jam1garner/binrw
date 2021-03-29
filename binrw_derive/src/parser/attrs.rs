@@ -1,6 +1,6 @@
 use super::{
     keywords as kw,
-    meta_types::{IdentPatType, IdentColonExpr, MetaExpr, MetaList, MetaLit, MetaType, MetaValue},
+    meta_types::{IdentColonExpr, IdentPatType, MetaExpr, MetaList, MetaLit, MetaType, MetaValue},
 };
 use syn::{Expr, Token};
 

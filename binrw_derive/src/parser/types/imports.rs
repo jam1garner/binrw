@@ -1,9 +1,9 @@
+use crate::codegen::sanitization::TRAIT_NAME;
 use crate::codegen::typed_builder::{Builder, BuilderField, BuilderFieldKind};
 use crate::parser::{attrs, KeywordToken, TrySet};
-use crate::codegen::sanitization::TRAIT_NAME;
 
-use quote::{quote, ToTokens, format_ident};
-use proc_macro2::{TokenStream, Span};
+use proc_macro2::{Span, TokenStream};
+use quote::{format_ident, quote, ToTokens};
 use syn::{Ident, Type};
 
 #[derive(Debug, Clone)]
@@ -49,7 +49,7 @@ impl Imports {
     }
 
     pub fn args_type(&self, type_name: &Ident) -> (TokenStream, TokenStream) {
-        let empty = quote!{};
+        let empty = quote! {};
         match self {
             Imports::None => (quote! { () }, empty),
             Imports::List(_, types) => {
@@ -58,7 +58,7 @@ impl Imports {
                     quote! {
                         (#(#types,)*)
                     },
-                    empty
+                    empty,
                 )
             }
             Imports::Tuple(_, ty) => (ty.to_token_stream(), empty),
@@ -68,29 +68,33 @@ impl Imports {
 }
 
 fn arg_type_name(ty_name: &Ident) -> Ident {
-    format_ident!("{}BinReadArgs", ty_name, span=Span::mixed_site())
+    format_ident!("{}BinReadArgs", ty_name, span = Span::mixed_site())
 }
 
-fn generate_named_arg_type(ty_name: &Ident, names: &[Ident], tys: &[Type]) -> (TokenStream, TokenStream) {
-    let fields: Vec<BuilderField> = names.iter()
-            .zip(tys.iter())
-            .map(|(name, ty)| {
-                BuilderField {
-                    name: name.clone(),
-                    ty: ty.clone(),
-                    kind: BuilderFieldKind::Required
-                }
-            })
-            .collect();
+fn generate_named_arg_type(
+    ty_name: &Ident,
+    names: &[Ident],
+    tys: &[Type],
+) -> (TokenStream, TokenStream) {
+    let fields: Vec<BuilderField> = names
+        .iter()
+        .zip(tys.iter())
+        .map(|(name, ty)| BuilderField {
+            name: name.clone(),
+            ty: ty.clone(),
+            kind: BuilderFieldKind::Required,
+        })
+        .collect();
 
-    let builder_ident = format_ident!("{}BinReadArgBuilder", ty_name, span=Span::mixed_site());
+    let builder_ident = format_ident!("{}BinReadArgBuilder", ty_name, span = Span::mixed_site());
     let result_name = arg_type_name(ty_name);
 
     let type_definition = Builder {
         builder_name: &builder_ident,
         result_name: &result_name,
-        fields: &fields
-    }.generate();
+        fields: &fields,
+    }
+    .generate();
 
     (result_name.to_token_stream(), type_definition)
 }

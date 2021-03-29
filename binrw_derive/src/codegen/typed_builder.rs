@@ -1,14 +1,12 @@
-use syn::{Ident, Type};
-use quote::{quote, ToTokens};
 use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use syn::{Ident, Type};
 
 use crate::codegen::sanitization::*;
 
 pub(crate) enum BuilderFieldKind {
     Required,
-    Optional {
-        default: syn::Expr,
-    },
+    Optional { default: syn::Expr },
 }
 
 pub(crate) struct BuilderField {
@@ -75,24 +73,27 @@ impl<'a> Builder<'a> {
     }
 
     fn generate_builder_fields(&self) -> TokenStream {
-        let fields = self.fields.iter().map(|field| field.generate_builder_field());
+        let fields = self
+            .fields
+            .iter()
+            .map(|field| field.generate_builder_field());
         quote!(
             #( #fields )*
         )
     }
 
     fn generate_result_fields(&self) -> TokenStream {
-        let fields = self.fields.iter().map(|field| field.generate_result_field());
+        let fields = self
+            .fields
+            .iter()
+            .map(|field| field.generate_result_field());
         quote!(
             #( #fields )*
         )
     }
 
     fn generate_generics(&self) -> Vec<Ident> {
-        self.fields
-            .iter()
-            .map(BuilderField::as_generic)
-            .collect()
+        self.fields.iter().map(BuilderField::as_generic).collect()
     }
 
     fn generate_builder_initial(&self) -> TokenStream {
@@ -127,7 +128,8 @@ impl<'a> Builder<'a> {
 
                 // The generics required for the builder should be generic for all parameters
                 // except the current field, which is set to its initial state
-                let mut required_generics: Vec<_> = generics.clone()
+                let mut required_generics: Vec<_> = generics
+                    .clone()
                     .into_iter()
                     .map(ToTokens::into_token_stream)
                     .collect();
@@ -143,8 +145,8 @@ impl<'a> Builder<'a> {
                 let ty = &field.ty;
 
                 let field_result = match field.kind {
-                    BuilderFieldKind::Required => quote!( Some(val) ),
-                    BuilderFieldKind::Optional { .. } => quote!( val ),
+                    BuilderFieldKind::Required => quote!(Some(val)),
+                    BuilderFieldKind::Optional { .. } => quote!(val),
                 };
 
                 quote!(
@@ -208,7 +210,7 @@ impl BuilderField {
             ),
             BuilderFieldKind::Optional { ref default } => quote!(
                 #name: #default,
-            )
+            ),
         }
     }
 

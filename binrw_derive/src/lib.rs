@@ -7,7 +7,7 @@ mod parser;
 use codegen::generate_impl;
 use parser::{is_binread_attr, Input, ParseResult};
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
@@ -41,11 +41,13 @@ pub fn test_typed_builder(_: TokenStream) -> TokenStream {
                 name: format_ident!("field2"),
                 ty: syn::parse_quote!(u16),
                 kind: BuilderFieldKind::Optional {
-                    default: syn::parse_quote!(5)
+                    default: syn::parse_quote!(5),
                 },
-            }
+            },
         ],
-    }.generate().into()
+    }
+    .generate()
+    .into()
 }
 
 fn clean_field_attrs(
