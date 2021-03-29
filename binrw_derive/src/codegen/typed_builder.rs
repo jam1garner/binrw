@@ -37,7 +37,7 @@ impl<'a> Builder<'a> {
         let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
         quote!(
-            #[derive(Debug)]
+            #[derive(Debug, Clone)]
             pub struct #name {
                 #fields
             }

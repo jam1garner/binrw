@@ -32,32 +32,32 @@ macro_rules! from_trait {
 }
 
 ident_str! {
-    pub(super) TRAIT_NAME = from_trait!();
-    pub(super) BIN_ERROR = from_crate!(Error);
-    pub(super) OPTIONS = from_crate!(ReadOptions);
-    pub(super) READ_TRAIT = from_crate!(io::Read);
-    pub(super) SEEK_TRAIT = from_crate!(io::Seek);
-    pub(super) SEEK_FROM = from_crate!(io::SeekFrom);
-    pub(super) BIN_RESULT = from_crate!(BinResult);
-    pub(super) ENDIAN_ENUM = from_crate!(Endian);
-    pub(super) READ_METHOD = from_trait!(read_options);
-    pub(super) AFTER_PARSE = from_trait!(after_parse);
-    pub(super) READER = "__binrw_generated_var_reader";
-    pub(super) OPT = "__binrw_generated_var_options";
-    pub(super) ARGS = "__binrw_generated_var_arguments";
-    pub(super) SAVED_POSITION = "__binrw_generated_saved_position";
-    pub(super) ASSERT_MAGIC = from_crate!(__private::magic);
-    pub(super) ASSERT = from_crate!(__private::assert);
-    pub(super) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
-    pub(super) COERCE_FN = from_crate!(__private::coerce_fn);
-    pub(super) TRY_AFTER_PARSE = from_crate!(__private::try_after_parse);
-    pub(super) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
-    pub(super) SATISFIED = from_crate!(Satisfied);
-    pub(super) NEEDED = from_crate!(Needed);
-    pub(super) OPTIONAL = from_crate!(Optional);
-    pub(super) TEMP = "__binrw_temp";
-    pub(super) POS = "__binrw_generated_position_temp";
-    pub(super) ERROR_BASKET = "__binrw_generated_error_basket";
+    pub(crate) TRAIT_NAME = from_trait!();
+    pub(crate) BIN_ERROR = from_crate!(Error);
+    pub(crate) OPTIONS = from_crate!(ReadOptions);
+    pub(crate) READ_TRAIT = from_crate!(io::Read);
+    pub(crate) SEEK_TRAIT = from_crate!(io::Seek);
+    pub(crate) SEEK_FROM = from_crate!(io::SeekFrom);
+    pub(crate) BIN_RESULT = from_crate!(BinResult);
+    pub(crate) ENDIAN_ENUM = from_crate!(Endian);
+    pub(crate) READ_METHOD = from_trait!(read_options);
+    pub(crate) AFTER_PARSE = from_trait!(after_parse);
+    pub(crate) READER = "__binrw_generated_var_reader";
+    pub(crate) OPT = "__binrw_generated_var_options";
+    pub(crate) ARGS = "__binrw_generated_var_arguments";
+    pub(crate) SAVED_POSITION = "__binrw_generated_saved_position";
+    pub(crate) ASSERT_MAGIC = from_crate!(__private::magic);
+    pub(crate) ASSERT = from_crate!(__private::assert);
+    pub(crate) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
+    pub(crate) COERCE_FN = from_crate!(__private::coerce_fn);
+    pub(crate) TRY_AFTER_PARSE = from_crate!(__private::try_after_parse);
+    pub(crate) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
+    pub(crate) SATISFIED = from_crate!(Satisfied);
+    pub(crate) NEEDED = from_crate!(Needed);
+    pub(crate) OPTIONAL = from_crate!(Optional);
+    pub(crate) TEMP = "__binrw_temp";
+    pub(crate) POS = "__binrw_generated_position_temp";
+    pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";
 }
 
 pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {

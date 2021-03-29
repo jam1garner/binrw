@@ -6,8 +6,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
 
-pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>) -> TokenStream {
-    let prelude = get_prelude(input);
+pub(super) fn generate_unit_struct(input: &Input, name: Option<&Ident>, variant_ident: Option<&Ident>) -> TokenStream {
+    let prelude = get_prelude(input, name);
     let return_type = get_return_type(variant_ident);
     quote! {
         #prelude
@@ -15,9 +15,9 @@ pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>)
     }
 }
 
-pub(super) fn generate_struct(input: &Input, st: &Struct) -> TokenStream {
+pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(input, st)
-        .read_fields()
+        .read_fields(name)
         .add_assertions(core::iter::empty())
         .return_value(None)
         .finish()
@@ -56,8 +56,8 @@ impl<'input> StructGenerator<'input> {
         self
     }
 
-    pub(super) fn read_fields(mut self) -> Self {
-        let prelude = get_prelude(self.input);
+    pub(super) fn read_fields(mut self, name: Option<&Ident>) -> Self {
+        let prelude = get_prelude(self.input, name);
         let read_fields = self.st.fields.iter().map(|field| generate_field(field));
         let after_parse = {
             let after_parse = self
@@ -416,9 +416,9 @@ fn get_passed_args(args: &PassedArgs) -> Option<TokenStream> {
     }
 }
 
-fn get_prelude(input: &Input) -> TokenStream {
+fn get_prelude(input: &Input, name: Option<&Ident>) -> TokenStream {
     PreludeGenerator::new(input)
-        .add_imports()
+        .add_imports(name)
         .add_options()
         .add_magic_pre_assertion()
         .finish()
