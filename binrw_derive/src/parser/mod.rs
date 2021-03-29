@@ -340,7 +340,7 @@ mod tests {
     try_error!(conflicting_keyword_passed_args: "conflicting args keyword" {
         struct Foo {
             a: i32,
-            #[br(args(a), args_tuple = (a, ))]
+            #[br(args(a: 3), args_tuple = (a, ))]
             b: i32,
         }
     });

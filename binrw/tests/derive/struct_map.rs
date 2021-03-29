@@ -13,7 +13,12 @@ fn map_closure() {
         a: i16,
     }
 
-    let result = Test::read_args(&mut Cursor::new("\x01"), (5,)).unwrap();
+    let result = Test::read_args(
+        &mut Cursor::new("\x01"),
+        <Test as BinRead>::Args::builder()
+            .extra(5)
+            .finalize()
+    ).unwrap();
     assert_eq!(result.a, 6);
 }
 

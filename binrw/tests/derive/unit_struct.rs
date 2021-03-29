@@ -17,8 +17,18 @@ fn unit_struct_import_pre_assert() {
     #[br(import(succeed: bool), pre_assert(succeed))]
     struct Test;
 
-    Test::read_args(&mut Cursor::new(b""), (true,)).unwrap();
+    Test::read_args(
+        &mut Cursor::new(b""),
+        <Test as BinRead>::Args::builder()
+            .succeed(true)
+            .finalize()
+    ).unwrap();
     let error =
-        Test::read_args(&mut Cursor::new(b""), (false,)).expect_err("accepted negative pre-assert");
+        Test::read_args(
+            &mut Cursor::new(b""),
+            <Test as BinRead>::Args::builder()
+                .succeed(false)
+                .finalize()
+        ).expect_err("accepted negative pre-assert");
     assert!(matches!(error, binrw::Error::AssertFail { .. }));
 }

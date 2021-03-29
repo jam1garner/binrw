@@ -283,7 +283,7 @@
 //! struct Message {
 //!     ty: u8,
 //!     len: u8,
-//!     #[br(args(ty))]
+//!     #[br(args(ty: ty))]
 //!     data: Command
 //! }
 //!
@@ -320,7 +320,7 @@
 //! #[derive(BinRead)]
 //! struct ArgsTets {
 //!     val: u32,
-//!     #[br(args(val + 3, "test"))]
+//!     #[br(args(val1: val + 3, val2: "test"))]
 //!     test: ImportTest
 //! }
 //! ```

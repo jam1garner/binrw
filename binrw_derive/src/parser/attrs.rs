@@ -1,12 +1,12 @@
 use super::{
     keywords as kw,
-    meta_types::{IdentPatType, MetaExpr, MetaList, MetaLit, MetaType, MetaValue},
+    meta_types::{IdentPatType, IdentColonExpr, MetaExpr, MetaList, MetaLit, MetaType, MetaValue},
 };
 use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
-pub(crate) type Args = MetaList<kw::args, Expr>;
+pub(crate) type Args = MetaList<kw::args, IdentColonExpr>;
 pub(crate) type ArgsTuple = MetaExpr<kw::args_tuple>;
 pub(crate) type AssertLike<K> = MetaList<K, Expr>;
 pub(crate) type Assert = AssertLike<kw::assert>;
@@ -40,3 +40,6 @@ pub(crate) type SeekBefore = MetaExpr<kw::seek_before>;
 pub(crate) type Temp = kw::temp;
 pub(crate) type Try = Token![try];
 pub(crate) type TryMap = MetaExpr<kw::try_map>;
+
+// Tuple-style args
+//pub(crate) type Args = MetaList<kw::args, Expr>;

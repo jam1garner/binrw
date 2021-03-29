@@ -97,15 +97,19 @@ fn generate_named_arg_type(ty_name: &Ident, names: &[Ident], tys: &[Type]) -> (T
 
 impl From<attrs::Import> for Imports {
     fn from(value: attrs::Import) -> Self {
-        let (idents, tys) = value
-            .fields
-            .iter()
-            .cloned()
-            .map(|import_arg| (import_arg.ident, import_arg.ty))
-            .unzip();
+        if value.fields.is_empty() {
+            Self::None
+        } else {
+            let (idents, tys) = value
+                .fields
+                .iter()
+                .cloned()
+                .map(|import_arg| (import_arg.ident, import_arg.ty))
+                .unzip();
 
-        // Change this to Self::List to use old tuple args
-        Self::Named(idents, tys)
+            // Change this to Self::List to use old tuple args
+            Self::Named(idents, tys)
+        }
     }
 }
 

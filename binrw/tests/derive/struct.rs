@@ -15,7 +15,7 @@ fn all_the_things() {
     struct Test {
         extra_entry_count: u32,
 
-        #[br(count = extra_entry_count + 1, args(0x69))]
+        #[br(count = extra_entry_count + 1, args(extra_val: 0x69))]
         entries: Vec<FilePtr<u32, TestEntry>>,
 
         #[br(default)]
@@ -203,9 +203,19 @@ fn if_alternate() {
         a: u8,
     }
 
-    let result = Test::read_args(&mut Cursor::new(b"\x01"), (true,)).unwrap();
+    let result = Test::read_args(
+        &mut Cursor::new(b"\x01"),
+        <Test as BinRead>::Args::builder()
+            .try_read(true)
+            .finalize()
+    ).unwrap();
     assert_eq!(result.a, 1);
-    let result = Test::read_args(&mut Cursor::new(b"\x01"), (false,)).unwrap();
+    let result = Test::read_args(
+        &mut Cursor::new(b"\x01"),
+        <Test as BinRead>::Args::builder()
+            .try_read(false)
+            .finalize()
+    ).unwrap();
     assert_eq!(result.a, 10);
 }
 
@@ -318,6 +328,7 @@ fn parse_with_default_args() {
 
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {
+        #[br(args(in_a: 0))]
         #[br(parse_with = InnerImport::read_options)]
         inner: InnerImport,
         #[br(parse_with = InnerImportTuple::read_options)]

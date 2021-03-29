@@ -7,6 +7,7 @@ pub(crate) enum PassedArgs {
     None,
     List(Vec<TokenStream>),
     Tuple(TokenStream),
+    Named(Vec<(syn::Ident, syn::Expr)>),
 }
 
 impl PassedArgs {
@@ -23,14 +24,27 @@ impl Default for PassedArgs {
 
 impl From<attrs::Args> for PassedArgs {
     fn from(args: attrs::Args) -> Self {
-        Self::List(
+        Self::Named(
             args.fields
-                .iter()
-                .map(ToTokens::into_token_stream)
+                .into_iter()
+                .map(Into::into)
                 .collect(),
         )
     }
 }
+
+// Tuple-style args
+//
+//impl From<attrs::Args> for PassedArgs {
+//    fn from(args: attrs::Args) -> Self {
+//        Self::List(
+//            args.fields
+//                .iter()
+//                .map(ToTokens::into_token_stream)
+//                .collect(),
+//        )
+//    }
+//}
 
 impl From<attrs::ArgsTuple> for PassedArgs {
     fn from(args: attrs::ArgsTuple) -> Self {

@@ -124,6 +124,31 @@ impl Parse for IdentPatType {
     }
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct IdentColonExpr {
+    pub(crate) ident: syn::Ident,
+    pub(crate) colon_token: Token![:],
+    pub(crate) expr: syn::Expr,
+}
+
+impl From<IdentColonExpr> for (syn::Ident, syn::Expr) {
+    fn from(x: IdentColonExpr) -> Self {
+        let IdentColonExpr { ident, expr, .. } = x;
+
+        (ident, expr)
+    }
+}
+
+impl Parse for IdentColonExpr {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        Ok(Self {
+            ident: input.parse()?,
+            colon_token: input.parse()?,
+            expr: input.parse()?,
+        })
+    }
+}
+
 pub(crate) struct MetaAttrList<P>(Fields<P>);
 
 impl<P> MetaAttrList<P> {

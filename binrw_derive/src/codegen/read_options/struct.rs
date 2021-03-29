@@ -279,7 +279,7 @@ impl<'field> FieldGenerator<'field> {
 
     fn prefix_args_and_options(mut self) -> Self {
         let args = self.args_var.as_ref().map(|args_var| {
-            let args = get_passed_args(&self.field.args);
+            let args = get_passed_args(&self.field);
             quote! {
                 let #args_var = #args;
             }
@@ -408,8 +408,23 @@ fn get_args_argument(args_var: &Option<Ident>) -> TokenStream {
     )
 }
 
-fn get_passed_args(args: &PassedArgs) -> Option<TokenStream> {
+fn get_passed_args(field: &StructField) -> Option<TokenStream> {
+    let args = &field.args;
     match args {
+        PassedArgs::Named(fields) => Some({
+            if fields.is_empty() {
+                return None
+            }
+            let ty = &field.ty;
+            let (names, exprs): (Vec<_>, Vec<_>) = fields.into_iter().cloned().unzip();
+            quote!(
+                <#ty as #TRAIT_NAME>::Args::builder()
+                    #(
+                        .#names( #exprs )
+                     )*
+                    .finalize()
+            )
+        }),
         PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
         PassedArgs::Tuple(tuple) => Some(tuple.clone()),
         PassedArgs::None => None,
