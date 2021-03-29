@@ -38,7 +38,7 @@ impl<'a> Builder<'a> {
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
         quote!(
             #[derive(Clone)]
-            pub struct #name {
+            pub(crate) struct #name {
                 #fields
             }
 
@@ -51,7 +51,7 @@ impl<'a> Builder<'a> {
             #( #setters )*
 
             #[allow(non_camel_case_types)]
-            pub struct #builder_name < #( #generics ),* > {
+            pub(crate) struct #builder_name < #( #generics ),* > {
                 #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
