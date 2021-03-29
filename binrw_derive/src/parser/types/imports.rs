@@ -1,5 +1,5 @@
-use crate::codegen::typed_builder::{Builder, BuilderField, BuilderFieldKind};
-use crate::parser::{attrs, KeywordToken, TrySet};
+use crate::codegen::typed_builder::{Builder, BuilderField};
+use crate::parser::{attrs, meta_types::NamedImport, KeywordToken, TrySet};
 
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
@@ -11,7 +11,7 @@ pub(crate) enum Imports {
     #[allow(dead_code)]
     List(Vec<Ident>, Vec<Type>),
     Tuple(Ident, Box<Type>),
-    Named(Vec<Ident>, Vec<Type>),
+    Named(Vec<NamedImport>),
 }
 
 impl Default for Imports {
@@ -37,8 +37,9 @@ impl Imports {
             Imports::Tuple(ident, _) => Some(quote! {
                 mut #ident
             }),
-            Imports::Named(idents, _) => type_name.map(|type_name| {
+            Imports::Named(args) => type_name.map(|type_name| {
                 let args_ty_name = arg_type_name(type_name);
+                let idents = args.iter().map(|x| &x.ident);
                 quote! {
                     #args_ty_name {
                         #(#idents),*
@@ -62,7 +63,7 @@ impl Imports {
                 )
             }
             Imports::Tuple(_, ty) => (ty.to_token_stream(), empty),
-            Imports::Named(names, tys) => generate_named_arg_type(type_name, names, tys),
+            Imports::Named(args) => generate_named_arg_type(type_name, args),
         }
     }
 }
@@ -71,20 +72,8 @@ fn arg_type_name(ty_name: &Ident) -> Ident {
     format_ident!("{}BinReadArgs", ty_name, span = Span::mixed_site())
 }
 
-fn generate_named_arg_type(
-    ty_name: &Ident,
-    names: &[Ident],
-    tys: &[Type],
-) -> (TokenStream, TokenStream) {
-    let fields: Vec<BuilderField> = names
-        .iter()
-        .zip(tys.iter())
-        .map(|(name, ty)| BuilderField {
-            name: name.clone(),
-            ty: ty.clone(),
-            kind: BuilderFieldKind::Required,
-        })
-        .collect();
+fn generate_named_arg_type(ty_name: &Ident, args: &[NamedImport]) -> (TokenStream, TokenStream) {
+    let fields: Vec<BuilderField> = args.iter().map(Into::into).collect();
 
     let builder_ident = format_ident!("{}BinReadArgBuilder", ty_name, span = Span::mixed_site());
     let result_name = arg_type_name(ty_name);
@@ -104,15 +93,7 @@ impl From<attrs::Import> for Imports {
         if value.fields.is_empty() {
             Self::None
         } else {
-            let (idents, tys) = value
-                .fields
-                .iter()
-                .cloned()
-                .map(|import_arg| (import_arg.ident, import_arg.ty))
-                .unzip();
-
-            // Change this to Self::List to use old tuple args
-            Self::Named(idents, tys)
+            Self::Named(value.fields.iter().cloned().collect())
         }
     }
 }

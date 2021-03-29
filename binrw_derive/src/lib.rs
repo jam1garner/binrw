@@ -5,9 +5,10 @@ mod codegen;
 mod parser;
 
 use codegen::generate_impl;
+
 use parser::{is_binread_attr, Input, ParseResult};
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
+use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]

@@ -108,38 +108,52 @@ impl<Keyword: syn::token::Token + KeywordToken, ItemType> KeywordToken
 // (2) No attributes;
 // (3) Only allows an ident on the LHS instead of any `syn::Pat`.
 #[derive(Debug, Clone)]
-pub(crate) struct IdentPatType {
+pub(crate) struct NamedImport {
     pub(crate) ident: syn::Ident,
     pub(crate) colon_token: Token![:],
     pub(crate) ty: syn::Type,
+    pub(crate) eq: Option<Token![=]>,
+    pub(crate) default: Option<Box<syn::Expr>>,
 }
 
-impl Parse for IdentPatType {
+impl Parse for NamedImport {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        Ok(IdentPatType {
-            ident: input.parse()?,
-            colon_token: input.parse()?,
-            ty: input.parse()?,
+        let ident = input.parse()?;
+        let colon_token = input.parse()?;
+        let ty = input.parse()?;
+        let lookahead = input.lookahead1();
+        let (eq, default) = if lookahead.peek(Token![=]) {
+            (Some(input.parse()?), Some(input.parse()?))
+        } else {
+            (None, None)
+        };
+
+        Ok(NamedImport {
+            ident,
+            colon_token,
+            ty,
+            eq,
+            default,
         })
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct IdentColonExpr {
+pub(crate) struct NamedArg {
     pub(crate) ident: syn::Ident,
     pub(crate) colon_token: Token![:],
     pub(crate) expr: syn::Expr,
 }
 
-impl From<IdentColonExpr> for (syn::Ident, syn::Expr) {
-    fn from(x: IdentColonExpr) -> Self {
-        let IdentColonExpr { ident, expr, .. } = x;
+impl From<NamedArg> for (syn::Ident, syn::Expr) {
+    fn from(x: NamedArg) -> Self {
+        let NamedArg { ident, expr, .. } = x;
 
         (ident, expr)
     }
 }
 
-impl Parse for IdentColonExpr {
+impl Parse for NamedArg {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         Ok(Self {
             ident: input.parse()?,
@@ -257,10 +271,10 @@ mod tests {
         );
     }
 
-    try_parse!(ident_pat_type, IdentPatType, { foo: u8 });
-    try_parse_fail!(ident_pat_type_missing_ident, IdentPatType, { : 3u8 });
-    try_parse_fail!(ident_pat_type_missing_ty, IdentPatType, { foo: });
-    try_parse_fail!(ident_pat_type_wrong_ty_type, IdentPatType, { foo: 3u8 });
+    try_parse!(ident_pat_type, NamedImport, { foo: u8 });
+    try_parse_fail!(ident_pat_type_missing_ident, NamedImport, { : 3u8 });
+    try_parse_fail!(ident_pat_type_missing_ty, NamedImport, { foo: });
+    try_parse_fail!(ident_pat_type_wrong_ty_type, NamedImport, { foo: 3u8 });
 
     try_parse!(meta_attr_list, MetaAttrListTest, { (1u8, 2u8, 3u8) });
     try_parse!(meta_attr_list_empty, MetaAttrListTest, { () });

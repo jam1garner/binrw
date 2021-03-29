@@ -4,6 +4,7 @@ use syn::{Ident, Type};
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
+use crate::parser::meta_types::NamedImport;
 
 pub(crate) enum BuilderFieldKind {
     Required,
@@ -74,20 +75,14 @@ impl<'a> Builder<'a> {
     }
 
     fn generate_builder_fields(&self) -> TokenStream {
-        let fields = self
-            .fields
-            .iter()
-            .map(BuilderField::generate_builder_field);
+        let fields = self.fields.iter().map(BuilderField::generate_builder_field);
         quote!(
             #( #fields )*
         )
     }
 
     fn generate_result_fields(&self) -> TokenStream {
-        let fields = self
-            .fields
-            .iter()
-            .map(BuilderField::generate_result_field);
+        let fields = self.fields.iter().map(BuilderField::generate_result_field);
         quote!(
             #( #fields )*
         )
@@ -174,6 +169,25 @@ impl<'a> Builder<'a> {
                 )
             })
             .collect()
+    }
+}
+
+impl From<&NamedImport> for BuilderField {
+    fn from(import: &NamedImport) -> Self {
+        let name = import.ident.clone();
+        let ty = import.ty.clone();
+
+        // if no default is provided, mark as required
+        let kind = import
+            .default
+            .as_ref()
+            .map_or(BuilderFieldKind::Required, |default| {
+                BuilderFieldKind::Optional {
+                    default: default.clone(),
+                }
+            });
+
+        BuilderField { name, ty, kind }
     }
 }
 

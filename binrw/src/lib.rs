@@ -167,8 +167,6 @@ pub use binrw_derive::BinRead;
 /// of `#[derive(BinRead)]` to enable [temporary variables](attribute#temp).
 pub use binrw_derive::derive_binread;
 
-pub use binrw_derive::test_typed_builder;
-
 mod binread_impls;
 pub use binread_impls::*;
 
