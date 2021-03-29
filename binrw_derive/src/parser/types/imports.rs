@@ -1,4 +1,3 @@
-use crate::codegen::sanitization::TRAIT_NAME;
 use crate::codegen::typed_builder::{Builder, BuilderField, BuilderFieldKind};
 use crate::parser::{attrs, KeywordToken, TrySet};
 
@@ -9,6 +8,7 @@ use syn::{Ident, Type};
 #[derive(Debug, Clone)]
 pub(crate) enum Imports {
     None,
+    #[allow(dead_code)]
     List(Vec<Ident>, Vec<Type>),
     Tuple(Ident, Box<Type>),
     Named(Vec<Ident>, Vec<Type>),

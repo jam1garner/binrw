@@ -5,6 +5,7 @@ use quote::ToTokens;
 #[derive(Debug, Clone)]
 pub(crate) enum PassedArgs {
     None,
+    #[allow(dead_code)]
     List(Vec<TokenStream>),
     Tuple(TokenStream),
     Named(Vec<(syn::Ident, syn::Expr)>),
