@@ -420,7 +420,7 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
                 return None;
             }
             let ty = &field.ty;
-            let (names, exprs): (Vec<_>, Vec<_>) = fields.into_iter().cloned().unzip();
+            let (names, exprs): (Vec<_>, Vec<_>) = fields.iter().cloned().unzip();
             quote!(
                 <#ty as #TRAIT_NAME>::Args::builder()
                     #(

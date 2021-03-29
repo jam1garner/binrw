@@ -2,11 +2,12 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{Ident, Type};
 
+#[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 
 pub(crate) enum BuilderFieldKind {
     Required,
-    Optional { default: syn::Expr },
+    Optional { default: Box<syn::Expr> },
 }
 
 pub(crate) struct BuilderField {
@@ -76,7 +77,7 @@ impl<'a> Builder<'a> {
         let fields = self
             .fields
             .iter()
-            .map(|field| field.generate_builder_field());
+            .map(BuilderField::generate_builder_field);
         quote!(
             #( #fields )*
         )
@@ -86,7 +87,7 @@ impl<'a> Builder<'a> {
         let fields = self
             .fields
             .iter()
-            .map(|field| field.generate_result_field());
+            .map(BuilderField::generate_result_field);
         quote!(
             #( #fields )*
         )
@@ -129,7 +130,6 @@ impl<'a> Builder<'a> {
                 // The generics required for the builder should be generic for all parameters
                 // except the current field, which is set to its initial state
                 let mut required_generics: Vec<_> = generics
-                    .clone()
                     .into_iter()
                     .map(ToTokens::into_token_stream)
                     .collect();
