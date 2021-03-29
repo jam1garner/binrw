@@ -50,11 +50,13 @@ impl<'a> Builder<'a> {
 
             #( #setters )*
 
+            #[allow(non_camel_case_types)]
             pub struct #builder_name < #( #generics ),* > {
                 #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
 
+            #[allow(non_camel_case_types)]
             impl< #( #generics : #satisfied ),* > #builder_name < #( #generics ),* > {
                 pub fn finalize(self) -> #name {
                     let #builder_name {
@@ -145,6 +147,7 @@ impl<'a> Builder<'a> {
                 };
 
                 quote!(
+                    #[allow(non_camel_case_types)]
                     impl< #( #generic_params ),* > #builder_name < #( #required_generics ),* > {
                         pub fn #field_name(
                             self, val: #ty
