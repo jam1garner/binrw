@@ -129,6 +129,7 @@
 // because binrw knows of no crate called "binrw".
 // This causes binrw to associate *itself* as binrw,
 // meaning it makes access via ::binrw work.
+#[allow(unused_extern_crates)]
 extern crate self as binrw;
 
 #[cfg(feature = "std")]
