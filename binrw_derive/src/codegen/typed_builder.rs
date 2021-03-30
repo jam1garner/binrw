@@ -112,66 +112,62 @@ impl<'a> Builder<'a> {
             .collect()
     }
 
-    fn generate_setters(&self) -> Vec<TokenStream> {
+    fn generate_setters<'builder>(&'builder self) -> impl Iterator<Item = TokenStream> + 'builder {
         let builder_name = self.builder_name;
-        self.fields
-            .iter()
-            .enumerate()
-            .map(|(i, field)| {
-                let generics = self.generate_generics();
+        self.fields.iter().enumerate().map(move |(i, field)| {
+            let generics = self.generate_generics();
 
-                // The current field is not generic
-                let mut generic_params = generics.clone();
-                generic_params.remove(i);
+            // The current field is not generic
+            let mut generic_params = generics.clone();
+            generic_params.remove(i);
 
-                // The generics required for the builder should be generic for all parameters
-                // except the current field, which is set to its initial state
-                let mut required_generics: Vec<_> = generics
-                    .into_iter()
-                    .map(ToTokens::into_token_stream)
-                    .collect();
-                required_generics[i] = field.initial_generic();
+            // The generics required for the builder should be generic for all parameters
+            // except the current field, which is set to its initial state
+            let mut required_generics: Vec<_> = generics
+                .into_iter()
+                .map(ToTokens::into_token_stream)
+                .collect();
+            required_generics[i] = field.initial_generic();
 
-                // the resulting generics should be the same as before, but with the type for
-                // the current field being marked as satisfied.
-                let mut resulting_generics = required_generics.clone();
-                resulting_generics[i] = quote!( #SATISFIED );
+            // the resulting generics should be the same as before, but with the type for
+            // the current field being marked as satisfied.
+            let mut resulting_generics = required_generics.clone();
+            resulting_generics[i] = quote!( #SATISFIED );
 
-                let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
-                let field_name = &field.name;
-                let ty = &field.ty;
+            let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
+            let field_name = &field.name;
+            let ty = &field.ty;
 
-                let field_result = match field.kind {
-                    BuilderFieldKind::Required => quote!(Some(val)),
-                    BuilderFieldKind::Optional { .. } => quote!(val),
-                };
+            let field_result = match field.kind {
+                BuilderFieldKind::Required => quote!(Some(val)),
+                BuilderFieldKind::Optional { .. } => quote!(val),
+            };
 
-                quote!(
-                    #[allow(non_camel_case_types)]
-                    impl< #( #generic_params ),* > #builder_name < #( #required_generics ),* > {
-                        pub fn #field_name(
-                            self, val: #ty
-                        ) -> #builder_name < #( #resulting_generics ),* > {
-                            let #builder_name {
-                                #(
-                                    #field_names,
-                                )*
-                                ..
-                            } = self;
+            quote!(
+                #[allow(non_camel_case_types)]
+                impl< #( #generic_params ),* > #builder_name < #( #required_generics ),* > {
+                    pub fn #field_name(
+                        self, val: #ty
+                    ) -> #builder_name < #( #resulting_generics ),* > {
+                        let #builder_name {
+                            #(
+                                #field_names,
+                            )*
+                            ..
+                        } = self;
 
-                            let #field_name = #field_result;
+                        let #field_name = #field_result;
 
-                            #builder_name {
-                                #(
-                                    #field_names,
-                                )*
-                                __bind_generics: ::core::marker::PhantomData
-                            }
+                        #builder_name {
+                            #(
+                                #field_names,
+                            )*
+                            __bind_generics: ::core::marker::PhantomData
                         }
                     }
-                )
-            })
-            .collect()
+                }
+            )
+        })
     }
 }
 
