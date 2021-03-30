@@ -124,6 +124,13 @@
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)]
 
+// binrw_derive expects to be able to access items in binrw via
+// `::binrw::<whatever>`. Normally, this would fail in this crate
+// because binrw knows of no crate called "binrw".
+// This causes binrw to associate *itself* as binrw,
+// meaning it makes access via ::binrw work.
+extern crate self as binrw;
+
 #[cfg(feature = "std")]
 use std as alloc;
 
