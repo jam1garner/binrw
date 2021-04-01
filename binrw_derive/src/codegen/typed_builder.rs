@@ -48,6 +48,14 @@ impl<'a> Builder<'a> {
                 }
             }
 
+            impl #BINRW_NAMED_ARGS for #name {
+                type Builder = #builder_name < #( #initial_generics ),* >;
+
+                fn builder() -> Self::Builder {
+                    Self::builder()
+                }
+            }
+
             #( #setters )*
 
             #[allow(non_camel_case_types)]
