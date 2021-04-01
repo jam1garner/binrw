@@ -33,7 +33,7 @@ impl<'a> Builder<'a> {
         let generics = self.generate_generics();
         let initial_generics = self.generate_initial_generics();
         let setters = self.generate_setters();
-        let satisfied = std::iter::repeat(SATISFIED_OR_OPTIONAL);
+        let satisfied = &SATISFIED_OR_OPTIONAL;
         let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
         quote!(

@@ -25,7 +25,7 @@ pub(crate) fn generate_impl(
             binread_input.imports().args_type(&derive_input.ident),
             error.to_compile_error(),
         ),
-        ParseResult::Err(error) => ((quote! { () }, quote!()), error.to_compile_error()),
+        ParseResult::Err(error) => ((quote! { () }, None), error.to_compile_error()),
     };
 
     let name = &derive_input.ident;

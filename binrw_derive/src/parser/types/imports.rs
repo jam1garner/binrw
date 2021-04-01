@@ -49,20 +49,19 @@ impl Imports {
         }
     }
 
-    pub fn args_type(&self, type_name: &Ident) -> (TokenStream, TokenStream) {
-        let empty = quote! {};
+    pub fn args_type(&self, type_name: &Ident) -> (TokenStream, Option<TokenStream>) {
         match self {
-            Imports::None => (quote! { () }, empty),
+            Imports::None => (quote! { () }, None),
             Imports::List(_, types) => {
                 let types = types.iter();
                 (
                     quote! {
                         (#(#types,)*)
                     },
-                    empty,
+                    None,
                 )
             }
-            Imports::Tuple(_, ty) => (ty.to_token_stream(), empty),
+            Imports::Tuple(_, ty) => (ty.to_token_stream(), None),
             Imports::Named(args) => generate_named_arg_type(type_name, args),
         }
     }
@@ -72,7 +71,10 @@ fn arg_type_name(ty_name: &Ident) -> Ident {
     format_ident!("{}BinReadArgs", ty_name, span = Span::mixed_site())
 }
 
-fn generate_named_arg_type(ty_name: &Ident, args: &[NamedImport]) -> (TokenStream, TokenStream) {
+fn generate_named_arg_type(
+    ty_name: &Ident,
+    args: &[NamedImport],
+) -> (TokenStream, Option<TokenStream>) {
     let fields: Vec<BuilderField> = args.iter().map(Into::into).collect();
 
     let builder_ident = format_ident!("{}BinReadArgBuilder", ty_name, span = Span::mixed_site());
@@ -85,7 +87,7 @@ fn generate_named_arg_type(ty_name: &Ident, args: &[NamedImport]) -> (TokenStrea
     }
     .generate();
 
-    (result_name.to_token_stream(), type_definition)
+    (result_name.to_token_stream(), Some(type_definition))
 }
 
 impl From<attrs::Import> for Imports {
