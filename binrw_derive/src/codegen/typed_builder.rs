@@ -4,7 +4,7 @@ use syn::{Ident, Type};
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::meta_types::NamedImport;
+use crate::parser::meta_types::IdentTypeMaybeDefault;
 
 pub(crate) enum BuilderFieldKind {
     Required,
@@ -179,8 +179,8 @@ impl<'a> Builder<'a> {
     }
 }
 
-impl From<&NamedImport> for BuilderField {
-    fn from(import: &NamedImport) -> Self {
+impl From<&IdentTypeMaybeDefault> for BuilderField {
+    fn from(import: &IdentTypeMaybeDefault) -> Self {
         let name = import.ident.clone();
         let ty = import.ty.clone();
 

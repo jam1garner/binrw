@@ -209,11 +209,8 @@ fn if_alternate() {
     )
     .unwrap();
     assert_eq!(result.a, 1);
-    let result = Test::read_args(
-        &mut Cursor::new(b"\x01"),
-        binrw::args!{ try_read: false }
-    )
-    .unwrap();
+    let result =
+        Test::read_args(&mut Cursor::new(b"\x01"), binrw::args! { try_read: false }).unwrap();
     assert_eq!(result.a, 10);
 }
 

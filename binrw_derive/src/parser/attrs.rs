@@ -1,12 +1,15 @@
 use super::{
     keywords as kw,
-    meta_types::{MetaExpr, MetaList, MetaLit, MetaType, MetaValue, NamedArg, NamedImport},
+    meta_types::{
+        FieldValue, IdentPatType, IdentTypeMaybeDefault, MetaExpr, MetaList, MetaLit, MetaType,
+        MetaValue,
+    },
 };
 use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
-pub(crate) type Args = MetaList<kw::args, NamedArg>;
+pub(crate) type Args = MetaList<kw::args, FieldValue>;
 pub(crate) type ArgsTuple = MetaExpr<kw::args_tuple>;
 pub(crate) type AssertLike<K> = MetaList<K, Expr>;
 pub(crate) type Assert = AssertLike<kw::assert>;
@@ -17,8 +20,8 @@ pub(crate) type Default = kw::default;
 pub(crate) type DerefNow = kw::deref_now;
 pub(crate) type If = MetaList<Token![if], Expr>;
 pub(crate) type Ignore = kw::ignore;
-pub(crate) type Import = MetaList<kw::import, NamedImport>;
-pub(crate) type ImportTuple = MetaValue<kw::import_tuple, NamedImport>;
+pub(crate) type Import = MetaList<kw::import, IdentTypeMaybeDefault>;
+pub(crate) type ImportTuple = MetaValue<kw::import_tuple, IdentPatType>;
 pub(crate) type IsBig = MetaExpr<kw::is_big>;
 pub(crate) type IsLittle = MetaExpr<kw::is_little>;
 pub(crate) type Little = kw::little;

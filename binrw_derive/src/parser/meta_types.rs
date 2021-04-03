@@ -108,7 +108,29 @@ impl<Keyword: syn::token::Token + KeywordToken, ItemType> KeywordToken
 // (2) No attributes;
 // (3) Only allows an ident on the LHS instead of any `syn::Pat`.
 #[derive(Debug, Clone)]
-pub(crate) struct NamedImport {
+pub(crate) struct IdentPatType {
+    pub(crate) ident: syn::Ident,
+    pub(crate) colon_token: Token![:],
+    pub(crate) ty: syn::Type,
+}
+
+impl Parse for IdentPatType {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        Ok(Self {
+            ident: input.parse()?,
+            colon_token: input.parse()?,
+            ty: input.parse()?,
+        })
+    }
+}
+
+// This is like `syn::PatType` except:
+// (1) Implements `Parse`;
+// (2) No attributes;
+// (3) Only allows an ident on the LHS instead of any `syn::Pat`.
+// (4) Optionally allows a `= $expr` following the type
+#[derive(Debug, Clone)]
+pub(crate) struct IdentTypeMaybeDefault {
     pub(crate) ident: syn::Ident,
     pub(crate) colon_token: Token![:],
     pub(crate) ty: syn::Type,
@@ -116,7 +138,7 @@ pub(crate) struct NamedImport {
     pub(crate) default: Option<Box<syn::Expr>>,
 }
 
-impl Parse for NamedImport {
+impl Parse for IdentTypeMaybeDefault {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
         let colon_token = input.parse()?;
@@ -128,7 +150,7 @@ impl Parse for NamedImport {
             (None, None)
         };
 
-        Ok(NamedImport {
+        Ok(Self {
             ident,
             colon_token,
             ty,
@@ -139,21 +161,21 @@ impl Parse for NamedImport {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct NamedArg {
+pub(crate) struct FieldValue {
     pub(crate) ident: syn::Ident,
     pub(crate) colon_token: Token![:],
     pub(crate) expr: syn::Expr,
 }
 
-impl From<NamedArg> for (syn::Ident, syn::Expr) {
-    fn from(x: NamedArg) -> Self {
-        let NamedArg { ident, expr, .. } = x;
+impl From<FieldValue> for (syn::Ident, syn::Expr) {
+    fn from(x: FieldValue) -> Self {
+        let FieldValue { ident, expr, .. } = x;
 
         (ident, expr)
     }
 }
 
-impl Parse for NamedArg {
+impl Parse for FieldValue {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         Ok(Self {
             ident: input.parse()?,
@@ -271,10 +293,16 @@ mod tests {
         );
     }
 
-    try_parse!(ident_pat_type, NamedImport, { foo: u8 });
-    try_parse_fail!(ident_pat_type_missing_ident, NamedImport, { : 3u8 });
-    try_parse_fail!(ident_pat_type_missing_ty, NamedImport, { foo: });
-    try_parse_fail!(ident_pat_type_wrong_ty_type, NamedImport, { foo: 3u8 });
+    try_parse!(ident_type_default, IdentTypeMaybeDefault, { foo: u8 = 1 });
+    try_parse!(ident_type_no_default, IdentTypeMaybeDefault, { foo: u8 });
+    try_parse_fail!(ident_type_missing_type, IdentTypeMaybeDefault, { foo: });
+    try_parse_fail!(ident_type_missing_colon, IdentTypeMaybeDefault, { foo u8 });
+    try_parse_fail!(ident_type_missing_ident, IdentTypeMaybeDefault, { :u8 });
+
+    try_parse!(ident_pat_type, IdentPatType, { foo: u8 });
+    try_parse_fail!(ident_pat_type_missing_ident, IdentPatType, { : 3u8 });
+    try_parse_fail!(ident_pat_type_missing_ty, IdentPatType, { foo: });
+    try_parse_fail!(ident_pat_type_wrong_ty_type, IdentPatType, { foo: 3u8 });
 
     try_parse!(meta_attr_list, MetaAttrListTest, { (1u8, 2u8, 3u8) });
     try_parse!(meta_attr_list_empty, MetaAttrListTest, { () });

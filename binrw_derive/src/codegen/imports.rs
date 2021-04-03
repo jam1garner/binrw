@@ -1,5 +1,5 @@
 use crate::codegen::typed_builder::{Builder, BuilderField};
-use crate::parser::meta_types::NamedImport;
+use crate::parser::meta_types::IdentTypeMaybeDefault;
 
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
@@ -60,7 +60,7 @@ fn arg_type_name(ty_name: &Ident) -> Ident {
 
 fn generate_named_arg_type(
     ty_name: &Ident,
-    args: &[NamedImport],
+    args: &[IdentTypeMaybeDefault],
 ) -> (TokenStream, Option<TokenStream>) {
     let fields: Vec<BuilderField> = args.iter().map(Into::into).collect();
 

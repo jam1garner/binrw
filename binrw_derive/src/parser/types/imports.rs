@@ -1,4 +1,4 @@
-use crate::parser::{attrs, meta_types::NamedImport, KeywordToken, TrySet};
+use crate::parser::{attrs, meta_types::IdentTypeMaybeDefault, KeywordToken, TrySet};
 
 use syn::{Ident, Type};
 
@@ -8,7 +8,7 @@ pub(crate) enum Imports {
     #[allow(dead_code)]
     List(Vec<Ident>, Vec<Type>),
     Tuple(Ident, Box<Type>),
-    Named(Vec<NamedImport>),
+    Named(Vec<IdentTypeMaybeDefault>),
 }
 
 impl Default for Imports {

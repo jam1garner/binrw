@@ -32,7 +32,7 @@ pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
 #[macro_export]
 macro_rules! args {
     (@ifn { $value:expr } $name:ident) => { $value };
-    (@ifn {} $name:ident) => { $name }; 
+    (@ifn {} $name:ident) => { $name };
     ($($name:ident $(: $value:expr)?),*) => {
         {
             let __args_ty = ::core::marker::PhantomData::<_>;
