@@ -3,6 +3,8 @@ pub(crate) mod sanitization;
 mod read_options;
 pub(crate) mod typed_builder;
 
+mod imports;
+
 use crate::parser::{Input, ParseResult};
 use proc_macro2::TokenStream;
 use quote::quote;
