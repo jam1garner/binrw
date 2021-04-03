@@ -16,7 +16,7 @@ documentation = "https://docs.rs/binrw"
 
 [dependencies]
 binrw_derive = { version = "0.2.0", path = "../binrw_derive" }
-array-init = { version = "1.1" }
+array-init = { version = "2" }
 
 [dev-dependencies]
 modular-bitfield = "0.9"
