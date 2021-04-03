@@ -8,7 +8,7 @@ pub(crate) enum PassedArgs {
     #[allow(dead_code)]
     List(Vec<TokenStream>),
     Tuple(TokenStream),
-    Named(Vec<(syn::Ident, syn::Expr)>),
+    Named(Vec<(syn::Ident, Option<syn::Expr>)>),
 }
 
 impl PassedArgs {

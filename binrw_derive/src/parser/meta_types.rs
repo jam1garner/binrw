@@ -163,11 +163,11 @@ impl Parse for IdentTypeMaybeDefault {
 #[derive(Debug, Clone)]
 pub(crate) struct FieldValue {
     pub(crate) ident: syn::Ident,
-    pub(crate) colon_token: Token![:],
-    pub(crate) expr: syn::Expr,
+    pub(crate) colon_token: Option<Token![:]>,
+    pub(crate) expr: Option<syn::Expr>,
 }
 
-impl From<FieldValue> for (syn::Ident, syn::Expr) {
+impl From<FieldValue> for (syn::Ident, Option<syn::Expr>) {
     fn from(x: FieldValue) -> Self {
         let FieldValue { ident, expr, .. } = x;
 
@@ -177,10 +177,24 @@ impl From<FieldValue> for (syn::Ident, syn::Expr) {
 
 impl Parse for FieldValue {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let ident = input.parse()?;
+        let lookahead = input.lookahead1();
+
+        let expr;
+        let colon_token;
+
+        if lookahead.peek(Token![:]) {
+            colon_token = Some(input.parse()?);
+            expr = Some(input.parse()?);
+        } else {
+            colon_token = None;
+            expr = None;
+        }
+
         Ok(Self {
-            ident: input.parse()?,
-            colon_token: input.parse()?,
-            expr: input.parse()?,
+            ident,
+            colon_token,
+            expr,
         })
     }
 }

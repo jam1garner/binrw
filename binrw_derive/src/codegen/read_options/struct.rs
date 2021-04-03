@@ -3,7 +3,7 @@ use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 use crate::codegen::sanitization::*;
 use crate::parser::{Input, Map, PassedArgs, ReadMode, Struct, StructField};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::Ident;
 
 pub(super) fn generate_unit_struct(
@@ -420,7 +420,13 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
                 return None;
             }
             let ty = &field.ty;
-            let added_fields = fields.iter().map(|(name, expr)| quote!( .#name( #expr ) ));
+            let added_fields = fields.iter().map(|(name, expr)| {
+                let expr = expr
+                    .as_ref()
+                    .map(ToTokens::into_token_stream)
+                    .unwrap_or_else(|| name.into_token_stream());
+                quote!( .#name( #expr ) )
+            });
             quote!(
                 <#ty as #TRAIT_NAME>::Args::builder()
                     #(

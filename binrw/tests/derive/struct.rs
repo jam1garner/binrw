@@ -341,6 +341,28 @@ fn parse_with_default_args() {
 }
 
 #[test]
+fn args_same_name() {
+    #[derive(BinRead, Debug)]
+    #[br(import(y: u16, x: u8))]
+    struct Test {
+        #[br(calc(x))]
+        z: u8,
+    }
+
+    #[derive(BinRead, Debug)]
+    struct Test2 {
+        #[br(calc(3))]
+        x: u8,
+
+        #[br(args(x, y: 3))]
+        y: Test,
+    }
+
+    let result = Test2::read(&mut Cursor::new(b"")).unwrap();
+    assert_eq!(result.y.z, 3);
+}
+
+#[test]
 fn import_tuple() {
     #[derive(BinRead, Debug)]
     struct Test {
