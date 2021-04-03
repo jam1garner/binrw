@@ -120,7 +120,7 @@ impl<'a> Builder<'a> {
             .collect()
     }
 
-    fn generate_setters<'builder>(&'builder self) -> impl Iterator<Item = TokenStream> + 'builder {
+    fn generate_setters(&self) -> impl Iterator<Item = TokenStream> + '_ {
         let builder_name = self.builder_name;
         self.fields.iter().enumerate().map(move |(i, field)| {
             let generics = self.generate_generics();

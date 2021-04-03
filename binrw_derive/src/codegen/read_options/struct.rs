@@ -423,8 +423,7 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
             let added_fields = fields.iter().map(|(name, expr)| {
                 let expr = expr
                     .as_ref()
-                    .map(ToTokens::into_token_stream)
-                    .unwrap_or_else(|| name.into_token_stream());
+                    .map_or_else(|| name.into_token_stream(), ToTokens::into_token_stream);
                 quote!( .#name( #expr ) )
             });
             quote!(
