@@ -1,0 +1,7 @@
+error: only structs are supported
+ --> $DIR/named_args_unsupported_type_union.rs:4:1
+  |
+4 | / union Foo {
+5 | |     a: i32,
+6 | | }
+  | |_^

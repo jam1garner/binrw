@@ -4,11 +4,14 @@
 mod codegen;
 mod parser;
 
-use codegen::generate_impl;
+use codegen::{
+    generate_impl,
+    typed_builder::{Builder, BuilderField, BuilderFieldKind},
+};
 use parser::{is_binread_attr, Input, ParseResult};
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
 #[cfg(not(tarpaulin_include))]
@@ -50,6 +53,49 @@ fn clean_field_attrs(
             })
             .collect();
     }
+}
+
+#[proc_macro_derive(BinrwNamedArgs)]
+pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let fields = match match input.data {
+        syn::Data::Struct(s) => s
+            .fields
+            .iter()
+            .map(|field| {
+                Ok(BuilderField {
+                    kind: BuilderFieldKind::Required,
+                    name: match field.ident.as_ref() {
+                        Some(ident) => ident.clone(),
+                        None => {
+                            return Err(syn::Error::new(
+                                field.span(),
+                                "must not be a tuple-style field",
+                            ))
+                        }
+                    },
+                    ty: field.ty.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, syn::Error>>(),
+        _ => {
+            return syn::Error::new(input.span(), "only structs are supported")
+                .to_compile_error()
+                .into()
+        }
+    } {
+        Ok(fields) => fields,
+        Err(err) => return err.into_compile_error().into(),
+    };
+
+    Builder {
+        result_name: &input.ident,
+        builder_name: &quote::format_ident!("{}Builder", input.ident),
+        fields: &fields,
+    }
+    .generate(false)
+    .into()
 }
 
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {

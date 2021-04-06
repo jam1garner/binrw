@@ -72,7 +72,7 @@ fn generate_named_arg_type(
         result_name: &result_name,
         fields: &fields,
     }
-    .generate();
+    .generate(true);
 
     (result_name.to_token_stream(), Some(type_definition))
 }

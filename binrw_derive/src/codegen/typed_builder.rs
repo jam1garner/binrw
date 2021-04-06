@@ -24,7 +24,7 @@ pub(crate) struct Builder<'a> {
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn generate(&self) -> TokenStream {
+    pub(crate) fn generate(&self, define_result: bool) -> TokenStream {
         let builder_name = self.builder_name;
         let name = self.result_name;
         let fields = self.generate_result_fields();
@@ -36,11 +36,20 @@ impl<'a> Builder<'a> {
         let satisfied = &SATISFIED_OR_OPTIONAL;
         let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
+
+        let res_struct = if define_result {
+            Some(quote!(
+                #[derive(Clone)]
+                pub(crate) struct #name {
+                    #fields
+                }
+            ))
+        } else {
+            None
+        };
+
         quote!(
-            #[derive(Clone)]
-            pub(crate) struct #name {
-                #fields
-            }
+            #res_struct
 
             impl #name {
                 pub fn builder() -> #builder_name < #( #initial_generics ),* > {
