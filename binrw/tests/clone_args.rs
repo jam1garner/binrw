@@ -4,7 +4,7 @@ use binrw::{BinRead, BinReaderExt};
 struct OnlyCloneable;
 
 #[derive(BinRead)]
-#[br(import(needs_clone: OnlyCloneable))]
+#[br(import { needs_clone: OnlyCloneable })]
 struct ArgsNeedClone {}
 
 #[derive(BinRead)]

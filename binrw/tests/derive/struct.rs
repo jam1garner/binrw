@@ -38,7 +38,7 @@ fn all_the_things() {
 
     #[derive(BinRead, Debug)]
     #[br(little, magic = b"TST2")]
-    #[br(import(extra_val: u8))]
+    #[br(import { extra_val: u8 })]
     struct TestEntry {
         #[br(map = |val: u32| val.to_string())]
         entry_num: String,
@@ -197,7 +197,7 @@ fn empty_imports() {
 #[test]
 fn if_alternate() {
     #[derive(BinRead, Debug)]
-    #[br(import(try_read: bool))]
+    #[br(import{ try_read: bool })]
     struct Test {
         #[br(if(try_read, 10))]
         a: u8,
@@ -306,7 +306,7 @@ fn parse_with_default_args() {
     }
 
     #[derive(BinRead, Debug, PartialEq)]
-    #[br(import(in_a: u8))]
+    #[br(import { in_a: u8 })]
     struct InnerImport {
         #[br(calc(in_a))]
         a: u8,
@@ -343,7 +343,7 @@ fn parse_with_default_args() {
 #[test]
 fn args_same_name() {
     #[derive(BinRead, Debug)]
-    #[br(import(y: u16, x: u8))]
+    #[br(import { y: u16, x: u8 })]
     struct Test {
         #[br(calc(x))]
         z: u8,
@@ -371,7 +371,7 @@ fn import_tuple() {
     }
 
     #[derive(BinRead, Debug)]
-    #[br(import_tuple(args: (u8, u8)))]
+    #[br(import_raw(args: (u8, u8)))]
     struct Child {
         #[br(calc(args.0 + args.1))]
         a: u8,

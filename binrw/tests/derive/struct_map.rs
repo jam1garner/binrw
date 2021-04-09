@@ -15,7 +15,7 @@ fn map_closure() {
 
     let result = Test::read_args(
         &mut Cursor::new("\x01"),
-        <Test as BinRead>::Args::builder().extra(5).finalize(),
+        (5,)
     )
     .unwrap();
     assert_eq!(result.a, 6);

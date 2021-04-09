@@ -46,7 +46,7 @@ fn unit_enum_magic_bytes() {
 #[test]
 fn unit_enum_magic_pre_assert() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
-    #[br(big, import(allow_zero: bool, forbid_zero: bool))]
+    #[br(big, import { allow_zero: bool, forbid_zero: bool })]
     enum Test {
         #[br(magic(0u16), pre_assert(allow_zero))]
         // This redundant check is intentional and tests that assertions are
