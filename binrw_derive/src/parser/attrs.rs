@@ -43,6 +43,3 @@ pub(crate) type SeekBefore = MetaExpr<kw::seek_before>;
 pub(crate) type Temp = kw::temp;
 pub(crate) type Try = Token![try];
 pub(crate) type TryMap = MetaExpr<kw::try_map>;
-
-// Tuple-style args
-//pub(crate) type Args = MetaList<kw::args, Expr>;
