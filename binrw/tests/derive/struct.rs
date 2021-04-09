@@ -15,7 +15,7 @@ fn all_the_things() {
     struct Test {
         extra_entry_count: u32,
 
-        #[br(count = extra_entry_count + 1, args(extra_val: 0x69))]
+        #[br(count = extra_entry_count + 1, args { extra_val: 0x69 })]
         entries: Vec<FilePtr<u32, TestEntry>>,
 
         #[br(default)]
@@ -323,7 +323,7 @@ fn parse_with_default_args() {
 
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {
-        #[br(args(in_a: 0))]
+        #[br(args{ in_a: 0 })]
         #[br(parse_with = InnerImport::read_options)]
         inner: InnerImport,
         #[br(parse_with = InnerImportTuple::read_options)]
@@ -354,7 +354,7 @@ fn args_same_name() {
         #[br(calc(3))]
         x: u8,
 
-        #[br(args(x, y: 3))]
+        #[br(args { x, y: 3 })]
         y: Test,
     }
 

@@ -9,7 +9,7 @@ use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
-pub(crate) type Args = MetaList<kw::args, FieldValue>;
+pub(crate) type Args = MetaEnclosedList<kw::args, Expr, FieldValue>;
 pub(crate) type ArgsTuple = MetaExpr<kw::args_tuple>;
 pub(crate) type AssertLike<K> = MetaList<K, Expr>;
 pub(crate) type Assert = AssertLike<kw::assert>;

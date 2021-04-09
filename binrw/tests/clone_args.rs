@@ -9,10 +9,10 @@ struct ArgsNeedClone {}
 
 #[derive(BinRead)]
 struct TestCloneArray {
-    #[br(args(needs_clone: OnlyCloneable))]
+    #[br(args { needs_clone: OnlyCloneable })]
     array: [ArgsNeedClone; 35],
 
-    #[br(args(needs_clone: OnlyCloneable))]
+    #[br(args { needs_clone: OnlyCloneable })]
     #[br(count = 4)]
     vec: Vec<ArgsNeedClone>,
 }
