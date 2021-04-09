@@ -8,7 +8,7 @@
 //! | [`align_after`](#padding-and-alignment) | field | Aligns the reader to the Nth byte after reading data.
 //! | [`align_before`](#padding-and-alignment) | field | Aligns the reader to the Nth byte before reading data.
 //! | [`args`](#arguments) | struct field, data variant | Passes arguments to another `BinRead` object.
-//! | [`args_tuple`](#arguments) | struct field, data variant | Like `args`, but specifies a tuple containing the arguments.
+//! | [`args_raw`](#arguments) | struct field, data variant | Like `args`, but specifies a tuple containing the arguments.
 //! | [`assert`](#assert) | struct, field, non-unit enum, data variant | Asserts that a condition is true. Can be used multiple times.
 //! | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
 //! | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.

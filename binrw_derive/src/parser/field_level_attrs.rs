@@ -18,7 +18,7 @@ attr_struct! {
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,
-        #[from(Args, ArgsTuple)]
+        #[from(Args, ArgsRaw)]
         pub(crate) args: PassedArgs,
         #[from(Calc, Default, Ignore, ParseWith)]
         pub(crate) read_mode: ReadMode,

@@ -382,7 +382,7 @@ fn args_same_name() {
 fn import_tuple() {
     #[derive(BinRead, Debug)]
     struct Test {
-        #[br(args_tuple = (1, 2))]
+        #[br(args_raw = (1, 2))]
         a: Child,
     }
 

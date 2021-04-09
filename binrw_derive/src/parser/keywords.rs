@@ -10,7 +10,7 @@ define_keywords! {
     align_after,
     align_before,
     args,
-    args_tuple,
+    args_raw,
     assert,
     big,
     binread,

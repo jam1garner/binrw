@@ -35,8 +35,8 @@ impl From<attrs::Args> for PassedArgs {
     }
 }
 
-impl From<attrs::ArgsTuple> for PassedArgs {
-    fn from(args: attrs::ArgsTuple) -> Self {
+impl From<attrs::ArgsRaw> for PassedArgs {
+    fn from(args: attrs::ArgsRaw) -> Self {
         Self::Tuple(args.value.into_token_stream())
     }
 }
