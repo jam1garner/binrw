@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{GenericArgument, GenericParam, Ident, Type};
+use syn::{GenericArgument, GenericParam, Ident, Type, Visibility};
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
@@ -22,6 +22,7 @@ pub(crate) struct Builder<'a> {
     pub(crate) result_name: &'a Ident,
     pub(crate) fields: &'a [BuilderField],
     pub(crate) generics: &'a [GenericParam],
+    pub(crate) vis: &'a Visibility,
 }
 
 impl<'a> Builder<'a> {
@@ -29,6 +30,7 @@ impl<'a> Builder<'a> {
         let builder_name = self.builder_name;
         let name = self.result_name;
         let user_bounds = self.generics;
+        let vis = self.vis;
         let user_generic_args = self.user_generic_args();
         let fields = self.generate_result_fields();
         let builder_fields = self.generate_builder_fields();
@@ -43,7 +45,7 @@ impl<'a> Builder<'a> {
         let res_struct = if define_result {
             Some(quote!(
                 #[derive(Clone)]
-                pub(crate) struct #name < #( #user_bounds ),* > {
+                #vis struct #name < #( #user_bounds ),* > {
                     #fields
                 }
             ))
@@ -55,7 +57,7 @@ impl<'a> Builder<'a> {
             #res_struct
 
             impl< #( #user_bounds ),* > #name < #( #user_generic_args ),* >  {
-                pub fn builder() -> #builder_name < #( #user_generic_args, )* #( #initial_generics ),* > {
+                #vis fn builder() -> #builder_name < #( #user_generic_args, )* #( #initial_generics ),* > {
                     #initial
                 }
             }
@@ -71,7 +73,7 @@ impl<'a> Builder<'a> {
             #( #setters )*
 
             #[allow(non_camel_case_types)]
-            pub(crate) struct #builder_name <#(#user_bounds,)* #( #generics ),* > {
+            #vis struct #builder_name <#(#user_bounds,)* #( #generics ),* > {
                 #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
@@ -79,15 +81,15 @@ impl<'a> Builder<'a> {
             #[allow(non_camel_case_types)]
             impl<
                 #( #user_bounds, )*
-                #( #generics : #satisfied ),* 
-            > 
+                #( #generics : #satisfied ),*
+            >
                 #builder_name
                 <
                     #(#user_generic_args,)*
                     #( #generics ),*
                 >
             {
-                pub fn finalize(self) -> #name < #(#user_generic_args),* > {
+                #vis fn finalize(self) -> #name < #(#user_generic_args),* > {
                     let #builder_name {
                         #(
                             #field_names,
@@ -169,6 +171,7 @@ impl<'a> Builder<'a> {
         let user_bounds = self.generics;
         self.fields.iter().enumerate().map(move |(i, field)| {
             let generics = self.generate_generics();
+            let vis = self.vis;
 
             // The current field is not generic
             let mut generic_params = generics.clone();
@@ -202,7 +205,7 @@ impl<'a> Builder<'a> {
                     #( #user_bounds, )*
                     #( #generic_params ),*
                 > #builder_name < #( #user_generic_args, )* #( #required_generics ),* > {
-                    pub fn #field_name(
+                    #vis fn #field_name(
                         self, val: #ty
                     ) -> #builder_name < #( #user_generic_args, )* #( #resulting_generics ),* > {
                         let #builder_name {

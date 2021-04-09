@@ -96,6 +96,7 @@ pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
         builder_name: &quote::format_ident!("{}Builder", input.ident),
         fields: &fields,
         generics: &generics,
+        vis: &input.vis,
     }
     .generate(false)
     .into()

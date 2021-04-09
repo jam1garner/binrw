@@ -17,10 +17,9 @@ pub(crate) fn generate_impl(
 ) -> TokenStream {
     // Generate the argument type name and (if needed) definition
     let (arg_type, arg_type_declaration) = match binread_input {
-        ParseResult::Ok(binread_input) => binread_input.imports().args_type(&derive_input.ident),
-        ParseResult::Partial(binread_input, _) => {
-            binread_input.imports().args_type(&derive_input.ident)
-        }
+        ParseResult::Ok(binread_input) | ParseResult::Partial(binread_input, _) => binread_input
+            .imports()
+            .args_type(&derive_input.ident, &derive_input.vis),
         ParseResult::Err(_) => (quote! { () }, None),
     };
 

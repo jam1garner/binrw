@@ -3,10 +3,10 @@ use binrw::BinrwNamedArgs;
 #[test]
 fn test() {
     #[derive(PartialEq, Debug)]
-    struct NotClone;
+    pub struct NotClone;
 
     #[derive(BinrwNamedArgs)]
-    struct Test<T: Clone> {
+    pub struct Test<T: Clone> {
         blah: u32,
         not_copy: String,
         not_clone: NotClone,
