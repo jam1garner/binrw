@@ -72,6 +72,25 @@ impl dyn CustomError {
     }
 }
 
+/// The `Context` trait provides extra methods on [`Result`] to give extra
+/// contextual information in case of error.
+pub trait Context<T, E> {
+    /// Wraps the error value with additional context which is evaluated lazily
+    /// once an error occurs.
+    fn context<C>(self, f: impl FnOnce() -> C) -> Result<T, Error>
+    where
+        C: CustomError + 'static;
+}
+
+impl<T> Context<T, Error> for Result<T, Error> {
+    fn context<C>(self, f: impl FnOnce() -> C) -> Result<T, Error>
+    where
+        C: CustomError + 'static,
+    {
+        self.map_err(|err| err.context(f()))
+    }
+}
+
 /// The error type used by [`BinRead`](crate::BinRead).
 #[non_exhaustive]
 #[derive(Debug)]
@@ -153,16 +172,48 @@ pub enum Error {
         /// second field is the error that occurred when parsing that variant.
         variant_errors: Vec<(&'static str, Error)>,
     },
+
+    /// An error with attached context.
+    Context {
+        /// The additional context.
+        context: Box<dyn CustomError>,
+
+        /// The original error.
+        source: Box<Self>,
+    },
 }
 
 impl Error {
+    /// Wraps the error value with additional context.
+    pub fn context<C: CustomError + 'static>(self, context: C) -> Self {
+        Self::Context {
+            context: Box::new(context),
+            source: Box::new(self),
+        }
+    }
+
     /// Returns a reference to the boxed error object if this `Error` is a
     /// custom error of type `T`, or `None` if it isn’t.
+    ///
+    /// For errors with context, this will try to downcast the context first,
+    /// then the source, so that simply adding context does not require any
+    /// change in consumer code.
     pub fn custom_err<T: CustomError + 'static>(&self) -> Option<&T> {
-        if let Error::Custom { err, .. } = self {
+        if let Self::Custom { err, .. } = self {
             err.downcast_ref()
+        } else if let Self::Context { context, source } = self {
+            context.downcast_ref().or_else(|| source.custom_err::<T>())
         } else {
             None
+        }
+    }
+
+    /// Returns a reference to the source error if this `Error` is a chained
+    /// error, or `None` if it isn’t.
+    pub fn source(&self) -> Option<&Self> {
+        match self {
+            Self::Context { source, .. } => Some(source),
+            _ => None,
         }
     }
 }
@@ -191,12 +242,20 @@ impl fmt::Display for Error {
                 }
                 Ok(())
             }
+            Self::Context { context, source } => write!(f, "{}: {}", context, source),
         }
     }
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Context { source, .. } => Some(source.as_ref()),
+            _ => None,
+        }
+    }
+}
 
 mod private {
     use core::fmt;
