@@ -21,7 +21,7 @@ impl Imports {
                     })
                 }
             }
-            Imports::Tuple(ident, _) => Some(quote! {
+            Imports::Raw(ident, _) => Some(quote! {
                 mut #ident
             }),
             Imports::Named(args) => type_name.map(|type_name| {
@@ -48,7 +48,7 @@ impl Imports {
                     None,
                 )
             }
-            Imports::Tuple(_, ty) => (ty.to_token_stream(), None),
+            Imports::Raw(_, ty) => (ty.to_token_stream(), None),
             Imports::Named(args) => generate_named_arg_type(type_name, args),
         }
     }

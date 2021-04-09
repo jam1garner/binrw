@@ -5,9 +5,8 @@ use syn::{Ident, Type};
 #[derive(Debug, Clone)]
 pub(crate) enum Imports {
     None,
-    #[allow(dead_code)]
+    Raw(Ident, Box<Type>),
     List(Vec<Ident>, Vec<Type>),
-    Tuple(Ident, Box<Type>),
     Named(Vec<IdentTypeMaybeDefault>),
 }
 
@@ -17,8 +16,8 @@ impl Default for Imports {
     }
 }
 
-impl From<attrs::Import> for Imports {
-    fn from(value: attrs::Import) -> Self {
+impl From<attrs::ImportNamed> for Imports {
+    fn from(value: attrs::ImportNamed) -> Self {
         if value.fields.is_empty() {
             Self::None
         } else {
@@ -27,9 +26,9 @@ impl From<attrs::Import> for Imports {
     }
 }
 
-impl From<attrs::ImportTuple> for Imports {
-    fn from(value: attrs::ImportTuple) -> Self {
-        Imports::Tuple(value.value.ident, value.value.ty.into())
+impl From<attrs::ImportRaw> for Imports {
+    fn from(value: attrs::ImportRaw) -> Self {
+        Imports::Raw(value.value.ident, value.value.ty.into())
     }
 }
 
