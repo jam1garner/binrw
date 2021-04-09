@@ -273,7 +273,7 @@
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
-//! #[br(import(ty: u8))]
+//! #[br(import { ty: u8 })]
 //! enum Command {
 //!     #[br(pre_assert(ty == 0))] Variant0(u16, u16),
 //!     #[br(pre_assert(ty == 1))] Variant1(u32)
@@ -283,7 +283,7 @@
 //! struct Message {
 //!     ty: u8,
 //!     len: u8,
-//!     #[br(args(ty: ty))]
+//!     #[br(args { ty })]
 //!     data: Command
 //! }
 //!
@@ -320,7 +320,7 @@
 //! #[derive(BinRead)]
 //! struct ArgsTets {
 //!     val: u32,
-//!     #[br(args(val1: val + 3, val2: "test"))]
+//!     #[br(args(val + 3, "test"))]
 //!     test: ImportTest
 //! }
 //! ```

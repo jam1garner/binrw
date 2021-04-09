@@ -124,6 +124,14 @@
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)]
 
+// binrw_derive expects to be able to access items in binrw via
+// `::binrw::<whatever>`. Normally, this would fail in this crate
+// because binrw knows of no crate called "binrw".
+// This causes binrw to associate *itself* as binrw,
+// meaning it makes access via ::binrw work.
+#[allow(unused_extern_crates)]
+extern crate self as binrw;
+
 #[cfg(feature = "std")]
 use std as alloc;
 
@@ -168,6 +176,9 @@ pub use binrw_derive::BinRead;
 pub use binrw_derive::derive_binread;
 
 pub use binrw_derive::BinrwNamedArgs;
+
+/// A specialized [`Result`] type for BinRead operations.
+pub type BinResult<T> = core::result::Result<T, Error>;
 
 mod binread_impls;
 pub use binread_impls::*;

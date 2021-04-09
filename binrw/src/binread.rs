@@ -1,8 +1,7 @@
-use crate::io::{Read, Seek};
-use crate::{Endian, Error, ReadOptions};
-
-/// A specialized [`Result`] type for BinRead operations.
-pub type BinResult<T> = core::result::Result<T, Error>;
+use crate::{
+    io::{Read, Seek},
+    BinResult, Endian, ReadOptions,
+};
 
 /// The `BinRead` trait reads data from streams and converts it into objects.
 ///

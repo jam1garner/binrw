@@ -176,12 +176,12 @@ impl From<io::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::BadMagic { pos, found } => write!(f, "bad magic at 0x{:x}: {:?}", pos, found),
-            Error::AssertFail { pos, message } => write!(f, "{} at 0x{:x}", message, pos),
-            Error::Io(err) => fmt::Display::fmt(err, f),
-            Error::Custom { pos, err } => write!(f, "{} at 0x{:x}", err, pos),
-            Error::NoVariantMatch { pos } => write!(f, "no variants matched at 0x{:x}", pos),
-            Error::EnumErrors {
+            Self::BadMagic { pos, found } => write!(f, "bad magic at 0x{:x}: {:?}", pos, found),
+            Self::AssertFail { pos, message } => write!(f, "{} at 0x{:x}", message, pos),
+            Self::Io(err) => fmt::Display::fmt(err, f),
+            Self::Custom { pos, err } => write!(f, "{} at 0x{:x}", err, pos),
+            Self::NoVariantMatch { pos } => write!(f, "no variants matched at 0x{:x}", pos),
+            Self::EnumErrors {
                 pos,
                 variant_errors,
             } => {
@@ -199,7 +199,7 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 mod private {
-    use core::{any::Any, fmt};
+    use core::fmt;
     pub trait Sealed {}
-    impl<T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> Sealed for T {}
+    impl<T: fmt::Display + fmt::Debug + Send + Sync + 'static> Sealed for T {}
 }
