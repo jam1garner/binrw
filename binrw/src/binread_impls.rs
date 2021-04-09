@@ -116,7 +116,7 @@ impl<B: BinRead> BinRead for Vec<B> {
     }
 }
 
-impl<C: Clone + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N] {
+impl<B: BinRead, const N: usize> BinRead for [B; N] {
     type Args = B::Args;
 
     fn read_options<R: Read + Seek>(
