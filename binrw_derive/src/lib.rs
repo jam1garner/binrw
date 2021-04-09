@@ -89,10 +89,13 @@ pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
         Err(err) => return err.into_compile_error().into(),
     };
 
+    let generics: Vec<_> = input.generics.params.iter().cloned().collect();
+
     Builder {
         result_name: &input.ident,
         builder_name: &quote::format_ident!("{}Builder", input.ident),
         fields: &fields,
+        generics: &generics,
     }
     .generate(false)
     .into()

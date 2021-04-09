@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{Ident, Type};
+use syn::{GenericArgument, GenericParam, Ident, Type};
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
@@ -21,18 +21,21 @@ pub(crate) struct Builder<'a> {
     pub(crate) builder_name: &'a Ident,
     pub(crate) result_name: &'a Ident,
     pub(crate) fields: &'a [BuilderField],
+    pub(crate) generics: &'a [GenericParam],
 }
 
 impl<'a> Builder<'a> {
     pub(crate) fn generate(&self, define_result: bool) -> TokenStream {
         let builder_name = self.builder_name;
         let name = self.result_name;
+        let user_bounds = self.generics;
+        let user_generic_args = self.user_generic_args();
         let fields = self.generate_result_fields();
         let builder_fields = self.generate_builder_fields();
         let initial = self.generate_builder_initial();
         let generics = self.generate_generics();
         let initial_generics = self.generate_initial_generics();
-        let setters = self.generate_setters();
+        let setters = self.generate_setters(&user_generic_args);
         let satisfied = &SATISFIED_OR_OPTIONAL;
         let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
@@ -40,7 +43,7 @@ impl<'a> Builder<'a> {
         let res_struct = if define_result {
             Some(quote!(
                 #[derive(Clone)]
-                pub(crate) struct #name {
+                pub(crate) struct #name < #( #user_bounds ),* > {
                     #fields
                 }
             ))
@@ -51,14 +54,14 @@ impl<'a> Builder<'a> {
         quote!(
             #res_struct
 
-            impl #name {
-                pub fn builder() -> #builder_name < #( #initial_generics ),* > {
+            impl< #( #user_bounds ),* > #name < #( #user_generic_args ),* >  {
+                pub fn builder() -> #builder_name < #( #user_generic_args, )* #( #initial_generics ),* > {
                     #initial
                 }
             }
 
-            impl #BINRW_NAMED_ARGS for #name {
-                type Builder = #builder_name < #( #initial_generics ),* >;
+            impl< #( #user_bounds ),* > #BINRW_NAMED_ARGS for #name < #( #user_generic_args ),* > {
+                type Builder = #builder_name < #( #user_generic_args, )* #( #initial_generics ),* >;
 
                 fn builder() -> Self::Builder {
                     Self::builder()
@@ -68,14 +71,23 @@ impl<'a> Builder<'a> {
             #( #setters )*
 
             #[allow(non_camel_case_types)]
-            pub(crate) struct #builder_name < #( #generics ),* > {
+            pub(crate) struct #builder_name <#(#user_bounds,)* #( #generics ),* > {
                 #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
 
             #[allow(non_camel_case_types)]
-            impl< #( #generics : #satisfied ),* > #builder_name < #( #generics ),* > {
-                pub fn finalize(self) -> #name {
+            impl<
+                #( #user_bounds, )*
+                #( #generics : #satisfied ),* 
+            > 
+                #builder_name
+                <
+                    #(#user_generic_args,)*
+                    #( #generics ),*
+                >
+            {
+                pub fn finalize(self) -> #name < #(#user_generic_args),* > {
                     let #builder_name {
                         #(
                             #field_names,
@@ -91,6 +103,26 @@ impl<'a> Builder<'a> {
                 }
             }
         )
+    }
+
+    fn user_generic_args(&self) -> Vec<GenericArgument> {
+        self.generics
+            .iter()
+            .map(|generic| match generic {
+                GenericParam::Type(ty) => GenericArgument::Type(Type::Path(syn::TypePath {
+                    qself: None,
+                    path: ty.ident.clone().into(),
+                })),
+                GenericParam::Const(cnst) => {
+                    GenericArgument::Const(syn::Expr::Path(syn::ExprPath {
+                        attrs: Vec::new(),
+                        qself: None,
+                        path: cnst.ident.clone().into(),
+                    }))
+                }
+                GenericParam::Lifetime(lt) => GenericArgument::Lifetime(lt.lifetime.clone()),
+            })
+            .collect()
     }
 
     fn generate_builder_fields(&self) -> TokenStream {
@@ -129,8 +161,12 @@ impl<'a> Builder<'a> {
             .collect()
     }
 
-    fn generate_setters(&self) -> impl Iterator<Item = TokenStream> + '_ {
+    fn generate_setters<'builder>(
+        &'builder self,
+        user_generic_args: &'builder [GenericArgument],
+    ) -> impl Iterator<Item = TokenStream> + 'builder {
         let builder_name = self.builder_name;
+        let user_bounds = self.generics;
         self.fields.iter().enumerate().map(move |(i, field)| {
             let generics = self.generate_generics();
 
@@ -162,10 +198,13 @@ impl<'a> Builder<'a> {
 
             quote!(
                 #[allow(non_camel_case_types, unused_variables)]
-                impl< #( #generic_params ),* > #builder_name < #( #required_generics ),* > {
+                impl<
+                    #( #user_bounds, )*
+                    #( #generic_params ),*
+                > #builder_name < #( #user_generic_args, )* #( #required_generics ),* > {
                     pub fn #field_name(
                         self, val: #ty
-                    ) -> #builder_name < #( #resulting_generics ),* > {
+                    ) -> #builder_name < #( #user_generic_args, )* #( #resulting_generics ),* > {
                         let #builder_name {
                             #(
                                 #field_names,

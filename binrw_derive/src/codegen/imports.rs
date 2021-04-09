@@ -71,6 +71,7 @@ fn generate_named_arg_type(
         builder_name: &builder_ident,
         result_name: &result_name,
         fields: &fields,
+        generics: &[]
     }
     .generate(true);
 
