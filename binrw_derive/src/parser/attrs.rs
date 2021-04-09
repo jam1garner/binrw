@@ -1,8 +1,8 @@
 use super::{
     keywords as kw,
     meta_types::{
-        FieldValue, IdentPatType, IdentTypeMaybeDefault, MetaExpr, MetaList, MetaLit, MetaType,
-        MetaValue,
+        FieldValue, IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList,
+        MetaLit, MetaType, MetaValue,
     },
 };
 use syn::{Expr, Token};
@@ -20,9 +20,8 @@ pub(crate) type Default = kw::default;
 pub(crate) type DerefNow = kw::deref_now;
 pub(crate) type If = MetaList<Token![if], Expr>;
 pub(crate) type Ignore = kw::ignore;
-pub(crate) type ImportNamed = MetaList<kw::import, IdentTypeMaybeDefault>;
-pub(crate) type ImportList = MetaList<kw::import, IdentTypeMaybeDefault>;
-pub(crate) type ImportRaw = MetaValue<kw::import, IdentPatType>;
+pub(crate) type Import = MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>;
+pub(crate) type ImportRaw = MetaValue<kw::import_raw, IdentPatType>;
 pub(crate) type IsBig = MetaExpr<kw::is_big>;
 pub(crate) type IsLittle = MetaExpr<kw::is_little>;
 pub(crate) type Little = kw::little;

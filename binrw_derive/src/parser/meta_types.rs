@@ -2,7 +2,7 @@ use super::KeywordToken;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::{
-    parenthesized,
+    braced, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token, Expr, Lit, Token, Type,
@@ -95,6 +95,69 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
 
 impl<Keyword: syn::token::Token + KeywordToken, ItemType> KeywordToken
     for MetaList<Keyword, ItemType>
+{
+    type Token = Keyword;
+
+    fn keyword_span(&self) -> proc_macro2::Span {
+        self.ident.keyword_span()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum Enclosure<ParenType, BraceType> {
+    Paren {
+        parens: token::Paren,
+        fields: Fields<ParenType>,
+    },
+    Brace {
+        braces: token::Brace,
+        fields: Fields<BraceType>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct MetaEnclosedList<Keyword, ParenItemType, BraceItemType> {
+    pub(crate) ident: Keyword,
+    pub(crate) list: Enclosure<ParenItemType, BraceItemType>,
+}
+
+impl<Keyword, ParenItemType, BraceItemType> Parse
+    for MetaEnclosedList<Keyword, ParenItemType, BraceItemType>
+where
+    Keyword: Parse,
+    ParenItemType: Parse,
+    BraceItemType: Parse,
+{
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let ident = input.parse()?;
+        let content;
+        let lookahead = input.lookahead1();
+        if lookahead.peek(token::Paren) {
+            let parens = parenthesized!(content in input);
+            Ok(Self {
+                ident,
+                list: Enclosure::Paren {
+                    parens,
+                    fields: content.parse_terminated::<_, Token![,]>(ParenItemType::parse)?,
+                },
+            })
+        } else if lookahead.peek(token::Brace) {
+            let braces = braced!(content in input);
+            Ok(Self {
+                ident,
+                list: Enclosure::Brace {
+                    braces,
+                    fields: content.parse_terminated::<_, Token![,]>(BraceItemType::parse)?,
+                },
+            })
+        } else {
+            Err(lookahead.error())
+        }
+    }
+}
+
+impl<Keyword: syn::token::Token + KeywordToken, ParenItemType, BraceItemType> KeywordToken
+    for MetaEnclosedList<Keyword, ParenItemType, BraceItemType>
 {
     type Token = Keyword;
 

@@ -21,7 +21,7 @@ define_keywords! {
     deref_now,
     ignore,
     import,
-    import_tuple,
+    import_raw,
     is_big,
     is_little,
     little,

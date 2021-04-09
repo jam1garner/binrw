@@ -314,7 +314,7 @@ fn parse_with_default_args() {
     }
 
     #[derive(BinRead, Debug, PartialEq)]
-    #[br(import_tuple = args: Args)]
+    #[br(import_raw(args: Args))]
     struct InnerImportTuple {
         #[br(calc(args.0))]
         a: u8,

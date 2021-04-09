@@ -1,4 +1,4 @@
-use crate::parser::{attrs, meta_types::IdentTypeMaybeDefault, KeywordToken, TrySet};
+use crate::parser::{attrs, meta_types::{Enclosure, IdentTypeMaybeDefault}, KeywordToken, TrySet};
 
 use syn::{Ident, Type};
 
@@ -16,12 +16,28 @@ impl Default for Imports {
     }
 }
 
-impl From<attrs::ImportNamed> for Imports {
-    fn from(value: attrs::ImportNamed) -> Self {
-        if value.fields.is_empty() {
-            Self::None
-        } else {
-            Self::Named(value.fields.iter().cloned().collect())
+impl From<attrs::Import> for Imports {
+    fn from(value: attrs::Import) -> Self {
+        match &value.list {
+            Enclosure::Paren { fields, .. } => {
+                if fields.is_empty() {
+                    Self::None
+                } else {
+                    let (idents, tys) = fields
+                        .iter()
+                        .cloned()
+                        .map(|field| (field.ident, field.ty))
+                        .unzip();
+                    Self::List(idents, tys)
+                }
+            }
+            Enclosure::Brace { fields, .. } => {
+                if fields.is_empty() {
+                    Self::None
+                } else {
+                    Self::Named(fields.iter().cloned().collect())
+                }
+            }
         }
     }
 }
