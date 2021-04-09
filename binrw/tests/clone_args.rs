@@ -1,25 +1,27 @@
-use binrw::{BinRead, BinReaderExt};
+use binrw::BinRead;
 
-#[derive(Clone)]
-struct OnlyCloneable;
-
-#[derive(BinRead)]
-#[br(import(needs_clone: OnlyCloneable))]
-struct ArgsNeedClone {}
-
-#[derive(BinRead)]
-struct TestCloneArray {
-    #[br(args(OnlyCloneable))]
-    array: [ArgsNeedClone; 35],
-
-    #[br(args(OnlyCloneable))]
-    #[br(count = 4)]
-    vec: Vec<ArgsNeedClone>,
-}
-
+// This is a compile-time regression test to ensure library types allow
+// cloneable arguments.
 #[test]
 fn clone_args() {
-    let mut x = binrw::io::Cursor::new(&[]);
+    #[derive(Clone)]
+    struct OnlyCloneable;
 
-    let y: TestCloneArray = x.read_be().unwrap();
+    #[derive(BinRead)]
+    #[br(import(needs_clone: OnlyCloneable))]
+    struct ArgsNeedClone;
+
+    #[derive(BinRead)]
+    struct TestCloneArray {
+        // Test for `[T; N]::Args`
+        #[br(args(OnlyCloneable))]
+        _array: [ArgsNeedClone; 35],
+
+        // Test for `Vec<T>::Args`
+        #[br(args(OnlyCloneable))]
+        #[br(count = 4)]
+        _vec: Vec<ArgsNeedClone>,
+    }
+
+    TestCloneArray::read(&mut binrw::io::Cursor::new(b"")).unwrap();
 }
