@@ -1,4 +1,8 @@
-use crate::parser::{attrs, meta_types::{Enclosure, IdentTypeMaybeDefault}, KeywordToken, TrySet};
+use crate::parser::{
+    attrs,
+    meta_types::{Enclosure, IdentTypeMaybeDefault},
+    KeywordToken, TrySet,
+};
 
 use syn::{Ident, Type};
 

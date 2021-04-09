@@ -1,7 +1,7 @@
 use binrw::BinRead;
 
 #[derive(BinRead)]
-#[br(import(in_var: i16))]
+#[br(import { in_var: i16 })]
 #[br(invalid_struct_keyword)]
 struct Test {
     a: i16,
