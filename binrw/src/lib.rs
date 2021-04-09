@@ -175,6 +175,9 @@ pub use binrw_derive::BinRead;
 /// of `#[derive(BinRead)]` to enable [temporary variables](attribute#temp).
 pub use binrw_derive::derive_binread;
 
+/// A specialized [`Result`] type for BinRead operations.
+pub type BinResult<T> = core::result::Result<T, Error>;
+
 mod binread_impls;
 pub use binread_impls::*;
 
