@@ -161,7 +161,7 @@ impl<'a> Builder<'a> {
             };
 
             quote!(
-                #[allow(non_camel_case_types)]
+                #[allow(non_camel_case_types, unused_variables)]
                 impl< #( #generic_params ),* > #builder_name < #( #required_generics ),* > {
                     pub fn #field_name(
                         self, val: #ty

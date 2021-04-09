@@ -360,6 +360,9 @@ fn args_same_name() {
     struct Test {
         #[br(calc(x))]
         z: u8,
+
+        #[br(calc(y))]
+        z2: u16,
     }
 
     #[derive(BinRead, Debug)]
