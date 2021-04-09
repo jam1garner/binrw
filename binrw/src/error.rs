@@ -199,7 +199,7 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 mod private {
-    use core::{any::Any, fmt};
+    use core::fmt;
     pub trait Sealed {}
-    impl<T: Any + fmt::Display + fmt::Debug + Send + Sync + 'static> Sealed for T {}
+    impl<T: fmt::Display + fmt::Debug + Send + Sync + 'static> Sealed for T {}
 }
