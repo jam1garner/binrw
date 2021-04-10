@@ -379,7 +379,7 @@
 //!     #[br(temp, big)]
 //!     len: u32,
 //!
-//!     #[br(count = len)]
+//!     #[br(args { count: len as usize, inner: () })]
 //!     data: Vec<u8>
 //! }
 //!
@@ -702,7 +702,7 @@
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
-//!     #[br(count = size)]
+//!     #[br(args { count: size as usize, inner: () })]
 //!     data: Vec<u8>,
 //! }
 //!
@@ -719,7 +719,7 @@
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
-//!     #[br(count = size)]
+//!     #[br(args { count: size as usize, inner: () })]
 //!     data: FilePtr<u32, Vec<u8>>,
 //! }
 //!

@@ -18,8 +18,7 @@ fn clone_args() {
         _array: [ArgsNeedClone; 35],
 
         // Test for `Vec<T>::Args`
-        #[br(args(OnlyCloneable))]
-        #[br(count = 4)]
+        #[br(args { count: 4, inner: (OnlyCloneable,) })]
         _vec: Vec<ArgsNeedClone>,
     }
 

@@ -82,7 +82,7 @@
 //! struct Dog {
 //!     bone_pile_count: u8,
 //!
-//!     #[br(big, count = bone_pile_count)]
+//!     #[br(big, args { count: bone_pile_count as usize, inner: () })]
 //!     bone_piles: Vec<u16>,
 //!
 //!     #[br(align_before = 0xA)]

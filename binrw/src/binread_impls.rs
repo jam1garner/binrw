@@ -5,6 +5,8 @@ use crate::{
 use core::any::Any;
 use core::convert::TryInto;
 
+use binrw_derive::BinrwNamedArgs;
+
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
 
@@ -65,35 +67,39 @@ fn not_enough_bytes<T>(_: T) -> Error {
     ))
 }
 
+/// Arguments passed to the binread impl for Vec
+#[derive(BinrwNamedArgs, Clone)]
+pub struct VecArgs<B> {
+    /// The number of elements to read.
+    pub count: usize,
+    // TODO: provide a default for inner arguments somehow (specialization?)
+    /// Arguments to pass to the inner type
+    pub inner: B,
+}
+
 impl<B: BinRead> BinRead for Vec<B> {
-    type Args = B::Args;
+    type Args = VecArgs<B::Args>;
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
         args: Self::Args,
     ) -> BinResult<Self> {
-        let mut options = *options;
-        let count = match options.count.take() {
-            Some(x) => x,
-            None => panic!("Missing count for Vec"),
-        };
-
-        let mut list = Self::with_capacity(count);
+        let mut list = Self::with_capacity(args.count);
 
         if let Some(bytes) = <dyn Any>::downcast_mut::<Vec<u8>>(&mut list) {
             let byte_count = reader
-                .take(count.try_into().map_err(not_enough_bytes)?)
+                .take(args.count.try_into().map_err(not_enough_bytes)?)
                 .read_to_end(bytes)?;
 
-            if byte_count == count {
+            if byte_count == args.count {
                 Ok(list)
             } else {
                 Err(not_enough_bytes(()))
             }
         } else {
-            for _ in 0..count {
-                list.push(B::read_options(reader, &options, args.clone())?);
+            for _ in 0..args.count {
+                list.push(B::read_options(reader, options, args.inner.clone())?);
             }
             Ok(list)
         }
@@ -109,7 +115,7 @@ impl<B: BinRead> BinRead for Vec<B> {
         R: Read + Seek,
     {
         for val in self.iter_mut() {
-            val.after_parse(reader, ro, args.clone())?;
+            val.after_parse(reader, ro, args.inner.clone())?;
         }
 
         Ok(())
