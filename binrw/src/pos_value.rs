@@ -1,5 +1,5 @@
 use crate::{
-    io::{Read, Seek, SeekFrom},
+    io::{Read, Seek},
     BinRead, BinResult, ReadOptions,
 };
 use core::fmt;
@@ -37,7 +37,7 @@ impl<T: BinRead> BinRead for PosValue<T> {
         options: &ReadOptions,
         args: T::Args,
     ) -> BinResult<Self> {
-        let pos = reader.seek(SeekFrom::Current(0))?;
+        let pos = reader.stream_position()?;
 
         Ok(PosValue {
             pos,

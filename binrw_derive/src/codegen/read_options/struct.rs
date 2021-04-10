@@ -267,7 +267,7 @@ impl<'field> FieldGenerator<'field> {
                 let value = self.out;
                 let map_err = super::get_map_err(SAVED_POSITION);
                 quote! {{
-                    let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+                    let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#READER)?;
 
                     (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value)#map_err?
                 }}
@@ -428,7 +428,7 @@ fn generate_seek_after(field: &StructField) -> TokenStream {
     let pad_size_to = field.pad_size_to.as_ref().map(|pad| {
         quote! {{
             let pad = (#pad) as i64;
-            let size = (#SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))? - #POS) as i64;
+            let size = (#SEEK_TRAIT::stream_position(#READER)? - #POS) as i64;
             if size < pad {
                 #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(pad - size))?;
             }
@@ -454,7 +454,7 @@ fn generate_seek_before(field: &StructField) -> TokenStream {
     let align_before = field.align_before.as_ref().map(map_align);
     let pad_size_to_before = field.pad_size_to.as_ref().map(|_| {
         quote! {
-            let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+            let #POS = #SEEK_TRAIT::stream_position(#READER)?;
         }
     });
 
@@ -499,7 +499,7 @@ fn make_field_vars(field: &StructField) -> (Option<Ident>, Option<Ident>) {
 fn map_align(align: &TokenStream) -> TokenStream {
     quote! {{
         let align = (#align) as i64;
-        let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))? as i64;
+        let pos = #SEEK_TRAIT::stream_position(#READER)? as i64;
         #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current((align - (pos % align)) % align))?;
     }}
 }
@@ -515,7 +515,7 @@ fn wrap_save_restore(value: TokenStream) -> TokenStream {
         value
     } else {
         quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#READER)?;
             #value
             #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))?;
         }
