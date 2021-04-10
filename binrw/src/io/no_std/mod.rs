@@ -195,6 +195,12 @@ pub enum SeekFrom {
 pub trait Seek {
     /// Seek to an offset, in bytes, in a stream.
     fn seek(&mut self, pos: SeekFrom) -> Result<u64>;
+    /// Returns the current seek position from the start of the stream.
+    ///
+    /// This is equivalent to `self.seek(SeekFrom::Current(0))`.
+    fn stream_position(&mut self) -> Result<u64> {
+        self.seek(SeekFrom::Current(0))
+    }
 }
 
 impl<S: Seek + ?Sized> Seek for &mut S {

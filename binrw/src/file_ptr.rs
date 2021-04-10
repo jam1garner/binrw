@@ -86,7 +86,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
         R: Read + Seek,
     {
         let relative_to = ro.offset;
-        let before = reader.seek(SeekFrom::Current(0))?;
+        let before = reader.stream_position()?;
         reader.seek(SeekFrom::Start(relative_to))?;
         reader.seek(self.ptr.into_seek_from())?;
 
@@ -112,7 +112,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
         args: BR::Args,
     ) -> BinResult<BR> {
         let mut ptr: Self = Self::read_options(reader, options, args.clone())?;
-        let saved_pos = reader.seek(SeekFrom::Current(0))?;
+        let saved_pos = reader.stream_position()?;
         ptr.after_parse(reader, options, args)?;
         reader.seek(SeekFrom::Start(saved_pos))?;
         Ok(ptr.into_inner())
