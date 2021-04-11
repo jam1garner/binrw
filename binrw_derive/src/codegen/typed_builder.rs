@@ -57,6 +57,8 @@ impl<'a> Builder<'a> {
             #res_struct
 
             impl< #( #user_bounds ),* > #name < #( #user_generic_args ),* >  {
+                /// An inherent method version of [`BinrwNamedArgs`](::binrw::BinrwNamedArgs),
+                /// designed for use with [`binrw::args!`](::binrw::args).
                 #vis fn builder() -> #builder_name < #( #user_generic_args, )* #( #initial_generics ),* > {
                     #initial
                 }
@@ -72,6 +74,7 @@ impl<'a> Builder<'a> {
 
             #( #setters )*
 
+            /// A builder for constructing the given type using [`binrw::args!`](::binrw::args).
             #[allow(non_camel_case_types)]
             #vis struct #builder_name <#(#user_bounds,)* #( #generics ),* > {
                 #builder_fields
@@ -89,6 +92,8 @@ impl<'a> Builder<'a> {
                     #( #generics ),*
                 >
             {
+                /// A method to finalize the struct after all builder required fields have been
+                /// fulfilled.
                 #vis fn finalize(self) -> #name < #(#user_generic_args),* > {
                     let #builder_name {
                         #(
@@ -205,6 +210,10 @@ impl<'a> Builder<'a> {
                     #( #user_bounds, )*
                     #( #generic_params ),*
                 > #builder_name < #( #user_generic_args, )* #( #required_generics ),* > {
+                    /// A method to allow this field to be set using the [`binrw::args`]
+                    /// macro.
+                    ///
+                    /// [`binrw::args`]: ::binrw::args
                     #vis fn #field_name(
                         self, val: #ty
                     ) -> #builder_name < #( #user_generic_args, )* #( #resulting_generics ),* > {
