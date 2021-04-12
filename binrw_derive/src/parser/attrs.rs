@@ -1,15 +1,16 @@
 use super::{
     keywords as kw,
     meta_types::{
-        FieldValue, IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList,
-        MetaLit, MetaType, MetaValue,
+        IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList, MetaLit,
+        MetaType, MetaValue,
     },
 };
+use proc_macro2::TokenStream;
 use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
-pub(crate) type Args = MetaEnclosedList<kw::args, Expr, FieldValue>;
+pub(crate) type Args = MetaEnclosedList<kw::args, Expr, TokenStream>;
 pub(crate) type ArgsRaw = MetaExpr<kw::args_raw>;
 pub(crate) type AssertLike<K> = MetaList<K, Expr>;
 pub(crate) type Assert = AssertLike<kw::assert>;

@@ -2,7 +2,7 @@
 extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::format;
-use binrw::{args, io::Cursor, punctuated::Punctuated, BinRead, BinReaderExt};
+use binrw::{io::Cursor, punctuated::Punctuated, BinRead, BinReaderExt};
 
 #[derive(BinRead, Clone, Copy, Debug)]
 #[br(magic = 1u8)]
@@ -16,8 +16,7 @@ struct Two;
 struct PunctuatedTest {
     count: u8,
 
-    // FIXME: should be able to use args {...} directly instead of args_raw = args! {...}
-    #[br(args_raw = args! { count: count as usize, inner: () })]
+    #[br(args { count: count as usize, inner: () })]
     #[br(parse_with = Punctuated::<One, Two>::separated)]
     list: Punctuated<One, Two>,
 }
@@ -26,7 +25,7 @@ struct PunctuatedTest {
 struct PunctuatedTestTrailing {
     count: u8,
 
-    #[br(args_raw = args! { count: count as usize, inner: () })]
+    #[br(args { count: count as usize, inner: () })]
     #[br(parse_with = Punctuated::<One, Two>::separated_trailing)]
     list: Punctuated<One, Two>,
 }

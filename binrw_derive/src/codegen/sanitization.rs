@@ -57,6 +57,7 @@ ident_str! {
     pub(crate) NEEDED = from_crate!(Needed);
     pub(crate) OPTIONAL = from_crate!(Optional);
     pub(crate) BINRW_NAMED_ARGS = from_crate!(BinrwNamedArgs);
+    pub(crate) ARGS_MACRO = from_crate!(args);
     pub(crate) TEMP = "__binrw_temp";
     pub(crate) POS = "__binrw_generated_position_temp";
     pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";
