@@ -38,6 +38,7 @@ ident_str! {
     pub(crate) READ_TRAIT = from_crate!(io::Read);
     pub(crate) SEEK_TRAIT = from_crate!(io::Seek);
     pub(crate) SEEK_FROM = from_crate!(io::SeekFrom);
+    pub(crate) CURSOR = from_crate!(io::Cursor);
     pub(crate) BIN_RESULT = from_crate!(BinResult);
     pub(crate) ENDIAN_ENUM = from_crate!(Endian);
     pub(crate) READ_METHOD = from_trait!(read_options);

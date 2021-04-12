@@ -28,7 +28,7 @@ use core::fmt;
 /// #[derive(BinRead)]
 /// struct MyList {
 ///     #[br(parse_with = Punctuated::separated)]
-///     #[br(args { count: 3, inner: () })]
+///     #[br(args_raw = args! { count: 3, inner: () })]
 ///     x: Punctuated<u16, u8>,
 /// }
 ///
@@ -43,21 +43,6 @@ pub struct Punctuated<T: BinRead, P: BinRead> {
 
     /// The separator values.
     pub separators: Vec<P>,
-}
-
-// TODO: THIS IS A HACK
-//  perhaps it would be better if trailing vs no-trailing were implemented via an enum?
-impl<T: BinRead, P: BinRead> BinRead for Punctuated<T, P> {
-    type Args = VecArgs<T::Args>;
-
-    // Do nothing implementation, because we need to be able to provide Args.
-    fn read_options<R: Read + Seek>(
-        _reader: &mut R,
-        _options: &ReadOptions,
-        _args: Self::Args,
-    ) -> BinResult<Self> {
-        unimplemented!()
-    }
 }
 
 impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
@@ -75,7 +60,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// #[derive(BinRead)]
     /// struct MyList {
     ///     #[br(parse_with = Punctuated::separated)]
-    ///     #[br(args { count: 3, inner: () })]
+    ///     #[br(args_raw = args! { count: 3, inner: () })]
     ///     x: Punctuated<u16, u8>,
     /// }
     ///

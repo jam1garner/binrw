@@ -284,8 +284,30 @@ impl<'field> FieldGenerator<'field> {
     fn prefix_args_and_options(mut self) -> Self {
         let args = self.args_var.as_ref().map(|args_var| {
             let args = get_passed_args(&self.field);
-            quote! {
-                let #args_var = #args;
+            let ty = &self.field.ty;
+
+            // FIXME: this will result in duplicating the function tokens
+            //  which may not be desirable if it's a closure.
+            //  this is probably fixable by binding the function to a variable first,
+            //  and sharing it between actually calling it and calling the generated
+            //  helper function with it.
+            if let ReadMode::ParseWith(func) = &self.field.read_mode {
+                quote! {
+                    let #args_var = {
+                        fn helper<Args, R: #READ_TRAIT + #SEEK_TRAIT>(
+                            _: impl FnOnce(&mut R, &#OPTIONS, Args) -> #BIN_RESULT<#ty>,
+                            _: ::core::marker::PhantomData<R>,
+                            a: Args
+                        ) -> Args {
+                            a
+                        }
+                        helper(#func, ::core::marker::PhantomData::<#CURSOR<&[u8]>>, #args)
+                    };
+                }
+            } else {
+                quote! {
+                    let #args_var: <#ty as #TRAIT_NAME>::Args = #args;
+                }
             }
         });
 
