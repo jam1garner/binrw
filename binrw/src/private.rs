@@ -82,3 +82,11 @@ where
 
     Ok(())
 }
+
+pub fn parse_function_args_type_hint<R, Res, Args, F>(_: F, a: Args) -> Args
+where
+    R: crate::io::Read + crate::io::Seek,
+    F: FnOnce(&mut R, &crate::ReadOptions, Args) -> crate::BinResult<Res>,
+{
+    a
+}

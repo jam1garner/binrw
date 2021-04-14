@@ -3,7 +3,7 @@ use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 use crate::codegen::sanitization::*;
 use crate::parser::{Input, Map, PassedArgs, ReadMode, Struct, StructField};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::Ident;
 
 pub(super) fn generate_unit_struct(
@@ -123,6 +123,7 @@ fn generate_field(field: &StructField) -> TokenStream {
         .wrap_restore_position()
         .prefix_magic()
         .prefix_args_and_options()
+        .prefix_read_function()
         .finish()
 }
 
@@ -281,30 +282,33 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
+    fn prefix_read_function(mut self) -> Self {
+        let read_function = match &self.field.read_mode {
+            ReadMode::ParseWith(parser) => Some(parser.clone()),
+            ReadMode::Normal => Some(READ_METHOD.to_token_stream()),
+            _ => None,
+        };
+
+        let rest = self.out;
+        self.out = quote! {
+            let #READ_FUNCTION = (#read_function);
+            #rest
+        };
+
+        self
+    }
+
     fn prefix_args_and_options(mut self) -> Self {
         let args = self.args_var.as_ref().map(|args_var| {
             let args = get_passed_args(&self.field);
             let ty = &self.field.ty;
 
-            // FIXME: this will result in duplicating the function tokens
-            //  which may not be desirable if it's a closure.
-            //  this is probably fixable by binding the function to a variable first,
-            //  and sharing it between actually calling it and calling the generated
-            //  helper function with it.
-            if let ReadMode::ParseWith(func) = &self.field.read_mode {
+            if let ReadMode::ParseWith(_) = &self.field.read_mode {
                 quote! {
-                    let #args_var = {
-                        fn helper<Args, R: #READ_TRAIT + #SEEK_TRAIT>(
-                            _: impl FnOnce(&mut R, &#OPTIONS, Args) -> #BIN_RESULT<#ty>,
-                            _: ::core::marker::PhantomData<R>,
-                            a: Args
-                        ) -> Args {
-                            a
-                        }
-                        helper(#func, ::core::marker::PhantomData::<#CURSOR<&[u8]>>, #args)
-                    };
+                    let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
                 }
             } else {
+                // NOTE: we could probably remove this else branch.
                 quote! {
                     let #args_var: <#ty as #TRAIT_NAME>::Args = #args;
                 }
@@ -349,17 +353,11 @@ impl<'field> FieldGenerator<'field> {
             ReadMode::Default => quote! { <_>::default() },
             ReadMode::Calc(calc) => quote! { #calc },
             ReadMode::Normal | ReadMode::ParseWith(_) => {
-                let read_method = if let ReadMode::ParseWith(parser) = &self.field.read_mode {
-                    parser.clone()
-                } else {
-                    quote! { #READ_METHOD }
-                };
-
                 let args_arg = get_args_argument(&self.args_var);
                 let options_var = &self.options_var;
 
                 quote! {
-                    #read_method(#READER, #options_var, #args_arg)
+                    #READ_FUNCTION(#READER, #options_var, #args_arg)
                 }
             }
         };

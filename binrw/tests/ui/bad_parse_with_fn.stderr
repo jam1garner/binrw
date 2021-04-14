@@ -1,0 +1,10 @@
+error[E0618]: expected function, found `{integer}`
+ --> $DIR/bad_parse_with_fn.rs:3:10
+  |
+3 | #[derive(BinRead)]
+  |          ^^^^^^^
+  |          |
+  |          call expression requires function
+  |          `__binrw_generated_read_function` has type `{integer}`
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

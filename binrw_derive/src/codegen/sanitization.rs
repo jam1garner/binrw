@@ -38,7 +38,6 @@ ident_str! {
     pub(crate) READ_TRAIT = from_crate!(io::Read);
     pub(crate) SEEK_TRAIT = from_crate!(io::Seek);
     pub(crate) SEEK_FROM = from_crate!(io::SeekFrom);
-    pub(crate) CURSOR = from_crate!(io::Cursor);
     pub(crate) BIN_RESULT = from_crate!(BinResult);
     pub(crate) ENDIAN_ENUM = from_crate!(Endian);
     pub(crate) READ_METHOD = from_trait!(read_options);
@@ -52,6 +51,7 @@ ident_str! {
     pub(crate) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
     pub(crate) COERCE_FN = from_crate!(__private::coerce_fn);
     pub(crate) TRY_AFTER_PARSE = from_crate!(__private::try_after_parse);
+    pub(crate) ARGS_TYPE_HINT = from_crate!(__private::parse_function_args_type_hint);
     pub(crate) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
     pub(crate) SATISFIED = from_crate!(Satisfied);
     pub(crate) NEEDED = from_crate!(Needed);
@@ -61,6 +61,7 @@ ident_str! {
     pub(crate) TEMP = "__binrw_temp";
     pub(crate) POS = "__binrw_generated_position_temp";
     pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";
+    pub(crate) READ_FUNCTION = "__binrw_generated_read_function";
 }
 
 pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
