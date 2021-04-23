@@ -5,7 +5,9 @@ use super::{
 };
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
+use crate::parser::{
+    Enum, EnumErrorMode, EnumVariant, Imports, Input, UnitEnumField, UnitOnlyEnum,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -154,7 +156,10 @@ pub(super) fn generate_data_enum(input: &Input, en: &Enum) -> TokenStream {
 fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
     // TODO: Kind of expensive since the enum is containing all the fields
     // and this is a clone.
-    let input = Input::Enum(en.with_variant(variant));
+    let mut new_enum = en.with_variant(variant);
+    // Drop imports, we already have them in scope
+    new_enum.imports = Imports::None;
+    let input = Input::Enum(new_enum);
 
     match variant {
         EnumVariant::Variant { ident, options } => StructGenerator::new(&input, &options)
