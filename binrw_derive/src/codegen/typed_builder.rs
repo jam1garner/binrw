@@ -43,8 +43,13 @@ impl<'a> Builder<'a> {
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
 
         let res_struct = if define_result {
+            let derives = if self.are_all_fields_optional() {
+                quote!(#[derive(Clone, Default)])
+            } else {
+                quote!(#[derive(Clone)])
+            };
             Some(quote!(
-                #[derive(Clone)]
+                #derives
                 #vis struct #name < #( #user_bounds ),* > {
                     #fields
                 }
@@ -235,6 +240,13 @@ impl<'a> Builder<'a> {
                     }
                 }
             )
+        })
+    }
+
+    fn are_all_fields_optional(&self) -> bool {
+        self.fields.iter().all(|field| match field.kind {
+            BuilderFieldKind::Optional { .. } => true,
+            _ => false,
         })
     }
 }
