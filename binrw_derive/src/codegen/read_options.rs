@@ -174,18 +174,6 @@ impl ReadOptionsGenerator {
         }
     }
 
-    fn count(mut self, count: &Option<TokenStream>) -> Self {
-        if let Some(count) = &count {
-            let head = self.out;
-            self.out = quote! {
-                #head
-                #TEMP.count = Some((#count) as usize);
-            };
-        }
-
-        self
-    }
-
     fn endian(mut self, endian: &CondEndian) -> Self {
         let endian = match endian {
             CondEndian::Inherited => return self,

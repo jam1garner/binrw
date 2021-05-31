@@ -319,7 +319,6 @@ impl<'field> FieldGenerator<'field> {
             ReadOptionsGenerator::new(options_var)
                 .endian(&self.field.endian)
                 .offset(&self.field.offset)
-                .count(&self.field.count)
                 .finish()
         });
 
@@ -435,17 +434,21 @@ fn get_args_argument(args_var: &Option<Ident>) -> TokenStream {
 fn get_passed_args(field: &StructField) -> Option<TokenStream> {
     let args = &field.args;
     match args {
-        PassedArgs::Named(fields) => Some({
-            // if fields.is_empty() {
-            //     return None;
-            // }
+        PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
+            quote! {
+                #ARGS_MACRO! { count: ((#count) as usize) #(, #fields)* }
+            }
+        } else {
             quote! {
                 #ARGS_MACRO! { #(#fields),* }
             }
         }),
         PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
         PassedArgs::Tuple(tuple) => Some(tuple.clone()),
-        PassedArgs::None => None,
+        PassedArgs::None => field
+            .count
+            .as_ref()
+            .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
 }
 
@@ -514,7 +517,7 @@ fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {
 }
 
 fn make_field_vars(field: &StructField) -> (Option<Ident>, Option<Ident>) {
-    let args_var = if field.args.is_some() {
+    let args_var = if field.args.is_some() || field.count.is_some() {
         Some(make_ident(&field.ident, "args"))
     } else {
         None
