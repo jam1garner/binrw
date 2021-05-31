@@ -244,10 +244,9 @@ impl<'a> Builder<'a> {
     }
 
     fn are_all_fields_optional(&self) -> bool {
-        self.fields.iter().all(|field| match field.kind {
-            BuilderFieldKind::Optional { .. } => true,
-            _ => false,
-        })
+        self.fields
+            .iter()
+            .all(|field| matches!(field.kind, BuilderFieldKind::Optional { .. }))
     }
 }
 
