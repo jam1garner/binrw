@@ -8,7 +8,7 @@ fn clone_args() {
     struct OnlyCloneable;
 
     #[derive(BinRead)]
-    #[br(import(needs_clone: OnlyCloneable))]
+    #[br(import(_needs_clone: OnlyCloneable))]
     struct ArgsNeedClone;
 
     #[derive(BinRead)]

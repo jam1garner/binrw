@@ -1,5 +1,6 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
+#![allow(clippy::expl_impl_clone_on_copy)]
 
 mod codegen;
 mod parser;
