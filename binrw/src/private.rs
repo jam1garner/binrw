@@ -53,7 +53,7 @@ where
     B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + 'static,
     R: io::Read + io::Seek,
 {
-    let pos = reader.seek(io::SeekFrom::Current(0))?;
+    let pos = reader.stream_position()?;
     let val = B::read_options(reader, &options, ())?;
     if val == expected {
         Ok(())

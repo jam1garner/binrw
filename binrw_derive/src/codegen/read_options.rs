@@ -34,7 +34,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
     };
 
     quote! {
-        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+        let #POS = #SEEK_TRAIT::stream_position(#READER)?;
         (|| {
             #inner
         })().or_else(|error| {
@@ -107,7 +107,7 @@ impl<'input> PreludeGenerator<'input> {
             let head = self.out;
             self.out = quote! {
                 #head
-                let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+                let #POS = #SEEK_TRAIT::stream_position(#READER)?;
             };
         };
 
