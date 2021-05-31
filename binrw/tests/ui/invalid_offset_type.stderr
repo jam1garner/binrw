@@ -3,9 +3,21 @@ error[E0308]: mismatched types
   |
 6 |     #[br(offset = a)]
   |                   ^ expected `u64`, found `u8`
+  |
+note: return type inferred to be `u64` here
+ --> $DIR/invalid_offset_type.rs:3:10
+  |
+3 | #[derive(BinRead)]
+  |          ^^^^^^^
 
 error[E0308]: mismatched types
  --> $DIR/invalid_offset_type.rs:8:25
   |
 8 |     #[br(offset_after = d)]
   |                         ^ expected `u64`, found `u8`
+  |
+note: return type inferred to be `u64` here
+ --> $DIR/invalid_offset_type.rs:3:10
+  |
+3 | #[derive(BinRead)]
+  |          ^^^^^^^

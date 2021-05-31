@@ -7,4 +7,4 @@ error[E0618]: expected function, found `{integer}`
   |          call expression requires function
   |          `__binrw_generated_read_function` has type `{integer}`
   |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `BinRead` (in Nightly builds, run with -Z macro-backtrace for more info)
