@@ -72,8 +72,9 @@ fn not_enough_bytes<T>(_: T) -> Error {
 pub struct VecArgs<B> {
     /// The number of elements to read.
     pub count: usize,
-    // TODO: provide a default for inner arguments somehow (specialization?)
+
     /// Arguments to pass to the inner type
+    #[named_args(try_optional)]
     pub inner: B,
 }
 

@@ -129,7 +129,7 @@ fn calc_temp_field() {
         #[br(temp)]
         len: u32,
 
-        #[br(args { count: len as usize, inner: () })]
+        #[br(args { count: len as usize })]
         vec: Vec<u8>,
     }
 

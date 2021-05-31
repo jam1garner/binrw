@@ -8,6 +8,7 @@ use crate::parser::meta_types::IdentTypeMaybeDefault;
 
 pub(crate) enum BuilderFieldKind {
     Required,
+    TryOptional,
     Optional { default: Box<syn::Expr> },
 }
 
@@ -41,6 +42,7 @@ impl<'a> Builder<'a> {
         let satisfied = &SATISFIED_OR_OPTIONAL;
         let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
+        let optional_finalizers = self.optional_finalizers();
 
         let res_struct = if define_result {
             let derives = if self.are_all_fields_optional() {
@@ -85,6 +87,8 @@ impl<'a> Builder<'a> {
                 #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
+
+            #( #optional_finalizers )*
 
             #[allow(non_camel_case_types)]
             impl<
@@ -205,7 +209,7 @@ impl<'a> Builder<'a> {
             let ty = &field.ty;
 
             let field_result = match field.kind {
-                BuilderFieldKind::Required => quote!(Some(val)),
+                BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(Some(val)),
                 BuilderFieldKind::Optional { .. } => quote!(val),
             };
 
@@ -248,6 +252,88 @@ impl<'a> Builder<'a> {
             .iter()
             .all(|field| matches!(field.kind, BuilderFieldKind::Optional { .. }))
     }
+
+    fn optional_finalizers(&self) -> Vec<TokenStream> {
+        if !self
+            .fields
+            .iter()
+            .any(|field| matches!(field.kind, BuilderFieldKind::TryOptional))
+        {
+            return vec![];
+        }
+        let builder_name = self.builder_name;
+        let name = self.result_name;
+        let user_bounds = self.generics;
+        let vis = self.vis;
+        let user_generic_args = self.user_generic_args();
+        let generics = self.generate_generics();
+        let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
+        let possible_unwrap: Vec<_> = self
+            .fields
+            .iter()
+            .map(BuilderField::possible_unwrap_or_default)
+            .collect();
+
+        self.fields
+            .iter()
+            .enumerate()
+            .filter_map(|(i, field)| {
+                if let BuilderFieldKind::TryOptional = field.kind {
+                    let current_field_ty = &field.ty;
+                    let satisfied_generics = generics.iter().enumerate().map(|(n, generic)| {
+                        let generic = generic.clone();
+                        if i == n {
+                            quote!(#NEEDED)
+                        } else {
+                            quote!(#generic)
+                        }
+                    });
+                    let filtered_generics = generics.iter().enumerate().map(|(n, generic)| {
+                        let generic = generic.clone();
+                        if i == n {
+                            None
+                        } else {
+                            Some(quote!(#generic : #SATISFIED_OR_OPTIONAL))
+                        }
+                    });
+                    Some(quote! {
+                        #[allow(non_camel_case_types)]
+                        impl<
+                            #( #user_bounds, )*
+                            #( #filtered_generics ),*
+                        >
+                            #builder_name
+                            <
+                                #(#user_generic_args,)*
+                                #( #satisfied_generics ),*
+                            >
+                        where
+                            #current_field_ty: Default,
+                        {
+                            /// A method to finalize the struct after all builder required fields have been
+                            /// fulfilled.
+                            #vis fn finalize(self) -> #name < #(#user_generic_args),* > {
+                                let #builder_name {
+                                    #(
+                                        #field_names,
+                                    )*
+                                    ..
+                                } = self;
+
+                                #name {
+                                    #(
+                                        #field_names #possible_unwrap,
+                                    )*
+                                }
+                            }
+                        }
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 impl From<&IdentTypeMaybeDefault> for BuilderField {
@@ -274,7 +360,7 @@ impl BuilderField {
         let name = &self.name;
         let ty = &self.ty;
         let ty = match self.kind {
-            BuilderFieldKind::Required => quote!(Option<#ty>),
+            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(Option<#ty>),
             BuilderFieldKind::Optional { .. } => quote!(#ty),
         };
         quote!(
@@ -297,7 +383,7 @@ impl BuilderField {
     fn initial_value(&self) -> TokenStream {
         let name = &self.name;
         match self.kind {
-            BuilderFieldKind::Required => quote!(
+            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(
                 #name: None,
             ),
             BuilderFieldKind::Optional { ref default } => quote!(
@@ -308,7 +394,7 @@ impl BuilderField {
 
     fn initial_generic(&self) -> TokenStream {
         match self.kind {
-            BuilderFieldKind::Required => quote!( #NEEDED ),
+            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!( #NEEDED ),
             BuilderFieldKind::Optional { .. } => quote!( #OPTIONAL ),
         }
     }
@@ -316,8 +402,19 @@ impl BuilderField {
     fn possible_unwrap(&self) -> TokenStream {
         let name = &self.name;
         match self.kind {
+            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => {
+                quote!( : #name.unwrap() )
+            }
+            BuilderFieldKind::Optional { .. } => quote!(),
+        }
+    }
+
+    fn possible_unwrap_or_default(&self) -> TokenStream {
+        let name = &self.name;
+        match self.kind {
             BuilderFieldKind::Required => quote!( : #name.unwrap() ),
             BuilderFieldKind::Optional { .. } => quote!(),
+            BuilderFieldKind::TryOptional => quote!( : #name.unwrap_or_default() ),
         }
     }
 }
