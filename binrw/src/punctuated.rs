@@ -49,7 +49,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// Parses values of type `T` separated by values of type `P` without a
     /// trailing separator value.
     ///
-    /// Requires [`count`](crate::ReadOptions::count).
+    /// Requires a count to be passed via `#[br(count)]`.
     ///
     /// # Example
     ///
@@ -90,7 +90,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// Parses values of type `T` interleaved with values of type `P`, including
     /// a trailing `P`.
     ///
-    /// Requires [`count`](crate::ReadOptions::count).
+    /// Requires a count to be passed via `#[br(count)]`.
     pub fn separated_trailing<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,

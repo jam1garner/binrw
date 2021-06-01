@@ -688,7 +688,7 @@
 //! When manually implementing
 //! [`BinRead::read_options`](crate::BinRead::read_options) or a
 //! [custom parser function](#custom-parsers), the `count` value is accessible
-//! from [`ReadOptions::count`](crate::ReadOptions::count).
+//! from a named argument named `count`.
 //!
 //! Any earlier field or [import](#arguments) can be referenced by the
 //! expression in the directive.
