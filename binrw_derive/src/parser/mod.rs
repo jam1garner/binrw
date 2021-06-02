@@ -44,8 +44,8 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
             .filter(|attr| is_binread_attr(attr))
             .flat_map(
                 |attr| match syn::parse2::<MetaAttrList<Attr>>(attr.tokens.clone()) {
-                    Ok(list) => either::Either::Right(list.into_iter().map(Ok)),
-                    Err(err) => either::Either::Left(core::iter::once(Err(err))),
+                    Ok(list) => list.into_iter().map(Ok).collect::<Vec<_>>().into_iter(),
+                    Err(err) => core::iter::once(Err(err)).collect::<Vec<_>>().into_iter(),
                 },
             );
 
