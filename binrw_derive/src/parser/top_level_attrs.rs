@@ -110,7 +110,7 @@ attr_struct! {
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,
-        #[from(Import, ImportTuple)]
+        #[from(Import, ImportRaw)]
         pub(crate) imports: Imports,
         #[from(Assert)]
         pub(crate) assertions: Vec<Assert>,
@@ -153,7 +153,7 @@ attr_struct! {
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,
-        #[from(Import, ImportTuple)]
+        #[from(Import, ImportRaw)]
         pub(crate) imports: Imports,
         // TODO: Does this make sense? It is not known what properties will
         // exist in order to construct a valid variant. The assertions all get
@@ -222,7 +222,7 @@ attr_struct! {
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,
-        #[from(Import, ImportTuple)]
+        #[from(Import, ImportRaw)]
         pub(crate) imports: Imports,
         #[from(Repr)]
         pub(crate) repr: Option<SpannedValue<TokenStream>>,

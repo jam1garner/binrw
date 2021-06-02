@@ -16,10 +16,6 @@ pub struct ReadOptions {
     /// will be overridden by the directive.
     pub endian: Endian,
 
-    /// The number of inner objects to read when reading a collection type like
-    /// [`Vec`].
-    pub count: Option<usize>,
-
     /// An absolute offset added to the [`FilePtr::ptr`](crate::FilePtr::ptr)
     /// offset before reading the pointed-to value.
     pub offset: u64,

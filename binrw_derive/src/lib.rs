@@ -1,14 +1,20 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
+#![allow(clippy::expl_impl_clone_on_copy)]
 
 mod codegen;
+mod named_args;
 mod parser;
 
-use codegen::generate_impl;
+use codegen::{
+    generate_impl,
+    typed_builder::{Builder, BuilderField, BuilderFieldKind},
+};
+use named_args::NamedArgAttr;
 use parser::{is_binread_attr, Input, ParseResult};
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
 #[cfg(not(tarpaulin_include))]
@@ -50,6 +56,76 @@ fn clean_field_attrs(
             })
             .collect();
     }
+}
+
+#[proc_macro_derive(BinrwNamedArgs, attributes(named_args))]
+pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let fields = match match input.data {
+        syn::Data::Struct(s) => s
+            .fields
+            .iter()
+            .map(|field| {
+                let attrs: Vec<NamedArgAttr> = field
+                    .attrs
+                    .iter()
+                    .filter_map(|attr| {
+                        let is_named_args = attr
+                            .path
+                            .get_ident()
+                            .map_or(false, |ident| ident == "named_args");
+                        if is_named_args {
+                            attr.parse_args().ok()
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                let kind = if attrs
+                    .iter()
+                    .any(|attr| matches!(attr, NamedArgAttr::TryOptional))
+                {
+                    BuilderFieldKind::TryOptional
+                } else {
+                    BuilderFieldKind::Required
+                };
+                Ok(BuilderField {
+                    kind,
+                    name: match field.ident.as_ref() {
+                        Some(ident) => ident.clone(),
+                        None => {
+                            return Err(syn::Error::new(
+                                field.span(),
+                                "must not be a tuple-style field",
+                            ))
+                        }
+                    },
+                    ty: field.ty.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, syn::Error>>(),
+        _ => {
+            return syn::Error::new(input.span(), "only structs are supported")
+                .to_compile_error()
+                .into()
+        }
+    } {
+        Ok(fields) => fields,
+        Err(err) => return err.into_compile_error().into(),
+    };
+
+    let generics: Vec<_> = input.generics.params.iter().cloned().collect();
+
+    Builder {
+        result_name: &input.ident,
+        builder_name: &quote::format_ident!("{}Builder", input.ident),
+        fields: &fields,
+        generics: &generics,
+        vis: &input.vis,
+    }
+    .generate(false)
+    .into()
 }
 
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {

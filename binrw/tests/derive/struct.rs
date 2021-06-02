@@ -1,5 +1,5 @@
 use binrw::{
-    derive_binread,
+    args, derive_binread,
     io::{Cursor, Read, Seek, SeekFrom},
     BinRead, BinResult, FilePtr, NullString, ReadOptions,
 };
@@ -15,7 +15,7 @@ fn all_the_things() {
     struct Test {
         extra_entry_count: u32,
 
-        #[br(count = extra_entry_count + 1, args(0x69))]
+        #[br(count = extra_entry_count + 1, args { inner: args! { extra_val: 0x69 } })]
         entries: Vec<FilePtr<u32, TestEntry>>,
 
         #[br(default)]
@@ -38,7 +38,7 @@ fn all_the_things() {
 
     #[derive(BinRead, Debug)]
     #[br(little, magic = b"TST2")]
-    #[br(import(extra_val: u8))]
+    #[br(import { extra_val: u8 })]
     struct TestEntry {
         #[br(map = |val: u32| val.to_string())]
         entry_num: String,
@@ -195,17 +195,34 @@ fn empty_imports() {
 }
 
 #[test]
+fn all_default_imports() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import { _default: u8 = 42 })]
+    struct Test {
+        a: u8,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\x01")).unwrap();
+    assert_eq!(result, Test { a: 1 });
+}
+
+#[test]
 fn if_alternate() {
     #[derive(BinRead, Debug)]
-    #[br(import(try_read: bool))]
+    #[br(import{ try_read: bool })]
     struct Test {
         #[br(if(try_read, 10))]
         a: u8,
     }
 
-    let result = Test::read_args(&mut Cursor::new(b"\x01"), (true,)).unwrap();
+    let result = Test::read_args(
+        &mut Cursor::new(b"\x01"),
+        <Test as BinRead>::Args::builder().try_read(true).finalize(),
+    )
+    .unwrap();
     assert_eq!(result.a, 1);
-    let result = Test::read_args(&mut Cursor::new(b"\x01"), (false,)).unwrap();
+    let result =
+        Test::read_args(&mut Cursor::new(b"\x01"), binrw::args! { try_read: false }).unwrap();
     assert_eq!(result.a, 10);
 }
 
@@ -314,7 +331,7 @@ fn parse_with_default_args() {
     }
 
     #[derive(BinRead, Debug, PartialEq)]
-    #[br(import(in_a: u8))]
+    #[br(import { in_a: u8 })]
     struct InnerImport {
         #[br(calc(in_a))]
         a: u8,
@@ -322,7 +339,7 @@ fn parse_with_default_args() {
     }
 
     #[derive(BinRead, Debug, PartialEq)]
-    #[br(import_tuple = args: Args)]
+    #[br(import_raw(args: Args))]
     struct InnerImportTuple {
         #[br(calc(args.0))]
         a: u8,
@@ -331,6 +348,7 @@ fn parse_with_default_args() {
 
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {
+        #[br(args{ in_a: 0 })]
         #[br(parse_with = InnerImport::read_options)]
         inner: InnerImport,
         #[br(parse_with = InnerImportTuple::read_options)]
@@ -348,15 +366,40 @@ fn parse_with_default_args() {
 }
 
 #[test]
+fn args_same_name() {
+    #[derive(BinRead, Debug)]
+    #[br(import { y: u16, x: u8 })]
+    struct Test {
+        #[br(calc(x))]
+        z: u8,
+
+        #[br(calc(y))]
+        z2: u16,
+    }
+
+    #[derive(BinRead, Debug)]
+    struct Test2 {
+        #[br(calc(3))]
+        x: u8,
+
+        #[br(args { x, y: 3 })]
+        y: Test,
+    }
+
+    let result = Test2::read(&mut Cursor::new(b"")).unwrap();
+    assert_eq!(result.y.z, 3);
+}
+
+#[test]
 fn import_tuple() {
     #[derive(BinRead, Debug)]
     struct Test {
-        #[br(args_tuple = (1, 2))]
+        #[br(args_raw = (1, 2))]
         a: Child,
     }
 
     #[derive(BinRead, Debug)]
-    #[br(import_tuple(args: (u8, u8)))]
+    #[br(import_raw(args: (u8, u8)))]
     struct Child {
         #[br(calc(args.0 + args.1))]
         a: u8,

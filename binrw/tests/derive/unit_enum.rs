@@ -46,7 +46,7 @@ fn unit_enum_magic_bytes() {
 #[test]
 fn unit_enum_magic_pre_assert() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
-    #[br(big, import(allow_zero: bool, forbid_zero: bool))]
+    #[br(big, import { allow_zero: bool, forbid_zero: bool })]
     enum Test {
         #[br(magic(0u16), pre_assert(allow_zero))]
         // This redundant check is intentional and tests that assertions are
@@ -58,21 +58,49 @@ fn unit_enum_magic_pre_assert() {
     }
 
     assert_eq!(
-        Test::read_args(&mut Cursor::new(b"\0\0"), (true, false)).unwrap(),
+        Test::read_args(
+            &mut Cursor::new(b"\0\0"),
+            <Test as BinRead>::Args::builder()
+                .allow_zero(true)
+                .forbid_zero(false)
+                .finalize()
+        )
+        .unwrap(),
         Test::Zero
     );
     // Tests allow_zero condition actually applies
     assert_eq!(
-        Test::read_args(&mut Cursor::new(b"\0\0"), (true, true)).unwrap(),
+        Test::read_args(
+            &mut Cursor::new(b"\0\0"),
+            <Test as BinRead>::Args::builder()
+                .allow_zero(true)
+                .forbid_zero(true)
+                .finalize()
+        )
+        .unwrap(),
         Test::OtherZero
     );
     // Tests forbid_zero condition actually applies
     assert_eq!(
-        Test::read_args(&mut Cursor::new(b"\0\0"), (false, true)).unwrap(),
+        Test::read_args(
+            &mut Cursor::new(b"\0\0"),
+            <Test as BinRead>::Args::builder()
+                .allow_zero(false)
+                .forbid_zero(true)
+                .finalize()
+        )
+        .unwrap(),
         Test::OtherZero
     );
-    let error =
-        Test::read_args(&mut Cursor::new(b"\0\x01"), (false, true)).expect_err("accepted bad data");
+    let error = Test::read_args(
+        &mut Cursor::new(b"\0\x01"),
+        <Test as BinRead>::Args::builder()
+            .allow_zero(false)
+            .forbid_zero(true)
+            .finalize(),
+    )
+    .expect_err("accepted bad data");
+
     assert!(matches!(error, binrw::Error::NoVariantMatch { .. }));
 }
 

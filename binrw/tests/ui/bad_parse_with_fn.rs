@@ -2,9 +2,8 @@ use binrw::BinRead;
 
 #[derive(BinRead)]
 struct Foo {
+    #[br(parse_with = 56)]
     a: i32,
-    #[br(args(0), args_raw = (a, ))]
-    b: i32,
 }
 
 fn main() {}

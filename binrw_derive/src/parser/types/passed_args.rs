@@ -1,4 +1,4 @@
-use crate::parser::{attrs, KeywordToken, TrySet};
+use crate::parser::{attrs, meta_types::Enclosure, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
@@ -7,6 +7,7 @@ pub(crate) enum PassedArgs {
     None,
     List(Vec<TokenStream>),
     Tuple(TokenStream),
+    Named(Vec<TokenStream>),
 }
 
 impl PassedArgs {
@@ -23,17 +24,19 @@ impl Default for PassedArgs {
 
 impl From<attrs::Args> for PassedArgs {
     fn from(args: attrs::Args) -> Self {
-        Self::List(
-            args.fields
-                .iter()
-                .map(ToTokens::into_token_stream)
-                .collect(),
-        )
+        match args.list {
+            Enclosure::Brace { fields, .. } => {
+                Self::Named(fields.into_iter().map(Into::into).collect())
+            }
+            Enclosure::Paren { fields, .. } => {
+                Self::List(fields.iter().map(ToTokens::into_token_stream).collect())
+            }
+        }
     }
 }
 
-impl From<attrs::ArgsTuple> for PassedArgs {
-    fn from(args: attrs::ArgsTuple) -> Self {
+impl From<attrs::ArgsRaw> for PassedArgs {
+    fn from(args: attrs::ArgsRaw) -> Self {
         Self::Tuple(args.value.into_token_stream())
     }
 }

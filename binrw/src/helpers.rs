@@ -2,7 +2,7 @@
 
 use crate::{
     io::{Read, Seek},
-    BinResult, ReadOptions,
+    BinResult, ReadOptions, VecArgs,
 };
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
@@ -15,7 +15,7 @@ use alloc::{vec, vec::Vec};
 /// # use binrw::{BinRead, helpers::read_bytes, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
 /// struct BunchaBytes {
-///     #[br(count = 5)]
+///     #[br(args { count: 5, inner: () })]
 ///     data: Vec<u8>
 /// }
 ///
@@ -26,14 +26,10 @@ use alloc::{vec, vec::Vec};
 #[deprecated(since = "0.2.0", note = "Use Vec<u8> instead.")]
 pub fn read_bytes<R: Read + Seek>(
     reader: &mut R,
-    options: &ReadOptions,
-    _: (),
+    _options: &ReadOptions,
+    args: VecArgs<()>,
 ) -> BinResult<Vec<u8>> {
-    let count = match options.count {
-        Some(x) => x,
-        None => panic!("Missing count for read_bytes"),
-    };
-    let mut buf = vec![0; count];
+    let mut buf = vec![0; args.count];
     reader.read_exact(&mut buf)?;
 
     Ok(buf)

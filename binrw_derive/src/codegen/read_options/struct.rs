@@ -3,11 +3,15 @@ use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 use crate::codegen::sanitization::*;
 use crate::parser::{Input, Map, PassedArgs, ReadMode, Struct, StructField};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::Ident;
 
-pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>) -> TokenStream {
-    let prelude = get_prelude(input);
+pub(super) fn generate_unit_struct(
+    input: &Input,
+    name: Option<&Ident>,
+    variant_ident: Option<&Ident>,
+) -> TokenStream {
+    let prelude = get_prelude(input, name);
     let return_type = get_return_type(variant_ident);
     quote! {
         #prelude
@@ -15,9 +19,9 @@ pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>)
     }
 }
 
-pub(super) fn generate_struct(input: &Input, st: &Struct) -> TokenStream {
+pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(input, st)
-        .read_fields()
+        .read_fields(name)
         .add_assertions(core::iter::empty())
         .return_value(None)
         .finish()
@@ -56,8 +60,8 @@ impl<'input> StructGenerator<'input> {
         self
     }
 
-    pub(super) fn read_fields(mut self) -> Self {
-        let prelude = get_prelude(self.input);
+    pub(super) fn read_fields(mut self, name: Option<&Ident>) -> Self {
+        let prelude = get_prelude(self.input, name);
         let read_fields = self.st.fields.iter().map(|field| generate_field(field));
         let after_parse = {
             let after_parse = self
@@ -119,6 +123,7 @@ fn generate_field(field: &StructField) -> TokenStream {
         .wrap_restore_position()
         .prefix_magic()
         .prefix_args_and_options()
+        .prefix_read_function()
         .finish()
 }
 
@@ -277,11 +282,36 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
+    fn prefix_read_function(mut self) -> Self {
+        let read_function = match &self.field.read_mode {
+            ReadMode::ParseWith(parser) => Some(parser.clone()),
+            ReadMode::Normal => Some(READ_METHOD.to_token_stream()),
+            _ => None,
+        };
+
+        let rest = self.out;
+        self.out = quote! {
+            let #READ_FUNCTION = (#read_function);
+            #rest
+        };
+
+        self
+    }
+
     fn prefix_args_and_options(mut self) -> Self {
         let args = self.args_var.as_ref().map(|args_var| {
-            let args = get_passed_args(&self.field.args);
-            quote! {
-                let #args_var = #args;
+            let args = get_passed_args(&self.field);
+            let ty = &self.field.ty;
+
+            if let ReadMode::ParseWith(_) = &self.field.read_mode {
+                quote! {
+                    let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
+                }
+            } else {
+                // NOTE: we could probably remove this else branch.
+                quote! {
+                    let #args_var: <#ty as #TRAIT_NAME>::Args = #args;
+                }
             }
         });
 
@@ -289,7 +319,6 @@ impl<'field> FieldGenerator<'field> {
             ReadOptionsGenerator::new(options_var)
                 .endian(&self.field.endian)
                 .offset(&self.field.offset)
-                .count(&self.field.count)
                 .finish()
         });
 
@@ -323,17 +352,11 @@ impl<'field> FieldGenerator<'field> {
             ReadMode::Default => quote! { <_>::default() },
             ReadMode::Calc(calc) => quote! { #calc },
             ReadMode::Normal | ReadMode::ParseWith(_) => {
-                let read_method = if let ReadMode::ParseWith(parser) = &self.field.read_mode {
-                    parser.clone()
-                } else {
-                    quote! { #READ_METHOD }
-                };
-
                 let args_arg = get_args_argument(&self.args_var);
                 let options_var = &self.options_var;
 
                 quote! {
-                    #read_method(#READER, #options_var, #args_arg)
+                    #READ_FUNCTION(#READER, #options_var, #args_arg)
                 }
             }
         };
@@ -408,17 +431,30 @@ fn get_args_argument(args_var: &Option<Ident>) -> TokenStream {
     )
 }
 
-fn get_passed_args(args: &PassedArgs) -> Option<TokenStream> {
+fn get_passed_args(field: &StructField) -> Option<TokenStream> {
+    let args = &field.args;
     match args {
+        PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
+            quote! {
+                #ARGS_MACRO! { count: ((#count) as usize) #(, #fields)* }
+            }
+        } else {
+            quote! {
+                #ARGS_MACRO! { #(#fields),* }
+            }
+        }),
         PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
         PassedArgs::Tuple(tuple) => Some(tuple.clone()),
-        PassedArgs::None => None,
+        PassedArgs::None => field
+            .count
+            .as_ref()
+            .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
 }
 
-fn get_prelude(input: &Input) -> TokenStream {
+fn get_prelude(input: &Input, name: Option<&Ident>) -> TokenStream {
     PreludeGenerator::new(input)
-        .add_imports()
+        .add_imports(name)
         .add_options()
         .add_magic_pre_assertion()
         .finish()
@@ -481,7 +517,7 @@ fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {
 }
 
 fn make_field_vars(field: &StructField) -> (Option<Ident>, Option<Ident>) {
-    let args_var = if field.args.is_some() {
+    let args_var = if field.args.is_some() || field.count.is_some() {
         Some(make_ident(&field.ident, "args"))
     } else {
         None

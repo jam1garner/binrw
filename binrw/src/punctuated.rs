@@ -1,7 +1,7 @@
 //! Type definitions for wrappers which parse interleaved data.
 
 use crate::io::{Read, Seek};
-use crate::{BinRead, BinResult, ReadOptions};
+use crate::{BinRead, BinResult, ReadOptions, VecArgs};
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::fmt;
@@ -28,7 +28,7 @@ use core::fmt;
 /// #[derive(BinRead)]
 /// struct MyList {
 ///     #[br(parse_with = Punctuated::separated)]
-///     #[br(count = 3)]
+///     #[br(args { count: 3, inner: () })]
 ///     x: Punctuated<u16, u8>,
 /// }
 ///
@@ -49,7 +49,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// Parses values of type `T` separated by values of type `P` without a
     /// trailing separator value.
     ///
-    /// Requires [`count`](crate::ReadOptions::count).
+    /// Requires a count to be passed via `#[br(count)]`.
     ///
     /// # Example
     ///
@@ -60,7 +60,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// #[derive(BinRead)]
     /// struct MyList {
     ///     #[br(parse_with = Punctuated::separated)]
-    ///     #[br(count = 3)]
+    ///     #[br(args { count: 3, inner: () })]
     ///     x: Punctuated<u16, u8>,
     /// }
     ///
@@ -72,19 +72,14 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     pub fn separated<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: T::Args,
+        args: VecArgs<T::Args>,
     ) -> BinResult<Self> {
-        let count = match options.count {
-            Some(x) => x,
-            None => panic!("Missing count for Punctuated"),
-        };
+        let mut data = Vec::with_capacity(args.count);
+        let mut separators = Vec::with_capacity(args.count.max(1) - 1);
 
-        let mut data = Vec::with_capacity(count);
-        let mut separators = Vec::with_capacity(count.max(1) - 1);
-
-        for i in 0..count {
-            data.push(T::read_options(reader, &options, args.clone())?);
-            if i + 1 != count {
+        for i in 0..args.count {
+            data.push(T::read_options(reader, &options, args.inner.clone())?);
+            if i + 1 != args.count {
                 separators.push(P::read_options(reader, options, ())?);
             }
         }
@@ -95,22 +90,17 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// Parses values of type `T` interleaved with values of type `P`, including
     /// a trailing `P`.
     ///
-    /// Requires [`count`](crate::ReadOptions::count).
+    /// Requires a count to be passed via `#[br(count)]`.
     pub fn separated_trailing<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: T::Args,
+        args: VecArgs<T::Args>,
     ) -> BinResult<Self> {
-        let count = match options.count {
-            Some(x) => x,
-            None => panic!("Missing count for Punctuated"),
-        };
+        let mut data = Vec::with_capacity(args.count);
+        let mut separators = Vec::with_capacity(args.count);
 
-        let mut data = Vec::with_capacity(count);
-        let mut separators = Vec::with_capacity(count);
-
-        for _ in 0..count {
-            data.push(T::read_options(reader, &options, args.clone())?);
+        for _ in 0..args.count {
+            data.push(T::read_options(reader, &options, args.inner.clone())?);
             separators.push(P::read_options(reader, options, ())?);
         }
 

@@ -182,6 +182,7 @@ impl<T, E> PartialResult<T, E> {
 
 impl<T, E: core::fmt::Debug> PartialResult<T, E> {
     #[cfg(test)]
+    #[track_caller]
     pub(crate) fn unwrap(self) -> T {
         match self {
             PartialResult::Ok(value) => value,
@@ -321,7 +322,7 @@ mod tests {
     });
 
     try_error!(conflicting_keyword_imports: "conflicting import keyword" {
-        #[br(import(a: i32), import_tuple(args: (i32, )))]
+        #[br(import{a: i32}, import_raw(args: (i32, )))]
         struct Foo;
     });
 
@@ -340,7 +341,7 @@ mod tests {
     try_error!(conflicting_keyword_passed_args: "conflicting args keyword" {
         struct Foo {
             a: i32,
-            #[br(args(a), args_tuple = (a, ))]
+            #[br(args { a: 3 }, args_raw = (a, ))]
             b: i32,
         }
     });

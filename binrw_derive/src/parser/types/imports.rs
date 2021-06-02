@@ -1,13 +1,17 @@
-use crate::parser::{attrs, KeywordToken, TrySet};
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use crate::parser::{
+    attrs,
+    meta_types::{Enclosure, IdentTypeMaybeDefault},
+    KeywordToken, TrySet,
+};
+
 use syn::{Ident, Type};
 
 #[derive(Debug, Clone)]
 pub(crate) enum Imports {
     None,
+    Raw(Ident, Box<Type>),
     List(Vec<Ident>, Vec<Type>),
-    Tuple(Ident, Box<Type>),
+    Named(Vec<IdentTypeMaybeDefault>),
 }
 
 impl Default for Imports {
@@ -16,55 +20,35 @@ impl Default for Imports {
     }
 }
 
-impl Imports {
-    pub fn idents(&self) -> Option<TokenStream> {
-        match self {
-            Imports::None => None,
-            Imports::List(idents, _) => {
-                if idents.is_empty() {
-                    None
-                } else {
-                    let idents = idents.iter();
-                    Some(quote! {
-                        (#(mut #idents,)*)
-                    })
-                }
-            }
-            Imports::Tuple(ident, _) => Some(quote! {
-                mut #ident
-            }),
-        }
-    }
-
-    pub fn types(&self) -> TokenStream {
-        match self {
-            Imports::None => quote! { () },
-            Imports::List(_, types) => {
-                let types = types.iter();
-                quote! {
-                    (#(#types,)*)
-                }
-            }
-            Imports::Tuple(_, ty) => ty.to_token_stream(),
-        }
-    }
-}
-
 impl From<attrs::Import> for Imports {
     fn from(value: attrs::Import) -> Self {
-        let (idents, tys): (Vec<_>, Vec<_>) = value
-            .fields
-            .iter()
-            .cloned()
-            .map(|import_arg| (import_arg.ident, import_arg.ty))
-            .unzip();
-        Self::List(idents, tys)
+        match &value.list {
+            Enclosure::Paren { fields, .. } => {
+                if fields.is_empty() {
+                    Self::None
+                } else {
+                    let (idents, tys) = fields
+                        .iter()
+                        .cloned()
+                        .map(|field| (field.ident, field.ty))
+                        .unzip();
+                    Self::List(idents, tys)
+                }
+            }
+            Enclosure::Brace { fields, .. } => {
+                if fields.is_empty() {
+                    Self::None
+                } else {
+                    Self::Named(fields.iter().cloned().collect())
+                }
+            }
+        }
     }
 }
 
-impl From<attrs::ImportTuple> for Imports {
-    fn from(value: attrs::ImportTuple) -> Self {
-        Imports::Tuple(value.value.ident, value.value.ty.into())
+impl From<attrs::ImportRaw> for Imports {
+    fn from(value: attrs::ImportRaw) -> Self {
+        Imports::Raw(value.value.ident, value.value.ty.into())
     }
 }
 

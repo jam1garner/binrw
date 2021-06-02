@@ -8,7 +8,7 @@
 //! | [`align_after`](#padding-and-alignment) | field | Aligns the reader to the Nth byte after reading data.
 //! | [`align_before`](#padding-and-alignment) | field | Aligns the reader to the Nth byte before reading data.
 //! | [`args`](#arguments) | struct field, data variant | Passes arguments to another `BinRead` object.
-//! | [`args_tuple`](#arguments) | struct field, data variant | Like `args`, but specifies a tuple containing the arguments.
+//! | [`args_raw`](#arguments) | struct field, data variant | Like `args`, but specifies a tuple containing the arguments.
 //! | [`assert`](#assert) | struct, field, non-unit enum, data variant | Asserts that a condition is true. Can be used multiple times.
 //! | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
 //! | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.
@@ -273,7 +273,7 @@
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead, Debug, PartialEq)]
-//! #[br(import(ty: u8))]
+//! #[br(import { ty: u8 })]
 //! enum Command {
 //!     #[br(pre_assert(ty == 0))] Variant0(u16, u16),
 //!     #[br(pre_assert(ty == 1))] Variant1(u32)
@@ -283,7 +283,7 @@
 //! struct Message {
 //!     ty: u8,
 //!     len: u8,
-//!     #[br(args(ty))]
+//!     #[br(args { ty })]
 //!     data: Command
 //! }
 //!
@@ -297,17 +297,22 @@
 //!
 //! The `import` and `args` directives define the type of
 //! [`BinRead::Args`](crate::BinRead::Args) and the values passed in the `args`
-//! argument of a [`BinRead::read_options`](crate::BinRead::read_options) call,
-//! respectively:
-//!
-//! ```text
-//! #[br(import($($ident:ident : $ty:ty),* $(,)?))]
-//! #[br(args($($ident:ident),* $(,)?))]
-//! ```
+//! argument of a [`BinRead::read_options`](crate::BinRead::read_options) call.
 //!
 //! Any earlier field or [import](#arguments) can be referenced in `args`.
 //!
+//! There are 3 types of arguments:
+//!
+//! * Tuple-styled Arguments (Alternatively "Ordered Arguments") - arguments passed as a tuple
+//! * Named arguments - arguments passed as a builder that ensures all required arguments are
+//! passed (can be manually constructed using [`binrw::args`])
+//! * Raw arguments - the arguments are passed as a type of your choice
+//!
 //! ## Examples
+//!
+//! ### Tuple-styled arguments
+//!
+//! Tuple-styled arguments are passed via `args()` and recieved via `import()`.
 //!
 //! ```
 //! # use binrw::prelude::*;
@@ -324,6 +329,102 @@
 //!     test: ImportTest
 //! }
 //! ```
+//!
+//! ### Named arguments
+//!
+//! Named arguments are passed via `args {}` and recieved via `import {}`. (Note the curly braces)
+//!
+//! ```
+//! # use binrw::prelude::*;
+//! #[derive(BinRead)]
+//! #[br(import { count: u32, other: u16 = 0 })]
+//! struct ImportTest {
+//!     // ...
+//! }
+//!
+//! #[derive(BinRead)]
+//! struct ArgsTets {
+//!     count: u32,
+//!
+//!     #[br(args { count, other: 5 })]
+//!     test: ImportTest,
+//!
+//!     #[br(args { count: 3 })]
+//!     test2: ImportTest,
+//! }
+//! ```
+//!
+//! The syntax is designed to mimic Rust's struct literal syntax. Similarly, if you have a
+//! previously defined variable of the same name as an argument to be passed in, you can just
+//! provide the name of the variable and omit the `: $value` portion of passing the argument.
+//!
+//! Another feature of named imports is allowing to specify a default value in the form of
+//! `name: type = value`, which makes passing the argument optional.
+//!
+//! ### Raw arguments
+//!
+//! Raw arguments can be used to have a higher degree of control over the type of the arguments
+//! variable being passed into the parser.
+//!
+//! ```
+//! # use binrw::prelude::*;
+//!
+//! #[derive(BinRead)]
+//! #[br(import_raw(args: (u32, u16)))]
+//! struct ImportTest {
+//!     // ...
+//! }
+//!
+//! #[derive(BinRead)]
+//! struct ArgsTets {
+//!     count: u32,
+//!
+//!     #[br(args(1, 2))]
+//!     test: ImportTest,
+//!
+//!     // identical to the above
+//!     #[br(args_raw = (1, 2))]
+//!     test2: ImportTest,
+//! }
+//! ```
+//!
+//! One common use of `import_raw` and `args_raw` is for easily forwarding arguments through to an
+//! inner field of the structure.
+//!
+//! ## Technical notes
+//!
+//! The format for the import and args directives are as follows:
+//!
+//! ```text
+//! // tuple-styled args
+//! #[br(import($($ident:ident : $ty:ty),* $(,)?))]
+//! #[br(args($($value:expr),* $(,)?))]
+//!
+//! // named args
+//! #[br(import{ $($ident:ident : $ty:ty $(= $default:expr)? ),* $(,)? })]
+//! #[br(args { $($name:ident $(: $value:expr)? ),* $(,)? } )]
+//!
+//! // raw args
+//! #[br(import_raw( $binding:ident : $ty:ty ))]
+//! #[br(args_raw($value:expr))]
+//! #[br(args_raw = $value:expr)] // same as above, alternative syntax
+//! ```
+//!
+//! A notable limitation of the arguments system is not allowing non-static lifetimes. This is due
+//! to the fact arguments desugar into approximately the following:
+//!
+//! ```rust,ignore
+//! impl BinRead for MyType {
+//!     type Args = $ty;
+//!
+//!     fn read_options(..., args: Self::Args) -> Result<Self, binrw::Error> {
+//!         // ...
+//!     }
+//! }
+//! ```
+//!
+//! Which, due to the fact the associated type `Args` cannot have a lifetime tied to the associated
+//! function `read_options`, the type is inexpressible without [GATs](https://github.com/rust-lang/rfcs/pull/1598).
 //!
 //! # Default
 //!
@@ -379,7 +480,7 @@
 //!     #[br(temp, big)]
 //!     len: u32,
 //!
-//!     #[br(count = len)]
+//!     #[br(args { count: len as usize, inner: () })]
 //!     data: Vec<u8>
 //! }
 //!
@@ -688,7 +789,7 @@
 //! When manually implementing
 //! [`BinRead::read_options`](crate::BinRead::read_options) or a
 //! [custom parser function](#custom-parsers), the `count` value is accessible
-//! from [`ReadOptions::count`](crate::ReadOptions::count).
+//! from a named argument named `count`.
 //!
 //! Any earlier field or [import](#arguments) can be referenced by the
 //! expression in the directive.
@@ -702,7 +803,7 @@
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
-//!     #[br(count = size)]
+//!     #[br(args { count: size as usize, inner: () })]
 //!     data: Vec<u8>,
 //! }
 //!
@@ -719,7 +820,7 @@
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
-//!     #[br(count = size)]
+//!     #[br(args { count: size as usize, inner: () })]
 //!     data: FilePtr<u32, Vec<u8>>,
 //! }
 //!

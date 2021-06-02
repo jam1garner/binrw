@@ -2,7 +2,7 @@ use super::KeywordToken;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::{
-    parenthesized,
+    braced, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token, Expr, Lit, Token, Type,
@@ -103,6 +103,69 @@ impl<Keyword: syn::token::Token + KeywordToken, ItemType> KeywordToken
     }
 }
 
+#[derive(Debug, Clone)]
+pub(crate) enum Enclosure<ParenType, BraceType> {
+    Paren {
+        parens: token::Paren,
+        fields: Fields<ParenType>,
+    },
+    Brace {
+        braces: token::Brace,
+        fields: Fields<BraceType>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct MetaEnclosedList<Keyword, ParenItemType, BraceItemType> {
+    pub(crate) ident: Keyword,
+    pub(crate) list: Enclosure<ParenItemType, BraceItemType>,
+}
+
+impl<Keyword, ParenItemType, BraceItemType> Parse
+    for MetaEnclosedList<Keyword, ParenItemType, BraceItemType>
+where
+    Keyword: Parse,
+    ParenItemType: Parse,
+    BraceItemType: Parse,
+{
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let ident = input.parse()?;
+        let content;
+        let lookahead = input.lookahead1();
+        if lookahead.peek(token::Paren) {
+            let parens = parenthesized!(content in input);
+            Ok(Self {
+                ident,
+                list: Enclosure::Paren {
+                    parens,
+                    fields: content.parse_terminated::<_, Token![,]>(ParenItemType::parse)?,
+                },
+            })
+        } else if lookahead.peek(token::Brace) {
+            let braces = braced!(content in input);
+            Ok(Self {
+                ident,
+                list: Enclosure::Brace {
+                    braces,
+                    fields: content.parse_terminated::<_, Token![,]>(BraceItemType::parse)?,
+                },
+            })
+        } else {
+            Err(lookahead.error())
+        }
+    }
+}
+
+impl<Keyword: syn::token::Token + KeywordToken, ParenItemType, BraceItemType> KeywordToken
+    for MetaEnclosedList<Keyword, ParenItemType, BraceItemType>
+{
+    type Token = Keyword;
+
+    fn keyword_span(&self) -> proc_macro2::Span {
+        self.ident.keyword_span()
+    }
+}
+
 // This is like `syn::PatType` except:
 // (1) Implements `Parse`;
 // (2) No attributes;
@@ -116,10 +179,85 @@ pub(crate) struct IdentPatType {
 
 impl Parse for IdentPatType {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        Ok(IdentPatType {
+        Ok(Self {
             ident: input.parse()?,
             colon_token: input.parse()?,
             ty: input.parse()?,
+        })
+    }
+}
+
+// This is like `syn::PatType` except:
+// (1) Implements `Parse`;
+// (2) No attributes;
+// (3) Only allows an ident on the LHS instead of any `syn::Pat`.
+// (4) Optionally allows a `= $expr` following the type
+#[derive(Debug, Clone)]
+pub(crate) struct IdentTypeMaybeDefault {
+    pub(crate) ident: syn::Ident,
+    pub(crate) colon_token: Token![:],
+    pub(crate) ty: syn::Type,
+    pub(crate) eq: Option<Token![=]>,
+    pub(crate) default: Option<Box<syn::Expr>>,
+}
+
+impl Parse for IdentTypeMaybeDefault {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let ident = input.parse()?;
+        let colon_token = input.parse()?;
+        let ty = input.parse()?;
+        let lookahead = input.lookahead1();
+        let (eq, default) = if lookahead.peek(Token![=]) {
+            (Some(input.parse()?), Some(input.parse()?))
+        } else {
+            (None, None)
+        };
+
+        Ok(Self {
+            ident,
+            colon_token,
+            ty,
+            eq,
+            default,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct FieldValue {
+    pub(crate) ident: syn::Ident,
+    pub(crate) colon_token: Option<Token![:]>,
+    pub(crate) expr: Option<syn::Expr>,
+}
+
+impl From<FieldValue> for (syn::Ident, Option<syn::Expr>) {
+    fn from(x: FieldValue) -> Self {
+        let FieldValue { ident, expr, .. } = x;
+
+        (ident, expr)
+    }
+}
+
+impl Parse for FieldValue {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let ident = input.parse()?;
+        let lookahead = input.lookahead1();
+
+        let expr;
+        let colon_token;
+
+        if lookahead.peek(Token![:]) {
+            colon_token = Some(input.parse()?);
+            expr = Some(input.parse()?);
+        } else {
+            colon_token = None;
+            expr = None;
+        }
+
+        Ok(Self {
+            ident,
+            colon_token,
+            expr,
         })
     }
 }
@@ -231,6 +369,12 @@ mod tests {
             format!("{:?}", value.keyword_span())
         );
     }
+
+    try_parse!(ident_type_default, IdentTypeMaybeDefault, { foo: u8 = 1 });
+    try_parse!(ident_type_no_default, IdentTypeMaybeDefault, { foo: u8 });
+    try_parse_fail!(ident_type_missing_type, IdentTypeMaybeDefault, { foo: });
+    try_parse_fail!(ident_type_missing_colon, IdentTypeMaybeDefault, { foo u8 });
+    try_parse_fail!(ident_type_missing_ident, IdentTypeMaybeDefault, { :u8 });
 
     try_parse!(ident_pat_type, IdentPatType, { foo: u8 });
     try_parse_fail!(ident_pat_type_missing_ident, IdentPatType, { : 3u8 });

@@ -1,13 +1,17 @@
 use super::{
     keywords as kw,
-    meta_types::{IdentPatType, MetaExpr, MetaList, MetaLit, MetaType, MetaValue},
+    meta_types::{
+        IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList, MetaLit,
+        MetaType, MetaValue,
+    },
 };
+use proc_macro2::TokenStream;
 use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
-pub(crate) type Args = MetaList<kw::args, Expr>;
-pub(crate) type ArgsTuple = MetaExpr<kw::args_tuple>;
+pub(crate) type Args = MetaEnclosedList<kw::args, Expr, TokenStream>;
+pub(crate) type ArgsRaw = MetaExpr<kw::args_raw>;
 pub(crate) type AssertLike<K> = MetaList<K, Expr>;
 pub(crate) type Assert = AssertLike<kw::assert>;
 pub(crate) type Big = kw::big;
@@ -17,8 +21,8 @@ pub(crate) type Default = kw::default;
 pub(crate) type DerefNow = kw::deref_now;
 pub(crate) type If = MetaList<Token![if], Expr>;
 pub(crate) type Ignore = kw::ignore;
-pub(crate) type Import = MetaList<kw::import, IdentPatType>;
-pub(crate) type ImportTuple = MetaValue<kw::import_tuple, IdentPatType>;
+pub(crate) type Import = MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>;
+pub(crate) type ImportRaw = MetaValue<kw::import_raw, IdentPatType>;
 pub(crate) type IsBig = MetaExpr<kw::is_big>;
 pub(crate) type IsLittle = MetaExpr<kw::is_little>;
 pub(crate) type Little = kw::little;

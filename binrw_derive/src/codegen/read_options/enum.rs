@@ -8,11 +8,16 @@ use crate::codegen::sanitization::*;
 use crate::parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
 use proc_macro2::TokenStream;
 use quote::quote;
+use syn::Ident;
 
-pub(super) fn generate_unit_enum(input: &Input, en: &UnitOnlyEnum) -> TokenStream {
+pub(super) fn generate_unit_enum(
+    input: &Input,
+    name: Option<&Ident>,
+    en: &UnitOnlyEnum,
+) -> TokenStream {
     match &en.repr {
         Some(repr) => generate_unit_enum_repr(input, repr, &en.fields),
-        None => generate_unit_enum_magic(input, en, &en.fields),
+        None => generate_unit_enum_magic(input, name, en, &en.fields),
     }
 }
 
@@ -45,11 +50,12 @@ fn generate_unit_enum_repr(
 
 fn generate_unit_enum_magic(
     input: &Input,
+    name: Option<&Ident>,
     en: &UnitOnlyEnum,
     variants: &[UnitEnumField],
 ) -> TokenStream {
     let prelude = PreludeGenerator::new(input)
-        .add_imports()
+        .add_imports(name)
         .add_options()
         .finish();
 
@@ -83,7 +89,7 @@ fn generate_unit_enum_magic(
     }
 }
 
-pub(super) fn generate_data_enum(input: &Input, en: &Enum) -> TokenStream {
+pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum) -> TokenStream {
     let return_all_errors = en.error_mode != EnumErrorMode::ReturnUnexpectedError;
 
     let (create_error_basket, return_error) = if return_all_errors {
@@ -111,7 +117,7 @@ pub(super) fn generate_data_enum(input: &Input, en: &Enum) -> TokenStream {
     };
 
     let prelude = PreludeGenerator::new(input)
-        .add_imports()
+        .add_imports(name)
         .add_options()
         .add_magic_pre_assertion()
         .reset_position_after_magic()
@@ -158,11 +164,11 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
 
     match variant {
         EnumVariant::Variant { ident, options } => StructGenerator::new(&input, &options)
-            .read_fields()
+            .read_fields(None)
             .add_assertions(get_assertions(&en.assertions))
             .return_value(Some(ident))
             .finish(),
 
-        EnumVariant::Unit(options) => generate_unit_struct(&input, Some(&options.ident)),
+        EnumVariant::Unit(options) => generate_unit_struct(&input, None, Some(&options.ident)),
     }
 }

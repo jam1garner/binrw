@@ -16,8 +16,8 @@ struct Two;
 struct PunctuatedTest {
     count: u8,
 
-    #[br(count = count)]
-    #[br(parse_with = Punctuated::separated)]
+    #[br(args { count: count as usize, inner: () })]
+    #[br(parse_with = Punctuated::<One, Two>::separated)]
     list: Punctuated<One, Two>,
 }
 
@@ -25,22 +25,23 @@ struct PunctuatedTest {
 struct PunctuatedTestTrailing {
     count: u8,
 
-    #[br(count = count)]
-    #[br(parse_with = Punctuated::separated_trailing)]
+    #[br(args { count: count as usize, inner: () })]
+    #[br(parse_with = Punctuated::<One, Two>::separated_trailing)]
     list: Punctuated<One, Two>,
 }
 
-#[derive(BinRead)]
-struct MissingCount {
-    #[br(parse_with = Punctuated::separated)]
-    _list: Punctuated<One, Two>,
-}
-
-#[derive(BinRead)]
-struct MissingCountTrailing {
-    #[br(parse_with = Punctuated::separated_trailing)]
-    _list: Punctuated<One, Two>,
-}
+// TODO: move to UI tests?
+// #[derive(BinRead)]
+// struct MissingCount {
+//     #[br(parse_with = Punctuated::separated)]
+//     _list: Punctuated<One, Two>,
+// }
+//
+// #[derive(BinRead)]
+// struct MissingCountTrailing {
+//     #[br(parse_with = Punctuated::separated_trailing)]
+//     _list: Punctuated<One, Two>,
+// }
 
 const TEST_DATA: &[u8] = b"\x03\x01\x02\x01\x02\x01";
 const TEST_DATA_TRAILING: &[u8] = b"\x03\x01\x02\x01\x02\x01\x02";
@@ -71,18 +72,19 @@ fn punctuated_trailing() {
     y[0] = y[1];
 }
 
-#[test]
-#[should_panic]
-fn missing_count() {
-    let mut x = Cursor::new(TEST_DATA);
-
-    let _: MissingCount = x.read_be().unwrap();
-}
-
-#[test]
-#[should_panic]
-fn missing_count_trailing() {
-    let mut x = Cursor::new(TEST_DATA);
-
-    let _: MissingCountTrailing = x.read_be().unwrap();
-}
+// TODO: move to UI tests?
+// #[test]
+// #[should_panic]
+// fn missing_count() {
+//     let mut x = Cursor::new(TEST_DATA);
+//
+//     let _: MissingCount = x.read_be().unwrap();
+// }
+//
+// #[test]
+// #[should_panic]
+// fn missing_count_trailing() {
+//     let mut x = Cursor::new(TEST_DATA);
+//
+//     let _: MissingCountTrailing = x.read_be().unwrap();
+// }

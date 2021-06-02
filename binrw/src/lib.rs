@@ -82,7 +82,7 @@
 //! struct Dog {
 //!     bone_pile_count: u8,
 //!
-//!     #[br(big, count = bone_pile_count)]
+//!     #[br(big, args { count: bone_pile_count as usize, inner: () })]
 //!     bone_piles: Vec<u16>,
 //!
 //!     #[br(align_before = 0xA)]
@@ -175,6 +175,8 @@ pub use binrw_derive::BinRead;
 /// of `#[derive(BinRead)]` to enable [temporary variables](attribute#temp).
 pub use binrw_derive::derive_binread;
 
+pub use binrw_derive::BinrwNamedArgs;
+
 /// A specialized [`Result`] type for BinRead operations.
 pub type BinResult<T> = core::result::Result<T, Error>;
 
@@ -183,6 +185,9 @@ pub use binread_impls::*;
 
 mod binread;
 pub use binread::*;
+
+mod builder_types;
+pub use builder_types::*;
 
 pub mod prelude {
     //! The binrw prelude.

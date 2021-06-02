@@ -6,16 +6,19 @@ use crate::codegen::sanitization::*;
 use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
+use syn::Ident;
+
 use r#enum::{generate_data_enum, generate_unit_enum};
 use r#struct::{generate_struct, generate_unit_struct};
 
-pub(crate) fn generate(input: &Input) -> TokenStream {
+pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
+    let name = Some(&derive_input.ident);
     let inner = match input.map() {
         Map::None => match input {
-            Input::UnitStruct(_) => generate_unit_struct(input, None),
-            Input::Struct(s) => generate_struct(input, s),
-            Input::Enum(e) => generate_data_enum(input, e),
-            Input::UnitOnlyEnum(e) => generate_unit_enum(input, e),
+            Input::UnitStruct(_) => generate_unit_struct(input, name, None),
+            Input::Struct(s) => generate_struct(input, name, s),
+            Input::Enum(e) => generate_data_enum(input, name, e),
+            Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
         Map::Try(map) => {
             let map_err = get_map_err(POS);
@@ -58,8 +61,8 @@ impl<'input> PreludeGenerator<'input> {
         self.out
     }
 
-    fn add_imports(mut self) -> Self {
-        if let Some(imports) = self.input.imports().idents() {
+    fn add_imports(mut self, name: Option<&Ident>) -> Self {
+        if let Some(imports) = self.input.imports().destructure(name) {
             let head = self.out;
             self.out = quote! {
                 #head
@@ -169,18 +172,6 @@ impl ReadOptionsGenerator {
             out: TokenStream::new(),
             options_var: options_var.into_token_stream(),
         }
-    }
-
-    fn count(mut self, count: &Option<TokenStream>) -> Self {
-        if let Some(count) = &count {
-            let head = self.out;
-            self.out = quote! {
-                #head
-                #TEMP.count = Some((#count) as usize);
-            };
-        }
-
-        self
     }
 
     fn endian(mut self, endian: &CondEndian) -> Self {

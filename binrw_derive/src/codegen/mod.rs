@@ -1,6 +1,9 @@
 #[macro_use]
 pub(crate) mod sanitization;
 mod read_options;
+pub(crate) mod typed_builder;
+
+mod imports;
 
 use crate::parser::{Input, ParseResult};
 use proc_macro2::TokenStream;
@@ -12,18 +15,20 @@ pub(crate) fn generate_impl(
     derive_input: &syn::DeriveInput,
     binread_input: &ParseResult<Input>,
 ) -> TokenStream {
+    // Generate the argument type name and (if needed) definition
+    let (arg_type, arg_type_declaration) = match binread_input {
+        ParseResult::Ok(binread_input) | ParseResult::Partial(binread_input, _) => binread_input
+            .imports()
+            .args_type(&derive_input.ident, &derive_input.vis),
+        ParseResult::Err(_) => (quote! { () }, None),
+    };
+
     // If there is a parsing error, a BinRead impl still needs to be
     // generated to avoid misleading errors at all call sites that use the
     // BinRead trait
-    let (arg_type, read_opt_impl) = match binread_input {
-        ParseResult::Ok(binread_input) => (
-            binread_input.imports().types(),
-            read_options::generate(&binread_input),
-        ),
-        ParseResult::Partial(binread_input, error) => {
-            (binread_input.imports().types(), error.to_compile_error())
-        }
-        ParseResult::Err(error) => (quote! { () }, error.to_compile_error()),
+    let read_opt_impl = match binread_input {
+        ParseResult::Ok(binread_input) => read_options::generate(&binread_input, derive_input),
+        ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
     };
 
     let name = &derive_input.ident;
@@ -40,5 +45,7 @@ pub(crate) fn generate_impl(
                 #read_opt_impl
             }
         }
+
+        #arg_type_declaration
     }
 }
