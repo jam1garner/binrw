@@ -1,5 +1,5 @@
 use binrw::{
-    derive_binread,
+    binread,
     io::{Cursor, Seek, SeekFrom},
     BinRead,
 };
@@ -20,7 +20,7 @@ fn enum_assert() {
 
 #[test]
 fn enum_calc_temp_field() {
-    #[derive_binread]
+    #[binread]
     #[derive(Debug, Eq, PartialEq)]
     enum Test {
         #[br(magic(0u8))]

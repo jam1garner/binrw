@@ -26,7 +26,7 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 #[cfg(not(tarpaulin_include))]
-pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
+pub fn binread(_: TokenStream, input: TokenStream) -> TokenStream {
     derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
 

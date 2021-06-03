@@ -1,5 +1,5 @@
 use binrw::{
-    args, derive_binread,
+    args, binread,
     io::{Cursor, Read, Seek, SeekFrom},
     BinRead, BinResult, FilePtr, NullString, ReadOptions,
 };
@@ -122,7 +122,7 @@ fn assert_formatted() {
 
 #[test]
 fn calc_temp_field() {
-    #[derive_binread]
+    #[binread]
     #[derive(Debug, PartialEq)]
     #[br(big)]
     struct Test {
@@ -496,7 +496,7 @@ fn tuple() {
 
 #[test]
 fn tuple_calc_temp_field() {
-    #[derive_binread]
+    #[binread]
     #[derive(Debug, Eq, PartialEq)]
     #[br(big)]
     struct Test(#[br(temp)] u16, #[br(calc((self_0 + 1).into()))] u32);

@@ -1,9 +1,9 @@
-use binrw::{BinRead, derive_binread};
+use binrw::{BinRead, binread};
 
 #[derive(BinRead)]
 enum Foo {}
 
-#[derive_binread]
+#[binread]
 enum Bar {}
 
 fn main() {}
