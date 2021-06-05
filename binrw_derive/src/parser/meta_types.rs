@@ -37,6 +37,14 @@ pub(crate) struct MetaValue<Keyword, Value> {
     pub(crate) value: Value,
 }
 
+impl<Keyword: syn::token::Token + KeywordToken> KeywordToken for MetaVoid<Keyword> {
+    type Token = Keyword;
+
+    fn keyword_span(&self) -> proc_macro2::Span {
+        self.ident.keyword_span()
+    }
+}
+
 impl<Keyword: Parse, Value: Parse> Parse for MetaValue<Keyword, Value> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
@@ -71,6 +79,23 @@ impl<Keyword: syn::token::Token + KeywordToken, Value> KeywordToken for MetaValu
     fn keyword_span(&self) -> proc_macro2::Span {
         self.ident.keyword_span()
     }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct MetaVoid<Keyword> {
+    pub(crate) ident: Keyword,
+}
+
+impl<Keyword: Parse> Parse for MetaVoid<Keyword> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        Ok(MetaVoid {
+            ident: input.parse()?,
+        })
+    }
+}
+
+impl<Keyword> From<MetaVoid<Keyword>> for () {
+    fn from(_: MetaVoid<Keyword>) -> Self {}
 }
 
 #[derive(Debug, Clone)]

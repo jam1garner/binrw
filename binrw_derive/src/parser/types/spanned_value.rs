@@ -1,4 +1,4 @@
-use crate::parser::{KeywordToken, TrySet};
+use crate::parser::KeywordToken;
 use proc_macro2::Span;
 
 #[derive(Debug, Clone)]
@@ -10,15 +10,6 @@ pub(crate) struct SpannedValue<T> {
 impl<T> SpannedValue<T> {
     pub(crate) fn new(value: T, span: Span) -> Self {
         Self { value, span }
-    }
-}
-
-impl<T: Default> Default for SpannedValue<T> {
-    fn default() -> Self {
-        Self {
-            value: <_>::default(),
-            span: proc_macro2::Span::call_site(),
-        }
     }
 }
 
@@ -50,23 +41,6 @@ impl<T: Into<To> + KeywordToken, To> From<T> for SpannedValue<To> {
         Self {
             value: value.into(),
             span,
-        }
-    }
-}
-
-// TODO: This really should not be necessary but there are some really bad
-// generic trait conflicts when trying to just implement `From`.
-impl<T: KeywordToken> TrySet<SpannedValue<bool>> for T {
-    fn try_set(self, to: &mut SpannedValue<bool>) -> syn::Result<()> {
-        if to.value {
-            Err(syn::Error::new(
-                self.keyword_span(),
-                format!("conflicting {} keyword", self.dyn_display()),
-            ))
-        } else {
-            to.span = self.keyword_span();
-            to.value = true;
-            Ok(())
         }
     }
 }

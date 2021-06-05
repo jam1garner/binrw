@@ -31,13 +31,13 @@ attr_struct! {
         #[from(If)]
         pub(crate) if_cond: Option<Condition>,
         #[from(DerefNow, PostProcessNow)]
-        pub(crate) deref_now: SpannedValue<bool>,
+        pub(crate) deref_now: Option<SpannedValue<()>>,
         #[from(RestorePosition)]
-        pub(crate) restore_position: bool,
+        pub(crate) restore_position: Option<()>,
         #[from(Try)]
-        pub(crate) do_try: bool,
+        pub(crate) do_try: Option<()>,
         #[from(Temp)]
-        pub(crate) temp: bool,
+        pub(crate) temp: Option<()>,
         #[from(Assert)]
         pub(crate) assertions: Vec<Assert>,
         #[from(PadBefore)]
@@ -65,7 +65,7 @@ impl StructField {
     /// Returns true if the code generator should emit `BinRead::after_parse()`
     /// after all fields have been read.
     pub(crate) fn should_use_after_parse(&self) -> bool {
-        !*self.deref_now
+        self.deref_now.is_none()
     }
 
     /// Returns true if this field is generated using a calculated value instead
@@ -80,10 +80,10 @@ impl StructField {
     }
 
     fn validate(&self) -> syn::Result<()> {
-        if let (Some(offset_after), true) = (&self.offset_after, *self.deref_now) {
+        if let (Some(offset_after), Some(deref_now)) = (&self.offset_after, &self.deref_now) {
             let offset_after_span = offset_after.span();
             let span = offset_after_span
-                .join(self.deref_now.span())
+                .join(deref_now.span())
                 .unwrap_or(offset_after_span);
             Err(syn::Error::new(
                 span,

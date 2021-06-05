@@ -366,13 +366,13 @@ impl<'field> FieldGenerator<'field> {
 
     fn try_conversion(mut self) -> Self {
         if self.field.generated_value() {
-            if self.field.do_try {
+            if self.field.do_try.is_some() {
                 let value = self.out;
                 self.out = quote! { Some(#value) };
             }
         } else {
             let result = self.out;
-            self.out = if self.field.do_try {
+            self.out = if self.field.do_try.is_some() {
                 quote! { #result.ok() }
             } else {
                 quote! { #result? }
@@ -400,7 +400,7 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn wrap_restore_position(mut self) -> Self {
-        if self.field.restore_position {
+        if self.field.restore_position.is_some() {
             self.out = wrap_save_restore(self.out);
         }
 
@@ -505,7 +505,7 @@ fn generate_seek_before(field: &StructField) -> TokenStream {
 fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
     if !field.can_call_after_parse() {
         None
-    } else if field.do_try {
+    } else if field.do_try.is_some() {
         Some(TRY_AFTER_PARSE)
     } else {
         Some(AFTER_PARSE)
