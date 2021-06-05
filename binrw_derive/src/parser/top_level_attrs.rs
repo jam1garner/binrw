@@ -134,9 +134,9 @@ impl Struct {
     }
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
-        self.fields.iter().filter_map(|field| {
-            field.temp.is_none().then(|| &field.ident)
-        })
+        self.fields
+            .iter()
+            .filter_map(|field| field.temp.is_none().then(|| &field.ident))
     }
 }
 
