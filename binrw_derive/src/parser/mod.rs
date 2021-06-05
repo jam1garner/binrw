@@ -215,20 +215,6 @@ pub(crate) trait TrySet<T> {
     fn try_set(self, to: &mut T) -> syn::Result<()>;
 }
 
-impl<T: KeywordToken> TrySet<bool> for T {
-    fn try_set(self, to: &mut bool) -> syn::Result<()> {
-        if *to {
-            Err(syn::Error::new(
-                self.keyword_span(),
-                format!("conflicting {} keyword", self.dyn_display()),
-            ))
-        } else {
-            *to = true;
-            Ok(())
-        }
-    }
-}
-
 // TODO: This sucks
 pub(crate) enum TrySetError {
     Infallible,
