@@ -16,7 +16,7 @@ pub(crate) struct Assert {
     pub(crate) consequent: Option<Error>,
 }
 
-impl<K: Parse + Spanned> TryFrom<attrs::AssertLike<K>> for Assert {
+impl<K: Parse + Spanned + ToTokens> TryFrom<attrs::AssertLike<K>> for Assert {
     type Error = syn::Error;
 
     fn try_from(value: attrs::AssertLike<K>) -> Result<Self, Self::Error> {
@@ -27,7 +27,10 @@ impl<K: Parse + Spanned> TryFrom<attrs::AssertLike<K>> for Assert {
         } else {
             return Err(Self::Error::new(
                 value.ident.span(),
-                "`assert` requires a boolean expression as an argument",
+                format!(
+                    "`{}` requires a boolean expression as an argument",
+                    value.ident.into_token_stream()
+                ),
             ));
         };
 
