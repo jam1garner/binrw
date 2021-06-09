@@ -163,7 +163,7 @@ pub use {
     endian::Endian,
     error::Error,
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
-    options::ReadOptions,
+    options::{ReadOptions, WriteOptions},
     pos_value::PosValue,
     strings::{NullString, NullWideString},
 };
@@ -189,6 +189,11 @@ pub use binread::*;
 mod builder_types;
 pub use builder_types::*;
 
+mod binwrite;
+pub use binwrite::*;
+
+/// The collection of traits and types you'll likely need when working with binread and are
+/// unlikely to cause name conflicts.
 pub mod prelude {
     //! The binrw prelude.
     //!
