@@ -12,6 +12,18 @@ pub(crate) enum Kind {
     Numeric(String),
 }
 
+impl From<&Kind> for TokenStream {
+    fn from(kind: &Kind) -> Self {
+        match kind {
+            Kind::Char => quote! { char },
+            Kind::ByteStr(ty) | Kind::Numeric(ty) => {
+                let ty: TokenStream = ty.parse().unwrap();
+                quote! { #ty }
+            }
+        }
+    }
+}
+
 impl core::fmt::Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

@@ -33,6 +33,23 @@ pub(crate) fn generate_impl(
 
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
+
+    let magic_definition = match binread_input {
+        ParseResult::Ok(binread_input) => {
+            let magic = binread_input.magic().as_ref();
+            magic.map(|magic| {
+                let ty: TokenStream = magic.kind().into();
+                let val = magic.deref_value();
+                quote! {
+                    impl #name #ty_generics #where_clause {
+                        const MAGIC: #ty = #val;
+                    }
+                }
+            })
+        }
+        ParseResult::Partial(_, error) | ParseResult::Err(error) => Some(error.to_compile_error()),
+    };
+
     quote! {
         #[allow(non_snake_case)]
         impl #impl_generics #TRAIT_NAME for #name #ty_generics #where_clause {
@@ -45,6 +62,8 @@ pub(crate) fn generate_impl(
                 #read_opt_impl
             }
         }
+
+        #magic_definition
 
         #arg_type_declaration
     }
