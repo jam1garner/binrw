@@ -43,8 +43,8 @@ impl Endian {
             REVERSE_BOM => Ok(Self::Big),
             _ => Err(crate::Error::BadMagic {
                 pos: u64::MAX,
-                found: Box::new("Invalid UTF-16 BOM")
-            })
+                found: Box::new("Invalid UTF-16 BOM"),
+            }),
         }
     }
 
