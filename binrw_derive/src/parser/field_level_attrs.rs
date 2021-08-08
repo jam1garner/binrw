@@ -186,7 +186,7 @@ pub(crate) enum EnumVariant {
 impl EnumVariant {
     pub(crate) fn ident(&self) -> &syn::Ident {
         match self {
-            EnumVariant::Variant { ident, .. } => &ident,
+            EnumVariant::Variant { ident, .. } => ident,
             EnumVariant::Unit(field) => &field.ident,
         }
     }

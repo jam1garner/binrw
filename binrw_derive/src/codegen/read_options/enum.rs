@@ -163,7 +163,7 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
     let input = Input::Enum(en.with_variant(variant));
 
     match variant {
-        EnumVariant::Variant { ident, options } => StructGenerator::new(&input, &options)
+        EnumVariant::Variant { ident, options } => StructGenerator::new(&input, options)
             .read_fields(None)
             .add_assertions(get_assertions(&en.assertions))
             .return_value(Some(ident))

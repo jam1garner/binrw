@@ -75,7 +75,7 @@ impl<'input> PreludeGenerator<'input> {
 
     fn add_options(mut self) -> Self {
         let options = ReadOptionsGenerator::new(OPT)
-            .endian(&self.input.endian())
+            .endian(self.input.endian())
             .finish();
 
         if !options.is_empty() {
@@ -92,7 +92,7 @@ impl<'input> PreludeGenerator<'input> {
     fn add_magic_pre_assertion(mut self) -> Self {
         let head = self.out;
         let magic = get_magic(self.input.magic(), &OPT);
-        let pre_assertions = get_assertions(&self.input.pre_assertions());
+        let pre_assertions = get_assertions(self.input.pre_assertions());
         self.out = quote! {
             #head
             #magic

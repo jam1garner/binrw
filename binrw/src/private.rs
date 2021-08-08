@@ -54,7 +54,7 @@ where
     R: io::Read + io::Seek,
 {
     let pos = reader.stream_position()?;
-    let val = B::read_options(reader, &options, ())?;
+    let val = B::read_options(reader, options, ())?;
     if val == expected {
         Ok(())
     } else {

@@ -162,7 +162,7 @@ impl BinRead for NullWideString {
     ) -> BinResult<Self> {
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
-        <Vec<NonZeroU16>>::read_options(reader, &options, args).map(|chars| chars.into())
+        <Vec<NonZeroU16>>::read_options(reader, options, args).map(|chars| chars.into())
     }
 }
 
@@ -212,7 +212,7 @@ impl core::ops::Deref for NullWideString {
 
 impl ToString for NullString {
     fn to_string(&self) -> String {
-        core::str::from_utf8(&self).unwrap().to_string()
+        core::str::from_utf8(self).unwrap().to_string()
     }
 }
 

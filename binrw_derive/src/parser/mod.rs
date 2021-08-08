@@ -38,7 +38,6 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
     where
         Self: Sized,
     {
-        #[allow(clippy::filter_map)]
         let attrs = attrs
             .iter()
             .filter(|attr| is_binread_attr(attr))

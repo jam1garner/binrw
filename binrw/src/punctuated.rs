@@ -78,7 +78,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
         let mut separators = Vec::with_capacity(args.count.max(1) - 1);
 
         for i in 0..args.count {
-            data.push(T::read_options(reader, &options, args.inner.clone())?);
+            data.push(T::read_options(reader, options, args.inner.clone())?);
             if i + 1 != args.count {
                 separators.push(P::read_options(reader, options, ())?);
             }
@@ -100,7 +100,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
         let mut separators = Vec::with_capacity(args.count);
 
         for _ in 0..args.count {
-            data.push(T::read_options(reader, &options, args.inner.clone())?);
+            data.push(T::read_options(reader, options, args.inner.clone())?);
             separators.push(P::read_options(reader, options, ())?);
         }
 

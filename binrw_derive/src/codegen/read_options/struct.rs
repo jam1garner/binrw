@@ -100,7 +100,7 @@ impl<'input> StructGenerator<'input> {
 }
 
 fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
-    get_after_parse_handler(&field).map(|after_parse_fn| {
+    get_after_parse_handler(field).map(|after_parse_fn| {
         let (args_var, options_var) = make_field_vars(field);
         AfterParseCallGenerator::new(field)
             .get_value_from_ident()
@@ -111,7 +111,7 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
 }
 
 fn generate_field(field: &StructField) -> TokenStream {
-    FieldGenerator::new(&field)
+    FieldGenerator::new(field)
         .read_value()
         .try_conversion()
         .map_value()
@@ -237,7 +237,7 @@ impl<'field> FieldGenerator<'field> {
             return self;
         }
 
-        if let Some(after_parse) = get_after_parse_handler(&self.field) {
+        if let Some(after_parse) = get_after_parse_handler(self.field) {
             let after_parse = AfterParseCallGenerator::new(self.field)
                 .get_value_from_temp()
                 .call_after_parse(after_parse, &self.options_var, &self.args_var)
@@ -300,7 +300,7 @@ impl<'field> FieldGenerator<'field> {
 
     fn prefix_args_and_options(mut self) -> Self {
         let args = self.args_var.as_ref().map(|args_var| {
-            let args = get_passed_args(&self.field);
+            let args = get_passed_args(self.field);
             let ty = &self.field.ty;
 
             if let ReadMode::ParseWith(_) = &self.field.read_mode {

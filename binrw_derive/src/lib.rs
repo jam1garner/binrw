@@ -162,8 +162,8 @@ fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStr
 }
 
 fn derive_from_input(derive_input: &DeriveInput) -> (ParseResult<Input>, proc_macro2::TokenStream) {
-    let binread_input = Input::from_input(&derive_input);
-    let generated_impl = generate_impl(&derive_input, &binread_input);
+    let binread_input = Input::from_input(derive_input);
+    let generated_impl = generate_impl(derive_input, &binread_input);
     (binread_input, generated_impl)
 }
 

@@ -27,7 +27,7 @@ pub(crate) fn generate_impl(
     // generated to avoid misleading errors at all call sites that use the
     // BinRead trait
     let read_opt_impl = match binread_input {
-        ParseResult::Ok(binread_input) => read_options::generate(&binread_input, derive_input),
+        ParseResult::Ok(binread_input) => read_options::generate(binread_input, derive_input),
         ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
     };
 
