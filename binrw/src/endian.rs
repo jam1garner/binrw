@@ -1,5 +1,6 @@
 //! Type definitions for byte order handling.
 
+use crate::alloc::boxed::Box;
 use crate::BinResult;
 
 /// Defines the order of bytes in a multi-byte type.
