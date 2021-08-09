@@ -1,6 +1,6 @@
 [package]
 name = "binrw"
-version = "0.4.0"
+version = "0.5.0"
 authors = [
     "jam1garner <jam@jam1.re>",
     "Colin Snover <github.com@zetafleet.com>",
@@ -16,10 +16,10 @@ documentation = "https://docs.rs/binrw"
 
 [dependencies]
 array-init = "2.0"
-binrw_derive = { version = "0.4.0", path = "../binrw_derive" }
+binrw_derive = { version = "0.5.0", path = "../binrw_derive" }
 
 [dev-dependencies]
-modular-bitfield = "0.9"
+modular-bitfield = "0.11"
 rustversion = "1.0"
 trybuild = "1.0"
 
