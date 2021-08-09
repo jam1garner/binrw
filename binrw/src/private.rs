@@ -90,3 +90,11 @@ where
 {
     a
 }
+
+pub fn map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
+where
+    MapFn: FnOnce(Input) -> Output,
+    Input: BinRead<Args = Args>,
+{
+    args
+}

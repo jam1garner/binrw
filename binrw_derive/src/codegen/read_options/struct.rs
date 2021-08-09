@@ -123,6 +123,7 @@ fn generate_field(field: &StructField) -> TokenStream {
         .wrap_restore_position()
         .prefix_magic()
         .prefix_args_and_options()
+        .prefix_map_function()
         .prefix_read_function()
         .finish()
 }
@@ -259,24 +260,52 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn map_value(mut self) -> Self {
-        let ty = &self.field.ty;
+        let map_func = make_ident(&self.field.ident, "map_func");
 
         self.out = match &self.field.map {
             Map::None => return self,
-            Map::Map(map) => {
+            Map::Map(_) => {
                 let value = self.out;
-                quote! { (#COERCE_FN::<#ty, _, _>(#map))(#value) }
+                quote! { #map_func(#value) }
             }
-            Map::Try(try_map) => {
+            Map::Try(_) => {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
                 let map_err = super::get_map_err(SAVED_POSITION);
                 quote! {{
                     let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#READER)?;
 
-                    (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value)#map_err?
+                    #map_func(#value)#map_err?
                 }}
             }
+        };
+
+        self
+    }
+
+    fn prefix_map_function(mut self) -> Self {
+        let map_func = make_ident(&self.field.ident, "map_func");
+        let ty = &self.field.ty;
+
+        let set_map_function = match &self.field.map {
+            Map::None => return self,
+            Map::Map(map) => {
+                quote! {
+                    let #map_func = (#COERCE_FN::<#ty, _, _>(#map));
+                }
+            }
+            Map::Try(try_map) => {
+                // TODO: Position should always just be saved once for a field if used
+                quote! {
+                    let #map_func = (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map));
+                }
+            }
+        };
+
+        let rest = self.out;
+        self.out = quote! {
+            #set_map_function
+            #rest
         };
 
         self
@@ -300,6 +329,7 @@ impl<'field> FieldGenerator<'field> {
 
     fn prefix_args_and_options(mut self) -> Self {
         let args = self.args_var.as_ref().map(|args_var| {
+            let map_func = make_ident(&self.field.ident, "map_func");
             let args = get_passed_args(self.field);
             let ty = &self.field.ty;
 
@@ -308,9 +338,17 @@ impl<'field> FieldGenerator<'field> {
                     let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
                 }
             } else {
-                // NOTE: we could probably remove this else branch.
-                quote! {
-                    let #args_var: <#ty as #TRAIT_NAME>::Args = #args;
+                match &self.field.map {
+                    Map::Map(_) | Map::Try(_) => {
+                        quote! {
+                            let #args_var = #MAP_ARGS_TYPE_HINT(&#map_func, #args);
+                        }
+                    }
+                    Map::None => {
+                        quote! {
+                            let #args_var: <#ty as #TRAIT_NAME>::Args = #args;
+                        }
+                    }
                 }
             }
         });
