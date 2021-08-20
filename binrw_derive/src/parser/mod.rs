@@ -10,7 +10,7 @@ mod types;
 pub(crate) use field_level_attrs::*;
 use meta_types::MetaAttrList;
 use proc_macro2::Span;
-use syn::{spanned::Spanned, token::Token};
+use syn::token::Token;
 pub(crate) use top_level_attrs::*;
 pub(crate) use types::*;
 
@@ -135,14 +135,6 @@ pub(crate) trait KeywordToken {
     }
 
     fn keyword_span(&self) -> Span;
-}
-
-impl<T: Token + Spanned> KeywordToken for T {
-    type Token = T;
-
-    fn keyword_span(&self) -> Span {
-        self.span()
-    }
 }
 
 pub(crate) enum PartialResult<T, E> {
