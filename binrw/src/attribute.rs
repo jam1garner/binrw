@@ -480,7 +480,7 @@
 //!     #[br(temp, big)]
 //!     len: u32,
 //!
-//!     #[br(args { count: len as usize, inner: () })]
+//!     #[br(count = len)]
 //!     data: Vec<u8>
 //! }
 //!
@@ -786,7 +786,13 @@
 //! #[br(count = $count:expr) or #[br(count($count:expr))]
 //! ```
 //!
-//! When manually implementing
+//! This is effectively equivelant to writing:
+//!
+//! ```text
+//! #[br(args { count: $count as usize })]
+//! ```
+//!
+//! As such, when manually implementing
 //! [`BinRead::read_options`](crate::BinRead::read_options) or a
 //! [custom parser function](#custom-parsers), the `count` value is accessible
 //! from a named argument named `count`.
@@ -803,7 +809,7 @@
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
-//!     #[br(args { count: size as usize, inner: () })]
+//!     #[br(count = size)]
 //!     data: Vec<u8>,
 //! }
 //!
@@ -820,7 +826,7 @@
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
-//!     #[br(args { count: size as usize, inner: () })]
+//!     #[br(count = size)]
 //!     data: FilePtr<u32, Vec<u8>>,
 //! }
 //!

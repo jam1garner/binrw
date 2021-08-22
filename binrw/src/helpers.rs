@@ -15,7 +15,7 @@ use alloc::{vec, vec::Vec};
 /// # use binrw::{BinRead, helpers::read_bytes, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
 /// struct BunchaBytes {
-///     #[br(args { count: 5, inner: () })]
+///     #[br(count = 5)]
 ///     data: Vec<u8>
 /// }
 ///

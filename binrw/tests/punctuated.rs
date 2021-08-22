@@ -16,7 +16,7 @@ struct Two;
 struct PunctuatedTest {
     count: u8,
 
-    #[br(args { count: count as usize, inner: () })]
+    #[br(count = count)]
     #[br(parse_with = Punctuated::<One, Two>::separated)]
     list: Punctuated<One, Two>,
 }
@@ -25,7 +25,7 @@ struct PunctuatedTest {
 struct PunctuatedTestTrailing {
     count: u8,
 
-    #[br(args { count: count as usize, inner: () })]
+    #[br(count = count)]
     #[br(parse_with = Punctuated::<One, Two>::separated_trailing)]
     list: Punctuated<One, Two>,
 }
