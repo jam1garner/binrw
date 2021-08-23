@@ -1,5 +1,6 @@
 #[macro_use]
 pub(crate) mod sanitization;
+mod has_magic;
 mod read_options;
 pub(crate) mod typed_builder;
 
@@ -31,25 +32,13 @@ pub(crate) fn generate_impl(
         ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
     };
 
-    let name = &derive_input.ident;
-    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
-
-    let magic_definition = match binread_input {
-        ParseResult::Ok(binread_input) => {
-            let magic = binread_input.magic().as_ref();
-            magic.map(|magic| {
-                let ty: TokenStream = magic.kind().into();
-                let val = magic.deref_value();
-                quote! {
-                    impl #impl_generics #HAS_MAGIC for #name #ty_generics #where_clause {
-                        type MagicType = #ty;
-                        const MAGIC: Self::MagicType = #val;
-                    }
-                }
-            })
-        }
+    let has_magic_impl = match binread_input {
+        ParseResult::Ok(binread_input) => has_magic::generate(binread_input, derive_input),
         ParseResult::Partial(_, error) | ParseResult::Err(error) => Some(error.to_compile_error()),
     };
+
+    let name = &derive_input.ident;
+    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
 
     quote! {
         #[allow(non_snake_case)]
@@ -64,7 +53,7 @@ pub(crate) fn generate_impl(
             }
         }
 
-        #magic_definition
+        #has_magic_impl
 
         #arg_type_declaration
     }
