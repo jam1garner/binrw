@@ -41,8 +41,9 @@ pub(crate) fn generate_impl(
                 let ty: TokenStream = magic.kind().into();
                 let val = magic.deref_value();
                 quote! {
-                    impl #name #ty_generics #where_clause {
-                        const MAGIC: #ty = #val;
+                    impl #impl_generics #HAS_MAGIC for #name #ty_generics #where_clause {
+                        type MagicType = #ty;
+                        const MAGIC: Self::MagicType = #val;
                     }
                 }
             })

@@ -148,6 +148,7 @@ pub mod attribute;
 pub mod endian;
 pub mod error;
 pub mod file_ptr;
+pub mod has_magic;
 pub mod helpers;
 pub mod io;
 #[doc(hidden)]
@@ -163,6 +164,7 @@ pub use {
     endian::Endian,
     error::Error,
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
+    has_magic::HasMagic,
     options::ReadOptions,
     pos_value::PosValue,
     strings::{NullString, NullWideString},
