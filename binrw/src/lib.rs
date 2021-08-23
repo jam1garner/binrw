@@ -148,6 +148,7 @@ pub mod attribute;
 pub mod endian;
 pub mod error;
 pub mod file_ptr;
+#[doc(hidden)]
 pub mod has_magic;
 pub mod helpers;
 pub mod io;

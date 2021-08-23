@@ -1,7 +1,7 @@
-use crate::parser::{Input};
+use super::sanitization::HAS_MAGIC;
+use crate::parser::Input;
 use proc_macro2::TokenStream;
 use quote::quote;
-use super::sanitization::HAS_MAGIC;
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> Option<TokenStream> {
     let name = &derive_input.ident;
