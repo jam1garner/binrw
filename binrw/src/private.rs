@@ -65,24 +65,6 @@ where
     }
 }
 
-pub fn try_after_parse<Reader, ValueType, ArgType>(
-    item: &mut Option<ValueType>,
-    reader: &mut Reader,
-    ro: &ReadOptions,
-    args: ArgType,
-) -> BinResult<()>
-where
-    Reader: io::Read + io::Seek,
-    ValueType: BinRead<Args = ArgType>,
-    ArgType: Copy + 'static,
-{
-    if let Some(value) = item.as_mut() {
-        value.after_parse(reader, ro, args)?;
-    }
-
-    Ok(())
-}
-
 pub fn parse_function_args_type_hint<R, Res, Args, F>(_: F, a: Args) -> Args
 where
     R: crate::io::Read + crate::io::Seek,

@@ -35,7 +35,7 @@ attr_struct! {
         #[from(RestorePosition)]
         pub(crate) restore_position: Option<()>,
         #[from(Try)]
-        pub(crate) do_try: Option<()>,
+        pub(crate) do_try: Option<SpannedValue<()>>,
         #[from(Temp)]
         pub(crate) temp: Option<()>,
         #[from(Assert)]
@@ -88,6 +88,13 @@ impl StructField {
             Err(syn::Error::new(
                 span,
                 "`deref_now` and `offset_after` are mutually exclusive",
+            ))
+        } else if self.do_try.is_some() && self.generated_value()  {
+            //TODO: join with span of read mode somehow
+            let span = self.do_try.as_ref().unwrap().span();
+            Err(syn::Error::new(
+                span,
+                "`try` is incompatible with `default` and `calc`"
             ))
         } else {
             Ok(())

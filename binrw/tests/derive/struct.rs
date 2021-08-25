@@ -145,19 +145,6 @@ fn calc_temp_field() {
 }
 
 #[test]
-fn calc_try() {
-    #[derive(BinRead, Debug, PartialEq)]
-    #[br(big)]
-    struct Test {
-        #[br(calc(1), try)]
-        a: Option<i32>,
-    }
-
-    let result = Test::read(&mut Cursor::new(b"")).unwrap();
-    assert_eq!(result, Test { a: Some(1) });
-}
-
-#[test]
 fn deref_now() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(big, magic = b"TEST")]
