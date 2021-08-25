@@ -1,5 +1,6 @@
 #[macro_use]
 pub(crate) mod sanitization;
+mod has_magic;
 mod read_options;
 pub(crate) mod typed_builder;
 
@@ -31,8 +32,14 @@ pub(crate) fn generate_impl(
         ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
     };
 
+    let has_magic_impl = match binread_input {
+        ParseResult::Ok(binread_input) => has_magic::generate(binread_input, derive_input),
+        ParseResult::Partial(_, error) | ParseResult::Err(error) => Some(error.to_compile_error()),
+    };
+
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
+
     quote! {
         #[allow(non_snake_case)]
         impl #impl_generics #TRAIT_NAME for #name #ty_generics #where_clause {
@@ -45,6 +52,8 @@ pub(crate) fn generate_impl(
                 #read_opt_impl
             }
         }
+
+        #has_magic_impl
 
         #arg_type_declaration
     }

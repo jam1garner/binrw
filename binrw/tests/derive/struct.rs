@@ -295,6 +295,16 @@ fn magic_field() {
 }
 
 #[test]
+fn magic_const() {
+    use binrw::HasMagic;
+    #[derive(BinRead, Debug)]
+    #[br(magic = b'a')]
+    struct Test;
+
+    assert_eq!(Test::MAGIC, b'a');
+}
+
+#[test]
 fn pad_after_before() {
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {
