@@ -76,7 +76,7 @@ where
     }
 }
 
-/// Read items until a condition is met. The last item will *not* be named.
+/// Read items until a condition is met. The last item will *not* be included.
 ///
 /// # Examples
 ///
