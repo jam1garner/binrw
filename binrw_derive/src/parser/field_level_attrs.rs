@@ -89,12 +89,12 @@ impl StructField {
                 span,
                 "`deref_now` and `offset_after` are mutually exclusive",
             ))
-        } else if self.do_try.is_some() && self.generated_value()  {
+        } else if self.do_try.is_some() && self.generated_value() {
             //TODO: join with span of read mode somehow
             let span = self.do_try.as_ref().unwrap().span();
             Err(syn::Error::new(
                 span,
-                "`try` is incompatible with `default` and `calc`"
+                "`try` is incompatible with `default` and `calc`",
             ))
         } else {
             Ok(())
