@@ -19,6 +19,25 @@ fn enum_assert() {
 }
 
 #[test]
+fn enum_non_copy_args() {
+    #[derive(BinRead, Debug)]
+    #[br(import(a: NonCopyArg))]
+    enum Test {
+        A {
+            #[br(calc = a.0)]
+            a: u8,
+        },
+        B {
+            #[br(calc = a.0)]
+            b: u8,
+        },
+    }
+
+    #[derive(Clone)]
+    struct NonCopyArg(u8);
+}
+
+#[test]
 fn enum_calc_temp_field() {
     #[derive_binread]
     #[derive(Debug, Eq, PartialEq)]

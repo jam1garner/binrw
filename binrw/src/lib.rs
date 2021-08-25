@@ -82,7 +82,7 @@
 //! struct Dog {
 //!     bone_pile_count: u8,
 //!
-//!     #[br(big, args { count: bone_pile_count as usize, inner: () })]
+//!     #[br(big, count = bone_pile_count)]
 //!     bone_piles: Vec<u16>,
 //!
 //!     #[br(align_before = 0xA)]
@@ -166,6 +166,7 @@ pub use {
     error::Error,
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
     has_magic::HasMagic,
+    helpers::{count, until, until_eof, until_exclusive},
     options::ReadOptions,
     pos_value::PosValue,
     strings::{NullString, NullWideString},

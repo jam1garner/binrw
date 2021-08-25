@@ -28,7 +28,7 @@ use core::fmt;
 /// #[derive(BinRead)]
 /// struct MyList {
 ///     #[br(parse_with = Punctuated::separated)]
-///     #[br(args { count: 3, inner: () })]
+///     #[br(count = 3)]
 ///     x: Punctuated<u16, u8>,
 /// }
 ///
@@ -60,7 +60,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// #[derive(BinRead)]
     /// struct MyList {
     ///     #[br(parse_with = Punctuated::separated)]
-    ///     #[br(args { count: 3, inner: () })]
+    ///     #[br(count = 3)]
     ///     x: Punctuated<u16, u8>,
     /// }
     ///
