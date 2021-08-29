@@ -1,0 +1,5 @@
+error: `try` is incompatible with `default` and `calc`
+ --> $DIR/try_default_conflict.rs:5:10
+  |
+5 |     #[br(try, default)]
+  |          ^^^

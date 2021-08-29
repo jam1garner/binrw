@@ -37,7 +37,7 @@
 //! | [`return_unexpected_error`](#enum-errors) | non-unit enum | Returns a single generic error on failure.
 //! | [`seek_before`](#padding-and-alignment) | field | Moves the reader to a specific position before reading data.
 //! | [`temp`](#temp) | field | Uses a field as a temporary variable. Only usable with the [`derive_binread`] attribute macro.
-//! | [`try`](#try) | field | Reads data into an [`Option`](core::option::Option), but stores `None` if parsing fails instead of returning an error.
+//! | [`try`](#try) | field | Tries to parse and stores the [`default`](core::default::Default) value for the type if parsing fails instead of returning an error.
 //! | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`BinResult`](crate::BinResult).
 //!
 //! # Byte order
@@ -576,7 +576,7 @@
 //!
 //! # Try
 //!
-//! The `try` directive allows parsing of an [`Option`] field to fail instead
+//! The `try` directive allows parsing of a field to fail instead
 //! of returning an error:
 //!
 //! ```text
@@ -584,7 +584,7 @@
 //! ```
 //!
 //! If the field cannot be parsed, the position of the reader will be restored
-//! and the value of the field will be set to [`None`].
+//! and the value of the field will be set to the [`default`](core::default::Default) value for the type.
 //!
 //! ## Examples
 //!

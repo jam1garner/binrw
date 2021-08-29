@@ -50,7 +50,6 @@ ident_str! {
     pub(crate) ASSERT = from_crate!(__private::assert);
     pub(crate) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
     pub(crate) COERCE_FN = from_crate!(__private::coerce_fn);
-    pub(crate) TRY_AFTER_PARSE = from_crate!(__private::try_after_parse);
     pub(crate) ARGS_TYPE_HINT = from_crate!(__private::parse_function_args_type_hint);
     pub(crate) MAP_ARGS_TYPE_HINT = from_crate!(__private::map_args_type_hint);
     pub(crate) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
