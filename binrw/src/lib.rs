@@ -1,12 +1,11 @@
-//! **Maintainer's Note:** binrw is in a rather early state. Lots of work is being
+//! **Maintainer's Note:** binrw is in a somewhat early state. Lots of work is being
 //! done in order to make a great library before holding it to too many stability guarantees.
-//! Expect a bit of churn, if you're looking for a stable alternative, check out [`binread`].
+//! Expect a bit of API churn, especially with writing support as it is currently unfinished.
 //! If you're interested in getting involved, join us on [discord] or [matrix]! (whichever you
 //! prefer, they're bridged together)
 //!
 //! ---
 //!
-//! [`binread`]: https://docs.rs/binread
 //! [discord]: https://discord.gg/ABy4Qh549j
 //! [matrix]: https://matrix.to/#/#binrw:matrix.org
 //!
@@ -189,6 +188,9 @@ pub use binread_impls::*;
 
 mod binread;
 pub use binread::*;
+
+mod binwrite;
+pub use binwrite::*;
 
 mod builder_types;
 pub use builder_types::*;
