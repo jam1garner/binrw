@@ -3,6 +3,8 @@ use crate::{
     BinResult, Endian,
 };
 
+mod impls;
+
 /// A trait for writing a given type to a writer
 pub trait BinWrite {
     /// The type of arguments needed to be supplied in order to write this type, usually a tuple.
