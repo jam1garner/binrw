@@ -151,8 +151,7 @@ pub mod file_ptr;
 pub mod has_magic;
 pub mod helpers;
 pub mod io;
-#[doc(hidden)]
-pub mod options;
+
 #[doc(hidden)]
 pub mod pos_value;
 pub mod punctuated;
@@ -166,7 +165,6 @@ pub use {
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
     has_magic::HasMagic,
     helpers::{count, until, until_eof, until_exclusive},
-    options::ReadOptions,
     pos_value::PosValue,
     strings::{NullString, NullWideString},
 };
@@ -182,9 +180,6 @@ pub use binrw_derive::BinrwNamedArgs;
 
 /// A specialized [`Result`] type for BinRead operations.
 pub type BinResult<T> = core::result::Result<T, Error>;
-
-mod binread_impls;
-pub use binread_impls::*;
 
 mod binread;
 pub use binread::*;

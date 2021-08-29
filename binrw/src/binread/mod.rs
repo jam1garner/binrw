@@ -1,7 +1,13 @@
 use crate::{
     io::{Read, Seek},
-    BinResult, Endian, ReadOptions,
+    BinResult, Endian,
 };
+
+mod options;
+pub use options::*;
+
+mod impls;
+pub use impls::VecArgs;
 
 /// The `BinRead` trait reads data from streams and converts it into objects.
 ///
