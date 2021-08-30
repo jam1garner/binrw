@@ -1,5 +1,5 @@
 use super::sanitization::HAS_MAGIC;
-use crate::parser::Input;
+use crate::parser::read::Input;
 use proc_macro2::TokenStream;
 use quote::quote;
 

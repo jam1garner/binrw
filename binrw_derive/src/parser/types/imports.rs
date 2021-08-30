@@ -1,5 +1,5 @@
 use crate::parser::{
-    attrs,
+    read::attrs,
     meta_types::{Enclosure, IdentTypeMaybeDefault},
     KeywordToken, TrySet,
 };

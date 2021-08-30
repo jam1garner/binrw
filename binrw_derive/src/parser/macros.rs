@@ -1,12 +1,12 @@
 /// Attempt to parse variants in order until a match is found
 macro_rules! parse_any {
-    (enum $enum:ident {
+    ($vis:vis enum $enum:ident {
         $(
             $variant:ident($ty:ty)
         ),*
         $(,)?
     }) => {
-        pub(super) enum $enum {
+        $vis enum $enum {
             $(
                 $variant($ty)
             ),*
@@ -58,6 +58,8 @@ macro_rules! parse_any {
 // So, you know… here be dragons, and I’m sorry in advance.
 macro_rules! attr_struct {
     (
+        @$mode:ident $mod:ident
+
         #[from($attr_ty:ident)]
         $(#[$meta:meta])*
         $vis:vis struct $ident:ident {
@@ -84,12 +86,20 @@ macro_rules! attr_struct {
             }
         }
 
-        parse_any! {
-            enum $attr_ty {
-                $($(
-                    $($field_attr_id($crate::parser::attrs::$field_attr_id),)+
-                )?)+
+        mod $mod {
+            #[allow(unused_imports)]
+            use super::*;
+            use $crate::parser::$mode::attrs;
+
+            parse_any! {
+                $vis enum $attr_ty {
+                    $($(
+                        $($field_attr_id(attrs::$field_attr_id),)+
+                    )?)+
+                }
             }
         }
+
+        $vis use $mod::$attr_ty;
     }
 }

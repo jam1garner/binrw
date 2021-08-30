@@ -6,7 +6,7 @@ pub(crate) mod typed_builder;
 
 mod imports;
 
-use crate::parser::{Input, ParseResult};
+use crate::parser::{read, ParseResult};
 use proc_macro2::TokenStream;
 use quote::quote;
 #[allow(clippy::wildcard_imports)]
@@ -14,7 +14,7 @@ use sanitization::*;
 
 pub(crate) fn generate_impl(
     derive_input: &syn::DeriveInput,
-    binread_input: &ParseResult<Input>,
+    binread_input: &ParseResult<read::Input>,
 ) -> TokenStream {
     // Generate the argument type name and (if needed) definition
     let (arg_type, arg_type_declaration) = match binread_input {

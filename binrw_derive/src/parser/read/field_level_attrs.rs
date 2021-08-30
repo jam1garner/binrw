@@ -1,11 +1,16 @@
-use super::{
+use super::super::{
     types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode},
-    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
+    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, TrySet,
 };
+
+use super::Struct;
+
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
 attr_struct! {
+    @read struct_field
+
     #[from(StructFieldAttr)]
     #[derive(Clone, Debug)]
     pub(crate) struct StructField {
@@ -158,6 +163,8 @@ impl FromField for StructField {
 }
 
 attr_struct! {
+    @read unit_enum_field
+
     #[from(UnitEnumFieldAttr)]
     #[derive(Clone, Debug)]
     pub(crate) struct UnitEnumField {

@@ -1,18 +1,16 @@
 #[macro_use]
 pub(crate) mod macros;
-mod attrs;
-mod field_level_attrs;
 mod keywords;
 pub(crate) mod meta_types;
-mod top_level_attrs;
 mod types;
 
-pub(crate) use field_level_attrs::*;
 use meta_types::MetaAttrList;
 use proc_macro2::Span;
 use syn::token::Token;
-pub(crate) use top_level_attrs::*;
 pub(crate) use types::*;
+
+pub(crate) mod read;
+pub(crate) mod write;
 
 fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
     if let Some(all_errors) = all_errors {

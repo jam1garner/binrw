@@ -1,7 +1,9 @@
-use super::{
+use super::super::{
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
+    FromInput, ParseResult, SpannedValue, TrySet,
 };
+use super::{EnumVariant, StructField, UnitEnumField};
+
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
@@ -107,6 +109,8 @@ impl Input {
 }
 
 attr_struct! {
+    @read struct_struct
+
     #[from(StructAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Struct {
@@ -150,6 +154,8 @@ impl FromInput<StructAttr> for Struct {
 }
 
 attr_struct! {
+    @read enum_struct
+
     #[from(EnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
@@ -219,6 +225,8 @@ impl FromInput<EnumAttr> for Enum {
 }
 
 attr_struct! {
+    @read unit_only_enum
+
     #[from(UnitEnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct UnitOnlyEnum {

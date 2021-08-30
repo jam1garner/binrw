@@ -1,4 +1,4 @@
-use crate::parser::attrs;
+use crate::parser::read::attrs;
 use core::convert::TryFrom;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
