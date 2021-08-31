@@ -1,6 +1,7 @@
 use super::super::{
+    read::{FromAttrs, FromInput},
     types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode},
-    read::{FromAttrs, FromInput}, FromField, ParseResult, SpannedValue, TrySet,
+    FromField, ParseResult, SpannedValue, TrySet,
 };
 
 use super::Struct;

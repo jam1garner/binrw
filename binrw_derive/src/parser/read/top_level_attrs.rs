@@ -1,6 +1,7 @@
 use super::super::{
+    read::FromInput,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    read::FromInput, ParseResult, SpannedValue, TrySet,
+    ParseResult, SpannedValue, TrySet,
 };
 use super::{EnumVariant, StructField, UnitEnumField};
 

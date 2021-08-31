@@ -5,12 +5,8 @@ use super::{
 };
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::read::{
-    Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum,
-};
-use crate::parser::{
-    EnumErrorMode, Imports,
-};
+use crate::parser::read::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
+use crate::parser::{EnumErrorMode, Imports};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;

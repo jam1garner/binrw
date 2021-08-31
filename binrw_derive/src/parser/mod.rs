@@ -42,6 +42,7 @@ pub(crate) trait KeywordToken {
     fn keyword_span(&self) -> Span;
 }
 
+#[derive(Debug)]
 pub(crate) enum PartialResult<T, E> {
     Ok(T),
     Partial(T, E),

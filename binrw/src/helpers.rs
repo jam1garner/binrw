@@ -12,6 +12,7 @@ use alloc::{vec, vec::Vec};
 /// # Examples
 ///
 /// ```
+/// #![allow(deprecated)]
 /// # use binrw::{BinRead, helpers::read_bytes, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
 /// struct BunchaBytes {

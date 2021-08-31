@@ -1,6 +1,6 @@
-use binrw::{derive_binread, BinReaderExt};
+use binrw::{binread, BinReaderExt};
 
-#[derive_binread]
+#[binread]
 #[derive(Debug, PartialEq)]
 pub struct LenString {
     #[br(temp)]

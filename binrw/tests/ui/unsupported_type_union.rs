@@ -1,11 +1,11 @@
-use binrw::{BinRead, derive_binread};
+use binrw::{BinRead, binread};
 
 #[derive(BinRead)]
 union Foo {
     a: i32,
 }
 
-#[derive_binread]
+#[binread]
 union Bar {
     a: i32,
 }

@@ -1,12 +1,14 @@
 use super::super::{
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    write::FromInput, ParseResult, SpannedValue, TrySet,
+    write::FromInput,
+    ParseResult, SpannedValue, TrySet,
 };
 use super::{EnumVariant, StructField, UnitEnumField};
 
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
+#[derive(Debug)]
 pub(crate) enum Input {
     Struct(Struct),
     UnitStruct(Struct),

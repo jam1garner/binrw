@@ -1,12 +1,12 @@
 pub(crate) mod attrs;
-pub(crate) mod top_level_attrs;
 pub(crate) mod field_level_attrs;
+pub(crate) mod top_level_attrs;
 
-use top_level_attrs::*;
-use field_level_attrs::*;
+pub(crate) use field_level_attrs::*;
+pub(crate) use top_level_attrs::*;
 
 use super::meta_types::MetaAttrList;
-use super::{ParseResult, combine_error, FromField};
+use super::{combine_error, FromField, ParseResult};
 
 pub(crate) fn is_binwrite_attr(attr: &syn::Attribute) -> bool {
     attr.path.is_ident("bw") || attr.path.is_ident("brw") || attr.path.is_ident("binwrite")
