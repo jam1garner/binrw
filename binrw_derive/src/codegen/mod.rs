@@ -42,11 +42,11 @@ pub(crate) fn generate_binread_impl(
 
     quote! {
         #[allow(non_snake_case)]
-        impl #impl_generics #TRAIT_NAME for #name #ty_generics #where_clause {
+        impl #impl_generics #BINREAD_TRAIT for #name #ty_generics #where_clause {
             type Args = #arg_type;
 
             fn read_options<R: #READ_TRAIT + #SEEK_TRAIT>
-                (#READER: &mut R, #OPT: &#OPTIONS, #ARGS: Self::Args)
+                (#READER: &mut R, #OPT: &#READ_OPTIONS, #ARGS: Self::Args)
                 -> #BIN_RESULT<Self>
             {
                 #read_opt_impl
@@ -63,6 +63,5 @@ pub(crate) fn generate_binwrite_impl(
     _derive_input: &syn::DeriveInput,
     _binread_input: &ParseResult<write::Input>,
 ) -> TokenStream {
-
-    quote! {  }
+    quote! {}
 }

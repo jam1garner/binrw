@@ -22,7 +22,7 @@ macro_rules! from_crate {
     };
 }
 
-macro_rules! from_trait {
+macro_rules! from_read_trait {
     () => {
         from_crate!(BinRead)
     };
@@ -32,16 +32,16 @@ macro_rules! from_trait {
 }
 
 ident_str! {
-    pub(crate) TRAIT_NAME = from_trait!();
+    pub(crate) BINREAD_TRAIT = from_read_trait!();
     pub(crate) BIN_ERROR = from_crate!(Error);
-    pub(crate) OPTIONS = from_crate!(ReadOptions);
+    pub(crate) READ_OPTIONS = from_crate!(ReadOptions);
     pub(crate) READ_TRAIT = from_crate!(io::Read);
     pub(crate) SEEK_TRAIT = from_crate!(io::Seek);
     pub(crate) SEEK_FROM = from_crate!(io::SeekFrom);
     pub(crate) BIN_RESULT = from_crate!(BinResult);
     pub(crate) ENDIAN_ENUM = from_crate!(Endian);
-    pub(crate) READ_METHOD = from_trait!(read_options);
-    pub(crate) AFTER_PARSE = from_trait!(after_parse);
+    pub(crate) READ_METHOD = from_read_trait!(read_options);
+    pub(crate) AFTER_PARSE = from_read_trait!(after_parse);
     pub(crate) READER = "__binrw_generated_var_reader";
     pub(crate) OPT = "__binrw_generated_var_options";
     pub(crate) ARGS = "__binrw_generated_var_arguments";

@@ -347,7 +347,7 @@ impl<'field> FieldGenerator<'field> {
                     }
                     Map::None => {
                         quote! {
-                            let #args_var: <#ty as #TRAIT_NAME>::Args = #args;
+                            let #args_var: <#ty as #BINREAD_TRAIT>::Args = #args;
                         }
                     }
                 }
