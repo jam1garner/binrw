@@ -76,7 +76,7 @@ macro_rules! attr_struct {
             ),+
         }
 
-        impl $crate::parser::FromAttrs<$attr_ty> for $ident {
+        impl $crate::parser::$mode::FromAttrs<$attr_ty> for $ident {
             fn try_set_attr(&mut self, attr: $attr_ty) -> ::syn::Result<()> {
                 match attr {
                     $($(

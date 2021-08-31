@@ -1,6 +1,6 @@
 use super::super::{
     types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode},
-    read::{FromAttrs, FromInput}, FromField, ParseResult, SpannedValue, TrySet,
+    write::{FromAttrs, FromInput}, FromField, ParseResult, SpannedValue, TrySet,
 };
 
 use super::Struct;
@@ -9,7 +9,7 @@ use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
 attr_struct! {
-    @read struct_field
+    @write struct_field
 
     #[from(StructFieldAttr)]
     #[derive(Clone, Debug)]
@@ -25,22 +25,14 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(Args, ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(Calc, Default, Ignore, ParseWith)]
+        #[from(Calc, Ignore, ParseWith)]
         pub(crate) read_mode: ReadMode,
         #[from(Count)]
         pub(crate) count: Option<TokenStream>,
-        #[from(Offset)]
-        pub(crate) offset: Option<TokenStream>,
-        #[from(OffsetAfter)]
-        pub(crate) offset_after: Option<SpannedValue<TokenStream>>,
         #[from(If)]
         pub(crate) if_cond: Option<Condition>,
-        #[from(DerefNow, PostProcessNow)]
-        pub(crate) deref_now: Option<SpannedValue<()>>,
         #[from(RestorePosition)]
         pub(crate) restore_position: Option<()>,
-        #[from(Try)]
-        pub(crate) do_try: Option<SpannedValue<()>>,
         #[from(Temp)]
         pub(crate) temp: Option<()>,
         #[from(Assert)]
@@ -67,12 +59,6 @@ impl StructField {
         matches!(self.read_mode, ReadMode::Normal) && !self.map.is_some()
     }
 
-    /// Returns true if the code generator should emit `BinRead::after_parse()`
-    /// after all fields have been read.
-    pub(crate) fn should_use_after_parse(&self) -> bool {
-        self.deref_now.is_none() && self.map.is_none()
-    }
-
     /// Returns true if this field is generated using a calculated value instead
     /// of a parser.
     pub(crate) fn generated_value(&self) -> bool {
@@ -83,35 +69,13 @@ impl StructField {
     pub(crate) fn needs_options(&self) -> bool {
         !self.generated_value() || self.magic.is_some()
     }
-
-    fn validate(&self) -> syn::Result<()> {
-        if let (Some(offset_after), Some(deref_now)) = (&self.offset_after, &self.deref_now) {
-            let offset_after_span = offset_after.span();
-            let span = offset_after_span
-                .join(deref_now.span())
-                .unwrap_or(offset_after_span);
-            Err(syn::Error::new(
-                span,
-                "`deref_now` and `offset_after` are mutually exclusive",
-            ))
-        } else if self.do_try.is_some() && self.generated_value() {
-            //TODO: join with span of read mode somehow
-            let span = self.do_try.as_ref().unwrap().span();
-            Err(syn::Error::new(
-                span,
-                "`try` is incompatible with `default` and `calc`",
-            ))
-        } else {
-            Ok(())
-        }
-    }
 }
 
 impl FromField for StructField {
     type In = syn::Field;
 
     fn from_field(field: &Self::In, index: usize) -> ParseResult<Self> {
-        let result = Self::set_from_attrs(
+        Self::set_from_attrs(
             Self {
                 ident: field
                     .ident
@@ -125,12 +89,8 @@ impl FromField for StructField {
                 args: <_>::default(),
                 read_mode: <_>::default(),
                 count: <_>::default(),
-                offset: <_>::default(),
-                offset_after: <_>::default(),
                 if_cond: <_>::default(),
-                deref_now: <_>::default(),
                 restore_position: <_>::default(),
-                do_try: <_>::default(),
                 temp: <_>::default(),
                 assertions: <_>::default(),
                 pad_before: <_>::default(),
@@ -141,29 +101,12 @@ impl FromField for StructField {
                 pad_size_to: <_>::default(),
             },
             &field.attrs,
-        );
-
-        match result {
-            ParseResult::Ok(this) => {
-                if let Err(error) = this.validate() {
-                    ParseResult::Partial(this, error)
-                } else {
-                    ParseResult::Ok(this)
-                }
-            }
-            ParseResult::Partial(this, mut parse_error) => {
-                if let Err(error) = this.validate() {
-                    parse_error.combine(error);
-                }
-                ParseResult::Partial(this, parse_error)
-            }
-            ParseResult::Err(error) => ParseResult::Err(error),
-        }
+        )
     }
 }
 
 attr_struct! {
-    @read unit_enum_field
+    @write unit_enum_field
 
     #[from(UnitEnumFieldAttr)]
     #[derive(Clone, Debug)]

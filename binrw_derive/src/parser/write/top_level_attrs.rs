@@ -1,6 +1,6 @@
 use super::super::{
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    read::FromInput, ParseResult, SpannedValue, TrySet,
+    write::FromInput, ParseResult, SpannedValue, TrySet,
 };
 use super::{EnumVariant, StructField, UnitEnumField};
 
@@ -109,7 +109,7 @@ impl Input {
 }
 
 attr_struct! {
-    @read struct_struct
+    @write struct_struct
 
     #[from(StructAttr)]
     #[derive(Clone, Debug, Default)]
@@ -154,7 +154,7 @@ impl FromInput<StructAttr> for Struct {
 }
 
 attr_struct! {
-    @read enum_struct
+    @write enum_struct
 
     #[from(EnumAttr)]
     #[derive(Clone, Debug, Default)]
@@ -225,7 +225,7 @@ impl FromInput<EnumAttr> for Enum {
 }
 
 attr_struct! {
-    @read unit_only_enum
+    @write unit_only_enum
 
     #[from(UnitEnumAttr)]
     #[derive(Clone, Debug, Default)]
