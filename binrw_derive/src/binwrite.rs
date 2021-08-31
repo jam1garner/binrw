@@ -1,5 +1,5 @@
 use crate::{
-    codegen::generate_impl,
+    codegen::generate_binwrite_impl,
     named_args::NamedArgAttr,
     parser::{write, write::is_binwrite_attr, ParseResult},
 };
@@ -45,9 +45,8 @@ pub(crate) fn derive_from_input(
     derive_input: &DeriveInput,
 ) -> (ParseResult<write::Input>, proc_macro2::TokenStream) {
     let binwrite_input = write::Input::from_input(derive_input);
-    dbg!(&binwrite_input);
-    let _generated_impl = generate_impl(derive_input, todo!());
-    (binwrite_input, _generated_impl)
+    let generated_impl = generate_binwrite_impl(derive_input, &binwrite_input);
+    (binwrite_input, generated_impl)
 }
 
 fn clean_field_attrs(
