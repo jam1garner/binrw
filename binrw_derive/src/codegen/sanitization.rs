@@ -30,12 +30,23 @@ macro_rules! from_read_trait {
         concat!("binrw::BinRead::", stringify!($path))
     };
 }
+macro_rules! from_write_trait {
+    () => {
+        from_crate!(BinWrite)
+    };
+    ($path:path) => {
+        concat!("binrw::BinWrite::", stringify!($path))
+    };
+}
 
 ident_str! {
     pub(crate) BINREAD_TRAIT = from_read_trait!();
+    pub(crate) BINWRITE_TRAIT = from_write_trait!();
     pub(crate) BIN_ERROR = from_crate!(Error);
     pub(crate) READ_OPTIONS = from_crate!(ReadOptions);
+    pub(crate) WRITE_OPTIONS = from_crate!(WriteOptions);
     pub(crate) READ_TRAIT = from_crate!(io::Read);
+    pub(crate) WRITE_TRAIT = from_crate!(io::Write);
     pub(crate) SEEK_TRAIT = from_crate!(io::Seek);
     pub(crate) SEEK_FROM = from_crate!(io::SeekFrom);
     pub(crate) BIN_RESULT = from_crate!(BinResult);
@@ -43,6 +54,7 @@ ident_str! {
     pub(crate) READ_METHOD = from_read_trait!(read_options);
     pub(crate) AFTER_PARSE = from_read_trait!(after_parse);
     pub(crate) READER = "__binrw_generated_var_reader";
+    pub(crate) WRITER = "__binrw_generated_var_writer";
     pub(crate) OPT = "__binrw_generated_var_options";
     pub(crate) ARGS = "__binrw_generated_var_arguments";
     pub(crate) SAVED_POSITION = "__binrw_generated_saved_position";

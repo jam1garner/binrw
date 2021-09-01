@@ -2,6 +2,7 @@
 pub(crate) mod sanitization;
 mod has_magic;
 mod read_options;
+mod write_options;
 pub(crate) mod typed_builder;
 
 mod imports;
@@ -60,8 +61,42 @@ pub(crate) fn generate_binread_impl(
 }
 
 pub(crate) fn generate_binwrite_impl(
-    _derive_input: &syn::DeriveInput,
-    _binread_input: &ParseResult<write::Input>,
+    derive_input: &syn::DeriveInput,
+    binwrite_input: &ParseResult<write::Input>,
 ) -> TokenStream {
-    quote! {}
+    // Generate the argument type name and (if needed) definition
+    let (arg_type, arg_type_declaration) = match binwrite_input {
+        ParseResult::Ok(binwrite_input) | ParseResult::Partial(binwrite_input, _) => binwrite_input
+            .imports()
+            .args_type(&derive_input.ident, &derive_input.vis),
+        ParseResult::Err(_) => (quote! { () }, None),
+    };
+
+    // If there is a parsing error, a BinWrite impl still needs to be
+    // generated to avoid misleading errors at all call sites that use the
+    // BinWrite trait
+    let write_opt_impl = match binwrite_input {
+        ParseResult::Ok(binwrite_input) => write_options::generate(binwrite_input, derive_input),
+        ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
+    };
+
+    let name = &derive_input.ident;
+    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
+
+    quote! {
+        impl #impl_generics #BINWRITE_TRAIT for #name #ty_generics #where_clause {
+            type Args = #arg_type;
+
+            fn write_options<W: #WRITE_TRAIT + #SEEK_TRAIT>(
+                &self,
+                #WRITER: &mut W,
+                #OPT: &#WRITE_OPTIONS,
+                #ARGS: Self::Args
+            ) -> #BIN_RESULT<()> {
+                #write_opt_impl
+            }
+        }
+
+        #arg_type_declaration
+    }
 }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::super::{
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
     write::FromInput,

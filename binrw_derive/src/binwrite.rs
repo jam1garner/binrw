@@ -1,6 +1,5 @@
 use crate::{
     codegen::generate_binwrite_impl,
-    named_args::NamedArgAttr,
     parser::{write, write::is_binwrite_attr, ParseResult},
 };
 

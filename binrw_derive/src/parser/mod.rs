@@ -4,7 +4,6 @@ mod keywords;
 pub(crate) mod meta_types;
 mod types;
 
-use meta_types::MetaAttrList;
 use proc_macro2::Span;
 use syn::token::Token;
 pub(crate) use types::*;

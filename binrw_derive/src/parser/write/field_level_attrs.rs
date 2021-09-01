@@ -1,13 +1,13 @@
+#![allow(dead_code)]
 use super::super::{
     types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode},
     write::{FromAttrs, FromInput},
-    FromField, ParseResult, SpannedValue, TrySet,
+    FromField, ParseResult, TrySet,
 };
 
 use super::Struct;
 
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 
 attr_struct! {
     @write struct_field

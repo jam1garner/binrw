@@ -1,7 +1,6 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 #![allow(clippy::expl_impl_clone_on_copy)]
-#![allow(unused_imports, dead_code)]
 
 mod codegen;
 mod named_args;
@@ -15,7 +14,6 @@ use crate::{
     named_args::NamedArgAttr,
 };
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br, brw))]
