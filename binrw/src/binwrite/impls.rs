@@ -1,5 +1,7 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
+use crate::alloc::boxed::Box;
+use crate::alloc::vec::Vec;
 use crate::io::{Seek, Write};
 use crate::{BinResult, BinWrite, Endian, WriteOptions};
 
