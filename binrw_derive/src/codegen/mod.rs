@@ -2,8 +2,8 @@
 pub(crate) mod sanitization;
 mod has_magic;
 mod read_options;
-mod write_options;
 pub(crate) mod typed_builder;
+mod write_options;
 
 mod imports;
 
