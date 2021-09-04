@@ -157,7 +157,7 @@ impl Struct {
             && matches!(self.map, Map::None)
             && matches!(self.magic, None)
             && matches!(self.imports, Imports::None)
-            && self.fields.iter().all(|field| field.has_no_attrs())
+            && self.fields.iter().all(StructField::has_no_attrs)
     }
 }
 

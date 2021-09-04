@@ -113,8 +113,7 @@ impl Input {
             Input::Struct(input) => input
                 .fields
                 .iter()
-                .map(|field| get_assertions(&field.assertions))
-                .flatten()
+                .flat_map(|field| get_assertions(&field.assertions))
                 .collect::<Vec<_>>()
                 .into_iter(),
             _ => vec![].into_iter(),

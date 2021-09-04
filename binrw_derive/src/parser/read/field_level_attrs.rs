@@ -244,7 +244,7 @@ impl EnumVariant {
     pub(crate) fn has_no_attrs(&self) -> bool {
         match self {
             Self::Variant { options, .. } => options.has_no_attrs(),
-            _ => true,
+            Self::Unit(_) => true,
         }
     }
 }
