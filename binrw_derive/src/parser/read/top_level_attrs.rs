@@ -107,6 +107,14 @@ impl Input {
             Input::UnitOnlyEnum(_) => unimplemented!("`Input::pre_assert()` called on unit enum"),
         }
     }
+
+    pub(crate) fn assertions(&self) -> &[Assert] {
+        match self {
+            Input::Struct(s) | Input::UnitStruct(s) => &s.assertions,
+            Input::Enum(e) => &e.assertions,
+            Input::UnitOnlyEnum(_) => &[],
+        }
+    }
 }
 
 attr_struct! {

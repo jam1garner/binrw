@@ -1,0 +1,38 @@
+use binrw::{BinRead, BinReaderExt, io::Cursor};
+
+#[test]
+fn map_args() {
+    #[derive(BinRead)]
+    #[br(import(offset: u64))]
+    #[br(map = |x: u64| Self(x + offset))]
+    struct PlusOffset(u64);
+
+    let mut data = Cursor::new(&[0u8; 8][..]);
+
+    let PlusOffset(x) = data.read_be_args((20,)).unwrap();
+
+    assert_eq!(x, 20);
+}
+
+#[test]
+#[should_panic]
+fn map_assert() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(assert(false), map(|_: u8| Test {}))]
+    struct Test {}
+
+    Test::read(&mut Cursor::new(b"a")).unwrap();
+
+}
+
+#[test]
+#[should_panic]
+fn map_assert_fields() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(assert(*x == 2), map(|_: u8| Test { x: 3 }))]
+    struct Test {
+        x: u8,
+    }
+
+    Test::read(&mut Cursor::new(b"a")).unwrap();
+}
