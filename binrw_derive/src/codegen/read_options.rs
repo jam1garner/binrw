@@ -1,4 +1,5 @@
 mod r#enum;
+mod map;
 mod r#struct;
 
 #[allow(clippy::wildcard_imports)]
@@ -20,15 +21,8 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
             Input::Enum(e) => generate_data_enum(input, name, e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
-        Map::Try(map) => {
-            let map_err = get_map_err(POS);
-            quote! {
-                #READ_METHOD(#READER, #OPT, #ARGS).and_then(|value| {
-                    #map(value)#map_err
-                })
-            }
-        }
-        Map::Map(map) => generate_map(input, name, map),
+        Map::Try(map) => map::generate_try_map(input, name, map),
+        Map::Map(map) => map::generate_map(input, name, map),
     };
 
     quote! {
@@ -39,57 +33,6 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
             #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
             Err(error)
         })
-    }
-}
-
-fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> TokenStream {
-    let prelude = PreludeGenerator::new(input)
-        .add_imports(name)
-        .add_options()
-        .add_magic_pre_assertion()
-        .finish();
-
-    let destructure_ref = destructure_ref(input);
-    let assertions = get_assertions(input.assertions());
-
-    // TODO: replace args with top-level arguments and only
-    // use `()` as a default
-    quote! {
-        #prelude
-
-        #READ_METHOD(#READER, #OPT, ())
-            .map(#map)
-                .and_then(|this| {
-                    #destructure_ref
-
-                    (|| {
-                        #(
-                            #assertions
-                        )*
-
-                        Ok(())
-                    })().map(|_: ()| this)
-                })
-    }
-}
-
-fn destructure_ref(input: &Input) -> Option<TokenStream> {
-    match input {
-        Input::Struct(input) => {
-            let fields = input.fields.iter().map(|field| &field.ident);
-
-            if input.is_tuple() {
-                Some(quote!{
-                    let Self ( #( ref #fields ),* ) = &this;
-                })
-            } else {
-                Some(quote!{
-                    let Self { #( ref #fields ),* } = &this;
-                })
-            }
-        }
-
-        _ => None,
     }
 }
 
@@ -161,6 +104,21 @@ impl<'input> PreludeGenerator<'input> {
         };
 
         self
+    }
+}
+
+impl Input {
+    pub(crate) fn field_asserts(&self) -> impl Iterator<Item = TokenStream> + '_ {
+        match self {
+            Input::Struct(input) => input
+                .fields
+                .iter()
+                .map(|field| get_assertions(&field.assertions))
+                .flatten()
+                .collect::<Vec<_>>()
+                .into_iter(),
+            _ => vec![].into_iter(),
+        }
     }
 }
 

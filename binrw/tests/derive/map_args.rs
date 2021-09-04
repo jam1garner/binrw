@@ -1,4 +1,4 @@
-use binrw::{BinRead, BinReaderExt, io::Cursor};
+use binrw::{io::Cursor, BinRead, BinReaderExt};
 
 #[test]
 fn map_args() {
@@ -22,15 +22,27 @@ fn map_assert() {
     struct Test {}
 
     Test::read(&mut Cursor::new(b"a")).unwrap();
-
 }
 
 #[test]
 #[should_panic]
-fn map_assert_fields() {
+fn map_top_assert_access_fields() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(assert(*x == 2), map(|_: u8| Test { x: 3 }))]
     struct Test {
+        x: u8,
+    }
+
+    Test::read(&mut Cursor::new(b"a")).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn map_field_assert_access_fields() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(map(|_: u8| Test { x: 3 }))]
+    struct Test {
+        #[br(assert(*x == 2))]
         x: u8,
     }
 

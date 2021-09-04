@@ -1,0 +1,5 @@
+error: Field-level attributes cannot be used with top-level map
+ --> $DIR/map_with_field_level_attr.rs:4:12
+  |
+4 | #[br(map = |_: u8| Test { y: 3 })]
+  |            ^^^^^^^^^^^^^^^^^^^^^

@@ -85,6 +85,41 @@ impl StructField {
         !self.generated_value() || self.magic.is_some()
     }
 
+    /// Returns true if the only field-level attributes are asserts
+    pub(crate) fn has_no_attrs(&self) -> bool {
+        macro_rules! all_fields_none {
+            ($($field:ident),*) => {
+                $(
+                    matches!(self.$field, None) &&
+                 )*
+
+                true
+            }
+        }
+
+        matches!(self.endian, CondEndian::Inherited)
+            && matches!(self.map, Map::None)
+            && matches!(self.args, PassedArgs::None)
+            && matches!(self.read_mode, ReadMode::Normal)
+            && all_fields_none!(
+                count,
+                offset,
+                offset_after,
+                if_cond,
+                deref_now,
+                restore_position,
+                do_try,
+                temp,
+                pad_before,
+                pad_after,
+                align_before,
+                align_after,
+                seek_before,
+                pad_size_to,
+                magic
+            )
+    }
+
     fn validate(&self) -> syn::Result<()> {
         if let (Some(offset_after), Some(deref_now)) = (&self.offset_after, &self.deref_now) {
             let offset_after_span = offset_after.span();
@@ -203,6 +238,13 @@ impl EnumVariant {
         match self {
             EnumVariant::Variant { ident, .. } => ident,
             EnumVariant::Unit(field) => &field.ident,
+        }
+    }
+
+    pub(crate) fn has_no_attrs(&self) -> bool {
+        match self {
+            Self::Variant { options, .. } => options.has_no_attrs(),
+            _ => true,
         }
     }
 }

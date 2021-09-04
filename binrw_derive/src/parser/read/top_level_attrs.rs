@@ -151,6 +151,14 @@ impl Struct {
             .iter()
             .filter_map(|field| field.temp.is_none().then(|| &field.ident))
     }
+
+    pub(crate) fn has_no_attrs(&self) -> bool {
+        matches!(self.endian, CondEndian::Inherited)
+            && matches!(self.map, Map::None)
+            && matches!(self.magic, None)
+            && matches!(self.imports, Imports::None)
+            && self.fields.iter().all(|field| field.has_no_attrs())
+    }
 }
 
 impl FromInput<StructAttr> for Struct {
