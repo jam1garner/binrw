@@ -8,7 +8,10 @@ use syn::Ident;
 use crate::codegen::sanitization::*;
 
 pub(super) fn generate_struct(input: &Input, _name: Option<&Ident>, st: &Struct) -> TokenStream {
-    StructGenerator::new(input, st).write_fields().finish()
+    StructGenerator::new(input, st)
+        .write_fields()
+        .prefix_endian()
+        .finish()
 }
 
 struct StructGenerator<'input> {
@@ -32,6 +35,35 @@ impl<'input> StructGenerator<'input> {
 
         self.out = quote! {
             #(#write_fields)*
+        };
+
+        self
+    }
+
+    fn prefix_endian(mut self) -> Self {
+        let out = self.out;
+        let set_endian = match &self.st.endian {
+            CondEndian::Inherited => None,
+            CondEndian::Fixed(endian) => Some({
+                let endian = endian.as_binrw_endian();
+                quote! {
+                    let #OPT = #OPT.clone().with_endian(#endian);
+                    let #OPT = &#OPT;
+                }
+            }),
+            CondEndian::Cond(endian, cond) => Some({
+                let else_endian = endian.flipped().as_binrw_endian();
+                let endian = endian.as_binrw_endian();
+                quote! {
+                    let #OPT = #OPT.clone().with_endian(if #cond { #endian } else { #else_endian });
+                    let #OPT = &#OPT;
+                }
+            }),
+        };
+
+        self.out = quote! {
+            #set_endian
+            #out
         };
 
         self
