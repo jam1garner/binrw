@@ -4,7 +4,7 @@ mod has_magic;
 mod read_options;
 pub(crate) mod typed_builder;
 mod write_options;
-
+mod types;
 mod imports;
 
 use crate::parser::{read, write, ParseResult};

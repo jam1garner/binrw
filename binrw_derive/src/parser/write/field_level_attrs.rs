@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use super::super::{
-    types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode},
+    types::{Assert, CondEndian, Magic, Map, PassedArgs, ReadMode},
     write::{FromAttrs, FromInput},
     FromField, ParseResult, TrySet,
 };
@@ -30,8 +30,6 @@ attr_struct! {
         pub(crate) read_mode: ReadMode,
         #[from(Count)]
         pub(crate) count: Option<TokenStream>,
-        #[from(If)]
-        pub(crate) if_cond: Option<Condition>,
         #[from(RestorePosition)]
         pub(crate) restore_position: Option<()>,
         #[from(Temp)]
@@ -90,7 +88,6 @@ impl FromField for StructField {
                 args: <_>::default(),
                 read_mode: <_>::default(),
                 count: <_>::default(),
-                if_cond: <_>::default(),
                 restore_position: <_>::default(),
                 temp: <_>::default(),
                 assertions: <_>::default(),

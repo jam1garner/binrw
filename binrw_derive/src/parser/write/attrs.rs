@@ -6,7 +6,7 @@ use super::super::{
     },
 };
 use proc_macro2::TokenStream;
-use syn::{Expr, Token};
+use syn::Expr;
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
@@ -17,7 +17,6 @@ pub(crate) type Assert = AssertLike<kw::assert>;
 pub(crate) type Big = MetaVoid<kw::big>;
 pub(crate) type Calc = MetaExpr<kw::calc>;
 pub(crate) type Count = MetaExpr<kw::count>;
-pub(crate) type If = MetaList<Token![if], Expr>;
 pub(crate) type Ignore = MetaVoid<kw::ignore>;
 pub(crate) type Import = MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>;
 pub(crate) type ImportRaw = MetaValue<kw::import_raw, IdentPatType>;
