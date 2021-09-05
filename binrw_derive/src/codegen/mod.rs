@@ -1,11 +1,11 @@
 #[macro_use]
 pub(crate) mod sanitization;
 mod has_magic;
+mod imports;
 mod read_options;
 pub(crate) mod typed_builder;
-mod write_options;
 mod types;
-mod imports;
+mod write_options;
 
 use crate::parser::{read, write, ParseResult};
 use proc_macro2::TokenStream;
