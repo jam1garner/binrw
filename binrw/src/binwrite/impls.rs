@@ -74,6 +74,19 @@ impl<T: BinWrite> BinWrite for Vec<T> {
 
 // ========================= std types =========================
 
+impl<T: BinWrite> BinWrite for &T {
+    type Args = T::Args;
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        options: &WriteOptions,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        (**self).write_options(writer, options, args)
+    }
+}
+
 impl<T: BinWrite> BinWrite for Box<T> {
     type Args = T::Args;
 

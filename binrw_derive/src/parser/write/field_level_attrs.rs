@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use super::super::{
-    types::{Assert, CondEndian, Magic, Map, PassedArgs, ReadMode},
+    types::{Assert, CondEndian, Magic, Map, PassedArgs, WriteMode},
     write::{FromAttrs, FromInput},
     FromField, ParseResult, TrySet,
 };
@@ -26,14 +26,12 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(Args, ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(Calc, Ignore, ParseWith)]
-        pub(crate) read_mode: ReadMode,
+        #[from(Calc, Ignore, WriteWith)]
+        pub(crate) write_mode: WriteMode,
         #[from(Count)]
         pub(crate) count: Option<TokenStream>,
         #[from(RestorePosition)]
         pub(crate) restore_position: Option<()>,
-        #[from(Temp)]
-        pub(crate) temp: Option<()>,
         #[from(Assert)]
         pub(crate) assertions: Vec<Assert>,
         #[from(PadBefore)]
@@ -55,13 +53,13 @@ impl StructField {
     /// Returns true if this field is read from a parser with an `after_parse`
     /// method.
     pub(crate) fn can_call_after_parse(&self) -> bool {
-        matches!(self.read_mode, ReadMode::Normal) && !self.map.is_some()
+        matches!(self.write_mode, WriteMode::Normal) && !self.map.is_some()
     }
 
     /// Returns true if this field is generated using a calculated value instead
-    /// of a parser.
+    /// of being read from the struct.
     pub(crate) fn generated_value(&self) -> bool {
-        matches!(self.read_mode, ReadMode::Calc(_) | ReadMode::Default)
+        matches!(self.write_mode, WriteMode::Calc(_))
     }
 
     /// Returns true if the field needs `ReadOptions` to be parsed.
@@ -86,10 +84,9 @@ impl FromField for StructField {
                 map: <_>::default(),
                 magic: <_>::default(),
                 args: <_>::default(),
-                read_mode: <_>::default(),
                 count: <_>::default(),
                 restore_position: <_>::default(),
-                temp: <_>::default(),
+                write_mode: <_>::default(),
                 assertions: <_>::default(),
                 pad_before: <_>::default(),
                 pad_after: <_>::default(),

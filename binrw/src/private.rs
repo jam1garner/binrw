@@ -1,4 +1,8 @@
-use crate::{error::CustomError, io, BinRead, BinResult, Error, ReadOptions};
+use crate::{
+    error::CustomError,
+    io::{self, Seek, Write},
+    BinRead, BinResult, BinWrite, Error, ReadOptions, WriteOptions,
+};
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String};
 
@@ -67,7 +71,7 @@ where
 
 pub fn parse_function_args_type_hint<R, Res, Args, F>(_: F, a: Args) -> Args
 where
-    R: crate::io::Read + crate::io::Seek,
+    R: crate::io::Read + Seek,
     F: FnOnce(&mut R, &crate::ReadOptions, Args) -> crate::BinResult<Res>,
 {
     a
@@ -79,4 +83,14 @@ where
     Input: BinRead<Args = Args>,
 {
     args
+}
+
+pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
+where
+    T: BinWrite,
+    Args: Clone,
+    Writer: Write + Seek,
+    WriterFn: Fn(&T, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
+{
+    x
 }

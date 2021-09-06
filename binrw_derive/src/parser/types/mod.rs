@@ -8,6 +8,7 @@ mod map;
 mod passed_args;
 mod read_mode;
 mod spanned_value;
+mod write_mode;
 
 pub(crate) use assert::{Assert, Error as AssertionError};
 pub(crate) use cond_endian::{CondEndian, Endian};
@@ -19,6 +20,7 @@ pub(crate) use map::Map;
 pub(crate) use passed_args::PassedArgs;
 pub(crate) use read_mode::ReadMode;
 pub(crate) use spanned_value::SpannedValue;
+pub(crate) use write_mode::WriteMode;
 
 fn assert_all_args_consumed<Iter, IterItem>(
     args: Iter,

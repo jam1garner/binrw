@@ -45,4 +45,5 @@ define_keywords! {
     seek_before,
     temp,
     try_map,
+    write_with,
 }

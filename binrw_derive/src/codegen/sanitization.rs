@@ -65,6 +65,7 @@ ident_str! {
     pub(crate) COERCE_FN = from_crate!(__private::coerce_fn);
     pub(crate) ARGS_TYPE_HINT = from_crate!(__private::parse_function_args_type_hint);
     pub(crate) MAP_ARGS_TYPE_HINT = from_crate!(__private::map_args_type_hint);
+    pub(crate) WRITE_FN_TYPE_HINT = from_crate!(__private::write_fn_type_hint);
     pub(crate) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
     pub(crate) SATISFIED = from_crate!(Satisfied);
     pub(crate) NEEDED = from_crate!(Needed);
@@ -76,6 +77,7 @@ ident_str! {
     pub(crate) POS = "__binrw_generated_position_temp";
     pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";
     pub(crate) READ_FUNCTION = "__binrw_generated_read_function";
+    pub(crate) WRITE_FUNCTION = "__binrw_generated_write_function";
 }
 
 pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {

@@ -1,5 +1,5 @@
 use crate::parser::write::{Input, Struct, StructField};
-use crate::parser::CondEndian;
+use crate::parser::{CondEndian, WriteMode};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
@@ -7,10 +7,11 @@ use syn::Ident;
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 
-pub(super) fn generate_struct(input: &Input, _name: Option<&Ident>, st: &Struct) -> TokenStream {
-    StructGenerator::new(input, st)
+pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
+    StructGenerator::new(input, st, name)
         .write_fields()
         .prefix_endian()
+        .prefix_borrow_fields()
         .finish()
 }
 
@@ -18,14 +19,16 @@ struct StructGenerator<'input> {
     #[allow(dead_code)]
     input: &'input Input,
     st: &'input Struct,
+    name: Option<&'input Ident>,
     out: TokenStream,
 }
 
 impl<'input> StructGenerator<'input> {
-    fn new(input: &'input Input, st: &'input Struct) -> Self {
+    fn new(input: &'input Input, st: &'input Struct, name: Option<&'input Ident>) -> Self {
         Self {
             input,
             st,
+            name,
             out: TokenStream::new(),
         }
     }
@@ -35,6 +38,40 @@ impl<'input> StructGenerator<'input> {
 
         self.out = quote! {
             #(#write_fields)*
+        };
+
+        self
+    }
+
+    fn prefix_borrow_fields(mut self) -> Self {
+        let borrow_fields = self.name.as_ref().map(|name| {
+            let pattern = match &self.input {
+                Input::Struct(input) => {
+                    let fields = self.st.iter_permanent_idents();
+
+                    if input.is_tuple() {
+                        quote! {
+                            #name (#(ref #fields),*)
+                        }
+                    } else {
+                        quote! {
+                            #name { #(ref #fields),* }
+                        }
+                    }
+                }
+                Input::UnitStruct(_) => quote! { _ },
+                Input::Enum(_) | Input::UnitOnlyEnum(_) => unreachable!(),
+            };
+
+            Some(quote! {
+                let #pattern = self;
+            })
+        });
+
+        let out = self.out;
+        self.out = quote! {
+            #borrow_fields
+            #out
         };
 
         self
@@ -122,13 +159,43 @@ impl<'a> StructFieldGenerator<'a> {
         let args = self.args_ident();
         let specify_endian = self.specify_endian();
 
-        self.out = quote! {
-            #WRITE_METHOD (
-                &self.#name,
-                #WRITER,
-                &#OPT#specify_endian,
-                #args
-            )?;
+        let initialize = if let WriteMode::Calc(expr) = &self.field.write_mode {
+            Some({
+                let ty = &self.field.ty;
+                quote! {
+                    let #name: #ty = #expr;
+                }
+            })
+        } else {
+            None
+        };
+
+        let write_fn = match &self.field.write_mode {
+            WriteMode::Normal | WriteMode::Calc(_) => quote! { #WRITE_METHOD },
+            WriteMode::Ignore => quote! { |_, _, _, _| { Ok(()) } },
+            WriteMode::WriteWith(write_fn) => write_fn.clone(),
+        };
+
+        let set_write_fn = quote! {
+            let #WRITE_FUNCTION = #WRITE_FN_TYPE_HINT(#write_fn);
+        };
+
+        self.out = if let WriteMode::Ignore = &self.field.write_mode {
+            quote! {
+                #initialize
+            }
+        } else {
+            quote! {
+                #initialize
+                #set_write_fn
+
+                #WRITE_FUNCTION (
+                    &#name,
+                    #WRITER,
+                    &#OPT#specify_endian,
+                    #args
+                )?;
+            }
         };
 
         self

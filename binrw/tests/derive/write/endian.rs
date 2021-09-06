@@ -61,7 +61,12 @@ fn top_level_endian() {
     Test {
         little: TestLittle { x: 1, y: 2 },
         big: TestInheritBig { x: 3, y: 4 },
-    }.write_to(&mut x).unwrap();
+    }
+    .write_to(&mut x)
+    .unwrap();
 
-    assert_eq!(&x.into_inner()[..], &[1, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 4][..]);
+    assert_eq!(
+        &x.into_inner()[..],
+        &[1, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 4][..]
+    );
 }
