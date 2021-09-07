@@ -1,4 +1,6 @@
 use crate::{
+    binread,
+    binwrite,
     codegen::{generate_binwrite_impl, generate_binread_impl},
     parser::{read::is_binread_attr, write, write::is_binwrite_attr, ParseResult},
 };
@@ -20,40 +22,30 @@ fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
 }
 
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
+    
     let (binwrite_input, generated_impl_wr) = derive_from_input(&derive_input);
     let (binread_input,  generated_impl_rd) = derive_from_input(&derive_input);
+
     let binwrite_input = binwrite_input.ok();
     let binread_input  = binread_input.ok();
-    
-    // only clean fields if binread isn't going to be applied after
-    ["binread", "binwrite"].into_iter().map(|attr| {
-        if !has_attr(&derive_input, attr) {
-            clean_struct_attrs(&mut derive_input.attrs);
-
-            match &mut derive_input.data {
-                syn::Data::Struct(input_struct) => {
-                    clean_field_attrs(&binwrite_input, 0, &mut input_struct.fields);
-                }
-                syn::Data::Enum(input_enum) => {
-                    for (index, variant) in input_enum.variants.iter_mut().enumerate() {
-                        clean_struct_attrs(&mut variant.attrs);
-                        clean_field_attrs(&binwrite_input, index, &mut variant.fields);
-                    }
-                }
-                syn::Data::Union(union) => {
-                    for field in union.fields.named.iter_mut() {
-                        clean_struct_attrs(&mut field.attrs);
-                    }
-                }
-            }
-        }
-    ).collect();
 
     quote!(
         #derive_input
-        #generated_impl
+        #generated_impl_wr
+        #generated_impl_rd
     )
 }
+
+pub(crate) fn derive_from_input(
+    derive_input: &DeriveInput,
+) -> (ParseResult<read::Input>, proc_macro2::TokenStream) {
+    
+    let binrw_input = read::Input::from_input(derive_input);
+    let generated_impl_bw = generate_binwrite_impl(derive_input, &binrw_input);
+    let generated_impl_br = generate_binread_impl(derive_input, &binrw_input);
+    (binrw_input, quote!(#generated_impl_br, #generated_impl_br))
+}
+
 fn clean_field_attrs(
     binrw_input: &Option<write::Input>,
     variant_index: usize,
@@ -70,7 +62,7 @@ fn clean_field_attrs(
             .iter_mut()
             .enumerate()
             .filter_map(|(index, value)| {
-                if binwrite_input.is_temp_field(variant_index, index) {
+                if binrw_input.is_temp_field(variant_index, index) {
                     None
                 } else {
                     let mut value = value.clone();

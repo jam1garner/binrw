@@ -9,6 +9,8 @@ mod parser;
 mod binread;
 mod binwrite;
 
+mod binrw_attr;
+
 use crate::{
     codegen::typed_builder::{Builder, BuilderField, BuilderFieldKind},
     named_args::NamedArgAttr,
@@ -42,6 +44,20 @@ pub fn derive_binwrite_trait(input: TokenStream) -> TokenStream {
 #[cfg(not(tarpaulin_include))]
 pub fn binwrite(_: TokenStream, input: TokenStream) -> TokenStream {
     binwrite::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
+}
+
+#[proc_macro_derive(Binrw, attributes(binrw, bw, brw))]
+#[cfg(not(tarpaulin_include))]
+pub fn derive_binrw_trait(input: TokenStream) -> TokenStream {
+    binrw_attr::derive_from_input(&parse_macro_input!(input as DeriveInput))
+        .1
+        .into()
+}
+
+#[proc_macro_attribute]
+#[cfg(not(tarpaulin_include))]
+pub fn binrw(_: TokenStream, input: TokenStream) -> TokenStream {
+    binrw_attr::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
 
 #[proc_macro_derive(BinrwNamedArgs, attributes(named_args))]
