@@ -39,8 +39,6 @@ struct TestRoundTrip {
     not_z: u32,
 }
 
-use binrw::binrw_attr;
-
 #[binrw]
 #[derive(Debug, PartialEq)]
 struct TestRoundTripConjugate {
