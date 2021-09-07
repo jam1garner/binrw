@@ -74,11 +74,11 @@ fn round_trip_2() {
     let bytes = &[0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0];
     let mut reader = Cursor::new(bytes);
     let test: TestRoundTrip = reader.read_be().unwrap();
-    
+
     let bytes_conj = &[0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0];
     let mut reader_conj = Cursor::new(bytes_conj);
     let conj: TestRoundTripConjugate = reader_conj.read_be().unwrap();
-    
+
     let mut x = Cursor::new(Vec::new());
     let mut y = Cursor::new(Vec::new());
 
@@ -87,5 +87,8 @@ fn round_trip_2() {
     conj.write_options(&mut y, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(&x.into_inner()[..] == bytes, bytes_conj == &y.into_inner()[..]);
+    assert_eq!(
+        &x.into_inner()[..] == bytes,
+        bytes_conj == &y.into_inner()[..]
+    );
 }
