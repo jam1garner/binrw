@@ -2,7 +2,7 @@ use crate::{
     binread,
     binwrite,
     codegen::{generate_binwrite_impl, generate_binread_impl},
-    parser::{read::is_binread_attr, write, write::is_binwrite_attr, ParseResult},
+    parser::{read, read::is_binread_attr, write, write::is_binwrite_attr, ParseResult},
 };
 
 use quote::quote;
@@ -51,7 +51,7 @@ fn clean_field_attrs(
     variant_index: usize,
     fields: &mut syn::Fields,
 ) {
-    if let Some(binrw) = binrw {
+    if let Some(binrw) = binrw_input {
         let fields = match fields {
             syn::Fields::Named(fields) => &mut fields.named,
             syn::Fields::Unnamed(fields) => &mut fields.unnamed,
