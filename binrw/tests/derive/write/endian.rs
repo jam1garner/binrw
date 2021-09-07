@@ -35,7 +35,7 @@ fn write_endian() {
 #[test]
 fn top_level_endian() {
     #[binwrite]
-    #[bw(big)]
+    #[bw(is_big = true)]
     struct Test {
         #[bw(big)] // <-- will be ignored
         little: TestLittle,
