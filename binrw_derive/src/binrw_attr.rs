@@ -1,7 +1,6 @@
 use crate::{
-    binread,
-    binwrite,
-    codegen::{generate_binwrite_impl, generate_binread_impl},
+    binread, binwrite,
+    codegen::{generate_binread_impl, generate_binwrite_impl},
     parser::{read, read::is_binread_attr, write, write::is_binwrite_attr, ParseResult},
 };
 
@@ -22,13 +21,12 @@ fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
 }
 
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
-    
-    let (binread_input,  generated_impl_rd) = binread::derive_from_input(&derive_input);
+    let (binread_input, generated_impl_rd) = binread::derive_from_input(&derive_input);
     let (binwrite_input, generated_impl_wr) = binwrite::derive_from_input(&derive_input);
-    
-    let binread_input  = binread_input.ok();
+
+    let binread_input = binread_input.ok();
     let binwrite_input = binwrite_input.ok();
-    
+
     quote!(
         #derive_input
         #generated_impl_rd
@@ -39,14 +37,16 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
 pub(crate) fn derive_from_input(
     derive_input: &DeriveInput,
 ) -> (ParseResult<read::Input>, proc_macro2::TokenStream) {
-    
-    let binread_input  = read::Input::from_input(derive_input);
+    let binread_input = read::Input::from_input(derive_input);
     let binwrite_input = write::Input::from_input(derive_input);
-    
+
     let generated_impl_br = generate_binread_impl(derive_input, &binread_input);
     let generated_impl_bw = generate_binwrite_impl(derive_input, &binwrite_input);
     /* this needs to be: `binread_input + binwrite_input` */
-    (binread_input, quote!(#generated_impl_br, #generated_impl_br))
+    (
+        binread_input,
+        quote!(#generated_impl_br, #generated_impl_br),
+    )
 }
 
 fn clean_field_attrs(
@@ -65,7 +65,11 @@ fn clean_field_attrs(
             .iter_mut()
             .enumerate()
             .filter_map(|(index, value)| {
-                if binrw_input.as_ref().unwrap().is_temp_field(variant_index, index) {
+                if binrw_input
+                    .as_ref()
+                    .unwrap()
+                    .is_temp_field(variant_index, index)
+                {
                     None
                 } else {
                     let mut value = value.clone();
@@ -76,5 +80,3 @@ fn clean_field_attrs(
             .collect();
     }
 }
-
-
