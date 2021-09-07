@@ -10,6 +10,7 @@ use crate::codegen::sanitization::*;
 pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(input, st, name)
         .write_fields()
+        .prefix_magic()
         .prefix_endian()
         .prefix_borrow_fields()
         .finish()
@@ -39,6 +40,25 @@ impl<'input> StructGenerator<'input> {
         self.out = quote! {
             #(#write_fields)*
         };
+
+        self
+    }
+
+    fn prefix_magic(mut self) -> Self {
+        if let Some(magic) = &self.st.magic {
+            let magic = magic.match_value();
+            let out = self.out;
+            self.out = quote! {
+                #WRITE_METHOD (
+                    &#magic,
+                    #WRITER,
+                    &#OPT,
+                    ()
+                )?;
+
+                #out
+            };
+        }
 
         self
     }
@@ -115,6 +135,7 @@ fn write_field(field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field)
         .write_field()
         .prefix_args()
+        .prefix_magic()
         .finish()
 }
 
@@ -210,6 +231,26 @@ impl<'a> StructFieldGenerator<'a> {
             let #args = ();
             #out
         };
+
+        self
+    }
+
+    fn prefix_magic(mut self) -> Self {
+        if let Some(magic) = &self.field.magic {
+            let magic = magic.match_value();
+            let specify_endian = self.specify_endian();
+            let out = self.out;
+            self.out = quote! {
+                #WRITE_METHOD (
+                    &#magic,
+                    #WRITER,
+                    &#OPT #specify_endian,
+                    ()
+                )?;
+
+                #out
+            };
+        }
 
         self
     }
