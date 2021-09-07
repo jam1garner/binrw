@@ -30,7 +30,7 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
 
             #derive_input
             #generated_impl
-        }
+        };
     }
 
     clean_struct_attrs(&mut derive_input.attrs);
