@@ -123,7 +123,7 @@ attr_struct! {
     #[from(StructAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Struct {
-        #[from(Big, Little)]
+        #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
         pub(crate) map: Map,
@@ -176,7 +176,7 @@ attr_struct! {
     #[from(EnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
-        #[from(Big, Little)]
+        #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
         pub(crate) map: Map,
@@ -247,7 +247,7 @@ attr_struct! {
     #[from(UnitEnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct UnitOnlyEnum {
-        #[from(Big, Little)]
+        #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
         pub(crate) map: Map,

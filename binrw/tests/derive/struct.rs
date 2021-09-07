@@ -10,7 +10,7 @@ fn all_the_things() {
     struct PlainObject;
 
     #[derive(BinRead, Debug)]
-    #[br(big, magic = b"TEST")]
+    #[br(is_big = true, magic = b"TEST")]
     #[br(assert(entries.len() as u32 == extra_entry_count + 1))]
     struct Test {
         extra_entry_count: u32,

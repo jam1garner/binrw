@@ -1,5 +1,5 @@
 use binrw::binrw;
-use binrw::{BinWrite, BinReaderExt, io::Cursor};
+use binrw::{io::Cursor, BinReaderExt, BinWrite};
 
 #[test]
 fn magic_round_trip() {
@@ -15,7 +15,7 @@ fn magic_round_trip() {
     let data = &[0x78, 0x56, 0x34, 0x12, 0x9A, 0xBC, 0, 0, 0, 1, 0x3, 0][..];
 
     let test: Test = Cursor::new(data).read_be().unwrap();
-    
+
     let mut out = Cursor::new(Vec::new());
     test.write_to(&mut out).unwrap();
 
@@ -34,10 +34,7 @@ fn magic_one_way() {
     }
 
     let mut out = Cursor::new(Vec::new());
-    Test {
-        x: 1,
-        y: 5,
-    }.write_to(&mut out).unwrap();
+    Test { x: 1, y: 5 }.write_to(&mut out).unwrap();
 
     let data = b"ABCD\x9A\xBC\0\0\0\x01\x05\0";
 

@@ -1,4 +1,4 @@
-error: expected one of: `big`, `little`, `map`, `try_map`, `magic`, `import`, `import_raw`, `repr`
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `magic`, `import`, `import_raw`, `repr`
  --> $DIR/invalid_keyword_unit_enum.rs:4:6
   |
 4 | #[br(invalid_unit_enum_keyword)]
