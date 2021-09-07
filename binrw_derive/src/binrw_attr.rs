@@ -23,8 +23,8 @@ fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
 
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
     
-    let (binwrite_input, generated_impl_wr) = derive_from_input(&derive_input);
-    let (binread_input,  generated_impl_rd) = derive_from_input(&derive_input);
+    let (binwrite_input, generated_impl_wr) = binwrite::derive_from_input(&derive_input);
+    let (binread_input,  generated_impl_rd) = binread::derive_from_input(&derive_input);
 
     let binwrite_input = binwrite_input.ok();
     let binread_input  = binread_input.ok();
