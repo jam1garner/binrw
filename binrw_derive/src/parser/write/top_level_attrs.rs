@@ -70,16 +70,14 @@ impl Input {
 
     pub(crate) fn is_temp_field(&self, variant_index: usize, index: usize) -> bool {
         match self {
-            Input::Struct(s) => s
-                .fields
-                .get(index)
-                .map_or(false, |field| matches!(field.write_mode, WriteMode::Calc(_))),
+            Input::Struct(s) => s.fields.get(index).map_or(false, |field| {
+                matches!(field.write_mode, WriteMode::Calc(_))
+            }),
             Input::Enum(e) => e.variants.get(variant_index).map_or(false, |variant| {
                 if let EnumVariant::Variant { options, .. } = variant {
-                    options
-                        .fields
-                        .get(index)
-                        .map_or(false, |field| matches!(field.write_mode, WriteMode::Calc(_)))
+                    options.fields.get(index).map_or(false, |field| {
+                        matches!(field.write_mode, WriteMode::Calc(_))
+                    })
                 } else {
                     false
                 }
@@ -143,13 +141,11 @@ impl Struct {
     }
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
-        self.fields
-            .iter()
-            .filter_map(|field| {
-                matches!(field.write_mode, WriteMode::Calc(_))
-                    .not()
-                    .then(|| &field.ident)
-            })
+        self.fields.iter().filter_map(|field| {
+            matches!(field.write_mode, WriteMode::Calc(_))
+                .not()
+                .then(|| &field.ident)
+        })
     }
 }
 
