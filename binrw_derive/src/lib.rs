@@ -46,14 +46,6 @@ pub fn binwrite(_: TokenStream, input: TokenStream) -> TokenStream {
     binwrite::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
 
-#[proc_macro_derive(Binrw, attributes(binrw, bw, brw))]
-#[cfg(not(tarpaulin_include))]
-pub fn derive_binrw_trait(input: TokenStream) -> TokenStream {
-    binrw_attr::derive_from_input(&parse_macro_input!(input as DeriveInput))
-        .1
-        .into()
-}
-
 #[proc_macro_attribute]
 #[cfg(not(tarpaulin_include))]
 pub fn binrw(_: TokenStream, input: TokenStream) -> TokenStream {

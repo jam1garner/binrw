@@ -24,23 +24,30 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
     let binwrite_input = binwrite_input.ok();
 
     // only clean fields if binread isn't going to be applied after
-    if !has_attr(&derive_input, "binread") {
-        clean_struct_attrs(&mut derive_input.attrs);
+    if has_attr(&derive_input, "binread") {
+        return quote! {
+            compile_error!("`binread` and `binwrite` cannot be used togeter, try using `#[binrw]`");
 
-        match &mut derive_input.data {
-            syn::Data::Struct(input_struct) => {
-                clean_field_attrs(&binwrite_input, 0, &mut input_struct.fields);
+            #derive_input
+            #generated_impl
+        }
+    }
+
+    clean_struct_attrs(&mut derive_input.attrs);
+
+    match &mut derive_input.data {
+        syn::Data::Struct(input_struct) => {
+            clean_field_attrs(&binwrite_input, 0, &mut input_struct.fields);
+        }
+        syn::Data::Enum(input_enum) => {
+            for (index, variant) in input_enum.variants.iter_mut().enumerate() {
+                clean_struct_attrs(&mut variant.attrs);
+                clean_field_attrs(&binwrite_input, index, &mut variant.fields);
             }
-            syn::Data::Enum(input_enum) => {
-                for (index, variant) in input_enum.variants.iter_mut().enumerate() {
-                    clean_struct_attrs(&mut variant.attrs);
-                    clean_field_attrs(&binwrite_input, index, &mut variant.fields);
-                }
-            }
-            syn::Data::Union(union) => {
-                for field in union.fields.named.iter_mut() {
-                    clean_struct_attrs(&mut field.attrs);
-                }
+        }
+        syn::Data::Union(union) => {
+            for field in union.fields.named.iter_mut() {
+                clean_struct_attrs(&mut field.attrs);
             }
         }
     }

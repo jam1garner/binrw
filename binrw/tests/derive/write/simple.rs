@@ -1,3 +1,4 @@
+use binrw::binrw;
 use binrw::binwrite;
 use binrw::BinWrite;
 use binrw::{io::Cursor, Endian, WriteOptions};
@@ -20,11 +21,9 @@ fn simple_write() {
     assert_eq!(&x.into_inner()[..], &[1, 0, 2, 0, 0, 0, 3]);
 }
 
-use binrw::binread;
 use binrw::BinReaderExt;
 
-#[binread]
-#[binwrite]
+#[binrw]
 #[derive(Debug, PartialEq)]
 struct TestRoundTrip {
     x: u16,
