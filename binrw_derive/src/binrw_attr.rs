@@ -23,16 +23,16 @@ fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
 
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
     
-    let (binwrite_input, generated_impl_wr) = binwrite::derive_from_input(&derive_input);
     let (binread_input,  generated_impl_rd) = binread::derive_from_input(&derive_input);
-
-    let binwrite_input = binwrite_input.ok();
+    let (binwrite_input, generated_impl_wr) = binwrite::derive_from_input(&derive_input);
+    
     let binread_input  = binread_input.ok();
-
+    let binwrite_input = binwrite_input.ok();
+    
     quote!(
         #derive_input
-        #generated_impl_wr
         #generated_impl_rd
+        #generated_impl_wr
     )
 }
 
@@ -41,8 +41,10 @@ pub(crate) fn derive_from_input(
 ) -> (ParseResult<read::Input>, proc_macro2::TokenStream) {
     
     let binrw_input = read::Input::from_input(derive_input);
-    let generated_impl_bw = generate_binwrite_impl(derive_input, &binrw_input);
+    
     let generated_impl_br = generate_binread_impl(derive_input, &binrw_input);
+    let generated_impl_bw = generate_binwrite_impl(derive_input, &binrw_input);
+    
     (binrw_input, quote!(#generated_impl_br, #generated_impl_br))
 }
 
@@ -62,7 +64,7 @@ fn clean_field_attrs(
             .iter_mut()
             .enumerate()
             .filter_map(|(index, value)| {
-                if binrw_input.is_temp_field(variant_index, index) {
+                if binrw_input.unwrap().is_temp_field(variant_index, index) {
                     None
                 } else {
                     let mut value = value.clone();
