@@ -112,6 +112,11 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
 }
 
 fn generate_field(field: &StructField) -> TokenStream {
+    // temp + ignore == just don't bother
+    if field.temp.is_some() && matches!(field.read_mode, ReadMode::Default) {
+        return TokenStream::new()
+    }
+
     FieldGenerator::new(field)
         .read_value()
         .try_conversion()

@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-use std::ops::Not;
 
 use super::super::{
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map, WriteMode},
@@ -142,9 +141,11 @@ impl Struct {
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
         self.fields.iter().filter_map(|field| {
-            matches!(field.write_mode, WriteMode::Calc(_))
-                .not()
-                .then(|| &field.ident)
+            if matches!(field.write_mode, WriteMode::Calc(_)) {
+                None
+            } else {
+                Some(&field.ident)
+            }
         })
     }
 }

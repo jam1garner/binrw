@@ -13,6 +13,7 @@ pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) 
         .prefix_magic()
         .prefix_endian()
         .prefix_borrow_fields()
+        .prefix_imports()
         .finish()
 }
 
@@ -40,6 +41,18 @@ impl<'input> StructGenerator<'input> {
         self.out = quote! {
             #(#write_fields)*
         };
+
+        self
+    }
+
+    fn prefix_imports(mut self) -> Self {
+        if let Some(imports) = self.input.imports().destructure(self.name) {
+            let out = self.out;
+            self.out = quote! {
+                let #imports = #ARGS;
+                #out
+            };
+        }
 
         self
     }
