@@ -1,7 +1,7 @@
 use crate::parser::write::{Input, Struct, StructField};
-use crate::parser::{CondEndian, WriteMode};
+use crate::parser::{CondEndian, PassedArgs, WriteMode};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, quote_spanned};
 use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
@@ -148,6 +148,7 @@ fn write_field(field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field)
         .write_field()
         .prefix_args()
+        .prefix_write_fn()
         .prefix_magic()
         .finish()
 }
@@ -188,6 +189,22 @@ impl<'a> StructFieldGenerator<'a> {
         }
     }
 
+    fn prefix_write_fn(mut self) -> Self {
+        let write_fn = match &self.field.write_mode {
+            WriteMode::Normal | WriteMode::Calc(_) => quote! { #WRITE_METHOD },
+            WriteMode::Ignore => quote! { |_, _, _, _| { Ok(()) } },
+            WriteMode::WriteWith(write_fn) => write_fn.clone(),
+        };
+
+        let out = &self.out;
+        self.out = quote! {
+            let #WRITE_FUNCTION = #WRITE_FN_TYPE_HINT(#write_fn);
+            #out
+        };
+
+        self
+    }
+
     fn write_field(mut self) -> Self {
         let name = &self.field.ident;
         let args = self.args_ident();
@@ -204,16 +221,6 @@ impl<'a> StructFieldGenerator<'a> {
             None
         };
 
-        let write_fn = match &self.field.write_mode {
-            WriteMode::Normal | WriteMode::Calc(_) => quote! { #WRITE_METHOD },
-            WriteMode::Ignore => quote! { |_, _, _, _| { Ok(()) } },
-            WriteMode::WriteWith(write_fn) => write_fn.clone(),
-        };
-
-        let set_write_fn = quote! {
-            let #WRITE_FUNCTION = #WRITE_FN_TYPE_HINT(#write_fn);
-        };
-
         self.out = if let WriteMode::Ignore = &self.field.write_mode {
             quote! {
                 #initialize
@@ -221,7 +228,6 @@ impl<'a> StructFieldGenerator<'a> {
         } else {
             quote! {
                 #initialize
-                #set_write_fn
 
                 #WRITE_FUNCTION (
                     &#name,
@@ -238,11 +244,62 @@ impl<'a> StructFieldGenerator<'a> {
     fn prefix_args(mut self) -> Self {
         let args = self.args_ident();
 
+        let args_val = if let Some(args) = get_passed_args(self.field) {
+            args
+        } else {
+            quote! { () }
+        };
+
         let out = &self.out;
-        self.out = quote! {
-            // TODO: add support for passing arguments
-            let #args = ();
-            #out
+        self.out = match self.field.write_mode {
+            WriteMode::Normal => {
+                let ty = &self.field.ty;
+                quote! {
+                    let #args: <#ty as #BINWRITE_TRAIT>::Args = #args_val;
+                    #out
+                }
+            },
+            WriteMode::Ignore => if self.field.args.is_some() {
+                let name = &self.field.ident;
+                quote_spanned! { self.field.ident.span() =>
+                    compile_error!(concat!(
+                        "Cannot pass arguments to the field '",
+                        stringify!(#name),
+                        "'  as it is uses the 'ignore' directive"
+                    ));
+                    #out
+                }
+            } else {
+                quote! {
+                    let #args = ();
+                    #out
+                }
+            },
+            WriteMode::Calc(_) => if self.field.args.is_some() {
+                let name = &self.field.ident;
+                quote_spanned! { self.field.ident.span() =>
+                    compile_error!(concat!(
+                        "Cannot pass arguments to the field '",
+                        stringify!(#name),
+                        "'  as it is uses the 'calc' directive"
+                    ));
+                    #out
+                }
+            } else {
+                quote! {
+                    let #args = ();
+                    #out
+                }
+            },
+            WriteMode::WriteWith(_) => {
+                let ty = &self.field.ty;
+                quote! {
+                    let #args = #WRITE_WITH_ARGS_TYPE_HINT::<#ty, W, _, _>(
+                        #WRITE_FUNCTION, #args_val
+                    );
+                    #out
+                }
+            },
         };
 
         self
@@ -270,5 +327,26 @@ impl<'a> StructFieldGenerator<'a> {
 
     fn finish(self) -> TokenStream {
         self.out
+    }
+}
+
+fn get_passed_args(field: &StructField) -> Option<TokenStream> {
+    let args = &field.args;
+    match args {
+        PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
+            quote! {
+                #ARGS_MACRO! { count: ((#count) as usize) #(, #fields)* }
+            }
+        } else {
+            quote! {
+                #ARGS_MACRO! { #(#fields),* }
+            }
+        }),
+        PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
+        PassedArgs::Tuple(tuple) => Some(tuple.clone()),
+        PassedArgs::None => field
+            .count
+            .as_ref()
+            .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
 }

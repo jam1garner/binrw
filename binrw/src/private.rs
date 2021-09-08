@@ -77,6 +77,15 @@ where
     a
 }
 
+pub fn write_function_args_type_hint<T, W, Args, F>(_: F, a: Args) -> Args
+where
+    T: BinWrite<Args = Args>,
+    W: Write + Seek,
+    F: FnOnce(&T, &mut W, &crate::WriteOptions, Args) -> crate::BinResult<()>,
+{
+    a
+}
+
 pub fn map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> Output,
