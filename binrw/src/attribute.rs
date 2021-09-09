@@ -956,6 +956,16 @@
 //! #[br(pad_before = $skip_bytes:expr)] or #[br(pad_before($skip_bytes:expr))]
 //! ```
 //!
+//! This is effectively equivelant to:
+//!
+//! ```rust
+//! # let mut pos = 0;
+//! # let padding = 0x4;
+//! pos += padding;
+//! ```
+//!
+//! ---
+//!
 //! The `align_before` and `align_after` directives align the next read to the
 //! given byte alignment either before or after reading a field, respectively:
 //!
@@ -964,6 +974,18 @@
 //! #[br(align_before = $align_to:expr)] or #[br(align_before($align_to:expr))]
 //! ```
 //!
+//!  This is effectively equivelant to:
+//!
+//!  ```rust
+//!  # let mut pos = 0;
+//!  # let align = 0x10;
+//!  if pos % align != 0 {
+//!     pos += align - (pos % align);
+//!  }
+//!  ```
+//!
+//! ---
+//!
 //! The `seek_before` directive accepts a [`SeekFrom`](crate::io::SeekFrom)
 //! object and seeks the reader to an arbitrary position before reading a field:
 //!
@@ -971,8 +993,17 @@
 //! #[br(seek_before = $seek_from:expr)] or #[br(seek_before($seek_from:expr))]
 //! ```
 //!
+//! This is equivelant to:
+//!
+//! ```text
+//! reader.seek($seek_from)?;
+//! ```
+//!
 //! The position of the reader will not be restored after the seek; use the
-//! [`restore_position`](#restore-position) directive for this.
+//! [`restore_position`](#restore-position) directive if you wish to seek -> read -> restore
+//! position.
+//!
+//! ---
 //!
 //! The `pad_size_to` directive will ensure that the reader has advanced at
 //! least the number of bytes given after the field has been read:
