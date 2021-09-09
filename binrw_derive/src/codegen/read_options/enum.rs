@@ -16,14 +16,24 @@ pub(super) fn generate_unit_enum(
     name: Option<&Ident>,
     en: &UnitOnlyEnum,
 ) -> TokenStream {
-    match &en.repr {
-        Some(repr) => generate_unit_enum_repr(input, repr, &en.fields),
-        None => generate_unit_enum_magic(input, name, en, &en.fields),
+    let prelude = PreludeGenerator::new(input)
+        .add_imports(name)
+        .add_options()
+        .add_magic_pre_assertion()
+        .finish();
+
+    let read = match &en.repr {
+        Some(repr) => generate_unit_enum_repr(repr, &en.fields),
+        None => generate_unit_enum_magic(en, &en.fields),
+    };
+
+    quote! {
+        #prelude
+        #read
     }
 }
 
 fn generate_unit_enum_repr(
-    input: &Input,
     repr: &TokenStream,
     variants: &[UnitEnumField],
 ) -> TokenStream {
@@ -36,10 +46,7 @@ fn generate_unit_enum_repr(
         }
     });
 
-    let prelude = PreludeGenerator::new(input).add_options().finish();
-
     quote! {
-        #prelude
         let #TEMP: #repr = #READ_METHOD(#READER, #OPT, ())?;
         #(#clauses else)* {
             Err(#BIN_ERROR::NoVariantMatch {
@@ -50,16 +57,9 @@ fn generate_unit_enum_repr(
 }
 
 fn generate_unit_enum_magic(
-    input: &Input,
-    name: Option<&Ident>,
     en: &UnitOnlyEnum,
     variants: &[UnitEnumField],
 ) -> TokenStream {
-    let prelude = PreludeGenerator::new(input)
-        .add_imports(name)
-        .add_options()
-        .finish();
-
     let matches = variants.iter().filter_map(|field| {
         if let Some(magic) = &field.magic {
             let ident = &field.ident;
@@ -82,7 +82,6 @@ fn generate_unit_enum_magic(
         .map(|magic| magic.add_ref());
 
     quote! {
-        #prelude
         match #amp#READ_METHOD(#READER, #OPT, ())? {
             #(#matches,)*
             _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS })

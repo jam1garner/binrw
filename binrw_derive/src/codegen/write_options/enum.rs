@@ -5,15 +5,23 @@ use quote::quote;
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 
+use super::prelude::PreludeGenerator;
+
 pub(crate) fn generate_unit_enum(
     input: &Input,
     name: Option<&Ident>,
     en: &UnitOnlyEnum
 ) -> TokenStream {
-    match &en.repr {
+    let write = match &en.repr {
         Some(repr) => generate_unit_enum_repr(repr, en, &en.fields),
         None => generate_unit_enum_magic(input, name, en, &en.fields),
-    }
+    };
+
+    PreludeGenerator::new(write, input, name)
+        .prefix_magic(&en.magic)
+        .prefix_endian(&en.endian)
+        .prefix_imports()
+        .finish()
 }
 
 fn specify_endian(endian: &CondEndian) -> Option<TokenStream> {

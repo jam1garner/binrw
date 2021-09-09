@@ -31,7 +31,7 @@ fn write_enum() {
 #[test]
 fn round_trip_unit_enum() {
     #[binrw]
-    #[brw(repr(u32))]
+    #[brw(repr(u32), magic = 0xff_u8)]
     enum Test {
         A,
         B = 3,
@@ -39,7 +39,7 @@ fn round_trip_unit_enum() {
         D = 5,
     }
 
-    let data = &[0, 0, 0, 0,   0, 0, 0, 3,   0, 0, 0, 4,   0, 0, 0, 5];
+    let data = &[0xff, 0, 0, 0, 0,   0xff, 0, 0, 0, 3,   0xff, 0, 0, 0, 4,   0xff, 0, 0, 0, 5];
     let test: [Test; 4] = Cursor::new(data)
         .read_be()
         .unwrap();

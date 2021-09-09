@@ -100,11 +100,11 @@ impl Input {
         }
     }
 
-    pub(crate) fn pre_assertions(&self) -> &Vec<Assert> {
+    pub(crate) fn pre_assertions(&self) -> &[Assert] {
         match self {
             Input::Struct(s) | Input::UnitStruct(s) => &s.pre_assertions,
             Input::Enum(e) => &e.pre_assertions,
-            Input::UnitOnlyEnum(_) => unimplemented!("`Input::pre_assert()` called on unit enum"),
+            Input::UnitOnlyEnum(_) => &[],
         }
     }
 
