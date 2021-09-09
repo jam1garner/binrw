@@ -121,39 +121,43 @@ impl<'a> StructFieldGenerator<'a> {
                     let #args: <#ty as #BINWRITE_TRAIT>::Args = #args_val;
                     #out
                 }
-            },
-            WriteMode::Ignore => if self.field.args.is_some() {
-                let name = &self.field.ident;
-                quote_spanned! { self.field.ident.span() =>
-                    compile_error!(concat!(
-                        "Cannot pass arguments to the field '",
-                        stringify!(#name),
-                        "'  as it is uses the 'ignore' directive"
-                    ));
-                    #out
+            }
+            WriteMode::Ignore => {
+                if self.field.args.is_some() {
+                    let name = &self.field.ident;
+                    quote_spanned! { self.field.ident.span() =>
+                        compile_error!(concat!(
+                            "Cannot pass arguments to the field '",
+                            stringify!(#name),
+                            "'  as it is uses the 'ignore' directive"
+                        ));
+                        #out
+                    }
+                } else {
+                    quote! {
+                        let #args = ();
+                        #out
+                    }
                 }
-            } else {
-                quote! {
-                    let #args = ();
-                    #out
+            }
+            WriteMode::Calc(_) => {
+                if self.field.args.is_some() {
+                    let name = &self.field.ident;
+                    quote_spanned! { self.field.ident.span() =>
+                        compile_error!(concat!(
+                            "Cannot pass arguments to the field '",
+                            stringify!(#name),
+                            "'  as it is uses the 'calc' directive"
+                        ));
+                        #out
+                    }
+                } else {
+                    quote! {
+                        let #args = ();
+                        #out
+                    }
                 }
-            },
-            WriteMode::Calc(_) => if self.field.args.is_some() {
-                let name = &self.field.ident;
-                quote_spanned! { self.field.ident.span() =>
-                    compile_error!(concat!(
-                        "Cannot pass arguments to the field '",
-                        stringify!(#name),
-                        "'  as it is uses the 'calc' directive"
-                    ));
-                    #out
-                }
-            } else {
-                quote! {
-                    let #args = ();
-                    #out
-                }
-            },
+            }
             WriteMode::WriteWith(_) => {
                 let ty = &self.field.ty;
                 quote! {
@@ -162,7 +166,7 @@ impl<'a> StructFieldGenerator<'a> {
                     );
                     #out
                 }
-            },
+            }
         };
 
         self

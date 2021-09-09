@@ -1,5 +1,5 @@
-use binrw::{binrw, binwrite, BinReaderExt, BinWrite, Endian, WriteOptions};
 use binrw::io::Cursor;
+use binrw::{binrw, binwrite, BinReaderExt, BinWrite, Endian, WriteOptions};
 
 #[test]
 fn write_enum() {
@@ -14,18 +14,14 @@ fn write_enum() {
 
     let mut x = Cursor::new(Vec::new());
 
-    [
-        Test::A,
-        Test::B,
-        Test::C,
-        Test::D,
-    ].write_options(
-        &mut x,
-        &WriteOptions::new(Endian::Big),
-        ()
-    ).unwrap();
+    [Test::A, Test::B, Test::C, Test::D]
+        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .unwrap();
 
-    assert_eq!(&x.into_inner()[..], &[0, 0, 0, 0,   0, 0, 0, 3,   0, 0, 0, 4,   0, 0, 0, 5]);
+    assert_eq!(
+        &x.into_inner()[..],
+        &[0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5]
+    );
 }
 
 #[test]
@@ -39,18 +35,15 @@ fn round_trip_unit_enum() {
         D = 5,
     }
 
-    let data = &[0xff, 0, 0, 0, 0,   0xff, 0, 0, 0, 3,   0xff, 0, 0, 0, 4,   0xff, 0, 0, 0, 5];
-    let test: [Test; 4] = Cursor::new(data)
-        .read_be()
-        .unwrap();
+    let data = &[
+        0xff, 0, 0, 0, 0, 0xff, 0, 0, 0, 3, 0xff, 0, 0, 0, 4, 0xff, 0, 0, 0, 5,
+    ];
+    let test: [Test; 4] = Cursor::new(data).read_be().unwrap();
 
     let mut x = Cursor::new(Vec::new());
 
-    test.write_options(
-        &mut x,
-        &WriteOptions::new(Endian::Big),
-        ()
-    ).unwrap();
+    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .unwrap();
 
     assert_eq!(&x.into_inner()[..], data);
 }
@@ -73,17 +66,12 @@ fn magic_enum_round_trip() {
     }
 
     let data = b"123abcdef456";
-    let test: [Test; 4] = Cursor::new(data)
-        .read_be()
-        .unwrap();
+    let test: [Test; 4] = Cursor::new(data).read_be().unwrap();
 
     let mut x = Cursor::new(Vec::new());
 
-    test.write_options(
-        &mut x,
-        &WriteOptions::new(Endian::Big),
-        ()
-    ).unwrap();
+    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .unwrap();
 
     assert_eq!(&x.into_inner()[..], data);
 }

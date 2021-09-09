@@ -33,10 +33,7 @@ pub(super) fn generate_unit_enum(
     }
 }
 
-fn generate_unit_enum_repr(
-    repr: &TokenStream,
-    variants: &[UnitEnumField],
-) -> TokenStream {
+fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
     let clauses = variants.iter().map(|variant| {
         let ident = &variant.ident;
         quote! {
@@ -56,10 +53,7 @@ fn generate_unit_enum_repr(
     }
 }
 
-fn generate_unit_enum_magic(
-    en: &UnitOnlyEnum,
-    variants: &[UnitEnumField],
-) -> TokenStream {
+fn generate_unit_enum_magic(en: &UnitOnlyEnum, variants: &[UnitEnumField]) -> TokenStream {
     let matches = variants.iter().filter_map(|field| {
         if let Some(magic) = &field.magic {
             let ident = &field.ident;

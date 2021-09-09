@@ -1,5 +1,5 @@
+use crate::parser::write::{Input, UnitEnumField, UnitOnlyEnum};
 use proc_macro2::{Ident, TokenStream};
-use crate::parser::write::{Input, UnitOnlyEnum, UnitEnumField};
 use quote::quote;
 
 #[allow(clippy::wildcard_imports)]
@@ -10,7 +10,7 @@ use super::prelude::PreludeGenerator;
 pub(crate) fn generate_unit_enum(
     input: &Input,
     name: Option<&Ident>,
-    en: &UnitOnlyEnum
+    en: &UnitOnlyEnum,
 ) -> TokenStream {
     let write = match &en.repr {
         Some(repr) => generate_unit_enum_repr(repr, &en.fields),
@@ -24,10 +24,7 @@ pub(crate) fn generate_unit_enum(
         .finish()
 }
 
-fn generate_unit_enum_repr(
-    repr: &TokenStream,
-    variants: &[UnitEnumField],
-) -> TokenStream {
+fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
     let branches = variants.iter().map(|variant| {
         let name = &variant.ident;
         quote! {
@@ -47,9 +44,7 @@ fn generate_unit_enum_repr(
     }
 }
 
-fn generate_unit_enum_magic(
-    variants: &[UnitEnumField],
-) -> TokenStream {
+fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
     let branches = variants.iter().map(|variant| {
         let name = &variant.ident;
         let magic = variant.magic.as_ref().map(|magic| {

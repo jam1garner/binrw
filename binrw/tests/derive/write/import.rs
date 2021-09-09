@@ -5,13 +5,13 @@ use binrw::BinWrite;
 fn correct_args_type_set() {
     #[binrw]
     #[bw(import { _x: u32, _y: u8 })]
-    struct Test {
-
-    }
+    struct Test {}
 
     let mut x = binrw::io::Cursor::new(Vec::new());
 
-    Test {}.write_options(&mut x, &Default::default(), binrw::args!{ _x: 3, _y: 2 }).unwrap();
+    Test {}
+        .write_options(&mut x, &Default::default(), binrw::args! { _x: 3, _y: 2 })
+        .unwrap();
 }
 
 #[test]
@@ -26,5 +26,7 @@ fn usable_args() {
 
     let mut x = binrw::io::Cursor::new(Vec::new());
 
-    Test {}.write_options(&mut x, &Default::default(), binrw::args!{ x: 3, _y: 2 }).unwrap();
+    Test {}
+        .write_options(&mut x, &Default::default(), binrw::args! { x: 3, _y: 2 })
+        .unwrap();
 }

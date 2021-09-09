@@ -1,6 +1,6 @@
 use binrw::binwrite;
-use binrw::BinWrite;
 use binrw::io::Cursor;
+use binrw::BinWrite;
 
 #[test]
 fn pass_args() {
@@ -22,7 +22,11 @@ fn pass_args() {
     }
 
     let mut x = Cursor::new(Vec::new());
-    Test{ inner: TestInner {} }.write_to(&mut x).unwrap();
+    Test {
+        inner: TestInner {},
+    }
+    .write_to(&mut x)
+    .unwrap();
 
     assert_eq!(&x.into_inner()[..], b"\0\0\0\x01\x02");
 }

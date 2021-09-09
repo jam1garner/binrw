@@ -3,7 +3,7 @@ use quote::quote;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{CondEndian, Magic, write};
+use crate::parser::{write, CondEndian, Magic};
 
 pub(crate) struct PreludeGenerator<'a> {
     out: TokenStream,

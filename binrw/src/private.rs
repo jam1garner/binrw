@@ -1,7 +1,7 @@
 use crate::{
     error::CustomError,
     io::{self, Seek, Write},
-    BinRead, BinResult, BinWrite, Error, ReadOptions, WriteOptions,
+    BinRead, BinResult, Error, ReadOptions, WriteOptions,
 };
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String};
