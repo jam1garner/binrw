@@ -79,7 +79,6 @@ where
 
 pub fn write_function_args_type_hint<T, W, Args, F>(_: F, a: Args) -> Args
 where
-    T: BinWrite<Args = Args>,
     W: Write + Seek,
     F: FnOnce(&T, &mut W, &crate::WriteOptions, Args) -> crate::BinResult<()>,
 {
@@ -96,7 +95,6 @@ where
 
 pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
 where
-    T: BinWrite,
     Args: Clone,
     Writer: Write + Seek,
     WriterFn: Fn(&T, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
