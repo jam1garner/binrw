@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, TokenStream};
-use crate::parser::{CondEndian, write::{Input, UnitOnlyEnum, UnitEnumField}};
+use crate::parser::write::{Input, UnitOnlyEnum, UnitEnumField};
 use quote::quote;
 
 #[allow(clippy::wildcard_imports)]
@@ -13,8 +13,8 @@ pub(crate) fn generate_unit_enum(
     en: &UnitOnlyEnum
 ) -> TokenStream {
     let write = match &en.repr {
-        Some(repr) => generate_unit_enum_repr(repr, en, &en.fields),
-        None => generate_unit_enum_magic(input, name, en, &en.fields),
+        Some(repr) => generate_unit_enum_repr(repr, &en.fields),
+        None => generate_unit_enum_magic(&en.fields),
     };
 
     PreludeGenerator::new(write, input, name)
@@ -24,28 +24,8 @@ pub(crate) fn generate_unit_enum(
         .finish()
 }
 
-fn specify_endian(endian: &CondEndian) -> Option<TokenStream> {
-    match endian {
-        CondEndian::Inherited => None,
-        CondEndian::Fixed(endian) => Some({
-            let endian = endian.as_binrw_endian();
-            quote! {
-                .clone().with_endian(#endian)
-            }
-        }),
-        CondEndian::Cond(endian, cond) => Some({
-            let else_endian = endian.flipped().as_binrw_endian();
-            let endian = endian.as_binrw_endian();
-            quote! {
-                .clone().with_endian(if #cond { #endian } else { #else_endian })
-            }
-        }),
-    }
-}
-
 fn generate_unit_enum_repr(
     repr: &TokenStream,
-    en: &UnitOnlyEnum,
     variants: &[UnitEnumField],
 ) -> TokenStream {
     let branches = variants.iter().map(|variant| {
@@ -55,27 +35,48 @@ fn generate_unit_enum_repr(
         }
     });
 
-    let specify_endian = specify_endian(&en.endian);
-
     quote! {
         #WRITE_METHOD (
             &(match self {
                 #(#branches),*
             } as #repr),
             #WRITER,
-            &#OPT#specify_endian,
+            &#OPT,
             (),
         )?;
     }
 }
 
 fn generate_unit_enum_magic(
-    _input: &Input,
-    _name: Option<&Ident>,
-    _en: &UnitOnlyEnum,
-    _variants: &[UnitEnumField],
+    variants: &[UnitEnumField],
 ) -> TokenStream {
-    todo!()
+    let branches = variants.iter().map(|variant| {
+        let name = &variant.ident;
+        let magic = variant.magic.as_ref().map(|magic| {
+            let magic = magic.match_value();
+
+            quote! {
+                #WRITE_METHOD (
+                    &#magic,
+                    #WRITER,
+                    &#OPT,
+                    (),
+                )?;
+            }
+        });
+
+        quote! {
+            Self::#name => {
+                #magic
+            }
+        }
+    });
+
+    quote! {
+        match self {
+            #( #branches )*
+        }
+    }
 }
 
 //struct UnitEnumGenerator<'a> {

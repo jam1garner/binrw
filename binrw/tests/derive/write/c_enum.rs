@@ -54,3 +54,36 @@ fn round_trip_unit_enum() {
 
     assert_eq!(&x.into_inner()[..], data);
 }
+
+#[test]
+fn magic_enum_round_trip() {
+    #[binrw]
+    enum Test {
+        #[brw(magic = b"abc")]
+        A,
+
+        #[brw(magic = b"123")]
+        B,
+
+        #[brw(magic = b"def")]
+        C,
+
+        #[brw(magic = b"456")]
+        D,
+    }
+
+    let data = b"123abcdef456";
+    let test: [Test; 4] = Cursor::new(data)
+        .read_be()
+        .unwrap();
+
+    let mut x = Cursor::new(Vec::new());
+
+    test.write_options(
+        &mut x,
+        &WriteOptions::new(Endian::Big),
+        ()
+    ).unwrap();
+
+    assert_eq!(&x.into_inner()[..], data);
+}
