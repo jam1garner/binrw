@@ -67,6 +67,7 @@ ident_str! {
     pub(crate) MAP_ARGS_TYPE_HINT = from_crate!(__private::map_args_type_hint);
     pub(crate) WRITE_FN_TYPE_HINT = from_crate!(__private::write_fn_type_hint);
     pub(crate) WRITE_WITH_ARGS_TYPE_HINT = from_crate!(__private::write_function_args_type_hint);
+    pub(crate) WRITE_ZEROES = from_crate!(__private::write_zeroes);
     pub(crate) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
     pub(crate) SATISFIED = from_crate!(Satisfied);
     pub(crate) NEEDED = from_crate!(Needed);
@@ -79,6 +80,7 @@ ident_str! {
     pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";
     pub(crate) READ_FUNCTION = "__binrw_generated_read_function";
     pub(crate) WRITE_FUNCTION = "__binrw_generated_write_function";
+    pub(crate) BEFORE_POS = "__binrw_generated_before_pos";
 }
 
 pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {

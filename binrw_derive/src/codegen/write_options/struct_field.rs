@@ -10,6 +10,7 @@ use crate::codegen::sanitization::*;
 pub(crate) fn write_field(field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field)
         .write_field()
+        .wrap_padding()
         .prefix_args()
         .prefix_write_fn()
         .prefix_magic()
@@ -99,6 +100,94 @@ impl<'a> StructFieldGenerator<'a> {
                     #args
                 )?;
             }
+        };
+
+        self
+    }
+
+    fn pad_before(&self) -> TokenStream {
+        let seek_before = self.field.seek_before.as_ref().map(|seek| {
+            quote! {
+                #SEEK_TRAIT::seek(
+                    #WRITER,
+                    #seek,
+                )?;
+            }
+        });
+        let pad_before = self.field.pad_before.as_ref().map(|padding| {
+            quote! { 
+                #WRITE_ZEROES(#WRITER, (#padding) as u64)?;
+            }
+        });
+        let align_before = self.field.align_before.as_ref().map(|alignment| {
+            quote! {{
+                let pos = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+                let align = ((#alignment) as u64);
+                let rem = pos % align;
+                if rem != 0 {
+                    #WRITE_ZEROES(#WRITER, align - rem)?;
+                }
+            }}
+        });
+        let pad_size_to_before = self.field.pad_size_to.as_ref().map(|_| {
+            quote! {
+                let #BEFORE_POS = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+            }
+        });
+
+        quote! {
+            // TODO
+            #seek_before
+            #pad_before
+            #align_before
+            #pad_size_to_before
+        }
+    }
+
+    fn pad_after(&self) -> TokenStream {
+        let pad_size_to = self.field.pad_size_to.as_ref().map(|size| {
+            quote! {{
+                let pad_to_size = (#size) as u64;
+                let after_pos = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+                if let Some(size) = after_pos.checked_sub(#BEFORE_POS) {
+                    if let Some(padding) = pad_to_size.checked_sub(size) {
+                        #WRITE_ZEROES(#WRITER, padding)?;
+                    }
+                }
+            }}
+        });
+        let pad_after = self.field.pad_after.as_ref().map(|padding| {
+            quote! {
+                #WRITE_ZEROES(#WRITER, (#padding) as u64)?;
+            }
+        });
+        let align_after = self.field.align_after.as_ref().map(|alignment| {
+            quote! {{
+                let pos = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+                let align = ((#alignment) as u64);
+                let rem = pos % align;
+                if rem != 0 {
+                    #WRITE_ZEROES(#WRITER, align - rem)?;
+                }
+            }}
+        });
+
+        quote! {
+            #pad_size_to
+            #pad_after
+            #align_after
+        }
+    }
+
+    fn wrap_padding(mut self) -> Self {
+        let out = &self.out;
+
+        let pad_before = self.pad_before();
+        let pad_after = self.pad_after();
+        self.out = quote! {
+            #pad_before
+            #out
+            #pad_after
         };
 
         self

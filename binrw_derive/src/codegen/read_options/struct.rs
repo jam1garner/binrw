@@ -575,7 +575,7 @@ fn map_align(align: &TokenStream) -> TokenStream {
 
 fn map_pad(pad: &TokenStream) -> TokenStream {
     quote! {
-        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(#pad))?;
+        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current((#pad) as i64))?;
     }
 }
 

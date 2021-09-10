@@ -5,4 +5,5 @@ mod custom_writer;
 mod endian;
 mod import;
 mod magic;
+mod padding;
 mod simple;

@@ -101,3 +101,24 @@ where
 {
     x
 }
+
+
+pub fn write_zeroes<W: Write>(writer: &mut W, count: u64) -> BinResult<()> {
+    const BUF_SIZE: u64 = 0x20;
+    const ZEROES: [u8; BUF_SIZE as usize] = [0u8; BUF_SIZE as usize];
+
+    if count <= BUF_SIZE {
+        writer.write_all(&ZEROES[..count as usize])?;
+    } else {
+        let full_chunks = count / BUF_SIZE;
+        let remaining = count % BUF_SIZE;
+
+        for _ in 0..full_chunks {
+            writer.write_all(&ZEROES)?;
+        }
+
+        writer.write_all(&ZEROES[..remaining as usize])?;
+    }
+
+    Ok(())
+}
