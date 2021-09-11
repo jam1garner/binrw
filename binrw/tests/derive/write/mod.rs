@@ -3,6 +3,7 @@ mod c_enum;
 mod calc;
 mod custom_writer;
 mod endian;
+mod r#enum;
 mod import;
 mod magic;
 mod padding;

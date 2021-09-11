@@ -148,6 +148,20 @@ impl Struct {
             }
         })
     }
+
+    pub(crate) fn fields_pattern(&self) -> TokenStream {
+        let fields = self.iter_permanent_idents();
+
+        if self.is_tuple() {
+            quote::quote! {
+                (#(ref #fields),*)
+            }
+        } else {
+            quote::quote! {
+                { #(ref #fields),* }
+            }
+        }
+    }
 }
 
 impl FromInput<StructAttr> for Struct {

@@ -7,17 +7,17 @@ use crate::parser::{write, CondEndian, Magic};
 
 pub(crate) struct PreludeGenerator<'a> {
     out: TokenStream,
-    input: &'a write::Input,
+    input: Option<&'a write::Input>,
     name: Option<&'a Ident>,
 }
 
 impl<'a> PreludeGenerator<'a> {
-    pub(crate) fn new(out: TokenStream, input: &'a write::Input, name: Option<&'a Ident>) -> Self {
+    pub(crate) fn new(out: TokenStream, input: Option<&'a write::Input>, name: Option<&'a Ident>) -> Self {
         Self { out, input, name }
     }
 
     pub(crate) fn prefix_imports(mut self) -> Self {
-        if let Some(imports) = self.input.imports().destructure(self.name) {
+        if let Some(imports) = self.input.map(|input| input.imports().destructure(self.name)).flatten() {
             let out = self.out;
             self.out = quote! {
                 let #imports = #ARGS;

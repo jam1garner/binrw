@@ -9,7 +9,7 @@ mod prelude;
 mod struct_field;
 
 mod r#enum;
-use r#enum::generate_unit_enum;
+use r#enum::{generate_unit_enum, generate_data_enum};
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);
@@ -17,7 +17,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
         Map::None => match input {
             Input::UnitStruct(_) => todo!(), //generate_unit_struct(input, name, None),
             Input::Struct(s) => generate_struct(input, name, s),
-            Input::Enum(_e) => todo!(), //generate_data_enum(input, name, e),
+            Input::Enum(e) => generate_data_enum(input, name, e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
         Map::Try(_map) => todo!(),
