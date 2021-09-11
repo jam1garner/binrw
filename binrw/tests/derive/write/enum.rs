@@ -49,12 +49,12 @@ fn enum_one_way() {
         },
 
         #[brw(little, magic = b"BBB")]
-        B {
-            x: u32,
+        B (
+            u32,
 
             #[brw(big)]
-            y: u16,
-        },
+            u16,
+        ),
 
         #[brw(magic = b"CCC")]
         C,
@@ -63,10 +63,10 @@ fn enum_one_way() {
     let mut x = Cursor::new(Vec::new());
 
     [
-        Test::B {
-            x: 0xAABB,
-            y: 0x2
-        },
+        Test::B (
+            0xAABB,
+            0x2
+        ),
         Test::C,
         Test::A {
             x: 0x10203,
