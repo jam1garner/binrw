@@ -96,10 +96,7 @@ fn binrw_named_args(input: DeriveInput) -> proc_macro2::TokenStream {
                 })
             })
             .collect::<Result<Vec<_>, syn::Error>>(),
-        _ => {
-            return syn::Error::new(input.span(), "only structs are supported")
-                .to_compile_error()
-        }
+        _ => return syn::Error::new(input.span(), "only structs are supported").to_compile_error(),
     } {
         Ok(fields) => fields,
         Err(err) => return err.into_compile_error(),
