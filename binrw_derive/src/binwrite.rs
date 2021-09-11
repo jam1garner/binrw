@@ -6,11 +6,13 @@ use crate::{
 use quote::quote;
 use syn::DeriveInput;
 
+#[cfg(not(tarpaulin_include))]
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
     attrs.retain(|attr| !is_binwrite_attr(attr) && !is_binread_attr(attr));
 }
 
 // TODO: make this work for `#[binrw::binread]` somehow?
+#[cfg(not(tarpaulin_include))]
 fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
     input.attrs.iter().any(|attr| {
         attr.path
@@ -19,6 +21,7 @@ fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
     })
 }
 
+#[cfg(not(tarpaulin_include))]
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
     let (binwrite_input, generated_impl) = derive_from_input(&derive_input);
     let binwrite_input = binwrite_input.ok();
@@ -67,6 +70,7 @@ pub(crate) fn derive_from_input(
     (binwrite_input, generated_impl)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn clean_field_attrs(
     binwrite_input: &Option<write::Input>,
     variant_index: usize,
