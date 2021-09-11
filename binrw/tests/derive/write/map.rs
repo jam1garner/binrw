@@ -21,7 +21,9 @@ fn map_field() {
     Test {
         x: 3,
         y: String::from("test"),
-    }.write_to(&mut x).unwrap();
+    }
+    .write_to(&mut x)
+    .unwrap();
 
     assert_eq!(&x.into_inner()[..], b"\0\0\0\0\0\0\0\x03test\xff");
 }

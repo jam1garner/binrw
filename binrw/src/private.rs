@@ -126,7 +126,8 @@ where
 }
 
 pub fn write_fn_map_output_type_hint<Input, Output, MapFn, Writer, WriteFn, Args>(
-    _: &MapFn, func: WriteFn
+    _: &MapFn,
+    func: WriteFn,
 ) -> WriteFn
 where
     MapFn: FnOnce(Input) -> Output,

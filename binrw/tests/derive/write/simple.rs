@@ -1,5 +1,5 @@
-use binrw::{BinRead, BinWrite};
 use binrw::{io::Cursor, Endian, WriteOptions};
+use binrw::{BinRead, BinWrite};
 
 #[derive(BinWrite)]
 struct Test {

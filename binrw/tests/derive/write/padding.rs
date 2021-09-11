@@ -16,11 +16,9 @@ fn padding_round_trip() {
     }
 
     let data = &[
-        /* pad_before: */ 0, 0, /* x */  1, /* align: */  0, 0, 0, 0, 0,
-
-        /* align_before: (none)*/ /* y */ 2, /* pad_after: */ 0, 0, 0,
-
-        /* z */ 0, 0xab, 0xcd, 0xef, /* pad_size_to */ 0, 0,
+        /* pad_before: */ 0, 0, /* x */ 1, /* align: */ 0, 0, 0, 0, 0,
+        /* align_before: (none)*/ /* y */ 2, /* pad_after: */ 0, 0, 0, /* z */ 0,
+        0xab, 0xcd, 0xef, /* pad_size_to */ 0, 0,
     ];
     let test: Test = Cursor::new(data).read_be().unwrap();
 
@@ -47,11 +45,9 @@ fn padding_one_way() {
     }
 
     let data = &[
-        /* pad_before: */ 0, 0, /* x */  1, /* align: */  0, 0, 0, 0, 0,
-
-        /* align_before: (none)*/ /* y */ 2, /* pad_after: */ 0, 0, 0,
-
-        /* z */ 0xef, 0xcd, 0xab, 0, /* pad_size_to */ 0, 0,
+        /* pad_before: */ 0, 0, /* x */ 1, /* align: */ 0, 0, 0, 0, 0,
+        /* align_before: (none)*/ /* y */ 2, /* pad_after: */ 0, 0, 0, /* z */ 0xef,
+        0xcd, 0xab, 0, /* pad_size_to */ 0, 0,
     ];
 
     let mut x = Cursor::new(Vec::new());
@@ -60,8 +56,9 @@ fn padding_one_way() {
         x: 1,
         y: 2,
         z: 0xabcdef,
-    }.write_options(&mut x, &WriteOptions::new(Endian::Little), ())
-        .unwrap();
+    }
+    .write_options(&mut x, &WriteOptions::new(Endian::Little), ())
+    .unwrap();
 
     assert_eq!(&x.into_inner()[..], data);
 }

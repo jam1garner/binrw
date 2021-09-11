@@ -17,7 +17,7 @@ impl<'a> PreludeGenerator<'a> {
     }
 
     pub(crate) fn prefix_imports(mut self) -> Self {
-        if let Some(imports) = self.input.map(|input| input.imports().destructure(self.name)).flatten() {
+        if let Some(imports) = self.input.and_then(|input| input.imports().destructure(self.name)) {
             let out = self.out;
             self.out = quote! {
                 let #imports = #ARGS;
