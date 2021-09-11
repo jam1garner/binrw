@@ -53,6 +53,23 @@ impl<T: BinWrite, const N: usize> BinWrite for [T; N] {
     }
 }
 
+impl<T: BinWrite> BinWrite for [T] {
+    type Args = T::Args;
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        options: &WriteOptions,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        for item in self {
+            T::write_options(item, writer, options, args.clone())?;
+        }
+
+        Ok(())
+    }
+}
+
 impl<T: BinWrite> BinWrite for Vec<T> {
     type Args = T::Args;
 
@@ -74,7 +91,7 @@ impl<T: BinWrite> BinWrite for Vec<T> {
 
 // ========================= std types =========================
 
-impl<T: BinWrite> BinWrite for &T {
+impl<T: BinWrite + ?Sized> BinWrite for &T {
     type Args = T::Args;
 
     fn write_options<W: Write + Seek>(

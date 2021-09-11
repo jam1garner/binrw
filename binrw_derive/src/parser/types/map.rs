@@ -17,6 +17,10 @@ impl Map {
     pub(crate) fn is_none(&self) -> bool {
         matches!(self, Self::None)
     }
+
+    pub(crate) fn is_try(&self) -> bool {
+        matches!(self, Self::Try(_))
+    }
 }
 
 impl Default for Map {

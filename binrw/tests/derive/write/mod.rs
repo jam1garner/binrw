@@ -6,5 +6,6 @@ mod endian;
 mod r#enum;
 mod import;
 mod magic;
+mod map;
 mod padding;
 mod simple;

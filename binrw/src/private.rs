@@ -102,6 +102,40 @@ where
     x
 }
 
+pub fn write_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
+where
+    MapFn: FnOnce(Input) -> Output,
+    Output: crate::BinWrite<Args = Args>,
+{
+    args
+}
+
+pub fn write_try_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
+where
+    MapFn: FnOnce(Input) -> BinResult<Output>,
+    Output: crate::BinWrite<Args = Args>,
+{
+    args
+}
+
+pub fn write_map_fn_input_type_hint<Input, Output, MapFn>(func: MapFn) -> MapFn
+where
+    MapFn: FnOnce(Input) -> Output,
+{
+    func
+}
+
+pub fn write_fn_map_output_type_hint<Input, Output, MapFn, Writer, WriteFn, Args>(
+    _: &MapFn, func: WriteFn
+) -> WriteFn
+where
+    MapFn: FnOnce(Input) -> Output,
+    Args: Clone,
+    Writer: Write + Seek,
+    WriteFn: Fn(&Output, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
+{
+    func
+}
 
 pub fn write_zeroes<W: Write>(writer: &mut W, count: u64) -> BinResult<()> {
     const BUF_SIZE: u64 = 0x20;

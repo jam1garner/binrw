@@ -1,5 +1,7 @@
+use std::ops::Not;
+
 use crate::parser::write::StructField;
-use crate::parser::{CondEndian, PassedArgs, WriteMode};
+use crate::parser::{CondEndian, Map, PassedArgs, WriteMode};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::Ident;
@@ -13,6 +15,7 @@ pub(crate) fn write_field(field: &StructField) -> TokenStream {
         .wrap_padding()
         .prefix_args()
         .prefix_write_fn()
+        .prefix_map_fn()
         .prefix_magic()
         .finish()
 }
@@ -32,6 +35,10 @@ impl<'a> StructFieldGenerator<'a> {
 
     fn args_ident(&self) -> Ident {
         make_ident(&self.field.ident, "args")
+    }
+
+    fn map_fn_ident(&self) -> Ident {
+        make_ident(&self.field.ident, "map_fn")
     }
 
     fn specify_endian(&self) -> Option<TokenStream> {
@@ -60,9 +67,43 @@ impl<'a> StructFieldGenerator<'a> {
             WriteMode::WriteWith(write_fn) => write_fn.clone(),
         };
 
+        let write_fn = if self.field.map.is_some() {
+            let map_fn = self.map_fn_ident();
+            quote! { #WRITE_FN_MAP_OUTPUT_TYPE_HINT(&#map_fn, #write_fn) }
+        } else {
+            quote! { #WRITE_FN_TYPE_HINT(#write_fn) }
+        };
+
         let out = &self.out;
         self.out = quote! {
-            let #WRITE_FUNCTION = #WRITE_FN_TYPE_HINT(#write_fn);
+            let #WRITE_FUNCTION = #write_fn;
+            #out
+        };
+
+        self
+    }
+
+    fn field_mapping(&self) -> Option<TokenStream> {
+        match &self.field.map {
+            Map::Try(map_fn) | Map::Map(map_fn) => Some(quote!{ (#map_fn) }),
+            Map::None => None,
+        }
+    }
+
+    fn prefix_map_fn(mut self) -> Self {
+        let map_fn = self.field_mapping().map(|map_fn| {
+            let map_fn_ident = self.map_fn_ident();
+            
+            let ty = &self.field.ty;
+            let ty_ref = self.field.generated_value().not().then(|| quote! { & });
+            quote! {
+                let #map_fn_ident = #WRITE_MAP_INPUT_TYPE_HINT::<#ty_ref #ty, _, _>(#map_fn);
+            }
+        });
+
+        let out = self.out;
+        self.out = quote! {
+            #map_fn
             #out
         };
 
@@ -85,6 +126,9 @@ impl<'a> StructFieldGenerator<'a> {
             None
         };
 
+        let map_fn = self.field.map.is_some().then(|| self.map_fn_ident());
+        let map_try = self.field.map.is_try().then(|| quote! { ? });
+
         self.out = if let WriteMode::Ignore = &self.field.write_mode {
             quote! {
                 #initialize
@@ -94,7 +138,7 @@ impl<'a> StructFieldGenerator<'a> {
                 #initialize
 
                 #WRITE_FUNCTION (
-                    &#name,
+                    &(#map_fn (#name) #map_try),
                     #WRITER,
                     &#OPT#specify_endian,
                     #args
@@ -202,15 +246,26 @@ impl<'a> StructFieldGenerator<'a> {
             quote! { () }
         };
 
+        let map_fn = self.map_fn_ident();
         let out = &self.out;
         self.out = match self.field.write_mode {
-            WriteMode::Normal => {
-                let ty = &self.field.ty;
-                quote! {
-                    let #args: <#ty as #BINWRITE_TRAIT>::Args = #args_val;
+            WriteMode::Normal => match &self.field.map {
+                Map::Map(_) => quote! {
+                    let #args = #WRITE_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
-                }
-            }
+                },
+                Map::Try(_) => quote! {
+                    let #args = #WRITE_TRY_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
+                    #out
+                },
+                Map::None => {
+                    let ty = &self.field.ty;
+                    quote! {
+                        let #args: <#ty as #BINWRITE_TRAIT>::Args = #args_val;
+                        #out
+                    }
+                },
+            },
             WriteMode::Ignore => {
                 if self.field.args.is_some() {
                     let name = &self.field.ident;
