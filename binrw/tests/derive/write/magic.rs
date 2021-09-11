@@ -16,7 +16,7 @@ fn magic_round_trip() {
     let test: Test = Cursor::new(data).read_be().unwrap();
 
     let mut out = Cursor::new(Vec::new());
-    test.write_to(&mut out).unwrap();
+    test.write_with_args(&mut out, ()).unwrap();
 
     assert_eq!(&out.into_inner()[..], data);
 }

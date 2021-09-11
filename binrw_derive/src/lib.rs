@@ -52,10 +52,7 @@ pub fn binrw(_: TokenStream, input: TokenStream) -> TokenStream {
     binrw_attr::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
 
-#[proc_macro_derive(BinrwNamedArgs, attributes(named_args))]
-pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
+fn binrw_named_args(input: DeriveInput) -> proc_macro2::TokenStream {
     let fields = match match input.data {
         syn::Data::Struct(s) => s
             .fields
@@ -102,11 +99,10 @@ pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
         _ => {
             return syn::Error::new(input.span(), "only structs are supported")
                 .to_compile_error()
-                .into()
         }
     } {
         Ok(fields) => fields,
-        Err(err) => return err.into_compile_error().into(),
+        Err(err) => return err.into_compile_error(),
     };
 
     let generics: Vec<_> = input.generics.params.iter().cloned().collect();
@@ -119,7 +115,13 @@ pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
         vis: &input.vis,
     }
     .generate(false)
-    .into()
+}
+
+#[cfg(not(tarpaulin_include))]
+#[proc_macro_derive(BinrwNamedArgs, attributes(named_args))]
+pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    binrw_named_args(input).into()
 }
 
 #[cfg(test)]
@@ -182,4 +184,15 @@ fn derive_binwrite_code_coverage_for_tarpaulin() {
     }
 
     assert!(run_success)
+}
+
+#[cfg(test)]
+#[cfg(tarpaulin)]
+#[test]
+fn derive_named_args_code_coverage_for_tarpaulin() {
+    use runtime_macros_derive::emulate_derive_expansion_fallible;
+    use std::fs;
+    let file = fs::File::open("../binrw/tests/builder.rs").unwrap();
+    emulate_derive_expansion_fallible(file, "BinrwNamedArgs", |input| binrw_named_args(input))
+        .unwrap();
 }
