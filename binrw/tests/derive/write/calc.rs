@@ -6,8 +6,8 @@ fn calc_simple_write() {
     struct Test {
         x: u8,
 
-        #[bw(calc = 2)]
-        y: u16,
+        #[bw(calc = Some(2))]
+        y: Option<u16>,
 
         #[bw(calc = (*x as u32) + 2)]
         z: u32,

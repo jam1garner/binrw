@@ -47,6 +47,8 @@ struct TestRoundTripConjugate {
 
     #[brw(is_big = false)]
     not_z: u32,
+
+    empty: (),
 }
 
 #[test]

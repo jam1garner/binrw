@@ -14,7 +14,7 @@ fn write_enum() {
 
     let mut x = Cursor::new(Vec::new());
 
-    [Test::A, Test::B, Test::C, Test::D]
+    vec![Test::A, Test::B, Test::C, Test::D]
         .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
