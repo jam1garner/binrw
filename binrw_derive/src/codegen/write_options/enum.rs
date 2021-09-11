@@ -5,7 +5,7 @@ use quote::quote;
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 
-use super::{r#struct::StructGenerator, prelude::PreludeGenerator};
+use super::{prelude::PreludeGenerator, r#struct::StructGenerator};
 
 pub(crate) fn generate_unit_enum(
     input: &Input,
@@ -24,11 +24,7 @@ pub(crate) fn generate_unit_enum(
         .finish()
 }
 
-pub(crate) fn generate_data_enum(
-    input: &Input,
-    name: Option<&Ident>,
-    en: &Enum,
-) -> TokenStream {
+pub(crate) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum) -> TokenStream {
     EnumGenerator::new(input, name, en)
         .write_variants()
         .prefix_prelude()
@@ -44,26 +40,31 @@ struct EnumGenerator<'a> {
 
 impl<'a> EnumGenerator<'a> {
     fn new(input: &'a Input, name: Option<&'a Ident>, en: &'a Enum) -> Self {
-        Self { input, name, en, out: TokenStream::new() }
+        Self {
+            input,
+            name,
+            en,
+            out: TokenStream::new(),
+        }
     }
 
     fn write_variants(mut self) -> Self {
-        let variants = self.en.variants.iter()
-            .map(|variant| {
-                let name = variant.ident();
-                let fields = match variant {
-                    EnumVariant::Variant { options, .. } => Some(options.fields_pattern()),
-                    EnumVariant::Unit(_) => None,
-                };
+        let variants = self.en.variants.iter().map(|variant| {
+            let name = variant.ident();
+            let fields = match variant {
+                EnumVariant::Variant { options, .. } => Some(options.fields_pattern()),
+                EnumVariant::Unit(_) => None,
+            };
 
-                let writing = match variant {
-                    EnumVariant::Variant { options, .. } => {
-                        StructGenerator::new(None, options, None)
-                            .write_fields()
-                            .prefix_prelude()
-                            .finish()
-                    },
-                    EnumVariant::Unit(variant) => variant.magic.as_ref().map(|magic| {
+            let writing = match variant {
+                EnumVariant::Variant { options, .. } => StructGenerator::new(None, options, None)
+                    .write_fields()
+                    .prefix_prelude()
+                    .finish(),
+                EnumVariant::Unit(variant) => variant
+                    .magic
+                    .as_ref()
+                    .map(|magic| {
                         let magic = magic.match_value();
                         quote! {
                             #WRITE_METHOD (
@@ -73,15 +74,16 @@ impl<'a> EnumGenerator<'a> {
                                 ()
                             )?;
                         }
-                    }).unwrap_or_default(),
-                };
+                    })
+                    .unwrap_or_default(),
+            };
 
-                quote! {
-                    Self::#name #fields => {
-                        #writing
-                    }
+            quote! {
+                Self::#name #fields => {
+                    #writing
                 }
-            });
+            }
+        });
 
         self.out = quote! {
             match self {
@@ -100,7 +102,7 @@ impl<'a> EnumGenerator<'a> {
             .prefix_endian(&self.en.endian)
             .prefix_imports()
             .finish();
-        
+
         self
     }
 

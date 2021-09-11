@@ -85,7 +85,7 @@ impl<'a> StructFieldGenerator<'a> {
 
     fn field_mapping(&self) -> Option<TokenStream> {
         match &self.field.map {
-            Map::Try(map_fn) | Map::Map(map_fn) => Some(quote!{ (#map_fn) }),
+            Map::Try(map_fn) | Map::Map(map_fn) => Some(quote! { (#map_fn) }),
             Map::None => None,
         }
     }
@@ -93,7 +93,7 @@ impl<'a> StructFieldGenerator<'a> {
     fn prefix_map_fn(mut self) -> Self {
         let map_fn = self.field_mapping().map(|map_fn| {
             let map_fn_ident = self.map_fn_ident();
-            
+
             let ty = &self.field.ty;
             let ty_ref = self.field.generated_value().not().then(|| quote! { & });
             quote! {
@@ -159,7 +159,7 @@ impl<'a> StructFieldGenerator<'a> {
             }
         });
         let pad_before = self.field.pad_before.as_ref().map(|padding| {
-            quote! { 
+            quote! {
                 #WRITE_ZEROES(#WRITER, (#padding) as u64)?;
             }
         });
@@ -264,7 +264,7 @@ impl<'a> StructFieldGenerator<'a> {
                         let #args: <#ty as #BINWRITE_TRAIT>::Args = #args_val;
                         #out
                     }
-                },
+                }
             },
             WriteMode::Ignore => {
                 if self.field.args.is_some() {

@@ -1,4 +1,6 @@
-use super::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
+use super::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
+use crate::alloc::{boxed::Box, vec::Vec};
+use core::{cmp, convert::TryInto};
 
 /// A `Cursor` wraps an in-memory buffer and provides it with a
 /// [`Seek`] implementation.
@@ -83,5 +85,89 @@ impl<T: AsRef<[u8]>> Seek for Cursor<T> {
                 }
             }
         }
+    }
+}
+
+// Non-resizing write implementation
+#[inline]
+fn slice_write(pos_mut: &mut u64, slice: &mut [u8], buf: &[u8]) -> Result<usize> {
+    let pos = cmp::min(*pos_mut, slice.len() as u64);
+    let amt = (&mut slice[(pos as usize)..]).write(buf)?;
+    *pos_mut += amt as u64;
+    Ok(amt)
+}
+
+// Resizing write implementation
+fn vec_write(pos_mut: &mut u64, vec: &mut Vec<u8>, buf: &[u8]) -> Result<usize> {
+    let pos: usize = (*pos_mut).try_into().map_err(|_| {
+        Error::new(
+            ErrorKind::InvalidInput,
+            &"cursor position exceeds maximum possible vector length",
+        )
+    })?;
+    // Make sure the internal buffer is as least as big as where we
+    // currently are
+    let len = vec.len();
+    if len < pos {
+        // use `resize` so that the zero filling is as efficient as possible
+        vec.resize(pos, 0);
+    }
+    // Figure out what bytes will be used to overwrite what's currently
+    // there (left), and what will be appended on the end (right)
+    {
+        let space = vec.len() - pos;
+        let (left, right) = buf.split_at(cmp::min(space, buf.len()));
+        vec[pos..pos + left.len()].copy_from_slice(left);
+        vec.extend_from_slice(right);
+    }
+
+    // Bump us forward
+    *pos_mut = (pos + buf.len()) as u64;
+    Ok(buf.len())
+}
+
+impl Write for Cursor<&mut [u8]> {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        slice_write(&mut self.pos, self.inner, buf)
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl Write for Cursor<&mut Vec<u8>> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        vec_write(&mut self.pos, self.inner, buf)
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl Write for Cursor<Vec<u8>> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        vec_write(&mut self.pos, &mut self.inner, buf)
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl Write for Cursor<Box<[u8]>> {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        slice_write(&mut self.pos, &mut self.inner, buf)
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
     }
 }

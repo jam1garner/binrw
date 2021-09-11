@@ -25,7 +25,11 @@ pub(crate) struct StructGenerator<'input> {
 }
 
 impl<'input> StructGenerator<'input> {
-    pub(crate) fn new(input: Option<&'input Input>, st: &'input Struct, name: Option<&'input Ident>) -> Self {
+    pub(crate) fn new(
+        input: Option<&'input Input>,
+        st: &'input Struct,
+        name: Option<&'input Ident>,
+    ) -> Self {
         Self {
             input,
             st,

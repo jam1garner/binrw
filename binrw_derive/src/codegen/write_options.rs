@@ -9,7 +9,7 @@ mod prelude;
 mod struct_field;
 
 mod r#enum;
-use r#enum::{generate_unit_enum, generate_data_enum};
+use r#enum::{generate_data_enum, generate_unit_enum};
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);

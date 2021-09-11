@@ -5,7 +5,7 @@ mod cursor;
 mod error;
 
 use alloc::vec::Vec;
-use core::fmt;
+use core::{cmp, fmt, mem};
 pub use {
     cursor::Cursor,
     error::{Error, ErrorKind},
@@ -282,5 +282,33 @@ pub trait Write {
         Self: Sized,
     {
         self
+    }
+}
+
+impl Write for &mut [u8] {
+    #[inline]
+    fn write(&mut self, data: &[u8]) -> Result<usize> {
+        let amt = cmp::min(data.len(), self.len());
+        let (a, b) = mem::replace(self, &mut []).split_at_mut(amt);
+        a.copy_from_slice(&data[..amt]);
+        *self = b;
+        Ok(amt)
+    }
+
+    #[inline]
+    fn write_all(&mut self, data: &[u8]) -> Result<()> {
+        if self.write(data)? == data.len() {
+            Ok(())
+        } else {
+            Err(Error::new(
+                ErrorKind::WriteZero,
+                &"failed to write whole buffer",
+            ))
+        }
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
     }
 }
