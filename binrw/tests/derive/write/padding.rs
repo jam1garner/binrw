@@ -1,9 +1,9 @@
 use binrw::io::Cursor;
-use binrw::{binrw, BinReaderExt, BinWrite, Endian, WriteOptions};
+use binrw::{BinRead, BinReaderExt, BinWrite, Endian, WriteOptions};
 
 #[test]
 fn padding_round_trip() {
-    #[binrw]
+    #[derive(BinRead, BinWrite)]
     struct Test {
         #[brw(pad_before = 0x2_u32, align_after = 0x8)]
         x: u8,
@@ -34,7 +34,7 @@ fn padding_round_trip() {
 
 #[test]
 fn padding_one_way() {
-    #[binrw]
+    #[derive(BinRead, BinWrite)]
     struct Test {
         #[brw(pad_before = 0x2_u32, align_after = 0x8)]
         x: u8,

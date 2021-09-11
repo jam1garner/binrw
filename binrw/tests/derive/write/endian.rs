@@ -1,8 +1,7 @@
-use binrw::binwrite;
 use binrw::BinWrite;
 use binrw::{io::Cursor, Endian, WriteOptions};
 
-#[binwrite]
+#[derive(BinWrite)]
 struct TestEndian {
     x: u16,
 
@@ -34,7 +33,7 @@ fn write_endian() {
 
 #[test]
 fn top_level_endian() {
-    #[binwrite]
+    #[derive(BinWrite)]
     #[bw(is_big = true)]
     struct Test {
         #[bw(big)] // <-- will be ignored
@@ -43,14 +42,14 @@ fn top_level_endian() {
         big: TestInheritBig,
     }
 
-    #[binwrite]
+    #[derive(BinWrite)]
     #[bw(little)]
     struct TestLittle {
         x: u16,
         y: u32,
     }
 
-    #[binwrite]
+    #[derive(BinWrite)]
     struct TestInheritBig {
         x: u16,
         y: u32,

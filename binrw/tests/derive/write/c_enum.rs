@@ -1,9 +1,9 @@
 use binrw::io::Cursor;
-use binrw::{binrw, binwrite, BinReaderExt, BinWrite, Endian, WriteOptions};
+use binrw::{BinRead, BinReaderExt, BinWrite, Endian, WriteOptions};
 
 #[test]
 fn write_enum() {
-    #[binwrite]
+    #[derive(BinWrite)]
     #[bw(repr(u32))]
     enum Test {
         A,
@@ -26,7 +26,7 @@ fn write_enum() {
 
 #[test]
 fn round_trip_unit_enum() {
-    #[binrw]
+    #[derive(BinRead, BinWrite)]
     #[brw(repr(u32), magic = 0xff_u8)]
     enum Test {
         A,
@@ -50,7 +50,7 @@ fn round_trip_unit_enum() {
 
 #[test]
 fn magic_enum_round_trip() {
-    #[binrw]
+    #[derive(BinRead, BinWrite)]
     enum Test {
         #[brw(magic = b"abc")]
         A,

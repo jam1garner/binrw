@@ -1,9 +1,7 @@
-use binrw::binrw;
-use binrw::binwrite;
-use binrw::BinWrite;
+use binrw::{BinRead, BinWrite};
 use binrw::{io::Cursor, Endian, WriteOptions};
 
-#[binwrite]
+#[derive(BinWrite)]
 struct Test {
     x: u8,
     y: u16,
@@ -23,8 +21,7 @@ fn simple_write() {
 
 use binrw::BinReaderExt;
 
-#[binrw]
-#[derive(Debug, PartialEq)]
+#[derive(BinRead, BinWrite, Debug, PartialEq)]
 struct TestRoundTrip {
     x: u16,
 
@@ -38,8 +35,7 @@ struct TestRoundTrip {
     not_z: u32,
 }
 
-#[binrw]
-#[derive(Debug, PartialEq)]
+#[derive(BinRead, BinWrite, Debug, PartialEq)]
 struct TestRoundTripConjugate {
     x: u16,
 

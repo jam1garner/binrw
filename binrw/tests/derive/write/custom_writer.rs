@@ -1,8 +1,8 @@
-use binrw::{binwrite, io::Cursor, BinWrite, Endian, WriteOptions};
+use binrw::{io::Cursor, BinWrite, Endian, WriteOptions};
 
 #[test]
 fn custom_writer() {
-    #[binwrite]
+    #[derive(BinWrite)]
     struct Test {
         x: u8,
 

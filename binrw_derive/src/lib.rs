@@ -153,3 +153,33 @@ fn derive_code_coverage_for_tarpaulin() {
 
     assert!(run_success)
 }
+
+#[cfg(test)]
+#[cfg(tarpaulin)]
+#[test]
+fn derive_binwrite_code_coverage_for_tarpaulin() {
+    use runtime_macros_derive::emulate_derive_expansion_fallible;
+    use std::{env, fs};
+
+    let derive_tests_folder = env::current_dir()
+        .unwrap()
+        .join("..")
+        .join("binrw/tests/derive/write");
+
+    let mut run_success = true;
+    for entry in fs::read_dir(derive_tests_folder).unwrap() {
+        let entry = entry.unwrap();
+        if entry.file_type().unwrap().is_file() {
+            let file = fs::File::open(entry.path()).unwrap();
+            if emulate_derive_expansion_fallible(file, "BinWrite", |input| {
+                binwrite::derive_from_input(&input).1
+            })
+            .is_err()
+            {
+                run_success = false;
+            }
+        }
+    }
+
+    assert!(run_success)
+}

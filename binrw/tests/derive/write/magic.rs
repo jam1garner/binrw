@@ -1,9 +1,8 @@
-use binrw::binrw;
-use binrw::{io::Cursor, BinReaderExt, BinWrite};
+use binrw::{io::Cursor, BinRead, BinReaderExt, BinWrite};
 
 #[test]
 fn magic_round_trip() {
-    #[binrw]
+    #[derive(BinRead, BinWrite)]
     #[brw(little, magic = 0x1234_5678_u32)]
     struct Test {
         #[brw(big, magic = 0x9ABC_u16)]
@@ -24,7 +23,7 @@ fn magic_round_trip() {
 
 #[test]
 fn magic_one_way() {
-    #[binrw]
+    #[derive(BinRead, BinWrite)]
     #[bw(little, magic = b"ABCD")]
     struct Test {
         #[bw(big, magic = 0x9ABC_u16)]

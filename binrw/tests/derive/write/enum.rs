@@ -1,9 +1,9 @@
 use binrw::io::Cursor;
-use binrw::{binrw, BinReaderExt, BinWrite, Endian, WriteOptions};
+use binrw::{BinRead, BinReaderExt, BinWrite, Endian, WriteOptions};
 
 #[test]
 fn enum_round_trip() {
-    #[binrw]
+    #[derive(BinRead, BinWrite)]
     #[brw(big)]
     enum Test {
         #[brw(magic = b"AAA")]
@@ -38,7 +38,7 @@ fn enum_round_trip() {
 
 #[test]
 fn enum_one_way() {
-    #[binrw]
+    #[derive(BinWrite)]
     #[brw(big)]
     enum Test {
         #[brw(magic = b"AAA")]

@@ -3,7 +3,7 @@ use binrw::BinWrite;
 
 #[test]
 fn correct_args_type_set() {
-    #[binrw]
+    #[derive(BinWrite)]
     #[bw(import { _x: u32, _y: u8 })]
     struct Test {}
 

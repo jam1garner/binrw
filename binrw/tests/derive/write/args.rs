@@ -1,6 +1,5 @@
-use binrw::binwrite;
 use binrw::io::Cursor;
-use binrw::BinWrite;
+use binrw::{binwrite, BinWrite};
 
 #[test]
 fn pass_args() {
@@ -14,7 +13,7 @@ fn pass_args() {
         y_copy: u8,
     }
 
-    #[binwrite]
+    #[derive(BinWrite)]
     #[bw(big)]
     struct Test {
         #[bw(args { x: 1, y: 2 })]
