@@ -10,6 +10,8 @@ fn test() {
         blah: u32,
         not_copy: String,
         not_clone: NotClone,
+        #[named_args(default = 2)]
+        default_val: u32,
         generic: T,
     }
 
@@ -24,4 +26,5 @@ fn test() {
     assert_eq!(x.not_copy, "a string here");
     assert_eq!(x.not_clone, NotClone);
     assert_eq!(x.generic, "generic string :o");
+    assert_eq!(x.default_val, 2);
 }

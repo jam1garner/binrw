@@ -78,6 +78,13 @@ fn binrw_named_args(input: DeriveInput) -> proc_macro2::TokenStream {
                     .any(|attr| matches!(attr, NamedArgAttr::TryOptional))
                 {
                     BuilderFieldKind::TryOptional
+                } else if let Some(NamedArgAttr::Default(default)) = attrs
+                    .iter()
+                    .find(|attr| matches!(attr, NamedArgAttr::Default(_)))
+                {
+                    BuilderFieldKind::Optional {
+                        default: Box::new(default.clone()),
+                    }
                 } else {
                     BuilderFieldKind::Required
                 };
