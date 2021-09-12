@@ -11,6 +11,9 @@ mod struct_field;
 mod r#enum;
 use r#enum::{generate_data_enum, generate_unit_enum};
 
+#[allow(clippy::wildcard_imports)]
+use crate::codegen::sanitization::*;
+
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);
     let inner = match input.map() {
@@ -20,8 +23,25 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
             Input::Enum(e) => generate_data_enum(input, name, e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
-        Map::Try(_map) => todo!(),
-        Map::Map(_map) => todo!(),
+        Map::Try(map) | Map::Map(map) => {
+            let try_op = matches!(input.map(), Map::Try(_)).then(|| quote! { ? });
+            let write_data = quote! {
+                #WRITE_METHOD(
+                    &((#map)(self) #try_op),
+                    #WRITER,
+                    #OPT,
+                    ()
+                )?;
+            };
+
+            let magic = input.magic();
+            let endian = input.endian();
+            prelude::PreludeGenerator::new(write_data, Some(input), name)
+                .prefix_magic(magic)
+                .prefix_endian(endian)
+                .prefix_imports()
+                .finish()
+        }
     };
 
     //quote! {
