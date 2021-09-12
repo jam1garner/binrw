@@ -178,9 +178,14 @@ impl<'a> StructFieldGenerator<'a> {
                 let #BEFORE_POS = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
             }
         });
+        let store_position = self.field.restore_position.map(|_| {
+            quote! {
+                let #SAVED_POSITION = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+            }
+        });
 
         quote! {
-            // TODO
+            #store_position
             #seek_before
             #pad_before
             #align_before
@@ -215,11 +220,17 @@ impl<'a> StructFieldGenerator<'a> {
                 }
             }}
         });
+        let restore_position = self.field.restore_position.map(|_| {
+            quote! {
+                #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Start(#SAVED_POSITION))?;
+            }
+        });
 
         quote! {
             #pad_size_to
             #pad_after
             #align_after
+            #restore_position
         }
     }
 

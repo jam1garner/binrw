@@ -8,4 +8,5 @@ mod import;
 mod magic;
 mod map;
 mod padding;
+mod restore_position;
 mod simple;
