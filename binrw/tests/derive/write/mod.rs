@@ -1,4 +1,5 @@
 mod args;
+mod assert;
 mod c_enum;
 mod calc;
 mod custom_writer;

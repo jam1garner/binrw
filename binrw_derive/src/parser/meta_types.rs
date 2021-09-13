@@ -103,6 +103,7 @@ impl<Keyword> From<MetaVoid<Keyword>> for () {
 #[derive(Debug, Clone)]
 pub(crate) struct MetaList<Keyword, ItemType> {
     pub(crate) ident: Keyword,
+    #[allow(dead_code)]
     pub(crate) parens: token::Paren,
     pub(crate) fields: Fields<ItemType>,
 }
@@ -133,10 +134,12 @@ impl<Keyword: syn::token::Token + syn::spanned::Spanned, ItemType> KeywordToken
 #[derive(Debug, Clone)]
 pub(crate) enum Enclosure<ParenType, BraceType> {
     Paren {
+        #[allow(dead_code)]
         parens: token::Paren,
         fields: Fields<ParenType>,
     },
     Brace {
+        #[allow(dead_code)]
         braces: token::Brace,
         fields: Fields<BraceType>,
     },
@@ -200,6 +203,7 @@ impl<Keyword: syn::token::Token + syn::spanned::Spanned, ParenItemType, BraceIte
 #[derive(Debug, Clone)]
 pub(crate) struct IdentPatType {
     pub(crate) ident: syn::Ident,
+    #[allow(dead_code)]
     pub(crate) colon_token: Token![:],
     pub(crate) ty: syn::Type,
 }
@@ -222,8 +226,10 @@ impl Parse for IdentPatType {
 #[derive(Debug, Clone)]
 pub(crate) struct IdentTypeMaybeDefault {
     pub(crate) ident: syn::Ident,
+    #[allow(dead_code)]
     pub(crate) colon_token: Token![:],
     pub(crate) ty: syn::Type,
+    #[allow(dead_code)]
     pub(crate) eq: Option<Token![=]>,
     pub(crate) default: Option<Box<syn::Expr>>,
 }
@@ -253,6 +259,7 @@ impl Parse for IdentTypeMaybeDefault {
 #[derive(Debug, Clone)]
 pub(crate) struct FieldValue {
     pub(crate) ident: syn::Ident,
+    #[allow(dead_code)]
     pub(crate) colon_token: Option<Token![:]>,
     pub(crate) expr: Option<syn::Expr>,
 }
