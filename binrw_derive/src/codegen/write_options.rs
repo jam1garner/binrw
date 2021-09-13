@@ -1,4 +1,4 @@
-use crate::parser::{write::Input, Map};
+use crate::parser::{write::Input, Assert, AssertionError, Map};
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -60,4 +60,30 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
 
         Ok(())
     }
+}
+
+fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
+    assertions.iter().map(
+        |Assert {
+             condition,
+             consequent,
+         }| {
+            let error_fn = match &consequent {
+                Some(AssertionError::Message(message)) => {
+                    quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
+                }
+                Some(AssertionError::Error(error)) => {
+                    quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) }
+                }
+                None => {
+                    let condition = condition.to_string();
+                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
+                }
+            };
+
+            quote! {
+                #ASSERT(#condition, #POS, #error_fn)?;
+            }
+        },
+    )
 }

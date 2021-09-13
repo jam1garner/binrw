@@ -1,7 +1,7 @@
 use std::ops::Not;
 
 use crate::parser::write::StructField;
-use crate::parser::{Assert, AssertionError, CondEndian, Map, PassedArgs, WriteMode};
+use crate::parser::{CondEndian, Map, PassedArgs, WriteMode};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::Ident;
@@ -62,7 +62,7 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn prefix_assertions(mut self) -> Self {
-        let assertions = get_assertions(&self.field.assertions);
+        let assertions = super::get_assertions(&self.field.assertions);
 
         let out = self.out;
         self.out = quote! {
@@ -384,30 +384,4 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
             .as_ref()
             .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
-}
-
-fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
-    assertions.iter().map(
-        |Assert {
-             condition,
-             consequent,
-         }| {
-            let error_fn = match &consequent {
-                Some(AssertionError::Message(message)) => {
-                    quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
-                }
-                Some(AssertionError::Error(error)) => {
-                    quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) }
-                }
-                None => {
-                    let condition = condition.to_string();
-                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
-                }
-            };
-
-            quote! {
-                #ASSERT(#condition, #POS, #error_fn)?;
-            }
-        },
-    )
 }

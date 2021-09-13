@@ -16,3 +16,20 @@ fn assert_fail() {
         panic!("Assert error expected");
     }
 }
+
+#[test]
+fn top_level_assert_fail() {
+    #[binwrite]
+    #[bw(assert(*x != 1, "x cannot be 1"))]
+    struct Test {
+        x: u32,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    if let Err(err) = x.write_be(&Test { x: 1 }) {
+        dbg!(format!("{}", err));
+        assert!(matches!(err, binrw::Error::AssertFail { .. }));
+    } else {
+        panic!("Assert error expected");
+    }
+}

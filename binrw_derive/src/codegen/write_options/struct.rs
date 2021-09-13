@@ -12,6 +12,7 @@ use super::struct_field::write_field;
 pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(Some(input), st, name)
         .write_fields()
+        .prefix_assertions()
         .prefix_prelude()
         .prefix_borrow_fields()
         .finish()
@@ -44,6 +45,18 @@ impl<'input> StructGenerator<'input> {
             .prefix_endian(&self.st.endian)
             .prefix_imports()
             .finish();
+
+        self
+    }
+
+    fn prefix_assertions(mut self) -> Self {
+        let assertions = super::get_assertions(&self.st.assertions);
+
+        let out = self.out;
+        self.out = quote! {
+            #(#assertions)*
+            #out
+        };
 
         self
     }
