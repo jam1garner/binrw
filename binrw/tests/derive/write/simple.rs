@@ -1,5 +1,5 @@
 use binrw::{io::Cursor, Endian, WriteOptions};
-use binrw::{BinRead, BinWrite};
+use binrw::{BinRead, BinWrite, BinWriterExt};
 
 #[derive(BinWrite)]
 struct Test {
@@ -61,8 +61,7 @@ fn round_trip() {
 
     let mut x = Cursor::new(Vec::new());
 
-    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
+    x.write_be(&test).unwrap();
 
     assert_eq!(&x.into_inner()[..], bytes);
 }

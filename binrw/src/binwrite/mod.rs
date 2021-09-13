@@ -61,3 +61,88 @@ impl WriteOptions {
         WriteOptions { endian }
     }
 }
+
+/// Extension methods for writing [`BinWrite`] objects directly to a writer.
+///
+/// # Examples
+///
+/// ```rust
+/// use binrw::{binwrite, BinWriterExt, io::Cursor, Endian};
+///
+/// #[binwrite]
+/// struct MyStruct(u8, u16, u8);
+///
+/// let mut writer = Cursor::new(Vec::new());
+/// writer.write_be(&MyStruct(1, 0xffff, 2)).unwrap();
+/// writer.write_type(&0x1234_u16, Endian::Little).unwrap();
+///
+/// assert_eq!(&writer.into_inner()[..], &[1, 0xff, 0xff, 2, 0x34, 0x12][..]);
+/// ```
+pub trait BinWriterExt: Write + Seek + Sized {
+    /// Write `T` from the writer with the given byte order.
+    fn write_type<T: BinWrite>(&mut self, value: &T, endian: Endian) -> BinResult<()>
+    where
+        T::Args: Default,
+    {
+        self.write_type_args(value, endian, T::Args::default())
+    }
+
+    /// Write `T` from the writer assuming big-endian byte order.
+    fn write_be<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
+    where
+        T::Args: Default,
+    {
+        self.write_type(value, Endian::Big)
+    }
+
+    /// Write `T` from the writer assuming little-endian byte order.
+    fn write_le<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
+    where
+        T::Args: Default,
+    {
+        self.write_type(value, Endian::Little)
+    }
+
+    /// Write `T` from the writer assuming native-endian byte order.
+    fn write_ne<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
+    where
+        T::Args: Default,
+    {
+        self.write_type(value, Endian::Native)
+    }
+
+    /// Write `T` from the writer with the given byte order and arguments.
+    fn write_type_args<T: BinWrite>(
+        &mut self,
+        value: &T,
+        endian: Endian,
+        args: T::Args,
+    ) -> BinResult<()> {
+        let options = WriteOptions::new(endian);
+
+        T::write_options(value, self, &options, args)?;
+        //res.after_parse(self, &options, args)?;
+
+        Ok(())
+    }
+
+    /// Write `T` from the writer, assuming big-endian byte order, using the
+    /// given arguments.
+    fn write_be_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
+        self.write_type_args(value, Endian::Big, args)
+    }
+
+    /// Write `T` from the writer, assuming little-endian byte order, using the
+    /// given arguments.
+    fn write_le_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
+        self.write_type_args(value, Endian::Little, args)
+    }
+
+    /// Write `T` from the writer, assuming native-endian byte order, using the
+    /// given arguments.
+    fn write_ne_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
+        self.write_type_args(value, Endian::Native, args)
+    }
+}
+
+impl<W: Write + Seek + Sized> BinWriterExt for W {}
