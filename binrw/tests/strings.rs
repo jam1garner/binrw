@@ -48,3 +48,33 @@ fn null_strings() {
         "no thanks"
     );
 }
+
+#[test]
+fn null_string_round_trip() {
+    use binrw::{io::Cursor, BinReaderExt, BinWriterExt, NullString};
+
+    let data = "test test test";
+    let s = NullString::from_string(String::from(data));
+
+    let mut x = Cursor::new(Vec::new());
+    x.write_be(&s).unwrap();
+
+    let s2: NullString = Cursor::new(x.into_inner()).read_be().unwrap();
+
+    assert_eq!(&s2.into_string(), data);
+}
+
+#[test]
+fn null_wide_string_round_trip() {
+    use binrw::{io::Cursor, BinReaderExt, BinWriterExt, NullWideString};
+
+    let data = "test test test";
+    let s = NullWideString::from_string(String::from(data));
+
+    let mut x = Cursor::new(Vec::new());
+    x.write_be(&s).unwrap();
+
+    let s2: NullWideString = Cursor::new(x.into_inner()).read_be().unwrap();
+
+    assert_eq!(&s2.into_string(), data);
+}

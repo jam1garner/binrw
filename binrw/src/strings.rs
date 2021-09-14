@@ -3,7 +3,7 @@
 use crate::{
     alloc::string::{FromUtf16Error, FromUtf8Error},
     io::{Read, Seek},
-    BinRead, BinResult, ReadOptions,
+    BinRead, BinResult, BinWrite, ReadOptions,
 };
 
 #[cfg(not(feature = "std"))]
@@ -13,7 +13,10 @@ use alloc::{
     vec::Vec,
 };
 
-use core::num::{NonZeroU16, NonZeroU8};
+use core::{
+    fmt,
+    num::{NonZeroU16, NonZeroU8},
+};
 
 impl BinRead for Vec<NonZeroU8> {
     type Args = ();
@@ -89,6 +92,10 @@ pub struct NullWideString(
 );
 
 impl NullString {
+    pub fn from_string(s: String) -> Self {
+        Self(s.into_bytes())
+    }
+
     pub fn into_string(self) -> String {
         String::from_utf8_lossy(&self.0).into()
     }
@@ -99,6 +106,10 @@ impl NullString {
 }
 
 impl NullWideString {
+    pub fn from_string(s: String) -> Self {
+        Self(s.encode_utf16().collect())
+    }
+
     pub fn into_string(self) -> String {
         String::from_utf16_lossy(&self.0)
     }
@@ -166,6 +177,22 @@ impl BinRead for NullWideString {
     }
 }
 
+impl BinWrite for NullWideString {
+    type Args = ();
+
+    fn write_options<W: std::io::Write + Seek>(
+        &self,
+        writer: &mut W,
+        options: &crate::WriteOptions,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        self.0.write_options(writer, options, args)?;
+        0u16.write_options(writer, options, args)?;
+
+        Ok(())
+    }
+}
+
 impl BinRead for NullString {
     type Args = ();
 
@@ -180,7 +207,21 @@ impl BinRead for NullString {
     }
 }
 
-use core::fmt;
+impl BinWrite for NullString {
+    type Args = ();
+
+    fn write_options<W: std::io::Write + Seek>(
+        &self,
+        writer: &mut W,
+        options: &crate::WriteOptions,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        self.0.write_options(writer, options, args)?;
+        0u8.write_options(writer, options, args)?;
+
+        Ok(())
+    }
+}
 
 impl fmt::Debug for NullString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
