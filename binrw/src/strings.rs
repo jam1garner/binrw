@@ -2,7 +2,7 @@
 
 use crate::{
     alloc::string::{FromUtf16Error, FromUtf8Error},
-    io::{Read, Seek},
+    io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, ReadOptions,
 };
 
@@ -180,7 +180,7 @@ impl BinRead for NullWideString {
 impl BinWrite for NullWideString {
     type Args = ();
 
-    fn write_options<W: std::io::Write + Seek>(
+    fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
         options: &crate::WriteOptions,
@@ -210,7 +210,7 @@ impl BinRead for NullString {
 impl BinWrite for NullString {
     type Args = ();
 
-    fn write_options<W: std::io::Write + Seek>(
+    fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
         options: &crate::WriteOptions,
