@@ -1,3 +1,4 @@
+use core::any::Any;
 use core::marker::PhantomData;
 
 use crate::alloc::boxed::Box;
@@ -36,7 +37,7 @@ binwrite_num_impl!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
 // =========================== array/vec ===========================
 
-impl<T: BinWrite, const N: usize> BinWrite for [T; N] {
+impl<T: BinWrite + 'static, const N: usize> BinWrite for [T; N] {
     type Args = T::Args;
 
     fn write_options<W: Write + Seek>(
@@ -45,8 +46,12 @@ impl<T: BinWrite, const N: usize> BinWrite for [T; N] {
         options: &WriteOptions,
         args: Self::Args,
     ) -> BinResult<()> {
-        for item in self {
-            T::write_options(item, writer, options, args.clone())?;
+        if let Some(this) = <dyn Any>::downcast_ref::<[u8; N]>(self) {
+            writer.write_all(&this[..])?;
+        } else {
+            for item in self {
+                T::write_options(item, writer, options, args.clone())?;
+            }
         }
 
         Ok(())
@@ -70,7 +75,7 @@ impl<T: BinWrite> BinWrite for [T] {
     }
 }
 
-impl<T: BinWrite> BinWrite for Vec<T> {
+impl<T: BinWrite + 'static> BinWrite for Vec<T> {
     type Args = T::Args;
 
     fn write_options<W: Write + Seek>(
@@ -79,8 +84,12 @@ impl<T: BinWrite> BinWrite for Vec<T> {
         options: &WriteOptions,
         args: Self::Args,
     ) -> BinResult<()> {
-        for item in self {
-            T::write_options(item, writer, options, args.clone())?;
+        if let Some(this) = <dyn Any>::downcast_ref::<Vec<u8>>(self) {
+            writer.write_all(this)?;
+        } else {
+            for item in self {
+                T::write_options(item, writer, options, args.clone())?;
+            }
         }
 
         Ok(())
@@ -104,7 +113,7 @@ impl<T: BinWrite + ?Sized> BinWrite for &T {
     }
 }
 
-impl<T: BinWrite> BinWrite for Box<T> {
+impl<T: BinWrite + 'static> BinWrite for Box<T> {
     type Args = T::Args;
 
     fn write_options<W: Write + Seek>(
@@ -113,7 +122,13 @@ impl<T: BinWrite> BinWrite for Box<T> {
         options: &WriteOptions,
         args: Self::Args,
     ) -> BinResult<()> {
-        (**self).write_options(writer, options, args)
+        if let Some(this) = <dyn Any>::downcast_ref::<Box<[u8]>>(self) {
+            writer.write_all(this)?;
+        } else {
+            (**self).write_options(writer, options, args)?;
+        }
+
+        Ok(())
     }
 }
 
