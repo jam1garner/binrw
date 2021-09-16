@@ -64,11 +64,11 @@ where
 {
     move |reader, ro, args| {
         let mut result = Vec::new();
-        let mut last = reader.read_type_args(ro.endian, args.clone())?;
+        let mut last = reader.read_type_args(ro.endian(), args.clone())?;
 
         while !cond(&last) {
             result.push(last);
-            last = reader.read_type_args(ro.endian, args.clone())?;
+            last = reader.read_type_args(ro.endian(), args.clone())?;
         }
 
         result.push(last);
@@ -105,11 +105,11 @@ where
 {
     move |reader, ro, args| {
         let mut result = Vec::new();
-        let mut last = reader.read_type_args(ro.endian, args.clone())?;
+        let mut last = reader.read_type_args(ro.endian(), args.clone())?;
 
         while !cond(&last) {
             result.push(last);
-            last = reader.read_type_args(ro.endian, args.clone())?;
+            last = reader.read_type_args(ro.endian(), args.clone())?;
         }
 
         Ok(result.into_iter().collect())
@@ -140,13 +140,13 @@ where
     Ret: core::iter::FromIterator<T>,
 {
     let mut result = Vec::new();
-    let mut last = reader.read_type_args(ro.endian, args.clone());
+    let mut last = reader.read_type_args(ro.endian(), args.clone());
 
     while !matches!(&last, Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof) {
         last = match last {
             Ok(x) => {
                 result.push(x);
-                reader.read_type_args(ro.endian, args.clone())
+                reader.read_type_args(ro.endian(), args.clone())
             }
             Err(err) => return Err(err),
         }
@@ -183,7 +183,7 @@ where
 {
     move |reader, ro, args| {
         (0..n)
-            .map(|_| reader.read_type_args(ro.endian, args.clone()))
+            .map(|_| reader.read_type_args(ro.endian(), args.clone()))
             .collect()
     }
 }

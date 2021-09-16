@@ -24,7 +24,7 @@ macro_rules! binread_impl {
                         reader.seek(SeekFrom::Start(pos))?;
                         Err(e)
                     })?;
-                    Ok(match options.endian {
+                    Ok(match options.endian() {
                         Endian::Big => {
                             <$type_name>::from_be_bytes(val)
                         }

@@ -189,7 +189,7 @@ impl<'field> AfterParseCallGenerator<'field> {
             self.out = quote! {
                 let #options_var = &{
                     let mut #TEMP = *#options_var;
-                    #TEMP.offset = #offset;
+                    let #TEMP = #TEMP.with_offset(#offset);
                     #TEMP
                 };
                 #tail

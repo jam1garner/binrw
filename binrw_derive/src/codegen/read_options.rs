@@ -210,7 +210,7 @@ impl ReadOptionsGenerator {
         let head = self.out;
         self.out = quote! {
             #head
-            #TEMP.endian = #endian;
+            let #TEMP = #TEMP.with_endian(#endian);
         };
 
         self
@@ -239,7 +239,7 @@ impl ReadOptionsGenerator {
             let head = self.out;
             self.out = quote! {
                 #head
-                #TEMP.offset = #offset;
+                let #TEMP = #TEMP.with_offset(#offset);
             };
         }
 

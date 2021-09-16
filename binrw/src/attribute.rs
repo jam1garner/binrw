@@ -90,8 +90,7 @@
 //!     child: Child,
 //! };
 //!
-//! let mut options = ReadOptions::default();
-//! options.endian = Endian::Big; // ← this will be ignored
+//! let mut options = ReadOptions::new(Endian::Big /* ← this will be ignored */);
 //! # assert_eq!(
 //! Child::read_options(&mut Cursor::new(b"\x01\0\0\0"), &options, ())
 //! # .unwrap(), Child(1));

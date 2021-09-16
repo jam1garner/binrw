@@ -135,10 +135,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
 
     /// Read `T` from the reader with the given byte order and arguments.
     fn read_type_args<T: BinRead>(&mut self, endian: Endian, args: T::Args) -> BinResult<T> {
-        let options = ReadOptions {
-            endian,
-            ..Default::default()
-        };
+        let options = ReadOptions::default().with_endian(endian);
 
         let mut res = T::read_options(self, &options, args.clone())?;
         res.after_parse(self, &options, args)?;
