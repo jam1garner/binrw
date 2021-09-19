@@ -6,7 +6,7 @@ use super::super::{
 
 use super::Struct;
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use syn::spanned::Spanned;
 
 attr_struct! {
@@ -18,6 +18,7 @@ attr_struct! {
         pub(crate) ident: syn::Ident,
         pub(crate) generated_ident: bool,
         pub(crate) ty: syn::Type,
+        pub(crate) span: Span,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
@@ -155,6 +156,7 @@ impl FromField for StructField {
                     .unwrap_or_else(|| quote::format_ident!("self_{}", index)),
                 generated_ident: field.ident.is_none(),
                 ty: field.ty.clone(),
+                span: field.span(),
                 endian: <_>::default(),
                 map: <_>::default(),
                 magic: <_>::default(),

@@ -1,15 +1,15 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 #![allow(clippy::expl_impl_clone_on_copy)]
+#![cfg_attr(nightly, feature(proc_macro_span))]
 
+mod backtrace;
+mod binread;
+mod binrw_attr;
+mod binwrite;
 mod codegen;
 mod named_args;
 mod parser;
-
-mod binread;
-mod binwrite;
-
-mod binrw_attr;
 
 use crate::{
     codegen::typed_builder::{Builder, BuilderField, BuilderFieldKind},
