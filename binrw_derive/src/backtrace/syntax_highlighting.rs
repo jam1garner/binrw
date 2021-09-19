@@ -78,93 +78,7 @@ impl<'ast> Visit<'ast> for Visitor {
     }
 
     fn visit_ident(&mut self, ident: &'ast proc_macro2::Ident) {
-        macro_rules! is_any {
-            ($($option:ident),*) => {
-                $(ident == (stringify!($option)) ||)* false
-            }
-        }
-
-        if is_any!(
-            // prelude/keywords/primitives
-            Vec,
-            u8,
-            u16,
-            u32,
-            u64,
-            u128,
-            i8,
-            i16,
-            i32,
-            i64,
-            i128,
-            char,
-            String,
-            Default,
-            Self,
-            super,
-            Drop,
-            Send,
-            Sync,
-            Sized,
-            Fn,
-            FnMut,
-            FnOnce,
-            From,
-            Into,
-            Iterator,
-            IntoIterator,
-            Ord,
-            Eq,
-            PartialEq,
-            Eq,
-            Box,
-            ToString,
-            usize,
-            isize,
-            f32,
-            f64,
-            str,
-            // binrw 'keywords'
-            align_after,
-            align_before,
-            args,
-            args_raw,
-            assert,
-            big,
-            binread,
-            br,
-            brw,
-            binwrite,
-            bw,
-            calc,
-            count,
-            default,
-            deref_now,
-            ignore,
-            import,
-            import_raw,
-            is_big,
-            is_little,
-            little,
-            magic,
-            map,
-            offset,
-            offset_after,
-            pad_after,
-            pad_before,
-            pad_size_to,
-            parse_with,
-            postprocess_now,
-            pre_assert,
-            repr,
-            restore_position,
-            return_all_errors,
-            return_unexpected_error,
-            seek_before,
-            temp,
-            try_map,
-            write_with
-        ) {
+        if is_keyword_ident(ident) {
             let start = ident.span().start();
             let end = ident.span().end();
 
@@ -231,4 +145,29 @@ impl<'ast> Visit<'ast> for Visitor {
             visit::visit_expr(self, arg);
         }
     }
+}
+
+fn is_keyword_ident(ident: &syn::Ident) -> bool {
+    macro_rules! is_any {
+        ($($option:ident),*) => {
+            $(ident == (stringify!($option)) ||)* false
+        }
+    }
+
+    #[rustfmt::skip]
+    let is_keyword = is_any!(
+        // prelude/keywords/primitives
+        Vec, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, char, String, Default,
+        Self, super, Drop, Send, Sync, Sized, Fn, FnMut, FnOnce, From, Into, Iterator,
+        IntoIterator, Ord, Eq, PartialEq, Eq, Box, ToString, usize, isize, f32, f64, str,
+
+        // binrw 'keywords'
+        align_after, align_before, args, args_raw, assert, big, binread, br, brw, binwrite,
+        bw, calc, count, default, deref_now, ignore, import, import_raw, is_big, is_little,
+        little, magic, map, offset, offset_after, pad_after, pad_before, pad_size_to, parse_with,
+        postprocess_now, pre_assert, repr, restore_position, return_all_errors,
+        return_unexpected_error, seek_before, temp, try_map, write_with
+    );
+
+    is_keyword
 }
