@@ -821,11 +821,11 @@
 //! ### Using `count` with [`FilePtr`](crate::FilePtr) and `Vec`
 //!
 //! ```
-//! # use binrw::{prelude::*, io::Cursor, FilePtr};
+//! # use binrw::{prelude::*, helpers::count, io::Cursor, FilePtr};
 //! #[derive(BinRead)]
 //! struct MyType {
 //!     size: u32,
-//!     #[br(count = size)]
+//!     #[br(parse_with = FilePtr::with(count(size as usize)))]
 //!     data: FilePtr<u32, Vec<u8>>,
 //! }
 //!

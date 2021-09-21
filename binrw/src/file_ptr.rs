@@ -43,12 +43,12 @@ use crate::{
 ///           [pointer]           [value]
 /// 00000000: 0000 0008 0000 0000 ff                   ............
 /// ```
-pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
+pub struct FilePtr<Ptr: IntoSeekFrom, T> {
     /// The raw offset to the value.
     pub ptr: Ptr,
 
     /// The pointed-to value.
-    pub value: Option<BR>,
+    pub value: Option<T>,
 }
 
 /// A type alias for [`FilePtr`] with 8-bit offsets.
@@ -85,37 +85,106 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     where
         R: Read + Seek,
     {
-        let relative_to = ro.offset();
+        self.after_parse_with_parser(BR::read_options, BR::after_parse, reader, ro, args)
+    }
+}
+
+impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
+    fn read_with_parser<R, Parser, AfterParse, Args>(
+        parser: Parser,
+        after_parse: AfterParse,
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Args,
+    ) -> BinResult<Self>
+    where
+        R: Read + Seek,
+        Args: Clone,
+        Parser: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
+        AfterParse: Fn(&mut T, &mut R, &ReadOptions, Args) -> BinResult<()>,
+    {
+        let mut file_ptr = Self {
+            ptr: Ptr::read_options(reader, options, ())?,
+            value: None,
+        };
+        file_ptr.after_parse_with_parser(parser, after_parse, reader, options, args)?;
+        Ok(file_ptr)
+    }
+
+    fn after_parse_with_parser<R, Parser, AfterParse, Args>(
+        &mut self,
+        parser: Parser,
+        after_parse: AfterParse,
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Args,
+    ) -> BinResult<()>
+    where
+        R: Read + Seek,
+        Args: Clone,
+        Parser: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
+        AfterParse: Fn(&mut T, &mut R, &ReadOptions, Args) -> BinResult<()>,
+    {
+        let relative_to = options.offset();
         let before = reader.stream_position()?;
         reader.seek(SeekFrom::Start(relative_to))?;
         reader.seek(self.ptr.into_seek_from())?;
 
-        let mut inner: BR = BinRead::read_options(reader, ro, args.clone())?;
+        let mut inner: T = parser(reader, options, args.clone())?;
 
-        inner.after_parse(reader, ro, args)?;
+        after_parse(&mut inner, reader, options, args)?;
+        reader.seek(SeekFrom::Start(before))?;
 
         self.value = Some(inner);
-
-        reader.seek(SeekFrom::Start(before))?;
         Ok(())
     }
-}
 
-impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
     /// Custom parser for use with the
     /// [`parse_with`](crate::attribute#custom-parsers) directive that reads
     /// and then immediately finalizes a [`FilePtr`], returning the pointed-to
     /// value as the result.
-    pub fn parse<R: Read + Seek>(
-        reader: &mut R,
-        options: &ReadOptions,
-        args: BR::Args,
-    ) -> BinResult<BR> {
-        let mut ptr: Self = Self::read_options(reader, options, args.clone())?;
-        let saved_pos = reader.stream_position()?;
-        ptr.after_parse(reader, options, args)?;
-        reader.seek(SeekFrom::Start(saved_pos))?;
-        Ok(ptr.into_inner())
+    pub fn parse<R, Args>(reader: &mut R, options: &ReadOptions, args: Args) -> BinResult<T>
+    where
+        R: Read + Seek,
+        Args: Clone,
+        T: BinRead<Args = Args>,
+    {
+        Ok(
+            Self::read_with_parser(T::read_options, T::after_parse, reader, options, args)?
+                .into_inner(),
+        )
+    }
+
+    /// Custom parser for use with the
+    /// [`parse_with`](crate::attribute#custom-parsers) directive that reads and then
+    /// immediately finalizes a [`FilePtr`] using the specified parser, returning the pointed-to
+    /// value as the result.
+    pub fn parse_with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<T>
+    where
+        R: Read + Seek,
+        Args: Clone,
+        F: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
+    {
+        move |reader, ro, args| {
+            let after_parse = |_: &mut T, _: &mut R, _: &ReadOptions, _: Args| Ok(());
+            Ok(Self::read_with_parser(&parser, after_parse, reader, ro, args)?.into_inner())
+        }
+    }
+
+    /// Custom parser for use with the
+    /// [`parse_with`](crate::attribute#custom-parsers) directive that reads and then
+    /// immediately finalizes a [`FilePtr`] using the specified parser, returning the [`FilePtr`]
+    /// as the result.
+    pub fn with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<Self>
+    where
+        R: Read + Seek,
+        Args: Clone,
+        F: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
+    {
+        move |reader, ro, args| {
+            let after_parse = |_: &mut T, _: &mut R, _: &ReadOptions, _: Args| Ok(());
+            Self::read_with_parser(&parser, after_parse, reader, ro, args)
+        }
     }
 
     /// Consumes this object, returning the pointed-to value.
@@ -124,7 +193,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
     ///
     /// Will panic if `FilePtr` hasn’t been finalized by calling
     /// [`after_parse()`](Self::after_parse).
-    pub fn into_inner(self) -> BR {
+    pub fn into_inner(self) -> T {
         self.value.unwrap()
     }
 }
