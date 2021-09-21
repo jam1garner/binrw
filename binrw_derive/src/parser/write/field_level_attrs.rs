@@ -94,6 +94,7 @@ impl FromField for StructField {
                 align_after: <_>::default(),
                 seek_before: <_>::default(),
                 pad_size_to: <_>::default(),
+                keyword_spans: <_>::default(),
             },
             &field.attrs,
         )
@@ -123,6 +124,7 @@ impl FromField for UnitEnumField {
                 ident: field.ident.clone(),
                 magic: <_>::default(),
                 pre_assertions: <_>::default(),
+                keyword_spans: <_>::default(),
             },
             &field.attrs,
         )

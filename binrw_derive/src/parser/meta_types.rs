@@ -5,7 +5,9 @@ use syn::{
     braced, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token, Expr, Lit, Token, Type,
+    spanned::Spanned,
+    token::{self, Token},
+    Expr, Lit, Token, Type,
 };
 
 type Fields<T> = Punctuated<T, Token![,]>;
@@ -37,7 +39,7 @@ pub(crate) struct MetaValue<Keyword, Value> {
     pub(crate) value: Value,
 }
 
-impl<Keyword: syn::token::Token + syn::spanned::Spanned> KeywordToken for MetaVoid<Keyword> {
+impl<Keyword: Token + Spanned> KeywordToken for MetaVoid<Keyword> {
     type Token = Keyword;
 
     fn keyword_span(&self) -> proc_macro2::Span {
@@ -73,9 +75,7 @@ impl<Keyword, Value: ToTokens> ToTokens for MetaValue<Keyword, Value> {
     }
 }
 
-impl<Keyword: syn::token::Token + syn::spanned::Spanned, Value> KeywordToken
-    for MetaValue<Keyword, Value>
-{
+impl<Keyword: Token + Spanned, Value> KeywordToken for MetaValue<Keyword, Value> {
     type Token = Keyword;
 
     fn keyword_span(&self) -> proc_macro2::Span {
@@ -121,9 +121,7 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
     }
 }
 
-impl<Keyword: syn::token::Token + syn::spanned::Spanned, ItemType> KeywordToken
-    for MetaList<Keyword, ItemType>
-{
+impl<Keyword: Token + Spanned, ItemType> KeywordToken for MetaList<Keyword, ItemType> {
     type Token = Keyword;
 
     fn keyword_span(&self) -> proc_macro2::Span {
@@ -186,7 +184,7 @@ where
     }
 }
 
-impl<Keyword: syn::token::Token + syn::spanned::Spanned, ParenItemType, BraceItemType> KeywordToken
+impl<Keyword: Token + Spanned, ParenItemType, BraceItemType> KeywordToken
     for MetaEnclosedList<Keyword, ParenItemType, BraceItemType>
 {
     type Token = Keyword;

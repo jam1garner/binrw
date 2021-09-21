@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Range};
 
-use crate::parser::read::StructField;
+use crate::parser::{read::StructField, CondEndian, Condition, Map, PassedArgs, ReadMode};
 use owo_colors::XtermColors;
 use syn::visit::{self, /*visit_expr,*/ visit_type, Visit};
 
@@ -43,10 +43,105 @@ pub(super) fn get_syntax_highlights(field: &StructField) -> SyntaxInfo {
     let mut visit = Visitor::default();
 
     visit_type(&mut visit, &field.ty);
+    visit_expr_attributes(field, &mut visit);
 
-    let Visitor { syntax_info } = visit;
+    let Visitor { mut syntax_info } = visit;
+
+    for keyword_span in &field.keyword_spans {
+        let start = keyword_span.start();
+        let end = keyword_span.end();
+        let line = syntax_info
+            .lines
+            .entry(start.line)
+            .or_insert_with(LineSyntax::default);
+
+        line.highlights
+            .push((start.column..end.column, Color::Keyword));
+    }
+
+    // ensure highlights are sorted in-order
+    syntax_info
+        .lines
+        .values_mut()
+        .for_each(|line| line.highlights.sort_by_key(|x| x.0.start));
 
     syntax_info
+}
+
+fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
+    macro_rules! visit {
+        ($expr:expr) => {
+            if let Ok(expr) = syn::parse2::<syn::Expr>($expr) {
+                visit::visit_expr(visitor, &expr);
+            }
+        };
+    }
+
+    macro_rules! spans_from_exprs {
+        ($($field:ident),*) => {
+            $(
+                if let Some(tokens) = field.$field.clone() {
+                    visit!(tokens);
+                }
+            )*
+        };
+    }
+
+    spans_from_exprs!(
+        count,
+        offset,
+        pad_before,
+        pad_after,
+        align_before,
+        align_after,
+        seek_before,
+        pad_size_to
+    );
+
+    if let Some(tokens) = field.offset_after.clone() {
+        visit!((*tokens).clone());
+    }
+
+    if let Some(condition) = field.if_cond.clone() {
+        let Condition {
+            condition,
+            alternate,
+        } = condition;
+
+        visit!(condition);
+        visit!(alternate);
+    }
+
+    if let Some(magic) = field.magic.clone() {
+        visit!(magic.into_value().into_match_value());
+    }
+
+    if let CondEndian::Cond(_, expr) = &field.endian {
+        visit!(expr.clone());
+    }
+
+    if let Map::Map(expr) | Map::Try(expr) = field.map.clone() {
+        visit!(expr);
+    }
+
+    match &field.args {
+        PassedArgs::List(args) => {
+            for arg in args {
+                visit!(arg.clone());
+            }
+        }
+        PassedArgs::Tuple(expr) => {
+            visit!(expr.clone());
+        }
+        PassedArgs::Named(_args) => {
+            // ???
+        }
+        PassedArgs::None => (),
+    }
+
+    if let ReadMode::Calc(expr) = &field.read_mode {
+        visit!(expr.clone());
+    }
 }
 
 impl<'ast> Visit<'ast> for Visitor {
