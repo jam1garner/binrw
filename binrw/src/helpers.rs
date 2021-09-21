@@ -1,9 +1,11 @@
 //! Helper functions for reading data.
 
 use crate::{
-    io::{ErrorKind::UnexpectedEof, Read, Seek},
-    BinRead, BinReaderExt, BinResult, ReadOptions, VecArgs,
+    io::{self, ErrorKind::UnexpectedEof, Read, Seek},
+    BinRead, BinReaderExt, BinResult, Error, ReadOptions, VecArgs,
 };
+use core::convert::TryInto;
+
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
 
@@ -155,6 +157,13 @@ where
     Ok(result.into_iter().collect())
 }
 
+fn not_enough_bytes<T>(_: T) -> Error {
+    Error::Io(io::Error::new(
+        io::ErrorKind::UnexpectedEof,
+        "not enough bytes in reader",
+    ))
+}
+
 /// A helper similar to `#[br(count = N)]` which can be used with any collection.
 ///
 /// # Examples
@@ -179,11 +188,22 @@ where
     T: BinRead<Args = Arg>,
     R: Read + Seek,
     Arg: Clone,
-    Ret: core::iter::FromIterator<T>,
+    Ret: core::iter::FromIterator<T> + 'static,
 {
     move |reader, ro, args| {
-        (0..n)
-            .map(|_| reader.read_type_args(ro.endian(), args.clone()))
-            .collect()
+        let mut container: Ret = core::iter::empty::<T>().collect();
+        if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
+            bytes.reserve(n);
+            let byte_count = reader
+                .take(n.try_into().map_err(not_enough_bytes)?)
+                .read_to_end(bytes)?;
+            (byte_count == n)
+                .then(|| container)
+                .ok_or_else(|| not_enough_bytes(()))
+        } else {
+            (0..n)
+                .map(|_| reader.read_type_args(ro.endian(), args.clone()))
+                .collect()
+        }
     }
 }
