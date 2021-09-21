@@ -11,6 +11,10 @@ impl<T> SpannedValue<T> {
     pub(crate) fn new(value: T, span: Span) -> Self {
         Self { value, span }
     }
+
+    pub(crate) fn into_value(self) -> T {
+        self.value
+    }
 }
 
 impl<T> AsRef<T> for SpannedValue<T> {

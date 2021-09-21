@@ -76,15 +76,21 @@ macro_rules! attr_struct {
                 $(
                     #[cfg($cfg_ident)]
                  )?
-                $field_vis $field: $field_ty
-            ),+
+                $field_vis $field: $field_ty,
+            )+
+
+            pub(crate) keyword_spans: Vec<proc_macro2::Span>,
         }
 
         impl $crate::parser::$mode::FromAttrs<$attr_ty> for $ident {
             fn try_set_attr(&mut self, attr: $attr_ty) -> ::syn::Result<()> {
+                use crate::parser::KeywordToken;
                 match attr {
                     $($(
-                        $($attr_ty::$field_attr_id(value) => value.try_set(&mut self.$field),)+
+                        $($attr_ty::$field_attr_id(value) => {
+                            self.keyword_spans.push(value.keyword_span());
+                            value.try_set(&mut self.$field)
+                        },)+
                     )?)+
                 }
             }
