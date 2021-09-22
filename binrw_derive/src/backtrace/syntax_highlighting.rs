@@ -250,7 +250,8 @@ impl<'ast> Visit<'ast> for Visitor {
 
     fn visit_expr_call(&mut self, call: &'ast syn::ExprCall) {
         if let syn::Expr::Path(path) = &*call.func {
-            if let Some(ident) = path.path.get_ident() {
+            if let Some(ident) = path.path.segments.last() {
+                let ident = &ident.ident;
                 let start = ident.span().start();
                 let end = ident.span().end();
 
@@ -289,6 +290,7 @@ fn is_keyword_ident(ident: &syn::Ident) -> bool {
         Vec, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, char, String, Default,
         Self, super, Drop, Send, Sync, Sized, Fn, FnMut, FnOnce, From, Into, Iterator,
         IntoIterator, Ord, Eq, PartialEq, Eq, Box, ToString, usize, isize, f32, f64, str,
+        Option,
 
         // binrw 'keywords'
         align_after, align_before, args, args_raw, assert, big, binread, br, brw, binwrite,
