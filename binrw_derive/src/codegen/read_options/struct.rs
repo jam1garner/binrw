@@ -117,8 +117,8 @@ fn generate_field(field: &StructField) -> TokenStream {
         return TokenStream::new();
     }
 
-    use crate::backtrace::BacktraceFrame;
-    eprintln!("{}", BacktraceFrame::from_field(field));
+    //use crate::backtrace::BacktraceFrame;
+    //eprintln!("{}", BacktraceFrame::from_field(field));
 
     FieldGenerator::new(field)
         .read_value()
