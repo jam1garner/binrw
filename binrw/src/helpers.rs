@@ -65,17 +65,19 @@ where
     Ret: core::iter::FromIterator<T>,
 {
     move |reader, ro, args| {
-        let mut result = Vec::new();
-        let mut last = reader.read_type_args(ro.endian(), args.clone())?;
-
-        while !cond(&last) {
-            result.push(last);
-            last = reader.read_type_args(ro.endian(), args.clone())?;
-        }
-
-        result.push(last);
-
-        Ok(result.into_iter().collect())
+        let mut last_cond = true;
+        let mut last_error = false;
+        core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
+            .take_while(|result| {
+                let cont = last_cond && !last_error; //keep the first error we get
+                if let Ok(val) = result {
+                    last_cond = !cond(val);
+                } else {
+                    last_error = true;
+                }
+                cont
+            })
+            .collect()
     }
 }
 
@@ -106,15 +108,18 @@ where
     Ret: core::iter::FromIterator<T>,
 {
     move |reader, ro, args| {
-        let mut result = Vec::new();
-        let mut last = reader.read_type_args(ro.endian(), args.clone())?;
-
-        while !cond(&last) {
-            result.push(last);
-            last = reader.read_type_args(ro.endian(), args.clone())?;
-        }
-
-        Ok(result.into_iter().collect())
+        let mut last_error = false;
+        core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
+            .take_while(|result| {
+                !last_error
+                    && if let Ok(val) = result {
+                        !cond(val)
+                    } else {
+                        last_error = true;
+                        true //keep the first error we get
+                    }
+            })
+            .collect()
     }
 }
 
@@ -141,20 +146,20 @@ where
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
-    let mut result = Vec::new();
-    let mut last = reader.read_type_args(ro.endian(), args.clone());
-
-    while !matches!(&last, Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof) {
-        last = match last {
-            Ok(x) => {
-                result.push(x);
-                reader.read_type_args(ro.endian(), args.clone())
-            }
-            Err(err) => return Err(err),
-        }
-    }
-
-    Ok(result.into_iter().collect())
+    let mut last_error = false;
+    core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
+        .take_while(|result| {
+            !last_error
+                && match result {
+                    Ok(_) => true,
+                    Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
+                    Err(_) => {
+                        last_error = true;
+                        true //keep the first error we get
+                    }
+                }
+        })
+        .collect()
 }
 
 fn not_enough_bytes<T>(_: T) -> Error {
