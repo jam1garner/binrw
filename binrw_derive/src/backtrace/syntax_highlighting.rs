@@ -1,7 +1,8 @@
 use std::{collections::HashMap, ops::Range};
 
 use crate::parser::{
-    meta_types::FieldValue, read::StructField, CondEndian, Condition, Map, PassedArgs, ReadMode,
+    meta_types::FieldValue, read::StructField, AssertionError, CondEndian, Condition, Map,
+    PassedArgs, ReadMode,
 };
 use owo_colors::XtermColors;
 use syn::{
@@ -156,6 +157,16 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
 
     if let ReadMode::Calc(expr) = &field.read_mode {
         visit!(expr.clone());
+    }
+
+    for assert in &field.assertions {
+        visit!(assert.condition.clone());
+
+        if let Some(AssertionError::Message(err) | AssertionError::Error(err)) =
+            assert.consequent.clone()
+        {
+            visit!(err);
+        }
     }
 }
 
