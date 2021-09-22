@@ -1,8 +1,15 @@
 use std::{collections::HashMap, ops::Range};
 
-use crate::parser::{read::StructField, CondEndian, Condition, Map, PassedArgs, ReadMode};
+use crate::parser::{
+    meta_types::FieldValue, read::StructField, CondEndian, Condition, Map, PassedArgs, ReadMode,
+};
 use owo_colors::XtermColors;
-use syn::visit::{self, /*visit_expr,*/ visit_type, Visit};
+use syn::{
+    parse::Parse,
+    punctuated::Punctuated,
+    token::Token,
+    visit::{self, /*visit_expr,*/ visit_type, Visit},
+};
 
 #[derive(Default)]
 pub(crate) struct SyntaxInfo {
@@ -133,14 +140,30 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         PassedArgs::Tuple(expr) => {
             visit!(expr.clone());
         }
-        PassedArgs::Named(_args) => {
-            // ???
+        PassedArgs::Named(args) => {
+            for arg in args {
+                if let Ok(args) = syn::parse2::<ArgList>(arg.clone()) {
+                    for arg in args.0 {
+                        if let Some(expr) = arg.expr {
+                            visit::visit_expr(visitor, &expr);
+                        }
+                    }
+                }
+            }
         }
         PassedArgs::None => (),
     }
 
     if let ReadMode::Calc(expr) = &field.read_mode {
         visit!(expr.clone());
+    }
+}
+
+struct ArgList(Punctuated<FieldValue, syn::token::Comma>);
+
+impl Parse for ArgList {
+    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        Punctuated::parse_terminated(input).map(Self)
     }
 }
 
