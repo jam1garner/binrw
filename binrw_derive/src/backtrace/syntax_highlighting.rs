@@ -5,9 +5,12 @@ use crate::parser::{
     PassedArgs, ReadMode,
 };
 use owo_colors::XtermColors;
+use proc_macro2::{Span, TokenTree};
+use quote::ToTokens;
 use syn::{
     parse::Parse,
     punctuated::Punctuated,
+    spanned::Spanned,
     token::Token,
     visit::{self, /*visit_expr,*/ visit_type, Visit},
 };
@@ -17,13 +20,14 @@ pub(crate) struct SyntaxInfo {
     pub(crate) lines: HashMap<usize, LineSyntax>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Color {
     String,   // yellow
     Char,     // purple
     Number,   // purple
     Keyword,  // red
     Function, // green
+    Unary,    // blue
 }
 
 impl Color {
@@ -33,6 +37,7 @@ impl Color {
             Self::Char | Self::Number => XtermColors::Heliotrope,
             Self::Keyword => XtermColors::DarkRose,
             Self::Function => XtermColors::RioGrandeGreen,
+            Self::Unary => XtermColors::MalibuBlue,
         }
     }
 }
@@ -47,11 +52,27 @@ struct Visitor {
     syntax_info: SyntaxInfo,
 }
 
+impl SyntaxInfo {
+    fn highlight_color(&mut self, span: Span, color: Color) {
+        let start = span.start();
+        let end = span.end();
+
+        let line = self
+            .lines
+            .entry(start.line)
+            .or_insert_with(LineSyntax::default);
+
+        assert_eq!(start.line, end.line);
+        line.highlights.push((start.column..end.column, color));
+    }
+}
+
 pub(super) fn get_syntax_highlights(field: &StructField) -> SyntaxInfo {
     let mut visit = Visitor::default();
 
     visit_type(&mut visit, &field.ty);
     visit_expr_attributes(field, &mut visit);
+    highlight_attributes(&field.field.attrs, &mut visit);
 
     let Visitor { mut syntax_info } = visit;
 
@@ -74,6 +95,51 @@ pub(super) fn get_syntax_highlights(field: &StructField) -> SyntaxInfo {
         .for_each(|line| line.highlights.sort_by_key(|x| x.0.start));
 
     syntax_info
+        .lines
+        .values_mut()
+        .for_each(|line| line.highlights.dedup());
+
+    syntax_info
+}
+
+#[allow(clippy::range_plus_one)]
+fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
+    let syntax_info = &mut visit.syntax_info;
+    for attr in attrs {
+        // #[path ...]
+        // ^ ^^^^
+        // |____|______ path and pound_token
+        //
+        syntax_info.highlight_color(attr.pound_token.span(), Color::Keyword);
+        syntax_info.highlight_color(attr.path.span(), Color::Keyword);
+
+        // #[...]
+        //  ^   ^
+        //  |___|___ brackets
+        //
+        let span = attr.bracket_token.span;
+        let start = span.start();
+        let end = span.end();
+
+        let line = syntax_info
+            .lines
+            .entry(start.line)
+            .or_insert_with(LineSyntax::default);
+
+        line.highlights
+            .push((start.column..start.column + 1, Color::Keyword));
+        line.highlights
+            .push((end.column - 1..end.column, Color::Keyword));
+
+        // #[path(...)]
+        //       ^   ^
+        //       |___|___ parens
+        //
+        if let Some(TokenTree::Group(group)) = attr.tokens.clone().into_iter().next() {
+            syntax_info.highlight_color(group.span_open(), Color::Keyword);
+            syntax_info.highlight_color(group.span_close(), Color::Keyword);
+        }
+    }
 }
 
 fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
@@ -155,7 +221,7 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         PassedArgs::None => (),
     }
 
-    if let ReadMode::Calc(expr) = &field.read_mode {
+    if let ReadMode::Calc(expr) | ReadMode::ParseWith(expr) = &field.read_mode {
         visit!(expr.clone());
     }
 
@@ -233,19 +299,7 @@ impl<'ast> Visit<'ast> for Visitor {
             .push((start.column..end.column, Color::Function));
 
         // continue walking ast
-        for attr in &call.attrs {
-            visit::visit_attribute(self, attr);
-        }
-
-        visit::visit_expr(self, &*call.receiver);
-
-        if let Some(turbofish) = call.turbofish.as_ref() {
-            visit::visit_method_turbofish(self, turbofish);
-        }
-
-        for arg in call.args.iter() {
-            visit::visit_expr(self, arg);
-        }
+        visit::visit_expr_method_call(self, call);
     }
 
     fn visit_expr_call(&mut self, call: &'ast syn::ExprCall) {
@@ -265,15 +319,33 @@ impl<'ast> Visit<'ast> for Visitor {
         }
 
         // continue walking ast
-        for attr in &call.attrs {
-            visit::visit_attribute(self, attr);
+        visit::visit_expr_call(self, call);
+    }
+
+    fn visit_bin_op(&mut self, binop: &'ast syn::BinOp) {
+        self.syntax_info
+            .highlight_color(binop.span(), Color::Keyword);
+    }
+
+    fn visit_un_op(&mut self, unop: &'ast syn::UnOp) {
+        self.syntax_info.highlight_color(unop.span(), Color::Unary);
+    }
+
+    fn visit_member(&mut self, member: &'ast syn::Member) {
+        if let syn::Member::Unnamed(index) = member {
+            self.syntax_info.highlight_color(index.span, Color::Number);
+        }
+    }
+
+    fn visit_path(&mut self, path: &'ast syn::Path) {
+        if path.segments.len() > 1 {
+            if let Some(first_segment) = path.segments.iter().next() {
+                self.syntax_info
+                    .highlight_color(first_segment.ident.span(), Color::Keyword);
+            }
         }
 
-        visit::visit_expr(self, &*call.func);
-
-        for arg in call.args.iter() {
-            visit::visit_expr(self, arg);
-        }
+        visit::visit_path(self, path);
     }
 }
 
