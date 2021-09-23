@@ -12,7 +12,6 @@ use syn::spanned::Spanned;
 
 pub(crate) struct BacktraceFrame {
     span: Span,
-    //ty: Type,
     highlight_line: usize,
     syntax_info: SyntaxInfo,
 }
@@ -27,7 +26,7 @@ struct Line {
 impl BacktraceFrame {
     pub(crate) fn from_field(field: &StructField) -> Self {
         Self {
-            span: field.span,
+            span: field.field.span(),
             highlight_line: field.ty.span().start().line,
             syntax_info: syntax_highlighting::get_syntax_highlights(field),
             //ty: field.ty.clone(),
@@ -110,6 +109,10 @@ impl BacktraceFrame {
                 } else {
                     write!(f, "{}", component)?;
                 }
+            } else if should_highlight {
+                write!(f, "{}", line.bold())?;
+            } else {
+                write!(f, "{}", line)?;
             }
 
             for ((range, color), next_start) in highlights.zip(highlights_next_start) {
