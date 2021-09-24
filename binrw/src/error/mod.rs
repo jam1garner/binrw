@@ -7,6 +7,11 @@ use crate::io;
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{any::Any, fmt};
 
+use crate::alloc::borrow::Cow;
+
+mod backtrace;
+pub use backtrace::*;
+
 /// The `CustomError` trait describes types that are usable as custom errors
 /// in a [`BinResult`](crate::BinResult).
 ///
@@ -39,6 +44,17 @@ impl<T: fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
     fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync> {
         self
     }
+}
+
+/// An extension trait allowing for errors to be given additional frames of context
+pub trait ContextExt {
+    /// Adds an additional frame of context to the backtrace
+    fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self;
+
+    /// Adds an additional frame of context to the backtrace including a message, file name, and
+    /// line number.
+    #[track_caller]
+    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self;
 }
 
 // The intent here is to allow any object which is compatible with
@@ -153,6 +169,9 @@ pub enum Error {
         /// second field is the error that occurred when parsing that variant.
         variant_errors: Vec<(&'static str, Error)>,
     },
+
+    /// An error with additional frames of context used to construct a backtrace
+    Backtrace(Backtrace),
 }
 
 impl Error {
@@ -191,6 +210,7 @@ impl fmt::Display for Error {
                 }
                 Ok(())
             }
+            Self::Backtrace(_backtrace) => todo!(),
         }
     }
 }
