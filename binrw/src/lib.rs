@@ -1,8 +1,12 @@
-//! **Maintainer's Note:** binrw is in a somewhat early state. Lots of work is being
-//! done in order to make a great library before holding it to too many stability guarantees.
-//! Expect a bit of API churn, especially with writing support as it is currently unfinished.
-//! If you're interested in getting involved, join us on [discord] or [matrix]! (whichever you
-//! prefer, they're bridged together)
+//! **Maintainer's Note:** binrw is currently considered pre-release. Most features are in-place
+//! but documentation may need work and there may be small breaking changes before release. Need
+//! help or want to contribute? Join us on [discord] or [matrix]! (whichever you prefer, they're
+//! bridged together)
+//!
+//! ---
+//!
+//! |**Quick links**|[`#[br]`](attribute::read)|[`#[bw]`](attribute::write)|[`BinReaderExt`]|[discord]|[matrix]|
+//! |-|-|-|-|-|-|
 //!
 //! ---
 //!
@@ -10,26 +14,48 @@
 //! [matrix]: https://matrix.to/#/#binrw:matrix.org
 //!
 //! binrw helps you write maintainable & easy-to-read declarative binary data
-//! parsers using ✨macro magic✨.
+//! readers and writers using ✨macro magic✨.
 //!
-//! Adding `#[derive(BinRead)]` to any struct or enum generates a parser that
-//! can read that type from raw data:
+//! Adding `#[binrw]` (or `#[derive(BinRead, BinWrite)]`) to a struct or enum
+//! generates a parser that can read that type from raw data and a writer that
+//! can write it back to bytes:
 //!
 //! ```
-//! # use binrw::{BinRead, io::Cursor};
+//! use binrw::binrw; // #[binrw] attribute
+//! use binrw::{BinReaderExt, BinWrite, io::Cursor}; // reading/writing utilities
+//!
+//! #[binrw]
 //! # #[derive(Debug, PartialEq)]
-//! #[derive(BinRead)]
 //! #[br(little)]
 //! struct Point(i16, i16);
 //!
-//! let point = Point::read(&mut Cursor::new(b"\x80\x02\xe0\x01")).unwrap();
+//! // Read a point from bytes
+//! let point: Point = Cursor::new(b"\x80\x02\xe0\x01").read_le().unwrap();
 //! assert_eq!(point, Point(640, 480));
 //!
+//! // Write the point back to bytes
+//! let mut writer = Cursor::new(Vec::new());
+//! point.write_to(&mut writer).unwrap();
+//! assert_eq!(&writer.into_inner()[..], b"\x80\x02\xe0\x01");
+//! ```
+//!
+//! These types are composable, allowing you to use [`BinRead`]/[`BinWrite`] types within
+//! others without any special logic:
+//!
+//! ```
+//! # use binrw::{binrw, BinRead, BinWrite, io::Cursor};
+//! # #[binrw]
+//! # #[derive(Debug, PartialEq)]
+//! # #[br(little)]
+//! # struct Point(i16, i16);
+//! #
 //! # #[derive(Debug, PartialEq)]
 //! #[derive(BinRead)]
 //! #[br(big, magic = b"SHAP")]
 //! enum Shape {
-//!     #[br(magic(0u8))] Rect { left: i16, top: i16, right: i16, bottom: i16 },
+//!     #[br(magic(0u8))] Rect {
+//!         left: i16, top: i16, right: i16, bottom: i16
+//!     },
 //!     #[br(magic(1u8))] Oval { origin: Point, rx: u8, ry: u8 }
 //! }
 //!
