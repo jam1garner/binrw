@@ -605,7 +605,7 @@
 //! error upwards and attaching additional information (surrounding code, line numbers,
 //! messages, etc.) in order to aid in debugging.
 //!
-//! The `#[br(context_err(...))]` attribute can work in one of two ways:
+//! The `#[br(err_context(...))]` attribute can work in one of two ways:
 //!
 //! 1. If the first (or only) item is a string literal, it will be a message format string,
 //! with any other arguments being used as arguments. This uses the same formatting as `format!`,

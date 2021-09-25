@@ -16,7 +16,7 @@
 //! binrw helps you write maintainable & easy-to-read declarative binary data
 //! readers and writers using ✨macro magic✨.
 //!
-//! Adding `#[binrw]` (or `#[derive(BinRead, BinWrite)]`) to a struct or enum
+//! Adding [`#[binrw]`](macro@binrw) (or `#[derive(BinRead, BinWrite)]`) to a struct or enum
 //! generates a parser that can read that type from raw data and a writer that
 //! can write it back to bytes:
 //!
