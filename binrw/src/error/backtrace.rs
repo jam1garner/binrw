@@ -1,6 +1,8 @@
 use super::*;
-use crate::alloc::borrow::Cow;
 
+use crate::alloc::borrow::Cow;
+use crate::alloc::string::ToString;
+use crate::alloc::{format, vec};
 use core::fmt;
 
 /// A backtrace containing a set of frames representing (in order from innermost to outmost code)
@@ -90,7 +92,7 @@ impl ContextExt for Backtrace {
     #[track_caller]
     fn with_message(mut self, message: impl Into<Cow<'static, str>>) -> Self {
         let message = message.into();
-        let caller = std::panic::Location::caller();
+        let caller = core::panic::Location::caller();
 
         match message {
             Cow::Owned(message) => {
@@ -132,7 +134,7 @@ impl ContextExt for Error {
             Error::Backtrace(backtrace) => Error::Backtrace(backtrace.with_message(message)),
             error => {
                 let message = message.into();
-                let caller = std::panic::Location::caller();
+                let caller = core::panic::Location::caller();
                 Error::Backtrace(Backtrace::new(
                     error,
                     vec![match message {
@@ -167,7 +169,7 @@ impl<T> ContextExt for Result<T, Error> {
     fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self {
         match self {
             Err(err) => {
-                let caller = std::panic::Location::caller();
+                let caller = core::panic::Location::caller();
                 Err(match err {
                     Error::Backtrace(backtrace) => {
                         Error::Backtrace(backtrace.with_message(message))
@@ -387,8 +389,6 @@ mod tests {
         let (line1, error) = (line!(), Err::<(), _>(error.with_message(ERR1)));
         let (line2, error) = (line!(), error.with_message(ERR2));
         let error = error.with_context(ERR3);
-
-        dbg!(line1, line2, &error);
 
         if let Error::Backtrace(backtrace) = error.unwrap_err() {
             if let Error::AssertFail { pos: 4, message } = &*backtrace.error {
