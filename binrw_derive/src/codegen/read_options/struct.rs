@@ -1,5 +1,4 @@
 use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
-use crate::backtrace::BacktraceFrame;
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Input, Struct, StructField};
@@ -8,6 +7,9 @@ use owo_colors::OwoColorize;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::Ident;
+
+#[cfg(nightly)]
+use crate::backtrace::BacktraceFrame;
 
 pub(super) fn generate_unit_struct(
     input: &Input,
