@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod r#enum;
 mod map_args;
 mod r#struct;
