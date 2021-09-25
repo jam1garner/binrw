@@ -67,7 +67,16 @@ impl Backtrace {
         if let Some(first_frame) = frames.next() {
             first_frame.display_with_message(
                 f,
-                &format!("\x1b[1mError: {}\x1b[22m", FirstErrorFmt(&*self.error)),
+                &format!(
+                    "\x1b[1mError: {}\x1b[22m\n    {}\x1b[1m{}\x1b[22m",
+                    FirstErrorFmt(&*self.error),
+                    if !matches!(&*self.error, Error::EnumErrors { .. }) {
+                        "       "
+                    } else {
+                        "..."
+                    },
+                    first_frame.message(),
+                ),
                 0,
             )?;
 
@@ -260,7 +269,11 @@ impl BacktraceFrame {
             | BacktraceFrame::OwnedFull {
                 code, file, line, ..
             } => {
-                writeln!(f, " {}: {}\n     at {}:{}", index, message, file, line)?;
+                writeln!(
+                    f,
+                    " {}: \x1b[1m{}\x1b[22m\n     at {}:{}",
+                    index, message, file, line
+                )?;
                 if let Some(code) = code {
                     writeln!(f, "{}", code.trim_end())?;
                 }
@@ -269,25 +282,25 @@ impl BacktraceFrame {
             BacktraceFrame::Message(_)
             | BacktraceFrame::OwnedMessage(_)
             | BacktraceFrame::Custom(_) => {
-                writeln!(f, " {}: {}", index, message)
+                writeln!(f, " {}: \x1b[1m{}\x1b[22m", index, message)
             }
         }
     }
 
     fn display(&self, f: &mut fmt::Formatter<'_>, index: usize) -> fmt::Result {
-        let msg;
-        let message: &str = match self {
-            BacktraceFrame::Full { message: msg, .. } | BacktraceFrame::Message(msg) => msg,
-            BacktraceFrame::OwnedFull { message: msg, .. } | BacktraceFrame::OwnedMessage(msg) => {
-                msg
-            }
-            BacktraceFrame::Custom(context) => {
-                msg = context.to_string();
-                &msg
-            }
-        };
+        self.display_with_message(f, &self.message(), index)
+    }
 
-        self.display_with_message(f, &message, index)
+    fn message(&self) -> Cow<'_, str> {
+        match self {
+            BacktraceFrame::Full { message: msg, .. } | BacktraceFrame::Message(msg) => {
+                (*msg).into()
+            }
+            BacktraceFrame::OwnedFull { message: msg, .. } | BacktraceFrame::OwnedMessage(msg) => {
+                msg.into()
+            }
+            BacktraceFrame::Custom(context) => context.to_string().into(),
+        }
     }
 }
 
@@ -310,9 +323,10 @@ impl fmt::Display for FirstErrorFmt<'_> {
                 pos,
                 variant_errors,
             } => {
-                writeln!(f, "no variants matched at {:#x?}\x1b[22m", pos)?;
+                writeln!(f, "no variants matched at {:#x?}...\x1b[22m", pos)?;
 
-                for (name, err) in variant_errors {
+                let len = variant_errors.len();
+                for (i, (name, err)) in variant_errors.iter().enumerate() {
                     writeln!(
                         f,
                         "   ╭───────────────────────┄ {} ┄────────────────────┄",
@@ -326,6 +340,10 @@ impl fmt::Display for FirstErrorFmt<'_> {
                         "\n   ╰─────────────────────────{}──────────────────────┄",
                         "─".repeat(name.len())
                     )?;
+
+                    if i != len - 1 {
+                        writeln!(f)?;
+                    }
                 }
 
                 Ok(())

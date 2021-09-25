@@ -2,8 +2,7 @@ use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Input, Struct, StructField};
-use crate::parser::{Map, PassedArgs, ReadMode};
-use owo_colors::OwoColorize;
+use crate::parser::{ErrContext, Map, PassedArgs, ReadMode};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::Ident;
@@ -425,19 +424,6 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn map_err_context(&self, name: Option<&Ident>, variant_name: Option<&str>) -> TokenStream {
-        let message = format!(
-            "While parsing field '{}' in {}",
-            self.field.ident,
-            name.map_or_else(
-                || variant_name
-                    .unwrap_or("[please report this error]")
-                    .to_string(),
-                ToString::to_string
-            )
-        )
-        .bold()
-        .to_string();
-
         #[cfg(nightly)]
         let code = {
             let code = BacktraceFrame::from_field(self.field).to_string();
@@ -447,14 +433,54 @@ impl<'field> FieldGenerator<'field> {
         #[cfg(not(nightly))]
         let code = quote!(None);
 
-        quote_spanned!( self.field.ident.span() =>
-            .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Full {
-                message: #message,
-                line: ::core::line!(),
-                file: ::core::file!(),
-                code: #code,
-            }))
-        )
+        match self.field.err_context.as_ref() {
+            Some(ErrContext::Format(message, exprs)) if exprs.is_empty() => {
+                quote_spanned!( self.field.ident.span() =>
+                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Full {
+                        message: #message,
+                        line: ::core::line!(),
+                        file: ::core::file!(),
+                        code: #code,
+                    }))
+                )
+            }
+            Some(ErrContext::Format(format, exprs)) => {
+                quote_spanned!( self.field.ident.span() =>
+                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::OwnedFull {
+                        message: ::binrw::alloc::format!(#format, #(#exprs),*),
+                        line: ::core::line!(),
+                        file: ::core::file!(),
+                        code: #code,
+                    }))
+                )
+            }
+            Some(ErrContext::Context(expr)) => {
+                quote!(
+                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Custom(Box::new(#expr) as _)))
+                )
+            }
+            None => {
+                let message = format!(
+                    "While parsing field '{}' in {}",
+                    self.field.ident,
+                    name.map_or_else(
+                        || variant_name
+                            .unwrap_or("[please report this error]")
+                            .to_string(),
+                        ToString::to_string
+                    )
+                );
+
+                quote_spanned!( self.field.ident.span() =>
+                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Full {
+                        message: #message,
+                        line: ::core::line!(),
+                        file: ::core::file!(),
+                        code: #code,
+                    }))
+                )
+            }
+        }
     }
 
     fn try_conversion(mut self, name: Option<&Ident>, variant_name: Option<&str>) -> Self {

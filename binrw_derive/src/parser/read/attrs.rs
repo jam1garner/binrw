@@ -19,6 +19,7 @@ pub(crate) type Calc = MetaExpr<kw::calc>;
 pub(crate) type Count = MetaExpr<kw::count>;
 pub(crate) type Default = MetaVoid<kw::default>;
 pub(crate) type DerefNow = MetaVoid<kw::deref_now>;
+pub(crate) type ErrContext = MetaList<kw::err_context, Expr>;
 pub(crate) type If = MetaList<Token![if], Expr>;
 pub(crate) type Ignore = MetaVoid<kw::ignore>;
 pub(crate) type Import = MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>;

@@ -1,8 +1,8 @@
 use std::{collections::HashMap, ops::Range};
 
 use crate::parser::{
-    meta_types::FieldValue, read::StructField, AssertionError, CondEndian, Condition, Map,
-    PassedArgs, ReadMode,
+    meta_types::FieldValue, read::StructField, AssertionError, CondEndian, Condition, ErrContext,
+    Map, PassedArgs, ReadMode,
 };
 use owo_colors::XtermColors;
 use proc_macro2::{Span, TokenTree};
@@ -232,6 +232,18 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
             assert.consequent.clone()
         {
             visit!(err);
+        }
+    }
+
+    for context_expr in &field.err_context {
+        match context_expr {
+            ErrContext::Context(expr) => visit!(expr.to_token_stream()),
+            ErrContext::Format(fmt, exprs) => {
+                visit!(fmt.to_token_stream());
+                for expr in exprs {
+                    visit!(expr.to_token_stream());
+                }
+            }
         }
     }
 }

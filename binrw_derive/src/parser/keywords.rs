@@ -22,6 +22,7 @@ define_keywords! {
     count,
     default,
     deref_now,
+    err_context,
     ignore,
     import,
     import_raw,

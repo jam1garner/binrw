@@ -131,11 +131,14 @@
 #[allow(unused_extern_crates)]
 extern crate self as binrw;
 
+#[doc(hidden)]
 #[cfg(feature = "std")]
-use std as alloc;
+pub use std as alloc;
 
+#[doc(hidden)]
 #[cfg(not(feature = "std"))]
-extern crate alloc;
+pub extern crate alloc;
+
 #[cfg(all(doc, not(feature = "std")))]
 use alloc::vec::Vec;
 

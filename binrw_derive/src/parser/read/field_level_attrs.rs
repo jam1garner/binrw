@@ -1,6 +1,6 @@
 use super::super::{
     read::{FromAttrs, FromInput},
-    types::{Assert, CondEndian, Condition, Magic, Map, PassedArgs, ReadMode},
+    types::{Assert, CondEndian, Condition, ErrContext, Magic, Map, PassedArgs, ReadMode},
     FromField, ParseResult, SpannedValue, TrySet,
 };
 
@@ -47,6 +47,8 @@ attr_struct! {
         pub(crate) temp: Option<()>,
         #[from(Assert)]
         pub(crate) assertions: Vec<Assert>,
+        #[from(ErrContext)]
+        pub(crate) err_context: Option<ErrContext>,
         #[from(PadBefore)]
         pub(crate) pad_before: Option<TokenStream>,
         #[from(PadAfter)]
@@ -178,6 +180,7 @@ impl FromField for StructField {
                 seek_before: <_>::default(),
                 pad_size_to: <_>::default(),
                 keyword_spans: <_>::default(),
+                err_context: <_>::default(),
             },
             &field.attrs,
         );

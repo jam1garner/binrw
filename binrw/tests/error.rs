@@ -53,12 +53,46 @@ fn show_backtrace() {
             #[br(assert(inner.len == 3))]
             inner: InnerMostStruct,
         },
+
+        OtherOption(u32, u32),
     }
 
     #[derive(BinRead)]
     struct MiddleStruct {
         #[br(little)]
         middle: MiddleEnum,
+    }
+
+    #[derive(BinRead)]
+    struct OutermostStruct {
+        #[br(little)]
+        middle: MiddleStruct,
+    }
+
+    let mut x = Cursor::new(b"\0\0\0\x06");
+    let err = x.read_be::<OutermostStruct>().map(|_| ()).unwrap_err();
+    println!("{}", err);
+}
+
+#[test]
+fn show_backtrace_2() {
+    #![allow(dead_code)]
+    use binrw::{io::Cursor, BinRead, BinReaderExt};
+
+    #[derive(BinRead)]
+    struct InnerMostStruct {
+        #[br(little)]
+        len: u32,
+
+        #[br(count = len, err_context("len = {}", len))]
+        items: Vec<u32>,
+    }
+
+    #[derive(BinRead)]
+    struct MiddleStruct {
+        #[br(little)]
+        #[br(err_context("While parsing the innerest most struct"))]
+        inner: InnerMostStruct,
     }
 
     #[derive(BinRead)]
