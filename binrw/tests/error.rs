@@ -47,10 +47,18 @@ fn show_backtrace() {
     }
 
     #[derive(BinRead)]
+    enum MiddleEnum {
+        OnlyOption {
+            #[br(big)]
+            #[br(assert(inner.len == 3))]
+            inner: InnerMostStruct,
+        },
+    }
+
+    #[derive(BinRead)]
     struct MiddleStruct {
-        #[br(big)]
-        #[br(assert(inner.len == 3))]
-        inner: InnerMostStruct,
+        #[br(little)]
+        middle: MiddleEnum,
     }
 
     #[derive(BinRead)]

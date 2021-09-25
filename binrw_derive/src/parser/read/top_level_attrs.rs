@@ -18,12 +18,13 @@ pub(crate) enum Input {
 impl Input {
     pub(crate) fn from_input(input: &syn::DeriveInput) -> ParseResult<Self> {
         let attrs = &input.attrs;
+        let ident = Some(&input.ident);
         match &input.data {
             syn::Data::Struct(st) => {
                 if matches!(st.fields, syn::Fields::Unit) {
-                    Struct::from_input(attrs, st.fields.iter()).map(Self::UnitStruct)
+                    Struct::from_input(ident, attrs, st.fields.iter()).map(Self::UnitStruct)
                 } else {
-                    Struct::from_input(attrs, st.fields.iter()).map(Self::Struct)
+                    Struct::from_input(ident, attrs, st.fields.iter()).map(Self::Struct)
                 }
             }
             syn::Data::Enum(en) => {
@@ -37,9 +38,9 @@ impl Input {
                     .iter()
                     .all(|v| matches!(v.fields, syn::Fields::Unit))
                 {
-                    UnitOnlyEnum::from_input(attrs, variants.iter()).map(Self::UnitOnlyEnum)
+                    UnitOnlyEnum::from_input(ident, attrs, variants.iter()).map(Self::UnitOnlyEnum)
                 } else {
-                    Enum::from_input(attrs, variants.iter()).map(Self::Enum)
+                    Enum::from_input(ident, attrs, variants.iter()).map(Self::Enum)
                 }
             }
             syn::Data::Union(_) => {
@@ -176,6 +177,7 @@ attr_struct! {
     #[from(EnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
+        pub(crate) ident: Option<syn::Ident>,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
@@ -238,6 +240,10 @@ impl FromInput<EnumAttr> for Enum {
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
         self.variants.push(field);
         Ok(())
+    }
+
+    fn set_ident(&mut self, ident: &syn::Ident) {
+        self.ident = Some(ident.clone());
     }
 }
 

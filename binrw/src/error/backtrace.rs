@@ -21,19 +21,8 @@ impl fmt::Display for Backtrace {
             f,
             "\n ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸\n"
         )?;
-        let mut frames = self.frames.iter();
 
-        if let Some(first_frame) = frames.next() {
-            first_frame.display_with_message(
-                f,
-                &format!("\x1b[1mError: {}\x1b[22m", self.error),
-                0,
-            )?;
-
-            for (i, frame) in frames.enumerate() {
-                frame.display(f, i + 1)?;
-            }
-        }
+        self.fmt_no_bars(f)?;
 
         #[cfg(not(nightly))]
         writeln!(
@@ -68,6 +57,24 @@ impl Backtrace {
                 frames,
             },
         }
+    }
+
+    fn fmt_no_bars(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut frames = self.frames.iter();
+
+        if let Some(first_frame) = frames.next() {
+            first_frame.display_with_message(
+                f,
+                &format!("\x1b[1mError: {}\x1b[22m", FirstErrorFmt(&*self.error)),
+                0,
+            )?;
+
+            for (i, frame) in frames.enumerate() {
+                frame.display(f, i + 1)?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -285,6 +292,79 @@ impl BacktraceFrame {
 impl<T: CustomError + 'static> From<T> for BacktraceFrame {
     fn from(err: T) -> Self {
         Self::Custom(Box::new(err) as _)
+    }
+}
+
+struct NoBars<'a>(&'a Error);
+struct FirstErrorFmt<'a>(&'a Error);
+struct Indenter<'a, 'b>(&'a mut fmt::Formatter<'b>);
+
+use fmt::Write;
+
+impl fmt::Display for FirstErrorFmt<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            Error::EnumErrors {
+                pos,
+                variant_errors,
+            } => {
+                writeln!(f, "no variants matched at {:#x?}\x1b[22m", pos)?;
+
+                for (name, err) in variant_errors {
+                    writeln!(
+                        f,
+                        "   ╭───────────────────────┄ {} ┄────────────────────┄",
+                        name
+                    )?;
+                    writeln!(f, "   ┆")?;
+                    write!(f, "   ┆")?;
+                    write!(Indenter(f), "{}", NoBars(err))?;
+                    write!(
+                        f,
+                        "\n   ╰─────────────────────────{}──────────────────────┄",
+                        "─".repeat(name.len())
+                    )?;
+                }
+
+                Ok(())
+            }
+            error => <Error as fmt::Display>::fmt(error, f),
+        }
+    }
+}
+
+impl fmt::Write for Indenter<'_, '_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if !s.contains('\n') {
+            self.0.write_str(s)
+        } else {
+            let mut last_ended_in_newline = false;
+            let mut is_first = true;
+            for line in s.split_inclusive('\n') {
+                if !is_first {
+                    self.0.write_str("   ┆")?;
+                }
+                is_first = false;
+                self.0.write_str(line)?;
+
+                last_ended_in_newline = line.ends_with('\n');
+            }
+
+            if last_ended_in_newline {
+                self.0.write_str("   ┆")
+            } else {
+                Ok(())
+            }
+        }
+    }
+}
+
+impl fmt::Display for NoBars<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            Error::Backtrace(backtrace) => backtrace.fmt_no_bars(f),
+            error => <Error as fmt::Display>::fmt(error, f),
+        }
     }
 }
 

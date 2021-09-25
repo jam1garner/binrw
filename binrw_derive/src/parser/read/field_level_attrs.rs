@@ -259,7 +259,7 @@ impl FromField for EnumVariant {
     fn from_field(variant: &Self::In, index: usize) -> ParseResult<Self> {
         match variant.fields {
             syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
-                Struct::from_input(&variant.attrs, variant.fields.iter()).map(|options| {
+                Struct::from_input(None, &variant.attrs, variant.fields.iter()).map(|options| {
                     Self::Variant {
                         ident: variant.ident.clone(),
                         options,

@@ -24,7 +24,7 @@ pub(super) fn generate_unit_struct(
 
 pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(input, st)
-        .read_fields(name)
+        .read_fields(name, None)
         .add_assertions(core::iter::empty())
         .return_value(None)
         .finish()
@@ -63,13 +63,13 @@ impl<'input> StructGenerator<'input> {
         self
     }
 
-    pub(super) fn read_fields(mut self, name: Option<&Ident>) -> Self {
+    pub(super) fn read_fields(mut self, name: Option<&Ident>, variant_name: Option<&str>) -> Self {
         let prelude = get_prelude(self.input, name);
         let read_fields = self
             .st
             .fields
             .iter()
-            .map(|field| generate_field(field, name));
+            .map(|field| generate_field(field, name, variant_name));
         let after_parse = {
             let after_parse = self
                 .st
@@ -117,7 +117,11 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
     })
 }
 
-fn generate_field(field: &StructField, name: Option<&Ident>) -> TokenStream {
+fn generate_field(
+    field: &StructField,
+    name: Option<&Ident>,
+    variant_name: Option<&str>,
+) -> TokenStream {
     // temp + ignore == just don't bother
     if field.temp.is_some() && matches!(field.read_mode, ReadMode::Default) {
         return TokenStream::new();
@@ -129,7 +133,7 @@ fn generate_field(field: &StructField, name: Option<&Ident>) -> TokenStream {
 
     FieldGenerator::new(field)
         .read_value()
-        .try_conversion(name)
+        .try_conversion(name, variant_name)
         .map_value()
         .deref_now()
         .wrap_seek()
@@ -418,12 +422,14 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
-    fn map_err_context(&self, name: Option<&Ident>) -> TokenStream {
+    fn map_err_context(&self, name: Option<&Ident>, variant_name: Option<&str>) -> TokenStream {
         let message = format!(
             "While parsing field '{}' in {}",
             self.field.ident,
             name.map_or_else(
-                || "[please report this error]".to_string(),
+                || variant_name
+                    .unwrap_or("[please report this error]")
+                    .to_string(),
                 ToString::to_string
             )
         )
@@ -449,13 +455,13 @@ impl<'field> FieldGenerator<'field> {
         )
     }
 
-    fn try_conversion(mut self, name: Option<&Ident>) -> Self {
+    fn try_conversion(mut self, name: Option<&Ident>, variant_name: Option<&str>) -> Self {
         if !self.field.generated_value() {
             let result = &self.out;
             self.out = if self.field.do_try.is_some() {
                 quote! { #result.unwrap_or(<_>::default()) }
             } else {
-                let map_err = self.map_err_context(name);
+                let map_err = self.map_err_context(name, variant_name);
                 quote! { #result #map_err ? }
             };
         }
