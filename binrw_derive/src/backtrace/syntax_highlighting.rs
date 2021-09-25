@@ -97,7 +97,7 @@ pub(super) fn get_syntax_highlights(field: &StructField) -> SyntaxInfo {
     syntax_info
         .lines
         .values_mut()
-        .for_each(|line| line.highlights.dedup());
+        .for_each(|line| line.highlights.dedup_by_key(|line| line.0.clone()));
 
     syntax_info
 }

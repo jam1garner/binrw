@@ -1,6 +1,8 @@
 use super::*;
 use crate::alloc::borrow::Cow;
 
+use core::fmt;
+
 /// A backtrace containing a set of frames representing (in order from innermost to outmost code)
 #[non_exhaustive]
 #[derive(Debug)]
@@ -11,6 +13,42 @@ pub struct Backtrace {
 
     /// The frames which lead to the given error
     pub frames: Vec<BacktraceFrame>,
+}
+
+impl fmt::Display for Backtrace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "\n ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸\n"
+        )?;
+        let mut frames = self.frames.iter();
+
+        if let Some(first_frame) = frames.next() {
+            first_frame.display_with_message(
+                f,
+                &format!("\x1b[1mError: {}\x1b[22m", self.error),
+                0,
+            )?;
+
+            for (i, frame) in frames.enumerate() {
+                frame.display(f, i + 1)?;
+            }
+        }
+
+        #[cfg(not(nightly))]
+        writeln!(
+            f,
+            "\n ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
+        )?;
+
+        #[cfg(nightly)]
+        writeln!(
+            f,
+            " ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
+        )?;
+
+        Ok(())
+    }
 }
 
 impl Backtrace {
@@ -197,6 +235,51 @@ pub enum BacktraceFrame {
 
     /// A custom error type which doesn't take a specific form
     Custom(Box<dyn CustomError>),
+}
+
+impl BacktraceFrame {
+    fn display_with_message(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        message: &impl fmt::Display,
+        index: usize,
+    ) -> fmt::Result {
+        match self {
+            BacktraceFrame::Full {
+                code, file, line, ..
+            }
+            | BacktraceFrame::OwnedFull {
+                code, file, line, ..
+            } => {
+                writeln!(f, " {}: {}\n     at {}:{}", index, message, file, line)?;
+                if let Some(code) = code {
+                    writeln!(f, "{}", code.trim_end())?;
+                }
+                Ok(())
+            }
+            BacktraceFrame::Message(_)
+            | BacktraceFrame::OwnedMessage(_)
+            | BacktraceFrame::Custom(_) => {
+                writeln!(f, " {}: {}", index, message)
+            }
+        }
+    }
+
+    fn display(&self, f: &mut fmt::Formatter<'_>, index: usize) -> fmt::Result {
+        let msg;
+        let message: &str = match self {
+            BacktraceFrame::Full { message: msg, .. } | BacktraceFrame::Message(msg) => msg,
+            BacktraceFrame::OwnedFull { message: msg, .. } | BacktraceFrame::OwnedMessage(msg) => {
+                msg
+            }
+            BacktraceFrame::Custom(context) => {
+                msg = context.to_string();
+                &msg
+            }
+        };
+
+        self.display_with_message(f, &message, index)
+    }
 }
 
 impl<T: CustomError + 'static> From<T> for BacktraceFrame {
