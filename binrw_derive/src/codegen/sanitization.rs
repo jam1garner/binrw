@@ -79,6 +79,8 @@ ident_str! {
     pub(crate) BINRW_NAMED_ARGS = from_crate!(BinrwNamedArgs);
     pub(crate) ARGS_MACRO = from_crate!(args);
     pub(crate) HAS_MAGIC = from_crate!(HasMagic);
+    pub(crate) WITH_CONTEXT = from_crate!(error::ContextExt::with_context);
+    pub(crate) BACKTRACE_FRAME = from_crate!(error::BacktraceFrame);
     pub(crate) TEMP = "__binrw_temp";
     pub(crate) POS = "__binrw_generated_position_temp";
     pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";

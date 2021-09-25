@@ -74,6 +74,7 @@ impl BacktraceFrame {
         }
     }
 
+    #[cfg(nightly)]
     fn write_line(
         &self,
         Line {
@@ -136,6 +137,9 @@ impl BacktraceFrame {
             }
 
             writeln!(f)
+        } else if should_highlight {
+            // no syntax highlighting on this line, but  b o l d
+            writeln!(f, "{}", line.bold())
         } else {
             // no syntax highlighting on this line
             writeln!(f, "{}", line)

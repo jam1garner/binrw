@@ -31,3 +31,35 @@ fn custom_error_trait() {
         _ => unreachable!(),
     }
 }
+
+#[test]
+fn show_backtrace() {
+    #![allow(dead_code)]
+    use binrw::{io::Cursor, BinRead, BinReaderExt};
+
+    #[derive(BinRead)]
+    struct InnerMostStruct {
+        #[br(little)]
+        len: u32,
+
+        #[br(count = len)]
+        items: Vec<u32>,
+    }
+
+    #[derive(BinRead)]
+    struct MiddleStruct {
+        #[br(big)]
+        #[br(assert(inner.len == 3))]
+        inner: InnerMostStruct,
+    }
+
+    #[derive(BinRead)]
+    struct OutermostStruct {
+        #[br(little)]
+        middle: MiddleStruct,
+    }
+
+    let mut x = Cursor::new(b"\0\0\0\x06");
+    let err = x.read_be::<OutermostStruct>().map(|_| ()).unwrap_err();
+    println!("{}", err);
+}

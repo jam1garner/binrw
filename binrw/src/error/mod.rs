@@ -175,6 +175,15 @@ pub enum Error {
 }
 
 impl Error {
+    /// Returns the source error. For a Backtrace this is the error that caused it, for every
+    /// other error this returns self
+    pub fn root_cause(&self) -> &Self {
+        match self {
+            Self::Backtrace(backtrace) => &*backtrace.error,
+            error => error,
+        }
+    }
+
     /// Returns a reference to the boxed error object if this `Error` is a
     /// custom error of type `T`, or `None` if it isn’t.
     pub fn custom_err<T: CustomError + 'static>(&self) -> Option<&T> {
@@ -210,7 +219,7 @@ impl fmt::Display for Error {
                 }
                 Ok(())
             }
-            Self::Backtrace(_backtrace) => todo!(),
+            Self::Backtrace(backtrace) => write!(f, "{}", backtrace),
         }
     }
 }

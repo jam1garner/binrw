@@ -1,10 +1,12 @@
 use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
+use crate::backtrace::BacktraceFrame;
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Input, Struct, StructField};
 use crate::parser::{Map, PassedArgs, ReadMode};
+use owo_colors::OwoColorize;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::Ident;
 
 pub(super) fn generate_unit_struct(
@@ -63,7 +65,11 @@ impl<'input> StructGenerator<'input> {
 
     pub(super) fn read_fields(mut self, name: Option<&Ident>) -> Self {
         let prelude = get_prelude(self.input, name);
-        let read_fields = self.st.fields.iter().map(|field| generate_field(field));
+        let read_fields = self
+            .st
+            .fields
+            .iter()
+            .map(|field| generate_field(field, name));
         let after_parse = {
             let after_parse = self
                 .st
@@ -111,7 +117,7 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
     })
 }
 
-fn generate_field(field: &StructField) -> TokenStream {
+fn generate_field(field: &StructField, name: Option<&Ident>) -> TokenStream {
     // temp + ignore == just don't bother
     if field.temp.is_some() && matches!(field.read_mode, ReadMode::Default) {
         return TokenStream::new();
@@ -123,7 +129,7 @@ fn generate_field(field: &StructField) -> TokenStream {
 
     FieldGenerator::new(field)
         .read_value()
-        .try_conversion()
+        .try_conversion(name)
         .map_value()
         .deref_now()
         .wrap_seek()
@@ -412,13 +418,45 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
-    fn try_conversion(mut self) -> Self {
+    fn map_err_context(&self, name: Option<&Ident>) -> TokenStream {
+        let message = format!(
+            "While parsing field '{}' in {}",
+            self.field.ident,
+            name.map_or_else(
+                || "[please report this error]".to_string(),
+                ToString::to_string
+            )
+        )
+        .bold()
+        .to_string();
+
+        #[cfg(nightly)]
+        let code = {
+            let code = BacktraceFrame::from_field(self.field).to_string();
+            quote!(Some(#code))
+        };
+
+        #[cfg(not(nightly))]
+        let code = quote!(None);
+
+        quote_spanned!( self.field.ident.span() =>
+            .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Full {
+                message: #message,
+                line: ::core::line!(),
+                file: ::core::file!(),
+                code: #code,
+            }))
+        )
+    }
+
+    fn try_conversion(mut self, name: Option<&Ident>) -> Self {
         if !self.field.generated_value() {
-            let result = self.out;
+            let result = &self.out;
             self.out = if self.field.do_try.is_some() {
                 quote! { #result.unwrap_or(<_>::default()) }
             } else {
-                quote! { #result? }
+                let map_err = self.map_err_context(name);
+                quote! { #result #map_err ? }
             };
         }
 
