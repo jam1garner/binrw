@@ -15,6 +15,7 @@
 //! | [`count`](#count) | field | Sets the length of a vector.
 //! | [`default`](#default) | field | Uses the [`default`](core::default::Default) value for a field instead of reading data.
 //! | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
+//! | [`err_context`](#backtrace) | field | Add additional context to errors.
 //! | [`if`](#conditional-values) | field | Reads data only if a condition is true.
 //! | [`ignore`](#default) | field | An alias for `default`.
 //! | [`import`](#arguments) | struct, non-unit enum, unit-like enum | Defines extra arguments for a struct or enum.
@@ -596,6 +597,58 @@
 //! }
 //!
 //! assert_eq!(Cursor::new(b"").read_be::<MyType>().unwrap().maybe_u32, None);
+//! ```
+//!
+//! # Backtrace
+//!
+//! When an error is raised during parsing, BinRead forms a backtrace, bubbling the
+//! error upwards and attaching additional information (surrounding code, line numbers,
+//! messages, etc.) in order to aid in debugging.
+//!
+//! The `#[br(context_err(...))]` attribute can work in one of two ways:
+//!
+//! 1. If the first (or only) item is a string literal, it will be a message format string,
+//! with any other arguments being used as arguments. This uses the same formatting as `format!`,
+//! `println!`, and other standard library formatters.
+//!
+//! 2. Otherwise, only a single argument is allowed, which will then be attached as a context
+//! type. This type must implement [`Display`](std::fmt::Display), [`Debug`], [`Send`], and [`Sync`].
+//!
+//! ## Example
+//!
+//! ```
+//! # use binrw::{io::Cursor, BinRead, BinReaderExt};
+//! #[derive(BinRead)]
+//! struct InnerMostStruct {
+//!     #[br(little)]
+//!     len: u32,
+//!
+//!     #[br(count = len, err_context("len = {}", len))]
+//!     items: Vec<u32>,
+//! }
+//!
+//! #[derive(BinRead)]
+//! struct MiddleStruct {
+//!     #[br(little)]
+//!     #[br(err_context("While parsing the innerest most struct"))]
+//!     inner: InnerMostStruct,
+//! }
+//!
+//! #[derive(Debug, Clone)] // Display implementation omitted
+//! struct Oops(u32);
+//!
+//! #[derive(BinRead)]
+//! struct OutermostStruct {
+//!     #[br(little, err_context(Oops(3 + 1)))]
+//!     middle: MiddleStruct,
+//! }
+//! # let mut x = Cursor::new(b"\0\0\0\x06");
+//! # let err = x.read_be::<OutermostStruct>().map(|_| ()).unwrap_err();
+//! # impl core::fmt::Display for Oops {
+//! #     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+//! #         write!(f, "Oops({})", self.0)
+//! #     }
+//! # }
 //! ```
 //!
 //! # Map
