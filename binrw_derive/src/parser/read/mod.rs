@@ -62,6 +62,7 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     type Field: FromField + 'static;
 
     fn from_input<'input>(
+        ident: Option<&syn::Ident>,
         attrs: &'input [syn::Attribute],
         fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>,
     ) -> ParseResult<Self>
@@ -69,6 +70,10 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
         Self: Sized + Default,
     {
         let (mut this, mut all_errors) = Self::try_from_attrs(attrs).unwrap_tuple();
+
+        if let Some(ident) = ident {
+            this.set_ident(ident);
+        }
 
         for (index, field) in fields.enumerate() {
             let (field, mut field_error) = Self::Field::from_field(field, index).unwrap_tuple();
@@ -93,6 +98,8 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
             ParseResult::Ok(this)
         }
     }
+
+    fn set_ident(&mut self, _ident: &syn::Ident) {}
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()>;
 
