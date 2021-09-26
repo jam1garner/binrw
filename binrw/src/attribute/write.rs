@@ -276,7 +276,100 @@
 //!
 //! # Map
 //!
-//! todo
+//! The `map` and `try_map` directives allow data to be read using one type and
+//! stored as another:
+//!
+//! ```text
+//! #[bw(map = $map_fn:expr)] or #[map($map_fn:expr))]
+//! #[bw(try_map = $map_fn:expr)] or #[try_map($map_fn:expr))]
+//! ```
+//!
+//! When using `map` on a field, the map function must explicitly declare the
+//! type of the data to be read in its first parameter and return a value which
+//! matches the type of the field. The map function can be a plain function,
+//! closure, or call expression which returns a plain function or closure.
+//!
+//! When using `try_map` on a field, the same rules apply, except that the
+//! function must return a [`Result`] instead.
+//!
+//! When using `map` or `try_map` on a struct or enum, the map function must
+//! return `Self` or `Result<Self, E>`.
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! ## Examples
+//!
+//! ### Using `map` on a field
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     #[br(map = |x: u8| x.to_string())]
+//!     int_str: String
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().int_str, "0");
+//! ```
+//!
+//! ### Using `try_map` on a field
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! # use std::convert::TryInto;
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     #[br(try_map = |x: i8| x.try_into())]
+//!     value: u8
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().value, 0);
+//! # assert!(Cursor::new(b"\xff").read_be::<MyType>().is_err());
+//! ```
+//!
+//! ### Using `map` on a struct to create a bit field
+//!
+//! The [`modular-bitfield`](https://docs.rs/modular-bitfield) crate can be used
+//! along with `map` to create a struct out of raw bits.
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! use modular_bitfield::prelude::*;
+//!
+//! // The cursor dumps a single byte
+//! #[bitfield]
+//! #[derive(BinWrite)]
+//! #[bw(map = Self::from_bytes)]
+//! pub struct PackedData {
+//!     status: B4,
+//!     is_fast: bool,
+//!     is_static: bool,
+//!     is_alive: bool,
+//!     is_good: bool,
+//! }
+//!
+//! // example byte: 0x53
+//! // [good] [alive] [static] [fast] [status]
+//! //      0       1        0      1     0011
+//! //  false    true    false   true        3
+//!
+//! # let data = Cursor::new(b"\x53").write_le::<PackedData>().unwrap();
+//! # assert_eq!(data.is_good(), false);
+//! # assert_eq!(data.is_alive(), true);
+//! # assert_eq!(data.is_static(), false);
+//! # assert_eq!(data.is_fast(), true);
+//! # assert_eq!(data.status(), 3);
+//! ```
+//!
+//! ## Errors
+//!
+//! If the `try_map` function returns a [`binread::io::Error`](crate::io::Error)
+//! or [`std::io::Error`], an [`Io`](crate::Error::Io) error is returned. For
+//! any other error type, a [`Custom`](crate::Error::Custom) error is returned.
+//!
+//! In all cases, the reader’s position is reset to where it was before parsing
+//! started.
 //!
 //! # Repr
 //!
