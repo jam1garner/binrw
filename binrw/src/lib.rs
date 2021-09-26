@@ -244,4 +244,5 @@ pub mod prelude {
     pub use crate::BinRead;
     pub use crate::BinReaderExt;
     pub use crate::BinResult;
+    pub use crate::BinWriterExt;
 }

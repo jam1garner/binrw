@@ -49,7 +49,58 @@
 //!
 //! # Caculations
 //!
-//! todo
+//! The `calc` directive computes the value of a field instead of reading the value
+//! from the type itself.
+//!
+//! ```text
+//! #[br(calc = $value:expr)] or #[br(calc($value:expr))]
+//! ```
+//!
+//! Any field (earlier or later) or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! **Note:** within `BinWrite` calc removes the field from the struct, similarly to
+//! `#[br(temp)]`. The field also needs to be marked `#[br(temp)]` in order to ensure
+//! the parser does not try and store a value in the non-existent field.
+//!
+//! ## Examples
+//!
+//! A simple example showing how calc is necessary for writing an array prefixed
+//! by a count:
+//!
+//! ```rust
+//! # use binrw::{binwrite, prelude::*, io::Cursor};
+//! #[binwrite]
+//! struct MyType {
+//!     #[bw(calc = items.len() as u32)]
+//!     size: u32,
+//!     items: Vec<u8>,
+//! }
+//!
+//! let mut writer = Cursor::new(Vec::new());
+//! writer.write_be(&MyType { items: vec![0, 1, 2] }).unwrap();
+//! # assert_eq!(&writer.into_inner()[..], &[0, 0, 0, 3, 0, 1, 2]);
+//! ```
+//!
+//! And another example showing how `#[br(temp)]` is needed when making this round-trip:
+//!
+//! ```rust
+//! # use binrw::{binrw, prelude::*, io::Cursor};
+//! #[binrw]
+//! struct MyType {
+//!     #[br(temp)]
+//!     #[bw(calc = items.len() as u32)]
+//!     size: u32,
+//!
+//!     #[br(count = size)]
+//!     items: Vec<u8>,
+//! }
+//!
+//! let list: MyType = Cursor::new(b"\0\0\0\x03\0\x01\x02").read_be().unwrap();
+//! let mut writer = Cursor::new(Vec::new());
+//! writer.write_be(&list).unwrap();
+//! # assert_eq!(&writer.into_inner()[..], b"\0\0\0\x03\0\x01\x02");
+//! ```
 //!
 //! # Ignore
 //!
