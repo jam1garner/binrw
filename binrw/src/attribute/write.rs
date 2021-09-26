@@ -168,6 +168,129 @@
 //!
 //! # Assert
 //!
+//! The `assert` directive validates objects and fields after they are written,
+//! returning an error if the assertion condition evaluates to `false`:
+//!
+//! ```text
+//! #[bw(assert($cond:expr $(,)?))]
+//! #[bw(assert($cond:expr, $msg:literal $(,)?)]
+//! #[bw(assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
+//! #[bw(assert($cond:expr, $err:expr $(,)?)]
+//! ```
+//!
+//! Multiple assertion directives can be used; they will be combined and
+//! executed in order.
+//!
+//! Assertions added to the top of an enum will be checked against every variant
+//! in the enum.
+//!
+//! Any earlier field or [import](#arguments) can be referenced by expressions
+//! in the directive.
+//!
+//! ## Examples
+//!
+//! ### Formatted error
+//!
+//! ```rust
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(Debug, PartialEq)]
+//! struct NotSmallerError(u32, u32);
+//!
+//! #[derive(BinWrite, Debug)]
+//! #[bw(assert(some_val > some_smaller_val, "oops! {} <= {}", some_val, some_smaller_val))]
+//! struct Test {
+//!     some_val: u32,
+//!     some_smaller_val: u32
+//! }
+//!
+//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").write_be::<Test>();
+//! assert!(error.is_err());
+//! let error = error.unwrap_err();
+//! let expected = "oops! 1 <= 255".to_string();
+//! assert!(matches!(error, binrw::Error::AssertFail { message: expected, .. }));
+//! ```
+//!
+//! ### Custom error
+//!
+//! ```rust
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(Debug, PartialEq)]
+//! struct NotSmallerError(u32, u32);
+//! impl core::fmt::Display for NotSmallerError {
+//!     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+//!         write!(f, "{} <= {}", self.0, self.1)
+//!     }
+//! }
+//!
+//! #[derive(BinWrite, Debug)]
+//! #[bw(assert(some_val > some_smaller_val, NotSmallerError(some_val, some_smaller_val)))]
+//! struct Test {
+//!     some_val: u32,
+//!     some_smaller_val: u32
+//! }
+//!
+//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").write_be::<Test>();
+//! assert!(error.is_err());
+//! let error = error.unwrap_err();
+//! assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
+//! ```
+//!
+//! ## Errors
+//!
+//! If the assertion fails and there is no second argument, or a string literal
+//! is given as the second argument, an [`AssertFail`](crate::Error::AssertFail)
+//! error is returned.
+//!
+//! If the assertion fails and an expression is given as the second argument,
+//! a [`Custom`](crate::Error::Custom) error containing the result of the
+//! expression is returned.
+//!
+//! Arguments other than the condition are not evaluated unless the assertion
+//! fails, so it is safe for them to contain expensive operations without
+//! impacting performance.
+//!
+//! In all cases, the writer’s position is reset to where it was before parsing
+//! started.
+//!
+//! # Pre-assert
+//!
+//! `pre_assert` works like [`assert`](#assert), but checks the condition before
+//! data is written instead of after. This is most useful when validating arguments
+//! or choosing an enum variant to parse.
+//!
+//! ```text
+//! #[bw(pre_assert($cond:expr $(,)?))]
+//! #[bw(pre_assert($cond:expr, $msg:literal $(,)?)]
+//! #[bw(pre_assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
+//! #[bw(pre_assert($cond:expr, $err:expr $(,)?)]
+//! ```
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite, Debug, PartialEq)]
+//! #[bw(import { ty: u8 })]
+//! enum Command {
+//!     #[bw(pre_assert(ty == 0))] Variant0(u16, u16),
+//!     #[bw(pre_assert(ty == 1))] Variant1(u32)
+//! }
+//!
+//! #[derive(BinWrite, Debug, PartialEq)]
+//! struct Message {
+//!     ty: u8,
+//!     len: u8,
+//!     #[bw(args { ty })]
+//!     data: Command
+//! }
+//!
+//! let msg = Cursor::new(b"\x01\x04\0\0\0\xFF").write_be::<Message>();
+//! assert!(msg.is_ok());
+//! let msg = msg.unwrap();
+//! assert_eq!(msg, Message { ty: 1, len: 4, data: Command::Variant1(0xFF) });
+//! ```
+//!
+//!
 //! todo
 //!
 //! # Byte Order
@@ -176,7 +299,7 @@
 //!
 //! # Caculations
 //!
-//! The `calc` directive computes the value of a field instead of reading the value
+//! The `calc` directive computes the value of a field instead of writing the value
 //! from the type itself.
 //!
 //! ```text
@@ -215,15 +338,15 @@
 //! # use binrw::{binrw, prelude::*, io::Cursor};
 //! #[binrw]
 //! struct MyType {
-//!     #[br(temp)]
+//!     #[bw(temp)]
 //!     #[bw(calc = items.len() as u32)]
 //!     size: u32,
 //!
-//!     #[br(count = size)]
+//!     #[bw(count = size)]
 //!     items: Vec<u8>,
 //! }
 //!
-//! let list: MyType = Cursor::new(b"\0\0\0\x03\0\x01\x02").read_be().unwrap();
+//! let list: MyType = Cursor::new(b"\0\0\0\x03\0\x01\x02").write_be().unwrap();
 //! let mut writer = Cursor::new(Vec::new());
 //! writer.write_be(&list).unwrap();
 //! # assert_eq!(&writer.into_inner()[..], b"\0\0\0\x03\0\x01\x02");
@@ -276,7 +399,7 @@
 //!
 //! # Map
 //!
-//! The `map` and `try_map` directives allow data to be read using one type and
+//! The `map` and `try_map` directives allow data to be written using one type and
 //! stored as another:
 //!
 //! ```text
@@ -285,7 +408,7 @@
 //! ```
 //!
 //! When using `map` on a field, the map function must explicitly declare the
-//! type of the data to be read in its first parameter and return a value which
+//! type of the data to be written in its first parameter and return a value which
 //! matches the type of the field. The map function can be a plain function,
 //! closure, or call expression which returns a plain function or closure.
 //!
@@ -304,13 +427,13 @@
 //!
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
+//! #[derive(BinWrite)]
 //! struct MyType {
-//!     #[br(map = |x: u8| x.to_string())]
+//!     #[bw(map = |x: u8| x.to_string())]
 //!     int_str: String
 //! }
 //!
-//! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().int_str, "0");
+//! # assert_eq!(Cursor::new(b"\0").write_be::<MyType>().unwrap().int_str, "0");
 //! ```
 //!
 //! ### Using `try_map` on a field
@@ -318,14 +441,14 @@
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
 //! # use std::convert::TryInto;
-//! #[derive(BinRead)]
+//! #[derive(BinWrite)]
 //! struct MyType {
-//!     #[br(try_map = |x: i8| x.try_into())]
+//!     #[bw(try_map = |x: i8| x.try_into())]
 //!     value: u8
 //! }
 //!
-//! # assert_eq!(Cursor::new(b"\0").read_be::<MyType>().unwrap().value, 0);
-//! # assert!(Cursor::new(b"\xff").read_be::<MyType>().is_err());
+//! # assert_eq!(Cursor::new(b"\0").write_be::<MyType>().unwrap().value, 0);
+//! # assert!(Cursor::new(b"\xff").write_be::<MyType>().is_err());
 //! ```
 //!
 //! ### Using `map` on a struct to create a bit field
@@ -364,11 +487,11 @@
 //!
 //! ## Errors
 //!
-//! If the `try_map` function returns a [`binread::io::Error`](crate::io::Error)
+//! If the `try_map` function returns a [`binrw::io::Error`](crate::io::Error)
 //! or [`std::io::Error`], an [`Io`](crate::Error::Io) error is returned. For
 //! any other error type, a [`Custom`](crate::Error::Custom) error is returned.
 //!
-//! In all cases, the reader’s position is reset to where it was before parsing
+//! In all cases, the writer’s position is reset to where it was before parsing
 //! started.
 //!
 //! # Repr
