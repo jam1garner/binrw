@@ -290,9 +290,6 @@
 //! assert_eq!(msg, Message { ty: 1, len: 4, data: Command::Variant1(0xFF) });
 //! ```
 //!
-//!
-//! todo
-//!
 //! # Byte Order
 //!
 //! todo
