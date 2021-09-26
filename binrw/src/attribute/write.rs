@@ -120,4 +120,30 @@
 //!
 //! # Restore Position
 //!
-//! todo
+//! The `restore_position` directive restores the position of the writer after
+//! a field is writen:
+//!
+//! ```text
+//! #[br(restore_position)]
+//! ```
+//!
+//! To seek to an arbitrary position, use [`seek_before`](#padding-and-alignment).
+//!
+//! ## Example
+//!
+//! ```
+//! # use binrw::{binwrite, prelude::*, io::Cursor};
+//!
+//! #[binwrite]
+//! struct MyType {
+//!     #[bw(restore_position)]
+//!     my_u24: u32,
+//!     override_byte: u8,
+//! }
+//!
+//! let mut writer = Cursor::new(Vec::new());
+//! writer.write_be(&MyType { my_u24: 3, override_byte: 1 }).unwrap();
+//! assert_eq!(&writer.into_inner()[..], b"\x01\x00\x00\x03");
+//! ```
+//!
+//! Here a u32 (my_u24) is written, then the first byte is overwritten by the byte "override_byte".
