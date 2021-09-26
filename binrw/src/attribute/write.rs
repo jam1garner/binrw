@@ -233,9 +233,46 @@
 //!
 //! todo
 //!
-//! # Magic
 //!
-//! todo
+//! The `magic` directive matches [magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
+//! in data:
+//!
+//! ```text
+//! #[bw(magic = $magic:literal)] or #[bw(magic($magic:literal))]
+//! ```
+//!
+//! The magic number can be a byte literal, byte string, char, float, or
+//! integer. When a magic number is matched, parsing begins with the first byte
+//! after the magic number in the data. When a magic number is not matched, an
+//! error is returned.
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite, Debug)]
+//! #[bw(magic = b"TEST")]
+//! struct Test {
+//!     val: u32
+//! }
+//!
+//! #[derive(BinWrite, Debug)]
+//! #[bw(magic = 1.2f32)]
+//! struct Version(u16);
+//!
+//! #[derive(BinWrite)]
+//! enum Command {
+//!     #[bw(magic = 0u8)] Nop,
+//!     #[bw(magic = 1u8)] Jump { loc: u32 },
+//!     #[bw(magic = 2u8)] Begin { var_count: u16, local_count: u16 }
+//! }
+//! ```
+//!
+//! ## Errors
+//!
+//! If the specified magic number does not match the data, a
+//! [`BadMagic`](crate::Error::BadMagic) error is returned and the writer’s
+//! position is reset to where it was before parsing started.
 //!
 //! # Map
 //!
