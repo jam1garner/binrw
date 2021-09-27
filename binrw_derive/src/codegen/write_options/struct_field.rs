@@ -82,7 +82,11 @@ impl<'a> StructFieldGenerator<'a> {
 
         let write_fn = if self.field.map.is_some() {
             let map_fn = self.map_fn_ident();
-            quote! { #WRITE_FN_MAP_OUTPUT_TYPE_HINT(&#map_fn, #write_fn) }
+            if self.field.map.is_try() {
+                quote! { #WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT(&#map_fn, #write_fn) }
+            } else {
+                quote! { #WRITE_FN_MAP_OUTPUT_TYPE_HINT(&#map_fn, #write_fn) }
+            }
         } else {
             quote! { #WRITE_FN_TYPE_HINT(#write_fn) }
         };

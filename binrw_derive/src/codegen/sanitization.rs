@@ -71,6 +71,7 @@ ident_str! {
     pub(crate) WRITE_TRY_MAP_ARGS_TYPE_HINT = from_crate!(__private::write_try_map_args_type_hint);
     pub(crate) WRITE_MAP_INPUT_TYPE_HINT = from_crate!(__private::write_map_fn_input_type_hint);
     pub(crate) WRITE_FN_MAP_OUTPUT_TYPE_HINT = from_crate!(__private::write_fn_map_output_type_hint);
+    pub(crate) WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT = from_crate!(__private::write_fn_try_map_output_type_hint);
     pub(crate) WRITE_ZEROES = from_crate!(__private::write_zeroes);
     pub(crate) SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
     pub(crate) SATISFIED = from_crate!(Satisfied);

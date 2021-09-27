@@ -168,7 +168,7 @@
 //!
 //! # Assert
 //!
-//! The `assert` directive validates objects and fields after they are written,
+//! The `assert` directive validates objects and fields before they are written,
 //! returning an error if the assertion condition evaluates to `false`:
 //!
 //! ```text
@@ -203,11 +203,9 @@
 //!     some_smaller_val: u32
 //! }
 //!
-//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").write_be::<Test>();
-//! assert!(error.is_err());
-//! let error = error.unwrap_err();
-//! let expected = "oops! 1 <= 255".to_string();
-//! assert!(matches!(error, binrw::Error::AssertFail { message: expected, .. }));
+//! let mut writer = Cursor::new(Vec::new());
+//! let err = writer.write_be(&Test{ some_val: 1, some_smaller_val: 3 }).unwrap_err();
+//! assert!(matches!(err.root_cause(), binrw::Error::AssertFail { .. }));
 //! ```
 //!
 //! ### Custom error
@@ -223,16 +221,15 @@
 //! }
 //!
 //! #[derive(BinWrite, Debug)]
-//! #[bw(assert(some_val > some_smaller_val, NotSmallerError(some_val, some_smaller_val)))]
+//! #[bw(assert(some_val > some_smaller_val, NotSmallerError(*some_val, *some_smaller_val)))]
 //! struct Test {
 //!     some_val: u32,
 //!     some_smaller_val: u32
 //! }
 //!
-//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").write_be::<Test>();
-//! assert!(error.is_err());
-//! let error = error.unwrap_err();
-//! assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
+//! let mut writer = Cursor::new(Vec::new());
+//! let err = writer.write_be(&Test { some_val: 1, some_smaller_val: 3 }).unwrap_err();
+//! assert_eq!(err.custom_err(), Some(&NotSmallerError(1, 3)));
 //! ```
 //!
 //! ## Errors
@@ -251,44 +248,6 @@
 //!
 //! In all cases, the writer’s position is reset to where it was before parsing
 //! started.
-//!
-//! # Pre-assert
-//!
-//! `pre_assert` works like [`assert`](#assert), but checks the condition before
-//! data is written instead of after. This is most useful when validating arguments
-//! or choosing an enum variant to parse.
-//!
-//! ```text
-//! #[bw(pre_assert($cond:expr $(,)?))]
-//! #[bw(pre_assert($cond:expr, $msg:literal $(,)?)]
-//! #[bw(pre_assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
-//! #[bw(pre_assert($cond:expr, $err:expr $(,)?)]
-//! ```
-//!
-//! ## Examples
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinWrite, Debug, PartialEq)]
-//! #[bw(import { ty: u8 })]
-//! enum Command {
-//!     #[bw(pre_assert(ty == 0))] Variant0(u16, u16),
-//!     #[bw(pre_assert(ty == 1))] Variant1(u32)
-//! }
-//!
-//! #[derive(BinWrite, Debug, PartialEq)]
-//! struct Message {
-//!     ty: u8,
-//!     len: u8,
-//!     #[bw(args { ty })]
-//!     data: Command
-//! }
-//!
-//! let msg = Cursor::new(b"\x01\x04\0\0\0\xFF").write_be::<Message>();
-//! assert!(msg.is_ok());
-//! let msg = msg.unwrap();
-//! assert_eq!(msg, Message { ty: 1, len: 4, data: Command::Variant1(0xFF) });
-//! ```
 //!
 //! # Byte Order
 //!
@@ -335,15 +294,15 @@
 //! # use binrw::{binrw, prelude::*, io::Cursor};
 //! #[binrw]
 //! struct MyType {
-//!     #[bw(temp)]
+//!     #[br(temp)]
 //!     #[bw(calc = items.len() as u32)]
 //!     size: u32,
 //!
-//!     #[bw(count = size)]
+//!     #[br(count = size)]
 //!     items: Vec<u8>,
 //! }
 //!
-//! let list: MyType = Cursor::new(b"\0\0\0\x03\0\x01\x02").write_be().unwrap();
+//! let list: MyType = Cursor::new(b"\0\0\0\x03\0\x01\x02").read_be().unwrap();
 //! let mut writer = Cursor::new(Vec::new());
 //! writer.write_be(&list).unwrap();
 //! # assert_eq!(&writer.into_inner()[..], b"\0\0\0\x03\0\x01\x02");
@@ -426,11 +385,13 @@
 //! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinWrite)]
 //! struct MyType {
-//!     #[bw(map = |x: u8| x.to_string())]
+//!     #[bw(map = |x: &String| -> u8 { x.parse().unwrap() })]
 //!     int_str: String
 //! }
 //!
-//! # assert_eq!(Cursor::new(b"\0").write_be::<MyType>().unwrap().int_str, "0");
+//! let mut writer = Cursor::new(Vec::new());
+//! writer.write_be(&MyType { int_str: "1".to_string() }).unwrap();
+//! assert_eq!(&writer.into_inner()[..], b"\x01")
 //! ```
 //!
 //! ### Using `try_map` on a field
@@ -440,12 +401,13 @@
 //! # use std::convert::TryInto;
 //! #[derive(BinWrite)]
 //! struct MyType {
-//!     #[bw(try_map = |x: i8| x.try_into())]
+//!     #[bw(try_map = |&x| -> BinResult<i8> { x.try_into().map_err(|_| todo!()) })]
 //!     value: u8
 //! }
 //!
-//! # assert_eq!(Cursor::new(b"\0").write_be::<MyType>().unwrap().value, 0);
-//! # assert!(Cursor::new(b"\xff").write_be::<MyType>().is_err());
+//! let mut writer = Cursor::new(Vec::new());
+//! writer.write_be(&MyType { value: 3 });
+//! assert_eq!(&writer.into_inner()[..], b"\x03")
 //! ```
 //!
 //! ### Using `map` on a struct to create a bit field
@@ -459,8 +421,8 @@
 //!
 //! // The cursor dumps a single byte
 //! #[bitfield]
-//! #[derive(BinWrite)]
-//! #[bw(map = Self::from_bytes)]
+//! #[derive(BinWrite, Clone, Copy)]
+//! #[bw(map = |&x| Self::into_bytes(x))]
 //! pub struct PackedData {
 //!     status: B4,
 //!     is_fast: bool,
@@ -473,13 +435,9 @@
 //! // [good] [alive] [static] [fast] [status]
 //! //      0       1        0      1     0011
 //! //  false    true    false   true        3
-//!
-//! # let data = Cursor::new(b"\x53").write_le::<PackedData>().unwrap();
-//! # assert_eq!(data.is_good(), false);
-//! # assert_eq!(data.is_alive(), true);
-//! # assert_eq!(data.is_static(), false);
-//! # assert_eq!(data.is_fast(), true);
-//! # assert_eq!(data.status(), 3);
+//! # let mut writer = Cursor::new(Vec::new());
+//! # writer.write_le(&PackedData::new().with_status(3)).unwrap();
+//! # assert_eq!(&writer.into_inner()[..], b"\x03");
 //! ```
 //!
 //! ## Errors
