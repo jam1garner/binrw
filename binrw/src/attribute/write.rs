@@ -31,9 +31,50 @@
 //! | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`BinResult`](crate::BinResult).
 //!
 //!
-//! # Padding and Alignment
+//! # Padding and alignment
 //!
-//! todo
+//! BinWrite offers different directives for common forms of
+//! [data structure alignment](https://en.wikipedia.org/wiki/Data_structure_alignment#Data_structure_padding).
+//!
+//! The `pad_before` and `pad_after` directives skip a specific number of bytes
+//! either before or after writing a field, respectively:
+//!
+//! ```text
+//! #[bw(pad_after = $skip_bytes:expr)] or #[bw(pad_after($skip_bytes:expr))]
+//! #[bw(pad_before = $skip_bytes:expr)] or #[bw(pad_before($skip_bytes:expr))]
+//! #[brw(pad_after = $skip_bytes:expr)] or #[brw(pad_after($skip_bytes:expr))]
+//! #[brw(pad_before = $skip_bytes:expr)] or #[brw(pad_before($skip_bytes:expr))]
+//! ```
+//!
+//! This is effectively equivelant to:
+//!
+//! ```rust
+//! # let mut pos = 0;
+//! # let padding = 0x4;
+//! pos += padding;
+//! ```
+//!
+//! ---
+//!
+//! The `align_before` and `align_after` directives align the next written byte to the
+//! given byte alignment either before or after writing a field, respectively:
+//!
+//! ```text
+//! #[bw(align_after = $align_to:expr)] or #[bw(align_after($align_to:expr))]
+//! #[bw(align_before = $align_to:expr)] or #[bw(align_before($align_to:expr))]
+//! #[brw(align_after = $align_to:expr)] or #[brw(align_after($align_to:expr))]
+//! #[brw(align_before = $align_to:expr)] or #[brw(align_before($align_to:expr))]
+//! ```
+//!
+//!  This is effectively equivelant to:
+//!
+//!  ```rust
+//!  # let mut pos = 0;
+//!  # let align = 0x10;
+//!  if pos % align != 0 {
+//!     pos += align - (pos % align);
+//!  }
+//!  ```
 //!
 //! # Arguments
 //!
