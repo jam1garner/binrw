@@ -290,9 +290,40 @@
 //! In all cases, the writer’s position is reset to where it was before parsing
 //! started.
 //!
-//! # Byte Order
+//! # Byte order
 //!
-//! todo
+//! The `big` and `little` directives specify the [byte order](https://en.wikipedia.org/wiki/Endianness)
+//! of data in a struct, enum, variant, or field:
+//!
+//! ```text
+//! #[bw(big)]
+//! #[bw(little)]
+//! ```
+//!
+//! The `is_big` and `is_little` directives conditionally set the byte order of
+//! a struct field:
+//!
+//! ```text
+//! #[bw(is_little = $cond:expr)] or #[bw(is_little($cond:expr))]
+//! #[bw(is_big = $cond:expr)] or #[bw(is_big($cond:expr))]
+//! ```
+//!
+//! The `is_big` and `is_little` directives are primarily useful when byte order
+//! is defined in the data itself. Any earlier field or [import](#arguments) can
+//! be referenced in the condition. Conditional byte order directives can only
+//! be used on struct fields.
+//!
+//! The order of precedence (from highest to lowest) for determining byte order
+//! within an object is:
+//!
+//! 1. A directive on a field
+//! 2. A directive on an enum variant
+//! 3. A directive on the struct or enum
+//! 4. The [`endian`](crate::WriteOptions::endian) property of the
+//!    [`WriteOptions`](crate::WriteOptions) object passed to
+//!    [`BinWrite::write_options`](crate::BinWrite::write_options) by the caller
+//! 5. The host machine’s native byte order
+//!
 //!
 //! # Caculations
 //!
