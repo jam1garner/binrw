@@ -47,7 +47,7 @@ fn try_map() {
 
     #[derive(BinWrite)]
     struct MyType {
-        #[bw(try_map = |x| -> BinResult<i8> { x.try_into().map_err(|_| todo!()) })]
+        #[bw(try_map = |&x| -> BinResult<i8> { x.try_into().map_err(|_| todo!()) })]
         value: u8,
     }
 }
