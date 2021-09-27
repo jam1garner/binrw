@@ -492,7 +492,38 @@
 //!
 //! # Repr
 //!
-//! todo
+//! The `repr` directive is used on a unit-like (C-style) enum to specify the
+//! underlying type to use when reading the field and matching variants:
+//!
+//! ```text
+//! #[br(repr = $ty:ty)] or #[br(repr($ty:ty))]
+//! #[brw(repr = $ty:ty)] or #[brw(repr($ty:ty))]
+//! ```
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::BinWrite;
+//! #[derive(BinWrite)]
+//! #[bw(big, repr = i16)]
+//! enum FileKind {
+//!     Unknown = -1,
+//!     Text,
+//!     Archive,
+//!     Document,
+//!     Picture,
+//! }
+//! ```
+//!
+//! ## Errors
+//!
+//! If a read fails, an [`Io`](crate::Error::Io) error is returned. If no
+//! variant matches, a [`NoVariantMatch`](crate::Error::NoVariantMatch) error
+//! is returned.
+//!
+//! In all cases, the writer’s position is reset to where it was before parsing
+//! started.
+//!
 //!
 //! # Restore Position
 //!
@@ -521,9 +552,48 @@
 //! writer.write_be(&MyType { my_u24: 3, override_byte: 1 }).unwrap();
 //! assert_eq!(&writer.into_inner()[..], b"\x01\x00\x00\x03");
 //! ```
-//!
 //! Here a u32 (my_u24) is written, then the first byte is overwritten by the byte "override_byte".
+//! # Custom writers
 //!
-//! # Custom Writers
+//! The `write_with` directive specifies a custom writing function that can be
+//! used to override the default [`BinWrite`](crate::BinWrite) implementation for
+//! a type, or to dump values which have no `BinWrite` implementation at all:
 //!
-//! todo
+//! ```text
+//! #[bw(write_with = $write_fn:expr)] or #[bw(write_with($write_fn:expr))]
+//! #[brw(write_with = $write_fn:expr)] or #[brw(write_with($write_fn:expr))]
+//! ```
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive (for example, to construct a writer function at
+//! runtime by calling a function generator).
+//!
+//! ## Examples
+//!
+//! ### Using a local struct to generate a custom writer
+//!
+//! ```
+//! # use binrw::{prelude::*, io::*, BinWrite, Endian, WriteOptions};
+//! fn custom_writer<W: binrw::io::Write + binrw::io::Seek>(
+//!     _this: &u16,
+//!     writer: &mut W,
+//!     _opts: &WriteOptions,
+//!     _: (),
+//! ) -> binrw::BinResult<()> {
+//!     writer.write_all(b"abcd")?;
+//!     Ok(())
+//! }
+//! #[derive(BinWrite)]
+//! struct MyData {
+//!     x: u8,
+//!     #[bw(write_with = custom_writer)]
+//!     y: u16,
+//! }
+//! fn dump_mydata() {
+//!     let mut x = Cursor::new(Vec::new());
+//!     Test { x: 1, y: 2 }
+//!         .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+//!         .unwrap();
+//!     assert_eq!(&x.into_inner()[..], b"\x01abcd");
+//! }
+//! ```
