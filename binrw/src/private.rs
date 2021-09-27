@@ -138,6 +138,19 @@ where
     func
 }
 
+pub fn write_fn_try_map_output_type_hint<Input, Output, MapFn, Writer, WriteFn, Args>(
+    _: &MapFn,
+    func: WriteFn,
+) -> WriteFn
+where
+    MapFn: FnOnce(Input) -> BinResult<Output>,
+    Args: Clone,
+    Writer: Write + Seek,
+    WriteFn: Fn(&Output, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
+{
+    func
+}
+
 pub fn write_zeroes<W: Write>(writer: &mut W, count: u64) -> BinResult<()> {
     const BUF_SIZE: u64 = 0x20;
     const ZEROES: [u8; BUF_SIZE as usize] = [0u8; BUF_SIZE as usize];

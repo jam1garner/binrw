@@ -39,3 +39,15 @@ fn map_field_code_coverage() {
         y: String,
     }
 }
+
+#[test]
+fn try_map() {
+    use binrw::prelude::*;
+    use std::convert::TryInto;
+
+    #[derive(BinWrite)]
+    struct MyType {
+        #[bw(try_map = |&x| -> BinResult<i8> { x.try_into().map_err(|_| todo!()) })]
+        value: u8,
+    }
+}
