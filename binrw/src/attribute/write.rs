@@ -398,7 +398,7 @@
 //!
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
-//! # use std::convert::TryInto;
+//! # use core::convert::TryInto;
 //! #[derive(BinWrite)]
 //! struct MyType {
 //!     #[bw(try_map = |&x| -> BinResult<i8> { x.try_into().map_err(|_| todo!()) })]
@@ -442,8 +442,8 @@
 //!
 //! ## Errors
 //!
-//! If the `try_map` function returns a [`binrw::io::Error`](crate::io::Error)
-//! or [`std::io::Error`], an [`Io`](crate::Error::Io) error is returned. For
+//! If the `try_map` function returns a [`binrw::io::Error`](crate::io::Error) or
+//! a [`std::io::Error`](crate::io::Error), an [`Io`](crate::Error::Io) error is returned. For
 //! any other error type, a [`Custom`](crate::Error::Custom) error is returned.
 //!
 //! In all cases, the writer’s position is reset to where it was before parsing
