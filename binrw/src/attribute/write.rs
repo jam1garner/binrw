@@ -349,10 +349,33 @@
 //! # assert_eq!(&writer.into_inner()[..], b"\0\0\0\x03\0\x01\x02");
 //! ```
 //!
-//! # Ignore
+//! # Default
 //!
-//! todo
+//! The `default` directive, and its alias `ignore`, sets the value of the field
+//! to its [`Default`](core::default::Default) instead of dumping data from the
+//! writer:
 //!
+//! ```text
+//! #[bw(default)] or #[bw(ignore)]
+//! #[brw(default)] or #[brw(ignore)]
+//! ```
+//!
+//! ## Examples
+//!
+//! ```rust
+//! # use binrw::{binrw, prelude::*, BinWrite, io::Cursor};
+//! #[binrw]
+//! #[bw(import { x: u32, _y: u8 })]
+//! struct MyStruct {
+//!     #[br(temp, ignore)]
+//!     #[bw(calc = x)]
+//!     x_copy: u32,
+//! }
+//! let mut x = binrw::io::Cursor::new(Vec::new());
+//! MyStruct {}
+//!     .write_options(&mut x, &Default::default(), binrw::args! { x: 3, _y: 2 })
+//!     .unwrap();
+//! ```
 //!
 //! The `magic` directive matches [magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
 //! in data:
@@ -591,7 +614,7 @@
 //! }
 //! fn dump_mydata() {
 //!     let mut x = Cursor::new(Vec::new());
-//!     Test { x: 1, y: 2 }
+//!     MyData { x: 1, y: 2 }
 //!         .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
 //!         .unwrap();
 //!     assert_eq!(&x.into_inner()[..], b"\x01abcd");
