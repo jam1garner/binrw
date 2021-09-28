@@ -225,7 +225,7 @@
 //! Assertions added to the top of an enum will be checked against every variant
 //! in the enum.
 //!
-//! Any earlier field or [import](#arguments) can be referenced by expressions
+//! Any field or [import](#arguments) can be referenced by expressions
 //! in the directive.
 //!
 //! ## Examples
@@ -309,7 +309,7 @@
 //! ```
 //!
 //! The `is_big` and `is_little` directives are primarily useful when byte order
-//! is defined in the data itself. Any earlier field or [import](#arguments) can
+//! is defined in the data itself. Any field or [import](#arguments) can
 //! be referenced in the condition. Conditional byte order directives can only
 //! be used on struct fields.
 //!
@@ -469,7 +469,7 @@
 //! When using `map` or `try_map` on a struct or enum, the map function must
 //! return `Self` or `Result<Self, E>`.
 //!
-//! Any earlier field or [import](#arguments) can be referenced by the
+//! Any field or [import](#arguments) can be referenced by the
 //! expression in the directive.
 //!
 //! ## Examples
@@ -618,23 +618,25 @@
 //! #[brw(write_with = $write_fn:expr)] or #[brw(write_with($write_fn:expr))]
 //! ```
 //!
-//! Any earlier field or [import](#arguments) can be referenced by the
-//! expression in the directive (for example, to construct a writer function at
-//! runtime by calling a function generator).
+//! Any field or [import](#arguments) can be referenced by the
+//! expression in the directive (for example, to construct a writer function by
+//! passing a value to a function that returns a closure).
 //!
 //! ## Examples
 //!
-//! ### Using a local struct to generate a custom writer
+//! ### Using a custom writer
 //!
 //! ```
 //! # use binrw::{prelude::*, io::*, BinWrite, Endian, WriteOptions};
 //! fn custom_writer<W: binrw::io::Write + binrw::io::Seek>(
-//!     _this: &u16,
+//!     &amount: &u16,
 //!     writer: &mut W,
 //!     _opts: &WriteOptions,
 //!     _: (),
 //! ) -> binrw::BinResult<()> {
-//!     writer.write_all(b"abcd")?;
+//!     for _ in 0..amount {
+//!         writer.write_all(b"abcd")?;
+//!     }
 //!     Ok(())
 //! }
 //! #[derive(BinWrite)]
@@ -648,6 +650,6 @@
 //!     MyData { x: 1, y: 2 }
 //!         .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
 //!         .unwrap();
-//!     assert_eq!(&x.into_inner()[..], b"\x01abcd");
+//!     assert_eq!(&x.into_inner()[..], b"\x01abcdabcd");
 //! }
 //! ```
