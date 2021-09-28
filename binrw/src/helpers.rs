@@ -38,6 +38,34 @@ pub fn read_bytes<R: Read + Seek>(
     Ok(buf)
 }
 
+pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
+    read: ReadFn,
+    cond: CondFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    CondFn: Fn(&T) -> bool,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
+    move |reader, ro, args| {
+        let mut last_cond = true;
+        let mut last_error = false;
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+            .take_while(|result| {
+                let cont = last_cond && !last_error; //keep the first error we get
+                if let Ok(val) = result {
+                    last_cond = !cond(val);
+                } else {
+                    last_error = true;
+                }
+                cont
+            })
+            .collect()
+    }
+}
+
 /// Read items until a condition is met. The final item will be included.
 ///
 /// # Examples
@@ -64,21 +92,12 @@ where
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
-    move |reader, ro, args| {
-        let mut last_cond = true;
-        let mut last_error = false;
-        core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
-            .take_while(|result| {
-                let cont = last_cond && !last_error; //keep the first error we get
-                if let Ok(val) = result {
-                    last_cond = !cond(val);
-                } else {
-                    last_error = true;
-                }
-                cont
-            })
-            .collect()
-    }
+    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
+        let mut value = T::read_options(reader, ro, args.clone())?;
+        value.after_parse(reader, ro, args)?;
+        Ok(value)
+    };
+    until_with(read, cond)
 }
 
 /// Read items until a condition is met. The last item will *not* be included.
@@ -107,9 +126,28 @@ where
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
+    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
+        let mut value = T::read_options(reader, ro, args.clone())?;
+        value.after_parse(reader, ro, args)?;
+        Ok(value)
+    };
+    until_exclusive_with(read, cond)
+}
+
+pub fn until_exclusive_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
+    read: ReadFn,
+    cond: CondFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    CondFn: Fn(&T) -> bool,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
     move |reader, ro, args| {
         let mut last_error = false;
-        core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
             .take_while(|result| {
                 !last_error
                     && if let Ok(val) = result {
@@ -117,6 +155,33 @@ where
                     } else {
                         last_error = true;
                         true //keep the first error we get
+                    }
+            })
+            .collect()
+    }
+}
+
+pub fn until_eof_with<Reader, T, Arg, ReadFn, Ret>(
+    read: ReadFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
+    move |reader, ro, args| {
+        let mut last_error = false;
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+            .take_while(|result| {
+                !last_error
+                    && match result {
+                        Ok(_) => true,
+                        Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
+                        Err(_) => {
+                            last_error = true;
+                            true //keep the first error we get
+                        }
                     }
             })
             .collect()
@@ -139,27 +204,23 @@ where
 /// # let x: EntireFile = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4]);
 /// ```
-pub fn until_eof<R, T, Arg, Ret>(reader: &mut R, ro: &ReadOptions, args: Arg) -> BinResult<Ret>
+pub fn until_eof<Reader, T, Arg, Ret>(
+    reader: &mut Reader,
+    ro: &ReadOptions,
+    args: Arg,
+) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
-    R: Read + Seek,
+    Reader: Read + Seek,
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
-    let mut last_error = false;
-    core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
-        .take_while(|result| {
-            !last_error
-                && match result {
-                    Ok(_) => true,
-                    Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
-                    Err(_) => {
-                        last_error = true;
-                        true //keep the first error we get
-                    }
-                }
-        })
-        .collect()
+    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
+        let mut value = T::read_options(reader, ro, args.clone())?;
+        value.after_parse(reader, ro, args)?;
+        Ok(value)
+    };
+    until_eof_with(read)(reader, ro, args)
 }
 
 fn not_enough_bytes<T>(_: T) -> Error {
