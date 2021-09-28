@@ -2,7 +2,7 @@
 
 use crate::{
     io::{self, ErrorKind::UnexpectedEof, Read, Seek},
-    BinRead, BinReaderExt, BinResult, Error, ReadOptions, VecArgs,
+    BinRead, BinResult, Error, ReadOptions, VecArgs,
 };
 use core::convert::TryInto;
 
@@ -267,9 +267,30 @@ where
                 .then(|| container)
                 .ok_or_else(|| not_enough_bytes(()))
         } else {
-            (0..n)
-                .map(|_| reader.read_type_args(ro.endian(), args.clone()))
-                .collect()
+            let read = |reader: &mut R, ro: &ReadOptions, args: Arg| {
+                let mut value = T::read_options(reader, ro, args.clone())?;
+                value.after_parse(reader, ro, args)?;
+                Ok(value)
+            };
+            count_with(read, n)(reader, ro, args)
         }
+    }
+}
+
+pub fn count_with<R, T, Arg, ReadFn, Ret>(
+    read: ReadFn,
+    n: usize,
+) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    T: BinRead<Args = Arg>,
+    R: Read + Seek,
+    Arg: Clone,
+    ReadFn: Fn(&mut R, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T> + 'static,
+{
+    move |reader, ro, args| {
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+            .take(n)
+            .collect()
     }
 }
