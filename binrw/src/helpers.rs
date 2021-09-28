@@ -39,8 +39,8 @@ pub fn read_bytes<R: Read + Seek>(
 }
 
 pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
-    read: ReadFn,
     cond: CondFn,
+    read: ReadFn,
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
     Reader: Read + Seek,
@@ -97,7 +97,7 @@ where
         value.after_parse(reader, ro, args)?;
         Ok(value)
     };
-    until_with(read, cond)
+    until_with(cond, read)
 }
 
 /// Read items until a condition is met. The last item will *not* be included.
@@ -131,12 +131,12 @@ where
         value.after_parse(reader, ro, args)?;
         Ok(value)
     };
-    until_exclusive_with(read, cond)
+    until_exclusive_with(cond, read)
 }
 
 pub fn until_exclusive_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
-    read: ReadFn,
     cond: CondFn,
+    read: ReadFn,
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
     Reader: Read + Seek,
@@ -272,14 +272,14 @@ where
                 value.after_parse(reader, ro, args)?;
                 Ok(value)
             };
-            count_with(read, n)(reader, ro, args)
+            count_with(n, read)(reader, ro, args)
         }
     }
 }
 
 pub fn count_with<R, T, Arg, ReadFn, Ret>(
-    read: ReadFn,
     n: usize,
+    read: ReadFn,
 ) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
