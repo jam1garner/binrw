@@ -38,34 +38,6 @@ pub fn read_bytes<R: Read + Seek>(
     Ok(buf)
 }
 
-pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
-    cond: CondFn,
-    read: ReadFn,
-) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
-where
-    Reader: Read + Seek,
-    CondFn: Fn(&T) -> bool,
-    Arg: Clone,
-    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
-    Ret: core::iter::FromIterator<T>,
-{
-    move |reader, ro, args| {
-        let mut last_cond = true;
-        let mut last_error = false;
-        core::iter::repeat_with(|| read(reader, ro, args.clone()))
-            .take_while(|result| {
-                let cont = last_cond && !last_error; //keep the first error we get
-                if let Ok(val) = result {
-                    last_cond = !cond(val);
-                } else {
-                    last_error = true;
-                }
-                cont
-            })
-            .collect()
-    }
-}
-
 /// Read items until a condition is met. The final item will be included.
 ///
 /// # Examples
@@ -98,6 +70,35 @@ where
         Ok(value)
     };
     until_with(cond, read)
+}
+
+/// Do the same as [until](binrw::helpers::until) with a custom parsing function for the inner type.
+pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
+    cond: CondFn,
+    read: ReadFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    CondFn: Fn(&T) -> bool,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
+    move |reader, ro, args| {
+        let mut last_cond = true;
+        let mut last_error = false;
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+            .take_while(|result| {
+                let cont = last_cond && !last_error; //keep the first error we get
+                if let Ok(val) = result {
+                    last_cond = !cond(val);
+                } else {
+                    last_error = true;
+                }
+                cont
+            })
+            .collect()
+    }
 }
 
 /// Read items until a condition is met. The last item will *not* be included.
@@ -134,6 +135,7 @@ where
     until_exclusive_with(cond, read)
 }
 
+/// Do the same as [until_exclusive](binrw::helpers::until_exclusive) with a custom parsing function for the inner type.
 pub fn until_exclusive_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
     cond: CondFn,
     read: ReadFn,
@@ -155,33 +157,6 @@ where
                     } else {
                         last_error = true;
                         true //keep the first error we get
-                    }
-            })
-            .collect()
-    }
-}
-
-pub fn until_eof_with<Reader, T, Arg, ReadFn, Ret>(
-    read: ReadFn,
-) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
-where
-    Reader: Read + Seek,
-    Arg: Clone,
-    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
-    Ret: core::iter::FromIterator<T>,
-{
-    move |reader, ro, args| {
-        let mut last_error = false;
-        core::iter::repeat_with(|| read(reader, ro, args.clone()))
-            .take_while(|result| {
-                !last_error
-                    && match result {
-                        Ok(_) => true,
-                        Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
-                        Err(_) => {
-                            last_error = true;
-                            true //keep the first error we get
-                        }
                     }
             })
             .collect()
@@ -221,6 +196,34 @@ where
         Ok(value)
     };
     until_eof_with(read)(reader, ro, args)
+}
+
+/// Do the same as [until_eof](binrw::helpers::until_eof) with a custom parsing function for the inner type.
+pub fn until_eof_with<Reader, T, Arg, ReadFn, Ret>(
+    read: ReadFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
+    move |reader, ro, args| {
+        let mut last_error = false;
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+            .take_while(|result| {
+                !last_error
+                    && match result {
+                        Ok(_) => true,
+                        Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
+                        Err(_) => {
+                            last_error = true;
+                            true //keep the first error we get
+                        }
+                    }
+            })
+            .collect()
+    }
 }
 
 fn not_enough_bytes<T>(_: T) -> Error {
@@ -277,12 +280,29 @@ where
     }
 }
 
+/// Do the same as [count](binrw::helpers::count) with a custom parsing function for the inner type.
+///
+/// # Examples
+///
+/// ```
+/// # use binrw::{BinRead, helpers::count, helpers::count_with, io::Cursor, BinReaderExt};
+/// # use std::collections::VecDeque;
+/// #[derive(BinRead)]
+/// struct CountBytes {
+///     len: u8,
+///
+///     #[br(parse_with = count_with(len as usize, count(2)))]
+///     data: VecDeque<VecDeque<u8>>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x02\x01\x02\x03\x04");
+/// # let x: CountBytes = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
 pub fn count_with<R, T, Arg, ReadFn, Ret>(
     n: usize,
     read: ReadFn,
 ) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
     R: Read + Seek,
     Arg: Clone,
     ReadFn: Fn(&mut R, &ReadOptions, Arg) -> BinResult<T>,
