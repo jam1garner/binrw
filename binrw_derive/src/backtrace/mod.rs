@@ -139,17 +139,21 @@ impl BacktraceFrame {
                 let uncolored_range = range.end..next_start;
 
                 // write colored portion
-                if should_highlight {
-                    write!(f, "{}", (&line[range]).bold().color(color.into_owo()))?;
-                } else {
-                    write!(f, "{}", (&line[range]).color(color.into_owo()))?;
+                if !range.is_empty() {
+                    if should_highlight {
+                        write!(f, "{}", (&line[range]).bold().color(color.into_owo()))?;
+                    } else {
+                        write!(f, "{}", (&line[range]).color(color.into_owo()))?;
+                    }
                 }
 
-                // write next uncolored portion
-                if should_highlight {
-                    write!(f, "{}", (&line[uncolored_range]).bold())?;
-                } else {
-                    write!(f, "{}", &line[uncolored_range])?;
+                if !uncolored_range.is_empty() {
+                    // write next uncolored portion
+                    if should_highlight {
+                        write!(f, "{}", (&line[uncolored_range]).bold())?;
+                    } else {
+                        write!(f, "{}", &line[uncolored_range])?;
+                    }
                 }
             }
 
