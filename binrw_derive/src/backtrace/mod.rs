@@ -17,7 +17,6 @@ pub(crate) struct BacktraceFrame {
     syntax_info: SyntaxInfo,
 }
 
-#[cfg(nightly)]
 struct Line {
     line_num: usize,
     start_col: usize,
@@ -34,7 +33,6 @@ impl BacktraceFrame {
         }
     }
 
-    #[cfg(nightly)]
     fn iter_lines(&self) -> impl Iterator<Item = Line> + '_ {
         if let Some(text) = self.span.unwrap().source_text() {
             let start_col = self.span.start().column - 1;
@@ -75,7 +73,6 @@ impl BacktraceFrame {
         }
     }
 
-    #[cfg(nightly)]
     fn write_line(
         &self,
         Line {
@@ -166,7 +163,6 @@ impl BacktraceFrame {
 }
 
 impl Display for BacktraceFrame {
-    #[cfg(nightly)]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         // it's one allocation, we'll live
         let max_digits = self.span.end().line.to_string().len();
@@ -180,11 +176,6 @@ impl Display for BacktraceFrame {
         }
         writeln!(f, "  ┄{}─╯", bars)?;
 
-        Ok(())
-    }
-
-    #[cfg(not(nightly))]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Ok(())
     }
 }
