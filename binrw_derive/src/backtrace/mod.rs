@@ -92,9 +92,26 @@ impl BacktraceFrame {
             write!(f, "   {} │  ", line_num)?;
         }
 
+        if line.trim().starts_with("//") {
+            return writeln!(f, "{}", line.color(owo_colors::XtermColors::Boulder));
+        }
+
         if let Some(line_highlights) = self.syntax_info.lines.get(&line_num) {
+            let line_len = line.len() + start_col;
+
             // syntax highlighting on this line
-            let highlights = line_highlights.highlights.iter();
+            let highlights = line_highlights.highlights.iter().collect::<Vec<_>>();
+            let highlights = highlights
+                .iter()
+                .enumerate()
+                .filter(|&(i, highlight)| {
+                    i == 0 || !highlights[i - 1].0.contains(&highlight.0.start)
+                })
+                .map(|(_, (range, color))| {
+                    (range.start.min(line_len)..range.end.min(line_len), color)
+                })
+                .collect::<Vec<_>>()
+                .into_iter();
             let highlights_next_start = line_highlights
                 .highlights
                 .iter()
