@@ -1,9 +1,7 @@
+use std::fmt::{Display, Formatter};
 use std::{collections::HashMap, ops::Range};
 
-use crate::parser::{
-    meta_types::FieldValue, read::StructField, AssertionError, CondEndian, Condition, ErrContext,
-    Map, PassedArgs, ReadMode,
-};
+use owo_colors::styles::BoldDisplay;
 use owo_colors::XtermColors;
 use proc_macro2::{Span, TokenTree};
 use quote::ToTokens;
@@ -11,8 +9,12 @@ use syn::{
     parse::Parse,
     punctuated::Punctuated,
     spanned::Spanned,
-    token::Token,
-    visit::{self, /*visit_expr,*/ visit_type, Visit},
+    visit::{self, visit_type, Visit},
+};
+
+use crate::parser::{
+    meta_types::FieldValue, read::StructField, AssertionError, CondEndian, Condition, ErrContext,
+    Map, PassedArgs, ReadMode,
 };
 
 #[derive(Default)]
@@ -38,6 +40,31 @@ impl Color {
             Self::Keyword => XtermColors::DarkRose,
             Self::Function => XtermColors::RioGrandeGreen,
             Self::Unary => XtermColors::MalibuBlue,
+        }
+    }
+}
+
+pub(crate) fn conditional_bold<D>(item: &D, apply: bool) -> CondOwo<BoldDisplay<'_, D>, &'_ D>
+where
+    D: Display + Sized,
+{
+    if apply {
+        CondOwo::Applied(owo_colors::styles::BoldDisplay(item))
+    } else {
+        CondOwo::NotApplied(item)
+    }
+}
+
+pub(crate) enum CondOwo<A, N> {
+    Applied(A),
+    NotApplied(N),
+}
+
+impl<A: Display, N: Display> Display for CondOwo<A, N> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CondOwo::Applied(a) => a.fmt(f),
+            CondOwo::NotApplied(n) => n.fmt(f),
         }
     }
 }

@@ -1,14 +1,15 @@
 #![allow(clippy::non_ascii_literal)]
-#![allow(unused_imports, unused_variables, dead_code)]
 use std::fmt::{self, Display, Formatter};
 
-mod syntax_highlighting;
 use owo_colors::OwoColorize;
-use syntax_highlighting::SyntaxInfo;
-
-use crate::parser::read::StructField;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
+
+use syntax_highlighting::{conditional_bold, CondOwo, SyntaxInfo};
+
+use crate::parser::read::StructField;
+
+mod syntax_highlighting;
 
 pub(crate) struct BacktraceFrame {
     span: Span,
@@ -86,11 +87,17 @@ impl BacktraceFrame {
     ) -> fmt::Result {
         let should_highlight = line_num == self.highlight_line;
 
-        if should_highlight {
-            write!(f, "   {} {}  ", line_num.bold(), "⎬".bold())?;
+        let bar = if should_highlight {
+            CondOwo::Applied("⎬".bold())
         } else {
-            write!(f, "   {} │  ", line_num)?;
-        }
+            CondOwo::NotApplied("|")
+        };
+        write!(
+            f,
+            "   {} {}  ",
+            conditional_bold(&line_num, should_highlight),
+            bar
+        )?;
 
         if line.trim().starts_with("//") {
             return writeln!(f, "{}", line.color(owo_colors::XtermColors::Boulder));
@@ -122,15 +129,9 @@ impl BacktraceFrame {
             if let Some((first_range, _)) = line_highlights.highlights.get(0) {
                 let component = &line[..first_range.start - start_col];
 
-                if should_highlight {
-                    write!(f, "{}", component.bold())?;
-                } else {
-                    write!(f, "{}", component)?;
-                }
-            } else if should_highlight {
-                write!(f, "{}", line.bold())?;
+                write!(f, "{}", conditional_bold(&component, should_highlight))?;
             } else {
-                write!(f, "{}", line)?;
+                write!(f, "{}", conditional_bold(&line, should_highlight))?;
             }
 
             for ((range, color), next_start) in highlights.zip(highlights_next_start) {
@@ -140,30 +141,26 @@ impl BacktraceFrame {
 
                 // write colored portion
                 if !range.is_empty() {
-                    if should_highlight {
-                        write!(f, "{}", (&line[range]).bold().color(color.into_owo()))?;
-                    } else {
-                        write!(f, "{}", (&line[range]).color(color.into_owo()))?;
-                    }
+                    write!(
+                        f,
+                        "{}",
+                        conditional_bold(&(&line[range]).color(color.into_owo()), should_highlight)
+                    )?;
                 }
 
                 if !uncolored_range.is_empty() {
                     // write next uncolored portion
-                    if should_highlight {
-                        write!(f, "{}", (&line[uncolored_range]).bold())?;
-                    } else {
-                        write!(f, "{}", &line[uncolored_range])?;
-                    }
+                    write!(
+                        f,
+                        "{}",
+                        conditional_bold(&&line[uncolored_range], should_highlight)
+                    )?;
                 }
             }
 
             writeln!(f)
-        } else if should_highlight {
-            // no syntax highlighting on this line, but  b o l d
-            writeln!(f, "{}", line.bold())
         } else {
-            // no syntax highlighting on this line
-            writeln!(f, "{}", line)
+            writeln!(f, "{}", conditional_bold(&line, should_highlight))
         }
     }
 }
