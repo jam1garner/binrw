@@ -68,6 +68,7 @@ impl Inner {
         &self.1
     }
 
+    #[cfg(nightly)] // Not actually nightly, but only used by nightly mod syntax_highlighting
     pub(crate) fn into_match_value(self) -> TokenStream {
         self.1
     }

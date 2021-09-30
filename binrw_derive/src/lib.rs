@@ -3,6 +3,7 @@
 #![allow(clippy::expl_impl_clone_on_copy)]
 #![cfg_attr(nightly, feature(proc_macro_span))]
 
+#[cfg(nightly)]
 mod backtrace;
 mod binread;
 mod binrw_attr;
