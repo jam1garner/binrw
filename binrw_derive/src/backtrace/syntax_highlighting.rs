@@ -49,7 +49,7 @@ where
     D: Display + Sized,
 {
     if apply {
-        CondOwo::Applied(owo_colors::styles::BoldDisplay(item))
+        CondOwo::Applied(BoldDisplay(item))
     } else {
         CondOwo::NotApplied(item)
     }
