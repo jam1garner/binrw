@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use super::super::{
-    types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map, WriteMode},
+    types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
     write::FromInput,
     ParseResult, SpannedValue, TrySet,
 };
@@ -140,13 +140,9 @@ impl Struct {
     }
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
-        self.fields.iter().filter_map(|field| {
-            if matches!(field.write_mode, WriteMode::Calc(_)) {
-                None
-            } else {
-                Some(&field.ident)
-            }
-        })
+        self.fields
+            .iter()
+            .filter_map(|field| (!field.is_temp()).then(|| &field.ident))
     }
 
     pub(crate) fn fields_pattern(&self) -> TokenStream {
