@@ -19,6 +19,21 @@ fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
     }
 }
 
+pub(crate) trait TempableField {
+    // The identifier for this field.
+    fn ident(&self) -> &syn::Ident;
+
+    /// Returns true if this field is temporary and should be removed from the struct.
+    fn is_temp(&self) -> bool;
+
+    /// Returns true if this field is temporary and should be removed from the struct.
+    /// Ignores the value set by `set_crossover_temp`.
+    fn is_temp_for_crossover(&self) -> bool;
+
+    /// Set the crossover temporary field.
+    fn set_crossover_temp(&mut self, temp: bool);
+}
+
 pub(crate) trait FromField {
     type In;
 

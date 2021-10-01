@@ -6,6 +6,7 @@ use super::super::{
 
 use super::Struct;
 
+use crate::parser::TempableField;
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
@@ -143,6 +144,24 @@ impl StructField {
         } else {
             Ok(())
         }
+    }
+}
+
+impl TempableField for StructField {
+    fn ident(&self) -> &syn::Ident {
+        &self.ident
+    }
+
+    fn is_temp(&self) -> bool {
+        self.is_temp_for_crossover()
+    }
+
+    fn is_temp_for_crossover(&self) -> bool {
+        self.temp.is_some()
+    }
+
+    fn set_crossover_temp(&mut self, temp: bool) {
+        self.temp = temp.then(|| ());
     }
 }
 
