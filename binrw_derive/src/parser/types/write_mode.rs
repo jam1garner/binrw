@@ -5,7 +5,6 @@ use quote::ToTokens;
 #[derive(Clone, Debug)]
 pub(crate) enum WriteMode {
     Normal,
-    Ignore,
     Calc(TokenStream),
     WriteWith(TokenStream),
 }
@@ -13,12 +12,6 @@ pub(crate) enum WriteMode {
 impl Default for WriteMode {
     fn default() -> Self {
         Self::Normal
-    }
-}
-
-impl From<attrs::Ignore> for WriteMode {
-    fn from(_: attrs::Ignore) -> Self {
-        Self::Ignore
     }
 }
 

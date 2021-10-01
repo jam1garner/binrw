@@ -74,9 +74,12 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn prefix_write_fn(mut self) -> Self {
+        if !self.field.is_written() {
+            return self;
+        }
+
         let write_fn = match &self.field.write_mode {
             WriteMode::Normal | WriteMode::Calc(_) => quote! { #WRITE_METHOD },
-            WriteMode::Ignore => quote! { |_, _, _, _| { Ok(()) } },
             WriteMode::WriteWith(write_fn) => write_fn.clone(),
         };
 
@@ -128,6 +131,10 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn write_field(mut self) -> Self {
+        if !self.field.is_written() {
+            return self;
+        }
+
         let name = &self.field.ident;
         let args = self.args_ident();
         let specify_endian = self.specify_endian();
@@ -146,21 +153,15 @@ impl<'a> StructFieldGenerator<'a> {
         let map_fn = self.field.map.is_some().then(|| self.map_fn_ident());
         let map_try = self.field.map.is_try().then(|| quote! { ? });
 
-        self.out = if let WriteMode::Ignore = &self.field.write_mode {
-            quote! {
-                #initialize
-            }
-        } else {
-            quote! {
-                #initialize
+        self.out = quote! {
+            #initialize
 
-                #WRITE_FUNCTION (
-                    &(#map_fn (#name) #map_try),
-                    #WRITER,
-                    &#OPT#specify_endian,
-                    #args
-                )?;
-            }
+            #WRITE_FUNCTION (
+                &(#map_fn (#name) #map_try),
+                #WRITER,
+                &#OPT#specify_endian,
+                #args
+            )?;
         };
 
         self
@@ -266,6 +267,10 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn prefix_args(mut self) -> Self {
+        if !self.field.is_written() {
+            return self;
+        }
+
         let args = self.args_ident();
 
         let args_val = if let Some(args) = get_passed_args(self.field) {
@@ -294,24 +299,6 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 }
             },
-            WriteMode::Ignore => {
-                if self.field.args.is_some() {
-                    let name = &self.field.ident;
-                    quote_spanned! { self.field.ident.span() =>
-                        compile_error!(concat!(
-                            "Cannot pass arguments to the field '",
-                            stringify!(#name),
-                            "'  as it is uses the 'ignore' directive"
-                        ));
-                        #out
-                    }
-                } else {
-                    quote! {
-                        let #args = ();
-                        #out
-                    }
-                }
-            }
             WriteMode::Calc(_) => {
                 if self.field.args.is_some() {
                     let name = &self.field.ident;

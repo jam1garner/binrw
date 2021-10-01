@@ -27,7 +27,7 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(Args, ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(Calc, Ignore, WriteWith)]
+        #[from(Calc, WriteWith)]
         pub(crate) write_mode: WriteMode,
         #[from(Count)]
         pub(crate) count: Option<TokenStream>,
@@ -68,6 +68,11 @@ impl StructField {
     /// Returns true if the field needs `ReadOptions` to be parsed.
     pub(crate) fn needs_options(&self) -> bool {
         !self.generated_value() || self.magic.is_some()
+    }
+
+    /// Returns true if the field is actually written.
+    pub(crate) fn is_written(&self) -> bool {
+        !self.is_temp() || matches!(self.write_mode, WriteMode::Calc(_))
     }
 }
 

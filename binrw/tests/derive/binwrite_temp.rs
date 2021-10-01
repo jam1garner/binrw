@@ -1,4 +1,4 @@
-use binrw::{binrw, io::Cursor, BinRead};
+use binrw::{binrw, io::Cursor, BinRead, BinWrite, Endian, WriteOptions};
 
 #[test]
 fn binwrite_temp_applies() {
@@ -23,4 +23,35 @@ fn binwrite_temp_applies() {
             vec: Vec::from(&b"ABCDE"[..])
         }
     );
+}
+
+#[test]
+fn binwrite_temp_with_ignore() {
+    #[binrw]
+    #[derive(Debug, PartialEq)]
+    #[br(big)]
+    struct Test {
+        #[br(temp)]
+        len: u32,
+
+        #[br(count = len)]
+        vec: Vec<u8>,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap();
+    assert_eq!(
+        result,
+        Test {
+            vec: Vec::from(&b"ABCDE"[..])
+        }
+    );
+
+    let mut x = Cursor::new(Vec::new());
+
+    result
+        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .unwrap();
+
+    // Since it's br(temp) and not calculated, nothing is written here.
+    assert_eq!(&x.into_inner()[..], b"ABCDE");
 }
