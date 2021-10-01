@@ -1,5 +1,6 @@
 mod args;
 mod assert;
+mod binread_temp;
 mod c_enum;
 mod calc;
 mod custom_writer;

@@ -2,7 +2,7 @@ use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Input, Struct, StructField};
-use crate::parser::{ErrContext, Map, PassedArgs, ReadMode};
+use crate::parser::{ErrContext, Map, PassedArgs, ReadMode, TempableField};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::Ident;
@@ -124,7 +124,7 @@ fn generate_field(
     variant_name: Option<&str>,
 ) -> TokenStream {
     // temp + ignore == just don't bother
-    if field.temp.is_some() && matches!(field.read_mode, ReadMode::Default) {
+    if field.is_temp() && matches!(field.read_mode, ReadMode::Default) {
         return TokenStream::new();
     }
 

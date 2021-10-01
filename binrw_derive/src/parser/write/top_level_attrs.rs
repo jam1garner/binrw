@@ -7,6 +7,7 @@ use super::super::{
 };
 use super::{EnumVariant, StructField, UnitEnumField};
 
+use crate::parser::TempableField;
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
@@ -69,14 +70,13 @@ impl Input {
 
     pub(crate) fn is_temp_field(&self, variant_index: usize, index: usize) -> bool {
         match self {
-            Input::Struct(s) => s.fields.get(index).map_or(false, |field| {
-                matches!(field.write_mode, WriteMode::Calc(_))
-            }),
+            Input::Struct(s) => s.fields.get(index).map_or(false, |field| field.is_temp()),
             Input::Enum(e) => e.variants.get(variant_index).map_or(false, |variant| {
                 if let EnumVariant::Variant { options, .. } = variant {
-                    options.fields.get(index).map_or(false, |field| {
-                        matches!(field.write_mode, WriteMode::Calc(_))
-                    })
+                    options
+                        .fields
+                        .get(index)
+                        .map_or(false, |field| field.is_temp())
                 } else {
                     false
                 }

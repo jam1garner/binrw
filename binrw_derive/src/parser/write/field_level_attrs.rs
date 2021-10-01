@@ -7,6 +7,7 @@ use super::super::{
 
 use super::Struct;
 
+use crate::parser::TempableField;
 use proc_macro2::TokenStream;
 
 attr_struct! {
@@ -46,6 +47,8 @@ attr_struct! {
         pub(crate) seek_before: Option<TokenStream>,
         #[from(PadSizeTo)]
         pub(crate) pad_size_to: Option<TokenStream>,
+        // Marker for if binread has marked this field temporary
+        pub(crate) binread_temp: bool,
     }
 }
 
@@ -65,6 +68,24 @@ impl StructField {
     /// Returns true if the field needs `ReadOptions` to be parsed.
     pub(crate) fn needs_options(&self) -> bool {
         !self.generated_value() || self.magic.is_some()
+    }
+}
+
+impl TempableField for StructField {
+    fn ident(&self) -> &syn::Ident {
+        &self.ident
+    }
+
+    fn is_temp(&self) -> bool {
+        self.binread_temp || self.is_temp_for_crossover()
+    }
+
+    fn is_temp_for_crossover(&self) -> bool {
+        matches!(self.write_mode, WriteMode::Calc(_))
+    }
+
+    fn set_crossover_temp(&mut self, temp: bool) {
+        self.binread_temp = temp;
     }
 }
 
@@ -95,6 +116,7 @@ impl FromField for StructField {
                 seek_before: <_>::default(),
                 pad_size_to: <_>::default(),
                 keyword_spans: <_>::default(),
+                binread_temp: false,
             },
             &field.attrs,
         )

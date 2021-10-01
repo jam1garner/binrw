@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+mod binwrite_temp;
 mod r#enum;
 mod map_args;
 mod r#struct;

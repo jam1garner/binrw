@@ -1,10 +1,12 @@
-use crate::{
-    binread, binwrite,
-    parser::{read, read::is_binread_attr, write, write::is_binwrite_attr},
-};
+use std::collections::HashSet;
 
 use quote::quote;
 use syn::DeriveInput;
+
+use crate::codegen::{generate_binread_impl, generate_binwrite_impl};
+use crate::parser::{
+    read, read::is_binread_attr, write, write::is_binwrite_attr, ParseResult, TempableField,
+};
 
 #[cfg(not(tarpaulin_include))]
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
@@ -13,8 +15,13 @@ fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
 
 #[cfg(not(tarpaulin_include))]
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
-    let (binread_input, generated_impl_rd) = binread::derive_from_input(&derive_input);
-    let (binwrite_input, generated_impl_wr) = binwrite::derive_from_input(&derive_input);
+    let mut binread_input = read::Input::from_input(&derive_input);
+    let mut binwrite_input = write::Input::from_input(&derive_input);
+
+    apply_temp_crossover(&mut binread_input, &mut binwrite_input);
+
+    let generated_impl_rd = generate_binread_impl(&derive_input, &binread_input);
+    let generated_impl_wr = generate_binwrite_impl(&derive_input, &binwrite_input);
 
     let binread_input = binread_input.ok();
     let binwrite_input = binwrite_input.ok();
@@ -43,6 +50,79 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
         #generated_impl_rd
         #generated_impl_wr
     )
+}
+
+/// Check the fields of each input and copy temp state to the other input.
+fn apply_temp_crossover(
+    binread_input: &mut ParseResult<read::Input>,
+    binwrite_input: &mut ParseResult<write::Input>,
+) {
+    let (binread_input, binwrite_input) = match (binread_input, binwrite_input) {
+        (ParseResult::Ok(binread), ParseResult::Ok(binwrite)) => (binread, binwrite),
+        // We don't need to apply this in the case of Partial because no implementation is
+        // generated.
+        _ => return,
+    };
+    match (binread_input, binwrite_input) {
+        (read::Input::Struct(binread_struct), write::Input::Struct(binwrite_struct)) => {
+            apply_temp_crossover_struct(binread_struct, binwrite_struct);
+        }
+        (read::Input::Enum(binread_enum), write::Input::Enum(binwrite_enum)) => {
+            for (read_variant, write_variant) in binread_enum
+                .variants
+                .iter_mut()
+                .zip(binwrite_enum.variants.iter_mut())
+            {
+                match (read_variant, write_variant) {
+                    (
+                        read::EnumVariant::Variant {
+                            options: read_struct,
+                            ..
+                        },
+                        write::EnumVariant::Variant {
+                            options: write_struct,
+                            ..
+                        },
+                    ) => apply_temp_crossover_struct(read_struct, write_struct),
+                    (read::EnumVariant::Unit(_), write::EnumVariant::Unit(_)) => continue,
+                    _ => unreachable!("read and write input should always be the same kind"),
+                };
+            }
+        }
+        // These don't have temp fields.
+        (read::Input::UnitStruct(_), write::Input::UnitStruct(_))
+        | (read::Input::UnitOnlyEnum(_), write::Input::UnitOnlyEnum(_)) => {}
+        _ => unreachable!("read and write input should always be the same kind"),
+    }
+}
+
+fn apply_temp_crossover_struct(
+    binread_struct: &mut read::Struct,
+    binwrite_struct: &mut write::Struct,
+) {
+    // Index temporary fields
+    let read_temporary = extract_temporary_field_names(&binread_struct.fields);
+    let write_temporary = extract_temporary_field_names(&binwrite_struct.fields);
+
+    // Iterate the fields again and set temp flags
+    set_fields_temporary(&mut binread_struct.fields, &write_temporary);
+    set_fields_temporary(&mut binwrite_struct.fields, &read_temporary);
+}
+
+fn extract_temporary_field_names<S: TempableField>(fields: &[S]) -> HashSet<syn::Ident> {
+    fields
+        .iter()
+        .filter(|f| f.is_temp_for_crossover())
+        .map(|f| f.ident().clone())
+        .collect()
+}
+
+fn set_fields_temporary<S: TempableField>(fields: &mut [S], temporary_names: &HashSet<syn::Ident>) {
+    for field in fields {
+        if temporary_names.contains(field.ident()) {
+            field.set_crossover_temp(true);
+        }
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
