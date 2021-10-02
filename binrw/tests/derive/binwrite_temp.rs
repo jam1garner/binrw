@@ -32,6 +32,7 @@ fn binwrite_temp_with_ignore() {
     #[br(big)]
     struct Test {
         #[br(temp)]
+        #[bw(ignore)]
         len: u32,
 
         #[br(count = len)]
@@ -52,6 +53,6 @@ fn binwrite_temp_with_ignore() {
         .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    // Since it's br(temp) and not calculated, nothing is written here.
+    // Since it's bw(ignore), the length isn't written here
     assert_eq!(&x.into_inner()[..], b"ABCDE");
 }

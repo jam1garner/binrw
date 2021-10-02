@@ -6,6 +6,7 @@ mod calc;
 mod custom_writer;
 mod endian;
 mod r#enum;
+mod ignore;
 mod import;
 mod magic;
 mod map;

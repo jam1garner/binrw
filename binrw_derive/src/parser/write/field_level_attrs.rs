@@ -27,7 +27,7 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(Args, ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(Calc, WriteWith)]
+        #[from(Calc, Ignore, WriteWith)]
         pub(crate) write_mode: WriteMode,
         #[from(Count)]
         pub(crate) count: Option<TokenStream>,
@@ -72,7 +72,12 @@ impl StructField {
 
     /// Returns true if the field is actually written.
     pub(crate) fn is_written(&self) -> bool {
-        !self.is_temp() || matches!(self.write_mode, WriteMode::Calc(_))
+        // Non-calc temp fields are not written
+        if self.is_temp() && !matches!(self.write_mode, WriteMode::Calc(_)) {
+            return false;
+        }
+        // Ignored fields are not written
+        !matches!(self.write_mode, WriteMode::Ignore)
     }
 }
 
