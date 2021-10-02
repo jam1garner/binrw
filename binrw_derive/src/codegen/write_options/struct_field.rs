@@ -3,6 +3,7 @@ use std::ops::Not;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::Ident;
+use syn::spanned::Spanned;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
@@ -149,7 +150,7 @@ impl<'a> StructFieldGenerator<'a> {
             // Fail with a detailed error if it's not.
             _ if self.field.binread_temp => {
                 let ty = &self.field.ty;
-                self.out = quote! {
+                self.out = quote_spanned! {self.field.field.span()=>
                     let #name: #ty = compile_error!(concat!(
                         "The field ",
                         stringify!(#name),
