@@ -1,0 +1,7 @@
+error: The field len is temp but not provided a value in its BinWrite derivation. Try using `bw(calc = ...)` or `bw(ignore)`
+ --> $DIR/binrw_br_temp_no_bw_ignore.rs:3:1
+  |
+3 | #[binrw]
+  | ^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `binrw` (in Nightly builds, run with -Z macro-backtrace for more info)

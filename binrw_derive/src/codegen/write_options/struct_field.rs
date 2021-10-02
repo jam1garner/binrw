@@ -1,13 +1,13 @@
 use std::ops::Not;
 
-use crate::parser::write::StructField;
-use crate::parser::{CondEndian, Map, PassedArgs, WriteMode};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
+use crate::parser::write::StructField;
+use crate::parser::{CondEndian, Map, PassedArgs, WriteMode};
 
 pub(crate) fn write_field(field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field)
@@ -81,6 +81,7 @@ impl<'a> StructFieldGenerator<'a> {
         let write_fn = match &self.field.write_mode {
             WriteMode::Normal | WriteMode::Calc(_) => quote! { #WRITE_METHOD },
             WriteMode::WriteWith(write_fn) => write_fn.clone(),
+            WriteMode::Ignore => unreachable!("Ignored fields are not written"),
         };
 
         let write_fn = if self.field.map.is_some() {
@@ -131,23 +132,34 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn write_field(mut self) -> Self {
-        if !self.field.is_written() {
-            return self;
-        }
-
         let name = &self.field.ident;
         let args = self.args_ident();
         let specify_endian = self.specify_endian();
 
-        let initialize = if let WriteMode::Calc(expr) = &self.field.write_mode {
-            Some({
+        let initialize = match &self.field.write_mode {
+            WriteMode::Calc(expr) => Some({
                 let ty = &self.field.ty;
                 quote! {
                     let #name: #ty = #expr;
                 }
-            })
-        } else {
-            None
+            }),
+            // If ignored, just skip this now
+            WriteMode::Ignore => return self,
+            // If field is temp, it should also be calc or ignore
+            // Fail with a detailed error if it's not.
+            _ if self.field.binread_temp => {
+                let ty = &self.field.ty;
+                self.out = quote! {
+                    let #name: #ty = compile_error!(concat!(
+                        "The field ",
+                        stringify!(#name),
+                        " is temp but not provided a value in its BinWrite derivation.",
+                        " Try using `bw(calc = ...)` or `bw(ignore)`"
+                    ));
+                };
+                return self;
+            }
+            _ => None,
         };
 
         let map_fn = self.field.map.is_some().then(|| self.map_fn_ident());
@@ -326,6 +338,7 @@ impl<'a> StructFieldGenerator<'a> {
                     #out
                 }
             }
+            WriteMode::Ignore => unreachable!("Ignored fields are not written"),
         };
 
         self
