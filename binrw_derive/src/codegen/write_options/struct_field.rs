@@ -2,8 +2,8 @@ use std::ops::Not;
 
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::Ident;
 use syn::spanned::Spanned;
+use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
