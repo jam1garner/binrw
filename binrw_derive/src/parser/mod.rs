@@ -1,12 +1,13 @@
+use proc_macro2::Span;
+use syn::token::Token;
+
+pub(crate) use types::*;
+
 #[macro_use]
 pub(crate) mod macros;
 mod keywords;
 pub(crate) mod meta_types;
 mod types;
-
-use proc_macro2::Span;
-use syn::token::Token;
-pub(crate) use types::*;
 
 pub(crate) mod read;
 pub(crate) mod write;
@@ -172,12 +173,13 @@ impl<T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySe
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use proc_macro2::TokenStream;
     use syn::DeriveInput;
 
+    use super::*;
+
     fn try_input(input: TokenStream) -> ParseResult<read::Input> {
-        read::Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap())
+        read::Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap(), false)
     }
 
     macro_rules! try_error (

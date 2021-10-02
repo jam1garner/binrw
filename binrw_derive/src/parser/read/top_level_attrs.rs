@@ -1,11 +1,10 @@
 use super::super::{
     read::FromInput,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    ParseResult, SpannedValue, TrySet,
+    ParseResult, SpannedValue, TempableField, TrySet,
 };
 use super::{EnumVariant, StructField, UnitEnumField};
 
-use crate::parser::TempableField;
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
@@ -17,15 +16,24 @@ pub(crate) enum Input {
 }
 
 impl Input {
-    pub(crate) fn from_input(input: &syn::DeriveInput) -> ParseResult<Self> {
+    pub(crate) fn from_input(
+        input: &syn::DeriveInput,
+        is_inside_derive: bool,
+    ) -> ParseResult<Self> {
         let attrs = &input.attrs;
         let ident = Some(&input.ident);
         match &input.data {
             syn::Data::Struct(st) => {
+                let read_struct =
+                    Struct::from_input(ident, attrs, st.fields.iter()).map(|mut read_struct| {
+                        read_struct.temp_legal = !is_inside_derive;
+                        read_struct
+                    });
+
                 if matches!(st.fields, syn::Fields::Unit) {
-                    Struct::from_input(ident, attrs, st.fields.iter()).map(Self::UnitStruct)
+                    read_struct.map(Self::UnitStruct)
                 } else {
-                    Struct::from_input(ident, attrs, st.fields.iter()).map(Self::Struct)
+                    read_struct.map(Self::Struct)
                 }
             }
             syn::Data::Enum(en) => {
@@ -41,7 +49,16 @@ impl Input {
                 {
                     UnitOnlyEnum::from_input(ident, attrs, variants.iter()).map(Self::UnitOnlyEnum)
                 } else {
-                    Enum::from_input(ident, attrs, variants.iter()).map(Self::Enum)
+                    let read_enum =
+                        Enum::from_input(ident, attrs, variants.iter()).map(|mut read_enum| {
+                            for x in &mut read_enum.variants {
+                                if let EnumVariant::Variant { options, .. } = x {
+                                    options.temp_legal = !is_inside_derive;
+                                }
+                            }
+                            read_enum
+                        });
+                    read_enum.map(Self::Enum)
                 }
             }
             syn::Data::Union(_) => {
@@ -122,6 +139,7 @@ attr_struct! {
     #[from(StructAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Struct {
+        pub(crate) temp_legal: bool,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
@@ -146,9 +164,14 @@ impl Struct {
     }
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
-        self.fields
-            .iter()
-            .filter_map(|field| (!field.is_temp()).then(|| &field.ident))
+        let temp_legal = self.temp_legal;
+        self.fields.iter().filter_map(move |field| {
+            if temp_legal && field.is_temp() {
+                None
+            } else {
+                Some(&field.ident)
+            }
+        })
     }
 
     pub(crate) fn has_no_attrs(&self) -> bool {
@@ -175,6 +198,7 @@ attr_struct! {
     #[from(EnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
+        pub(crate) temp_legal: bool,
         pub(crate) ident: Option<syn::Ident>,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,

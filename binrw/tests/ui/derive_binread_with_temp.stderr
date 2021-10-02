@@ -1,0 +1,6 @@
+error: The attribute `temp` removes this field, but this is not possible under the derive macro. Try using `#[binread]` instead of `#[derive(BinRead)]`.
+ --> $DIR/derive_binread_with_temp.rs:5:5
+  |
+5 | /     #[br(temp)]
+6 | |     a: u8,
+  | |_________^
