@@ -15,8 +15,8 @@ fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
 
 #[cfg(not(tarpaulin_include))]
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
-    let mut binread_input = read::Input::from_input(&derive_input);
-    let mut binwrite_input = write::Input::from_input(&derive_input);
+    let mut binread_input = read::Input::from_input(&derive_input, false);
+    let mut binwrite_input = write::Input::from_input(&derive_input, false);
 
     apply_temp_crossover(&mut binread_input, &mut binwrite_input);
 

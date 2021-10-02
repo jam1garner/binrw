@@ -22,7 +22,7 @@ use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
 #[proc_macro_derive(BinRead, attributes(binread, br, brw))]
 #[cfg(not(tarpaulin_include))]
 pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
-    binread::derive_from_input(&parse_macro_input!(input as DeriveInput))
+    binread::derive_from_input(&parse_macro_input!(input as DeriveInput), true)
         .1
         .into()
 }
@@ -36,7 +36,7 @@ pub fn binread(_: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_derive(BinWrite, attributes(binwrite, bw, brw))]
 #[cfg(not(tarpaulin_include))]
 pub fn derive_binwrite_trait(input: TokenStream) -> TokenStream {
-    binwrite::derive_from_input(&parse_macro_input!(input as DeriveInput))
+    binwrite::derive_from_input(&parse_macro_input!(input as DeriveInput), true)
         .1
         .into()
 }
@@ -149,7 +149,7 @@ fn derive_code_coverage_for_tarpaulin() {
         if entry.file_type().unwrap().is_file() {
             let file = fs::File::open(entry.path()).unwrap();
             if emulate_derive_expansion_fallible(file, "BinRead", |input| {
-                binread::derive_from_input(&input).1
+                binread::derive_from_input(&input, true).1
             })
             .is_err()
             {
@@ -179,7 +179,7 @@ fn derive_binwrite_code_coverage_for_tarpaulin() {
         if entry.file_type().unwrap().is_file() {
             let file = fs::File::open(entry.path()).unwrap();
             if emulate_derive_expansion_fallible(file, "BinWrite", |input| {
-                binwrite::derive_from_input(&input).1
+                binwrite::derive_from_input(&input, true).1
             })
             .is_err()
             {

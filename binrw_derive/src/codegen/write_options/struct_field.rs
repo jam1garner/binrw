@@ -8,10 +8,10 @@ use syn::Ident;
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::write::StructField;
-use crate::parser::{CondEndian, Map, PassedArgs, WriteMode};
+use crate::parser::{CondEndian, Map, PassedArgs, TempableField, WriteMode};
 
-pub(crate) fn write_field(field: &StructField) -> TokenStream {
-    StructFieldGenerator::new(field)
+pub(crate) fn write_field(field: &StructField, temp_legal: bool) -> TokenStream {
+    StructFieldGenerator::new(field, temp_legal)
         .write_field()
         .wrap_padding()
         .prefix_args()
@@ -25,13 +25,15 @@ pub(crate) fn write_field(field: &StructField) -> TokenStream {
 struct StructFieldGenerator<'input> {
     field: &'input StructField,
     out: TokenStream,
+    temp_legal: bool,
 }
 
 impl<'a> StructFieldGenerator<'a> {
-    fn new(field: &'a StructField) -> Self {
+    fn new(field: &'a StructField, temp_legal: bool) -> Self {
         Self {
             field,
             out: TokenStream::new(),
+            temp_legal,
         }
     }
 
@@ -136,6 +138,18 @@ impl<'a> StructFieldGenerator<'a> {
         let name = &self.field.ident;
         let args = self.args_ident();
         let specify_endian = self.specify_endian();
+
+        if !self.temp_legal && self.field.is_temp_for_crossover() {
+            // Emit error regarding temp.
+            let ty = &self.field.ty;
+            self.out = quote_spanned! {self.field.field.span()=>
+                let #name: #ty = compile_error!(concat!(
+                    "The attribute `temp` removes this field, but this is not possible under",
+                    " the derive macro. Try using `#[binwrite]` instead of `#[derive(BinWrite)]`."
+                ));
+            };
+            return self;
+        }
 
         let initialize = match &self.field.write_mode {
             WriteMode::Calc(expr) => Some({
