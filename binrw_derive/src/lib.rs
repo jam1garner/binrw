@@ -149,7 +149,7 @@ fn derive_code_coverage_for_tarpaulin() {
         if entry.file_type().unwrap().is_file() {
             let file = fs::File::open(entry.path()).unwrap();
             if emulate_derive_expansion_fallible(file, "BinRead", |input| {
-                binread::derive_from_input(&input).1
+                binread::derive_from_input(&input, true).1
             })
             .is_err()
             {
