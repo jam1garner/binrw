@@ -198,7 +198,6 @@ attr_struct! {
     #[from(EnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
-        pub(crate) temp_legal: bool,
         pub(crate) ident: Option<syn::Ident>,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
