@@ -2,9 +2,10 @@ use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Input, Struct, StructField};
-use crate::parser::{ErrContext, Map, PassedArgs, ReadMode};
+use crate::parser::{ErrContext, Map, PassedArgs, ReadMode, TempableField};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
 use syn::Ident;
 
 #[cfg(nightly)]
@@ -97,9 +98,25 @@ impl<'input> StructGenerator<'input> {
             quote! { #return_type { #(#out_names),* } }
         };
 
+        let errors: Vec<_> = self.st.fields.iter()
+            .filter_map(|f| if !self.st.temp_legal && f.is_temp_for_crossover() {
+                let name = &f.ident;
+                let ty = &f.ty;
+                Some(quote_spanned! {f.field.span()=>
+                    let #name: #ty = compile_error!(concat!(
+                        "The attribute `temp` removes this field, but this is not possible under",
+                        " the derive macro. Try using `#[binread]` instead of `#[derive(BinRead)]`."
+                    ));
+                })
+            } else {
+                None
+            })
+            .collect();
+
         let head = self.out;
         self.out = quote! {
             #head
+            #(#errors);*
             Ok(#return_value)
         };
 
@@ -124,7 +141,7 @@ fn generate_field(
     variant_name: Option<&str>,
 ) -> TokenStream {
     // temp + ignore == just don't bother
-    if field.temp.is_some() && matches!(field.read_mode, ReadMode::Default) {
+    if field.is_temp() && matches!(field.read_mode, ReadMode::Default) {
         return TokenStream::new();
     }
 

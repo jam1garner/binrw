@@ -1,12 +1,13 @@
+use proc_macro2::Span;
+use syn::token::Token;
+
+pub(crate) use types::*;
+
 #[macro_use]
 pub(crate) mod macros;
 mod keywords;
 pub(crate) mod meta_types;
 mod types;
-
-use proc_macro2::Span;
-use syn::token::Token;
-pub(crate) use types::*;
 
 pub(crate) mod read;
 pub(crate) mod write;
@@ -17,6 +18,21 @@ fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
     } else {
         *all_errors = Some(new_error);
     }
+}
+
+pub(crate) trait TempableField {
+    // The identifier for this field.
+    fn ident(&self) -> &syn::Ident;
+
+    /// Returns true if this field is temporary and should be removed from the struct.
+    fn is_temp(&self) -> bool;
+
+    /// Returns true if this field is temporary and should be removed from the struct.
+    /// Ignores the value set by `set_crossover_temp`.
+    fn is_temp_for_crossover(&self) -> bool;
+
+    /// Set the crossover temporary field.
+    fn set_crossover_temp(&mut self, temp: bool);
 }
 
 pub(crate) trait FromField {
@@ -157,12 +173,13 @@ impl<T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySe
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use proc_macro2::TokenStream;
     use syn::DeriveInput;
 
+    use super::*;
+
     fn try_input(input: TokenStream) -> ParseResult<read::Input> {
-        read::Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap())
+        read::Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap(), false)
     }
 
     macro_rules! try_error (

@@ -23,7 +23,7 @@ fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
 
 #[cfg(not(tarpaulin_include))]
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
-    let (binwrite_input, generated_impl) = derive_from_input(&derive_input);
+    let (binwrite_input, generated_impl) = derive_from_input(&derive_input, false);
     let binwrite_input = binwrite_input.ok();
 
     // only clean fields if binread isn't going to be applied after
@@ -64,8 +64,9 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
 #[allow(unreachable_code)]
 pub(crate) fn derive_from_input(
     derive_input: &DeriveInput,
+    is_inside_derive: bool,
 ) -> (ParseResult<write::Input>, proc_macro2::TokenStream) {
-    let binwrite_input = write::Input::from_input(derive_input);
+    let binwrite_input = write::Input::from_input(derive_input, is_inside_derive);
     let generated_impl = generate_binwrite_impl(derive_input, &binwrite_input);
     (binwrite_input, generated_impl)
 }

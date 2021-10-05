@@ -1,16 +1,17 @@
 use std::ops::Not;
 
-use crate::parser::write::StructField;
-use crate::parser::{CondEndian, Map, PassedArgs, WriteMode};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
+use syn::spanned::Spanned;
 use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
+use crate::parser::write::StructField;
+use crate::parser::{CondEndian, Map, PassedArgs, TempableField, WriteMode};
 
-pub(crate) fn write_field(field: &StructField) -> TokenStream {
-    StructFieldGenerator::new(field)
+pub(crate) fn write_field(field: &StructField, temp_legal: bool) -> TokenStream {
+    StructFieldGenerator::new(field, temp_legal)
         .write_field()
         .wrap_padding()
         .prefix_args()
@@ -24,13 +25,15 @@ pub(crate) fn write_field(field: &StructField) -> TokenStream {
 struct StructFieldGenerator<'input> {
     field: &'input StructField,
     out: TokenStream,
+    temp_legal: bool,
 }
 
 impl<'a> StructFieldGenerator<'a> {
-    fn new(field: &'a StructField) -> Self {
+    fn new(field: &'a StructField, temp_legal: bool) -> Self {
         Self {
             field,
             out: TokenStream::new(),
+            temp_legal,
         }
     }
 
@@ -74,10 +77,14 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn prefix_write_fn(mut self) -> Self {
+        if !self.field.is_written() {
+            return self;
+        }
+
         let write_fn = match &self.field.write_mode {
             WriteMode::Normal | WriteMode::Calc(_) => quote! { #WRITE_METHOD },
-            WriteMode::Ignore => quote! { |_, _, _, _| { Ok(()) } },
             WriteMode::WriteWith(write_fn) => write_fn.clone(),
+            WriteMode::Ignore => unreachable!("Ignored fields are not written"),
         };
 
         let write_fn = if self.field.map.is_some() {
@@ -132,35 +139,56 @@ impl<'a> StructFieldGenerator<'a> {
         let args = self.args_ident();
         let specify_endian = self.specify_endian();
 
-        let initialize = if let WriteMode::Calc(expr) = &self.field.write_mode {
-            Some({
+        if !self.temp_legal && self.field.is_temp_for_crossover() {
+            // Emit error regarding temp.
+            let ty = &self.field.ty;
+            self.out = quote_spanned! {self.field.field.span()=>
+                let #name: #ty = compile_error!(concat!(
+                    "The attribute `temp` removes this field, but this is not possible under",
+                    " the derive macro. Try using `#[binwrite]` instead of `#[derive(BinWrite)]`."
+                ));
+            };
+            return self;
+        }
+
+        let initialize = match &self.field.write_mode {
+            WriteMode::Calc(expr) => Some({
                 let ty = &self.field.ty;
                 quote! {
                     let #name: #ty = #expr;
                 }
-            })
-        } else {
-            None
+            }),
+            // If ignored, just skip this now
+            WriteMode::Ignore => return self,
+            // If field is temp, it should also be calc or ignore
+            // Fail with a detailed error if it's not.
+            _ if self.field.binread_temp => {
+                let ty = &self.field.ty;
+                self.out = quote_spanned! {self.field.field.span()=>
+                    let #name: #ty = compile_error!(concat!(
+                        "The field ",
+                        stringify!(#name),
+                        " is temp but not provided a value in its BinWrite derivation.",
+                        " Try using `bw(calc = ...)` or `bw(ignore)`"
+                    ));
+                };
+                return self;
+            }
+            _ => None,
         };
 
         let map_fn = self.field.map.is_some().then(|| self.map_fn_ident());
         let map_try = self.field.map.is_try().then(|| quote! { ? });
 
-        self.out = if let WriteMode::Ignore = &self.field.write_mode {
-            quote! {
-                #initialize
-            }
-        } else {
-            quote! {
-                #initialize
+        self.out = quote! {
+            #initialize
 
-                #WRITE_FUNCTION (
-                    &(#map_fn (#name) #map_try),
-                    #WRITER,
-                    &#OPT#specify_endian,
-                    #args
-                )?;
-            }
+            #WRITE_FUNCTION (
+                &(#map_fn (#name) #map_try),
+                #WRITER,
+                &#OPT#specify_endian,
+                #args
+            )?;
         };
 
         self
@@ -266,6 +294,10 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn prefix_args(mut self) -> Self {
+        if !self.field.is_written() {
+            return self;
+        }
+
         let args = self.args_ident();
 
         let args_val = if let Some(args) = get_passed_args(self.field) {
@@ -294,24 +326,6 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 }
             },
-            WriteMode::Ignore => {
-                if self.field.args.is_some() {
-                    let name = &self.field.ident;
-                    quote_spanned! { self.field.ident.span() =>
-                        compile_error!(concat!(
-                            "Cannot pass arguments to the field '",
-                            stringify!(#name),
-                            "'  as it is uses the 'ignore' directive"
-                        ));
-                        #out
-                    }
-                } else {
-                    quote! {
-                        let #args = ();
-                        #out
-                    }
-                }
-            }
             WriteMode::Calc(_) => {
                 if self.field.args.is_some() {
                     let name = &self.field.ident;
@@ -339,6 +353,7 @@ impl<'a> StructFieldGenerator<'a> {
                     #out
                 }
             }
+            WriteMode::Ignore => unreachable!("Ignored fields are not written"),
         };
 
         self

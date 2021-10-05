@@ -1,10 +1,12 @@
 mod args;
 mod assert;
+mod binread_temp;
 mod c_enum;
 mod calc;
 mod custom_writer;
 mod endian;
 mod r#enum;
+mod ignore;
 mod import;
 mod magic;
 mod map;

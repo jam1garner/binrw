@@ -62,7 +62,11 @@ impl<'input> StructGenerator<'input> {
     }
 
     pub(crate) fn write_fields(mut self) -> Self {
-        let write_fields = self.st.fields.iter().map(write_field);
+        let write_fields = self
+            .st
+            .fields
+            .iter()
+            .map(|f| write_field(f, self.st.temp_legal));
 
         self.out = quote! {
             #(#write_fields)*

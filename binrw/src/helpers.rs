@@ -2,7 +2,7 @@
 
 use crate::{
     io::{self, ErrorKind::UnexpectedEof, Read, Seek},
-    BinRead, BinReaderExt, BinResult, Error, ReadOptions, VecArgs,
+    BinRead, BinResult, Error, ReadOptions, VecArgs,
 };
 use core::convert::TryInto;
 
@@ -64,10 +64,47 @@ where
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
+    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
+        let mut value = T::read_options(reader, ro, args.clone())?;
+        value.after_parse(reader, ro, args)?;
+        Ok(value)
+    };
+    until_with(cond, read)
+}
+
+/// Do the same as [until](binrw::helpers::until) with a custom parsing function for the inner type.
+///
+/// # Examples
+///
+/// This example shows how to read lists of two elements until a condition is met using [until_with](binrw::helpers::until_with) coupled with [count](binrw::helpers::count).
+/// ```
+/// # use binrw::{BinRead, helpers::{until, until_with, count}, io::Cursor, BinReaderExt};
+/// # use std::collections::VecDeque;
+/// #[derive(BinRead)]
+/// struct NullTerminated {
+///     #[br(parse_with = until_with(|bytes| bytes == &[0, 0], count(2)))]
+///     data: VecDeque<VecDeque<u8>>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x01\x02\x03\x04\0\0");
+/// # let x: NullTerminated = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[[1, 2], [3, 4], [0, 0]]);
+/// ```
+pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
+    cond: CondFn,
+    read: ReadFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    CondFn: Fn(&T) -> bool,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
     move |reader, ro, args| {
         let mut last_cond = true;
         let mut last_error = false;
-        core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
             .take_while(|result| {
                 let cont = last_cond && !last_error; //keep the first error we get
                 if let Ok(val) = result {
@@ -107,9 +144,46 @@ where
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
+    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
+        let mut value = T::read_options(reader, ro, args.clone())?;
+        value.after_parse(reader, ro, args)?;
+        Ok(value)
+    };
+    until_exclusive_with(cond, read)
+}
+
+/// Do the same as [until_exclusive](binrw::helpers::until_exclusive) with a custom parsing function for the inner type.
+///
+/// # Examples
+///
+/// This example shows how to read lists of two elements until a condition is met using [until_exclusive_with](binrw::helpers::until_exclusive_with) coupled with [count](binrw::helpers::count).
+/// ```
+/// # use binrw::{BinRead, helpers::{until_exclusive, until_exclusive_with, count}, io::Cursor, BinReaderExt};
+/// # use std::collections::VecDeque;
+/// #[derive(BinRead)]
+/// struct NullTerminated {
+///     #[br(parse_with = until_exclusive_with(|bytes| bytes == &[0, 0], count(2)))]
+///     data: VecDeque<VecDeque<u8>>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x01\x02\x03\x04\0\0");
+/// # let x: NullTerminated = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
+/// ```
+pub fn until_exclusive_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
+    cond: CondFn,
+    read: ReadFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    CondFn: Fn(&T) -> bool,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
     move |reader, ro, args| {
         let mut last_error = false;
-        core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
             .take_while(|result| {
                 !last_error
                     && if let Ok(val) = result {
@@ -139,27 +213,68 @@ where
 /// # let x: EntireFile = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4]);
 /// ```
-pub fn until_eof<R, T, Arg, Ret>(reader: &mut R, ro: &ReadOptions, args: Arg) -> BinResult<Ret>
+pub fn until_eof<Reader, T, Arg, Ret>(
+    reader: &mut Reader,
+    ro: &ReadOptions,
+    args: Arg,
+) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
-    R: Read + Seek,
+    Reader: Read + Seek,
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
-    let mut last_error = false;
-    core::iter::repeat_with(|| reader.read_type_args(ro.endian(), args.clone()))
-        .take_while(|result| {
-            !last_error
-                && match result {
-                    Ok(_) => true,
-                    Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
-                    Err(_) => {
-                        last_error = true;
-                        true //keep the first error we get
+    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
+        let mut value = T::read_options(reader, ro, args.clone())?;
+        value.after_parse(reader, ro, args)?;
+        Ok(value)
+    };
+    until_eof_with(read)(reader, ro, args)
+}
+
+/// Do the same as [until_eof](binrw::helpers::until_eof) with a custom parsing function for the inner type.
+///
+/// # Examples
+///
+/// This example shows how to read lists of two elements until the end of file using [until_eof_with](binrw::helpers::until_eof_with) coupled with [count](binrw::helpers::count).
+/// ```
+/// # use binrw::{BinRead, helpers::{until_eof, until_eof_with, count}, io::Cursor, BinReaderExt};
+/// # use std::collections::VecDeque;
+/// #[derive(BinRead)]
+/// struct EntireFile {
+///     #[br(parse_with = until_eof_with(count(2)))]
+///     data: VecDeque<VecDeque<u8>>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x01\x02\x03\x04");
+/// # let x: EntireFile = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
+/// ```
+pub fn until_eof_with<Reader, T, Arg, ReadFn, Ret>(
+    read: ReadFn,
+) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    Reader: Read + Seek,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T>,
+{
+    move |reader, ro, args| {
+        let mut last_error = false;
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+            .take_while(|result| {
+                !last_error
+                    && match result {
+                        Ok(_) => true,
+                        Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
+                        Err(_) => {
+                            last_error = true;
+                            true //keep the first error we get
+                        }
                     }
-                }
-        })
-        .collect()
+            })
+            .collect()
+    }
 }
 
 fn not_enough_bytes<T>(_: T) -> Error {
@@ -206,9 +321,48 @@ where
                 .then(|| container)
                 .ok_or_else(|| not_enough_bytes(()))
         } else {
-            (0..n)
-                .map(|_| reader.read_type_args(ro.endian(), args.clone()))
-                .collect()
+            let read = |reader: &mut R, ro: &ReadOptions, args: Arg| {
+                let mut value = T::read_options(reader, ro, args.clone())?;
+                value.after_parse(reader, ro, args)?;
+                Ok(value)
+            };
+            count_with(n, read)(reader, ro, args)
         }
+    }
+}
+
+/// Do the same as [count](binrw::helpers::count) with a custom parsing function for the inner type.
+///
+/// # Examples
+///
+/// This example shows how to read `len` lists of two elements using [count_with](binrw::helpers::count_with) coupled with [count](binrw::helpers::count).
+/// ```
+/// # use binrw::{BinRead, helpers::count, helpers::count_with, io::Cursor, BinReaderExt};
+/// # use std::collections::VecDeque;
+/// #[derive(BinRead)]
+/// struct CountBytes {
+///     len: u8,
+///
+///     #[br(parse_with = count_with(len as usize, count(2)))]
+///     data: VecDeque<VecDeque<u8>>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x02\x01\x02\x03\x04");
+/// # let x: CountBytes = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
+pub fn count_with<R, T, Arg, ReadFn, Ret>(
+    n: usize,
+    read: ReadFn,
+) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
+where
+    R: Read + Seek,
+    Arg: Clone,
+    ReadFn: Fn(&mut R, &ReadOptions, Arg) -> BinResult<T>,
+    Ret: core::iter::FromIterator<T> + 'static,
+{
+    move |reader, ro, args| {
+        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+            .take(n)
+            .collect()
     }
 }

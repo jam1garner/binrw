@@ -7,6 +7,7 @@ use super::super::{
 
 use super::Struct;
 
+use crate::parser::TempableField;
 use proc_macro2::TokenStream;
 
 attr_struct! {
@@ -18,6 +19,7 @@ attr_struct! {
         pub(crate) ident: syn::Ident,
         pub(crate) generated_ident: bool,
         pub(crate) ty: syn::Type,
+        pub(crate) field: syn::Field,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap)]
@@ -46,6 +48,8 @@ attr_struct! {
         pub(crate) seek_before: Option<TokenStream>,
         #[from(PadSizeTo)]
         pub(crate) pad_size_to: Option<TokenStream>,
+        // Marker for if binread has marked this field temporary
+        pub(crate) binread_temp: bool,
     }
 }
 
@@ -66,6 +70,34 @@ impl StructField {
     pub(crate) fn needs_options(&self) -> bool {
         !self.generated_value() || self.magic.is_some()
     }
+
+    /// Returns true if the field is actually written.
+    pub(crate) fn is_written(&self) -> bool {
+        // Non-calc temp fields are not written
+        if self.is_temp() && !matches!(self.write_mode, WriteMode::Calc(_)) {
+            return false;
+        }
+        // Ignored fields are not written
+        !matches!(self.write_mode, WriteMode::Ignore)
+    }
+}
+
+impl TempableField for StructField {
+    fn ident(&self) -> &syn::Ident {
+        &self.ident
+    }
+
+    fn is_temp(&self) -> bool {
+        self.binread_temp || self.is_temp_for_crossover()
+    }
+
+    fn is_temp_for_crossover(&self) -> bool {
+        matches!(self.write_mode, WriteMode::Calc(_))
+    }
+
+    fn set_crossover_temp(&mut self, temp: bool) {
+        self.binread_temp = temp;
+    }
 }
 
 impl FromField for StructField {
@@ -80,6 +112,7 @@ impl FromField for StructField {
                     .unwrap_or_else(|| quote::format_ident!("self_{}", index)),
                 generated_ident: field.ident.is_none(),
                 ty: field.ty.clone(),
+                field: field.clone(),
                 endian: <_>::default(),
                 map: <_>::default(),
                 magic: <_>::default(),
@@ -95,6 +128,7 @@ impl FromField for StructField {
                 seek_before: <_>::default(),
                 pad_size_to: <_>::default(),
                 keyword_spans: <_>::default(),
+                binread_temp: false,
             },
             &field.attrs,
         )

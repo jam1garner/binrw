@@ -90,7 +90,6 @@ impl dyn CustomError {
 
 /// The error type used by [`BinRead`](crate::BinRead).
 #[non_exhaustive]
-#[derive(Debug)]
 pub enum Error {
     /// An expected [magic number](crate::attribute#magic) was not found.
     BadMagic {
@@ -221,6 +220,12 @@ impl fmt::Display for Error {
             }
             Self::Backtrace(backtrace) => write!(f, "{}", backtrace),
         }
+    }
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <Error as fmt::Display>::fmt(self, f)
     }
 }
 
