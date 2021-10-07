@@ -69,7 +69,7 @@ where
     }
 }
 
-pub fn parse_function_args_type_hint<R, Res, Args, F>(_: F, a: Args) -> Args
+pub fn parse_function_args_type_hint<R, Res, Args, F>(_: &F, a: Args) -> Args
 where
     R: crate::io::Read + Seek,
     F: FnOnce(&mut R, &crate::ReadOptions, Args) -> crate::BinResult<Res>,
@@ -77,7 +77,7 @@ where
     a
 }
 
-pub fn write_function_args_type_hint<T, W, Args, F>(_: F, a: Args) -> Args
+pub fn write_function_args_type_hint<T, W, Args, F>(_: &F, a: Args) -> Args
 where
     W: Write + Seek,
     F: FnOnce(&T, &mut W, &crate::WriteOptions, Args) -> crate::BinResult<()>,

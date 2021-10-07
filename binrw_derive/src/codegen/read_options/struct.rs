@@ -373,7 +373,7 @@ impl<'field> FieldGenerator<'field> {
 
             if let ReadMode::ParseWith(_) = &self.field.read_mode {
                 quote! {
-                    let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
+                    let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(&#READ_FUNCTION, #args);
                 }
             } else {
                 match &self.field.map {

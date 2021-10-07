@@ -366,3 +366,64 @@ where
             .collect()
     }
 }
+
+/// A helper that takes a slice of arguments and reads items for each argument,
+/// and collecting that as a single collection.
+///
+/// # Examples
+///
+/// ```
+/// # use binrw::{BinRead, helpers::multi, io::Cursor, BinReaderExt};
+/// #[derive(BinRead)]
+/// struct CountBytes {
+///     len: u8,
+///
+///     #[br(count = len)]
+///     pairs: Vec<(u8, u8)>,
+///
+///     #[br(args_raw = &pairs, parse_with = multi())]
+///     data: Vec<TwoVecs>,
+/// }
+///
+/// #[derive(BinRead, PartialEq, Eq, Debug)]
+/// #[br(import(a_count: u8, b_count: u8))]
+/// struct TwoVecs(
+///     #[br(count = a_count)]
+///     Vec<u8>,
+///     #[br(count = b_count)]
+///     Vec<u8>,
+/// );
+///
+/// # let mut x = Cursor::new(b"\x02\x01\x02\x02\x01\x01\x02\x03\x04\x05\x06");
+/// # let x: CountBytes = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[TwoVecs(vec![1], vec![2, 3]), TwoVecs(vec![4, 5], vec![6])]);
+/// ```
+pub fn multi<R, T, Arg, Ret>() -> impl Fn(&mut R, &ReadOptions, &[Arg]) -> BinResult<Ret>
+where
+    T: BinRead<Args = Arg>,
+    R: Read + Seek,
+    Arg: Clone,
+    Ret: core::iter::FromIterator<T> + 'static,
+{
+    move |reader, ro, args| {
+        let mut container: Ret = core::iter::empty::<T>().collect();
+        if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
+            bytes.reserve(args.len());
+            let byte_count = reader
+                .take(args.len().try_into().map_err(not_enough_bytes)?)
+                .read_to_end(bytes)?;
+            (byte_count == args.len())
+                .then(|| container)
+                .ok_or_else(|| not_enough_bytes(()))
+        } else {
+            let read = |reader: &mut R, ro: &ReadOptions, args: Arg| {
+                let mut value = T::read_options(reader, ro, args.clone())?;
+                value.after_parse(reader, ro, args)?;
+                Ok(value)
+            };
+            args.iter()
+                .map(move |arg| read(reader, ro, arg.clone()))
+                .collect()
+        }
+    }
+}
