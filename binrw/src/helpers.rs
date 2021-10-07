@@ -367,8 +367,8 @@ where
     }
 }
 
-/// A helper that takes a slice of arguments and reads items for each argument,
-/// and collecting that as a single collection.
+/// A helper that takes a slice of arguments and reads an item for each argument, and collects that
+/// as a single collection.
 ///
 /// # Examples
 ///
