@@ -222,12 +222,15 @@ pub use binrw_derive::BinrwNamedArgs;
 pub type BinResult<T> = core::result::Result<T, Error>;
 
 mod binread;
-pub use binread::*;
-
 mod binwrite;
-pub use binwrite::*;
-
 mod builder_types;
+
+#[cfg(bintrace)]
+#[doc(hidden)]
+pub mod trace;
+
+pub use binread::*;
+pub use binwrite::*;
 pub use builder_types::*;
 
 pub mod prelude {
