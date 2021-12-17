@@ -5,11 +5,16 @@ use owo_colors::OwoColorize;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
 
+#![allow(unused_imports, unused_variables, dead_code)]
+use std::fmt::{self, Display, Formatter};
+
+mod syntax_highlighting;
+use owo_colors::OwoColorize;
 use syntax_highlighting::{conditional_bold, CondOwo, SyntaxInfo};
 
 use crate::parser::read::StructField;
-
-mod syntax_highlighting;
+use proc_macro2::Span;
+use syn::spanned::Spanned;
 
 pub(crate) struct BacktraceFrame {
     span: Span,
@@ -17,6 +22,7 @@ pub(crate) struct BacktraceFrame {
     syntax_info: SyntaxInfo,
 }
 
+#[cfg(nightly)]
 struct Line {
     line_num: usize,
     start_col: usize,
@@ -33,6 +39,7 @@ impl BacktraceFrame {
         }
     }
 
+    #[cfg(nightly)]
     fn iter_lines(&self) -> impl Iterator<Item = Line> + '_ {
         if let Some(text) = self.span.unwrap().source_text() {
             let start_col = self.span.start().column - 1;
@@ -73,6 +80,7 @@ impl BacktraceFrame {
         }
     }
 
+    #[cfg(nightly)]
     fn write_line(
         &self,
         Line {
@@ -98,6 +106,12 @@ impl BacktraceFrame {
 
         if line.trim().starts_with("//") {
             return writeln!(f, "{}", line.color(owo_colors::XtermColors::Boulder));
+        }
+
+        if should_highlight {
+            write!(f, "   {} {}  ", line_num.bold(), "⎬".bold())?;
+        } else {
+            write!(f, "   {} │  ", line_num)?;
         }
 
         if let Some(line_highlights) = self.syntax_info.lines.get(&line_num) {
@@ -137,32 +151,33 @@ impl BacktraceFrame {
                 let uncolored_range = range.end..next_start;
 
                 // write colored portion
-                if !range.is_empty() {
-                    write!(
-                        f,
-                        "{}",
-                        conditional_bold(&(&line[range]).color(color.into_owo()), should_highlight)
-                    )?;
+                if should_highlight {
+                    write!(f, "{}", (&line[range]).bold().color(color.into_owo()))?;
+                } else {
+                    write!(f, "{}", (&line[range]).color(color.into_owo()))?;
                 }
 
-                if !uncolored_range.is_empty() {
-                    // write next uncolored portion
-                    write!(
-                        f,
-                        "{}",
-                        conditional_bold(&&line[uncolored_range], should_highlight)
-                    )?;
+                // write next uncolored portion
+                if should_highlight {
+                    write!(f, "{}", (&line[uncolored_range]).bold())?;
+                } else {
+                    write!(f, "{}", &line[uncolored_range])?;
                 }
             }
 
             writeln!(f)
+        } else if should_highlight {
+            // no syntax highlighting on this line, but  b o l d
+            writeln!(f, "{}", line.bold())
         } else {
-            writeln!(f, "{}", conditional_bold(&line, should_highlight))
+            // no syntax highlighting on this line
+            writeln!(f, "{}", line)
         }
     }
 }
 
 impl Display for BacktraceFrame {
+    #[cfg(nightly)]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         // it's one allocation, we'll live
         let max_digits = self.span.end().line.to_string().len();
@@ -176,6 +191,10 @@ impl Display for BacktraceFrame {
         }
         writeln!(f, "  ┄{}─╯", bars)?;
 
+        Ok(())
+    }
+    #[cfg(not(nightly))]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Ok(())
     }
 }

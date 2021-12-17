@@ -31,9 +31,9 @@ impl Input {
                     });
 
                 if matches!(st.fields, syn::Fields::Unit) {
-                    read_struct.map(Self::UnitStruct)
+                    Struct::from_input(ident, attrs, st.fields.iter()).map(Self::UnitStruct)
                 } else {
-                    read_struct.map(Self::Struct)
+                    Struct::from_input(ident, attrs, st.fields.iter()).map(Self::Struct)
                 }
             }
             syn::Data::Enum(en) => {

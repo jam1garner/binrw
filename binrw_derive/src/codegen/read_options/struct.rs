@@ -3,10 +3,10 @@ use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Input, Struct, StructField};
 use crate::parser::{ErrContext, Map, PassedArgs, ReadMode, TempableField};
+use owo_colors::OwoColorize;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
-use syn::spanned::Spanned;
-use syn::Ident;
+use syn::{spanned::Spanned, self::Ident};
 
 #[cfg(nightly)]
 use crate::backtrace::BacktraceFrame;
@@ -441,6 +441,19 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn map_err_context(&self, name: Option<&Ident>, variant_name: Option<&str>) -> TokenStream {
+        let message = format!(
+            "While parsing field '{}' in {}",
+            self.field.ident,
+            name.map_or_else(
+                || variant_name
+                    .unwrap_or("[please report this error]")
+                    .to_string(),
+                ToString::to_string
+            )
+        )
+        .bold()
+        .to_string();
+
         #[cfg(nightly)]
         let code = {
             let code = BacktraceFrame::from_field(self.field).to_string();
