@@ -105,4 +105,3 @@ fn show_backtrace_2() {
     let err = x.read_be::<OutermostStruct>().map(|_| ()).unwrap_err();
     println!("{}", err);
 }
-
