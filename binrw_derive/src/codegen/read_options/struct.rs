@@ -4,9 +4,9 @@ use crate::codegen::sanitization::*;
 use crate::parser::read::{Input, Struct, StructField};
 use crate::parser::{ErrContext, Map, PassedArgs, ReadMode, TempableField};
 use owo_colors::OwoColorize;
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
-use syn::{spanned::Spanned, self::Ident};
+use syn::spanned::Spanned;
 
 #[cfg(nightly)]
 use crate::backtrace::BacktraceFrame;

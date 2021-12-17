@@ -2,8 +2,6 @@ use std::fmt::{Display, Formatter};
 use std::{collections::HashMap, ops::Range};
 
 use owo_colors::styles::BoldDisplay;
-use std::{collections::HashMap, ops::Range};
-
 use owo_colors::XtermColors;
 use proc_macro2::{Span, TokenTree};
 use quote::ToTokens;
@@ -17,8 +15,6 @@ use syn::{
 use crate::parser::{
     meta_types::FieldValue, read::StructField, AssertionError, CondEndian, Condition, ErrContext,
     Map, PassedArgs, ReadMode,
-    token::Token,
-    visit::{self, /*visit_expr,*/ visit_type, Visit},
 };
 
 #[derive(Default)]
@@ -143,7 +139,6 @@ fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
         //
         syntax_info.highlight_color(attr.pound_token.span(), Color::Keyword);
         syntax_info.highlight_color(attr.path.span(), Color::Keyword);
-
         // #[...]
         //  ^   ^
         //  |___|___ brackets
@@ -414,6 +409,5 @@ fn is_keyword_ident(ident: &syn::Ident) -> bool {
         postprocess_now, pre_assert, repr, restore_position, return_all_errors,
         return_unexpected_error, seek_before, temp, try_map, write_with
     );
-
     is_keyword
 }

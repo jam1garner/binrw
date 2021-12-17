@@ -1,20 +1,12 @@
-#![allow(clippy::non_ascii_literal)]
-use std::fmt::{self, Display, Formatter};
-
+#![allow(unused_imports, unused_variables, dead_code, clippy::non_ascii_literal)]
 use owo_colors::OwoColorize;
 use proc_macro2::Span;
-use syn::spanned::Spanned;
-
-#![allow(unused_imports, unused_variables, dead_code)]
 use std::fmt::{self, Display, Formatter};
-
+use syn::spanned::Spanned;
 mod syntax_highlighting;
-use owo_colors::OwoColorize;
 use syntax_highlighting::{conditional_bold, CondOwo, SyntaxInfo};
 
 use crate::parser::read::StructField;
-use proc_macro2::Span;
-use syn::spanned::Spanned;
 
 pub(crate) struct BacktraceFrame {
     span: Span,
