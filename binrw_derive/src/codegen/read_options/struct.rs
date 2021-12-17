@@ -440,6 +440,7 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
+    #[rustfmt::skip]
     fn map_err_context(&self, name: Option<&Ident>, variant_name: Option<&str>) -> TokenStream {
         let message = format!(
             "While parsing field '{}' in {}",

@@ -16,6 +16,7 @@ pub(crate) enum Input {
 }
 
 impl Input {
+    #[rustfmt::skip]
     pub(crate) fn from_input(
         input: &syn::DeriveInput,
         is_inside_derive: bool,
