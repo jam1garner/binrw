@@ -1,7 +1,7 @@
 //! Helper functions for reading data.
 
 use crate::{
-    io::{self, ErrorKind::UnexpectedEof, Read, Seek},
+    io::{self, Read, Seek},
     BinRead, BinResult, Error, ReadOptions, VecArgs,
 };
 use core::convert::TryInto;
@@ -266,7 +266,7 @@ where
                 !last_error
                     && match result {
                         Ok(_) => true,
-                        Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
+                        Err(e) if e.is_eof() => false,
                         Err(_) => {
                             last_error = true;
                             true //keep the first error we get

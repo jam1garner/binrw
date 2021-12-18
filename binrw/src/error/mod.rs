@@ -183,6 +183,12 @@ impl Error {
         }
     }
 
+    /// Check if the [root cause][`Self::root_cause`] of this error is an [`Error::Io`] and an
+    /// [`io::ErrorKind::UnexpectedEof`].
+    pub fn is_eof(&self) -> bool {
+        matches!(self.root_cause(), Error::Io(err) if err.kind() == io::ErrorKind::UnexpectedEof)
+    }
+
     /// Returns a reference to the boxed error object if this `Error` is a
     /// custom error of type `T`, or `None` if it isn’t.
     pub fn custom_err<T: CustomError + 'static>(&self) -> Option<&T> {
