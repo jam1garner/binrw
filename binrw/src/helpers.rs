@@ -266,7 +266,7 @@ where
                 !last_error
                     && match result {
                         Ok(_) => true,
-                        Err(crate::Error::Io(err)) if err.kind() == UnexpectedEof => false,
+                        Err(ref e) if is_eof(e) => false,
                         Err(_) => {
                             last_error = true;
                             true //keep the first error we get
@@ -274,6 +274,13 @@ where
                     }
             })
             .collect()
+    }
+}
+
+fn is_eof(e: &crate::error::Error) -> bool {
+    match e.root_cause() {
+        crate::error::Error::Io(err) if err.kind() == UnexpectedEof => true,
+        _ => false,
     }
 }
 
