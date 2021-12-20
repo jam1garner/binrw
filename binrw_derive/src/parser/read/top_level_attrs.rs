@@ -25,7 +25,7 @@ impl Input {
         let ident = Some(&input.ident);
         match &input.data {
             syn::Data::Struct(st) => {
-                let read_struct =
+                let _read_struct =
                     Struct::from_input(ident, attrs, st.fields.iter()).map(|mut read_struct| {
                         read_struct.temp_legal = !is_inside_derive;
                         read_struct
