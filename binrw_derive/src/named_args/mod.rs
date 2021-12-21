@@ -3,6 +3,7 @@ use syn::{
     Expr, Token,
 };
 
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum NamedArgAttr {
     Default(Expr),
     TryOptional,
