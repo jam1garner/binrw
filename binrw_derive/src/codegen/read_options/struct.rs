@@ -73,11 +73,7 @@ impl<'input> StructGenerator<'input> {
             .iter()
             .map(|field| generate_field(field, name, variant_name));
         let after_parse = {
-            let after_parse = self
-                .st
-                .fields
-                .iter()
-                .map(|field| generate_after_parse(field));
+            let after_parse = self.st.fields.iter().map(generate_after_parse);
             wrap_save_restore(quote!(#(#after_parse)*))
         };
         self.out = quote! {
