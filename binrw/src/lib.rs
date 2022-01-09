@@ -1,6 +1,4 @@
-//! **Maintainer's Note:** binrw is currently considered pre-release. Most features are in-place
-//! but documentation may need work and there may be small breaking changes before release. Need
-//! help or want to contribute? Join us on [discord] or [matrix]! (whichever you prefer, they're
+//! Need help or want to contribute? Join us on [discord] or [matrix]! (whichever you prefer, they're
 //! bridged together)
 //!
 //! ---
