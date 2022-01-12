@@ -9,7 +9,7 @@ use syn::{Ident, Type};
 pub(crate) enum Imports {
     None,
     Raw(Ident, Box<Type>),
-    List(Vec<Ident>, Vec<Type>, bool),
+    List(Vec<Ident>, Vec<Type>),
     Named(Vec<IdentTypeMaybeDefault>, bool),
 }
 
@@ -33,7 +33,7 @@ fn imports_from_attr(
                     .cloned()
                     .map(|field| (field.ident, field.ty))
                     .unzip();
-                Imports::List(idents, tys, is_write)
+                Imports::List(idents, tys)
             }
         }
         Enclosure::Brace { fields, .. } => {
