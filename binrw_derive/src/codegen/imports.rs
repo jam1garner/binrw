@@ -11,7 +11,7 @@ impl Imports {
     pub fn destructure(&self, type_name: Option<&Ident>) -> Option<TokenStream> {
         match self {
             Imports::None => None,
-            Imports::List(idents, _, _) => {
+            Imports::List(idents, _) => {
                 if idents.is_empty() {
                     None
                 } else {
@@ -43,7 +43,7 @@ impl Imports {
     ) -> (TokenStream, Option<TokenStream>) {
         match self {
             Imports::None => (quote! { () }, None),
-            Imports::List(_, types, _) => {
+            Imports::List(_, types) => {
                 let types = types.iter();
                 (
                     quote! {
