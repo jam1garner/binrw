@@ -7,11 +7,14 @@ use super::super::{
     KeywordToken,
 };
 use proc_macro2::{Span, TokenStream};
-use syn::{Expr, Token};
+use syn::{
+    parse::{Parse, ParseBuffer},
+    Expr, Token,
+};
 
 pub struct ReadOnlyAttr<T>(pub T);
 
-impl<T: KeywordToken> KeywordToken for crate::parser::read::attrs::ReadOnlyAttr<T> {
+impl<T: KeywordToken> KeywordToken for ReadOnlyAttr<T> {
     type Token = T::Token;
 
     fn keyword_span(&self) -> Span {
@@ -19,8 +22,8 @@ impl<T: KeywordToken> KeywordToken for crate::parser::read::attrs::ReadOnlyAttr<
     }
 }
 
-impl<T: syn::parse::Parse> syn::parse::Parse for ReadOnlyAttr<T> {
-    fn parse(buf: &syn::parse::ParseBuffer<'_>) -> std::result::Result<Self, syn::Error> {
+impl<T: Parse> Parse for ReadOnlyAttr<T> {
+    fn parse(buf: &ParseBuffer<'_>) -> Result<Self, syn::Error> {
         T::parse(buf).map(|x| ReadOnlyAttr(x))
     }
 }
