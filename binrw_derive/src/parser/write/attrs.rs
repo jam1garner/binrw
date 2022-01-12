@@ -4,9 +4,26 @@ use super::super::{
         IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList, MetaLit,
         MetaType, MetaValue, MetaVoid,
     },
+    KeywordToken,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use syn::Expr;
+
+pub struct WriteOnlyAttr<T>(pub T);
+
+impl<T: KeywordToken> KeywordToken for crate::parser::write::attrs::WriteOnlyAttr<T> {
+    type Token = T::Token;
+
+    fn keyword_span(&self) -> Span {
+        T::keyword_span(&self.0)
+    }
+}
+
+impl<T: syn::parse::Parse> syn::parse::Parse for WriteOnlyAttr<T> {
+    fn parse(buf: &syn::parse::ParseBuffer<'_>) -> std::result::Result<Self, syn::Error> {
+        T::parse(buf).map(|x| WriteOnlyAttr(x))
+    }
+}
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
@@ -18,7 +35,8 @@ pub(crate) type Big = MetaVoid<kw::big>;
 pub(crate) type Calc = MetaExpr<kw::calc>;
 pub(crate) type Count = MetaExpr<kw::count>;
 pub(crate) type Ignore = MetaVoid<kw::ignore>;
-pub(crate) type Import = MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>;
+pub(crate) type Import =
+    WriteOnlyAttr<MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>>;
 pub(crate) type ImportRaw = MetaValue<kw::import_raw, IdentPatType>;
 pub(crate) type IsBig = MetaExpr<kw::is_big>;
 pub(crate) type IsLittle = MetaExpr<kw::is_little>;

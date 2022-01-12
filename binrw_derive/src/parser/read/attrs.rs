@@ -4,9 +4,26 @@ use super::super::{
         IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList, MetaLit,
         MetaType, MetaValue, MetaVoid,
     },
+    KeywordToken,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use syn::{Expr, Token};
+
+pub struct ReadOnlyAttr<T>(pub T);
+
+impl<T: KeywordToken> KeywordToken for crate::parser::read::attrs::ReadOnlyAttr<T> {
+    type Token = T::Token;
+
+    fn keyword_span(&self) -> Span {
+        T::keyword_span(&self.0)
+    }
+}
+
+impl<T: syn::parse::Parse> syn::parse::Parse for ReadOnlyAttr<T> {
+    fn parse(buf: &syn::parse::ParseBuffer<'_>) -> std::result::Result<Self, syn::Error> {
+        T::parse(buf).map(|x| ReadOnlyAttr(x))
+    }
+}
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;
@@ -22,7 +39,8 @@ pub(crate) type DerefNow = MetaVoid<kw::deref_now>;
 pub(crate) type ErrContext = MetaList<kw::err_context, Expr>;
 pub(crate) type If = MetaList<Token![if], Expr>;
 pub(crate) type Ignore = MetaVoid<kw::ignore>;
-pub(crate) type Import = MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>;
+pub(crate) type Import =
+    ReadOnlyAttr<MetaEnclosedList<kw::import, IdentPatType, IdentTypeMaybeDefault>>;
 pub(crate) type ImportRaw = MetaValue<kw::import_raw, IdentPatType>;
 pub(crate) type IsBig = MetaExpr<kw::is_big>;
 pub(crate) type IsLittle = MetaExpr<kw::is_little>;
