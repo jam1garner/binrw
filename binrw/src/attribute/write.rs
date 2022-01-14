@@ -325,7 +325,7 @@
 //! 5. The host machine’s native byte order
 //!
 //!
-//! # Caculations
+//! # Calculations
 //!
 //! The `calc` directive computes the value of a field instead of writing the value
 //! from the type itself.
