@@ -2,6 +2,7 @@
 
 use crate::{
     alloc::string::{FromUtf16Error, FromUtf8Error},
+    arg_type,
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, ReadOptions,
 };
@@ -19,13 +20,9 @@ use core::{
 };
 
 impl BinRead for Vec<NonZeroU8> {
-    type Args = ();
+    type Args = arg_type!(());
 
-    fn read_options<R: Read + Seek>(
-        reader: &mut R,
-        _: &ReadOptions,
-        _: Self::Args,
-    ) -> BinResult<Self> {
+    fn read_options<R: Read + Seek>(reader: &mut R, _: &ReadOptions, _: ()) -> BinResult<Self> {
         reader
             .bytes()
             .take_while(|x| !matches!(x, Ok(0)))
@@ -144,12 +141,12 @@ impl From<NullString> for Vec<u8> {
 }
 
 impl BinRead for Vec<NonZeroU16> {
-    type Args = ();
+    type Args = arg_type!(());
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        _: Self::Args,
+        _: (),
     ) -> BinResult<Self> {
         let mut values = vec![];
 
@@ -164,12 +161,12 @@ impl BinRead for Vec<NonZeroU16> {
 }
 
 impl BinRead for NullWideString {
-    type Args = ();
+    type Args = arg_type!(());
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: Self::Args,
+        args: (),
     ) -> BinResult<Self> {
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
@@ -184,7 +181,7 @@ impl BinWrite for NullWideString {
         &self,
         writer: &mut W,
         options: &crate::WriteOptions,
-        args: Self::Args,
+        args: (),
     ) -> BinResult<()> {
         self.0.write_options(writer, options, args)?;
         0u16.write_options(writer, options, args)?;
@@ -194,12 +191,12 @@ impl BinWrite for NullWideString {
 }
 
 impl BinRead for NullString {
-    type Args = ();
+    type Args = arg_type!(());
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: Self::Args,
+        args: (),
     ) -> BinResult<Self> {
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]

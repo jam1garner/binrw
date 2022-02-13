@@ -5,6 +5,7 @@ use core::fmt;
 use core::ops::{Deref, DerefMut};
 
 use crate::{
+    arg_type, args_of,
     io::{Read, Seek, SeekFrom},
     BinRead, BinResult, ReadOptions,
 };
@@ -62,7 +63,7 @@ pub type FilePtr64<T> = FilePtr<u64, T>;
 /// A type alias for [`FilePtr`] with 128-bit offsets.
 pub type FilePtr128<T> = FilePtr<u128, T>;
 
-impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
+impl<Ptr: BinRead<Args = arg_type!(())> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
     type Args = BR::Args;
 
     /// Reads the offset of the value from the reader.
@@ -72,7 +73,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        _: Self::Args,
+        _: args_of!(Self),
     ) -> BinResult<Self> {
         Ok(FilePtr {
             ptr: Ptr::read_options(reader, options, ())?,
@@ -81,7 +82,12 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     }
 
     /// Finalizes the `FilePtr` by seeking to and reading the pointed-to value.
-    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: BR::Args) -> BinResult<()>
+    fn after_parse<R>(
+        &mut self,
+        reader: &mut R,
+        ro: &ReadOptions,
+        args: args_of!(Self),
+    ) -> BinResult<()>
     where
         R: Read + Seek,
     {
@@ -89,7 +95,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     }
 }
 
-impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
+impl<Ptr: BinRead<Args = arg_type!(())> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     fn read_with_parser<R, Parser, AfterParse, Args>(
         parser: Parser,
         after_parse: AfterParse,
@@ -147,7 +153,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     where
         R: Read + Seek,
         Args: Clone,
-        T: BinRead<Args = Args>,
+        T: BinRead<Args = arg_type!(Args)>,
     {
         Ok(
             Self::read_with_parser(T::read_options, T::after_parse, reader, options, args)?
@@ -253,7 +259,7 @@ impl<Ptr: IntoSeekFrom, BR: BinRead> DerefMut for FilePtr<Ptr, BR> {
 
 impl<Ptr, BR> fmt::Debug for FilePtr<Ptr, BR>
 where
-    Ptr: BinRead<Args = ()> + IntoSeekFrom,
+    Ptr: BinRead<Args = arg_type!(())> + IntoSeekFrom,
     BR: BinRead + fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -267,7 +273,7 @@ where
 
 impl<Ptr, BR> PartialEq<FilePtr<Ptr, BR>> for FilePtr<Ptr, BR>
 where
-    Ptr: BinRead<Args = ()> + IntoSeekFrom,
+    Ptr: BinRead<Args = arg_type!(())> + IntoSeekFrom,
     BR: BinRead + PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {

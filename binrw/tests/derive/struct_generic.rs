@@ -1,9 +1,9 @@
-use binrw::{io::Cursor, BinRead};
+use binrw::{arg_type, io::Cursor, BinRead};
 
 #[test]
 fn derive_generic() {
     #[derive(BinRead)]
-    struct Test<T: BinRead<Args = ()> + Default> {
+    struct Test<T: BinRead<Args = arg_type!(())> + Default> {
         a: [T; 3],
     }
 

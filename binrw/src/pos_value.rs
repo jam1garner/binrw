@@ -1,4 +1,5 @@
 use crate::{
+    args_of,
     io::{Read, Seek},
     BinRead, BinResult, ReadOptions,
 };
@@ -35,7 +36,7 @@ impl<T: BinRead> BinRead for PosValue<T> {
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: T::Args,
+        args: args_of!(T),
     ) -> BinResult<Self> {
         let pos = reader.stream_position()?;
 
@@ -49,7 +50,7 @@ impl<T: BinRead> BinRead for PosValue<T> {
         &mut self,
         reader: &mut R,
         options: &ReadOptions,
-        args: Self::Args,
+        args: args_of!(T),
     ) -> BinResult<()> {
         self.val.after_parse(reader, options, args)
     }

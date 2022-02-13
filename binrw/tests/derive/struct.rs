@@ -1,5 +1,5 @@
 use binrw::{
-    args, binread,
+    args, args_of, binread,
     io::{Cursor, Read, Seek, SeekFrom},
     BinRead, BinResult, FilePtr, NullString, ReadOptions,
 };
@@ -204,7 +204,9 @@ fn if_alternate() {
 
     let result = Test::read_args(
         &mut Cursor::new(b"\x01"),
-        <Test as BinRead>::Args::builder().try_read(true).finalize(),
+        <args_of!(Test as BinRead)>::builder()
+            .try_read(true)
+            .finalize(),
     )
     .unwrap();
     assert_eq!(result.a, 1);
@@ -360,6 +362,39 @@ fn parse_with_default_args() {
             inner_tuple: InnerImportTuple { a: 42, b: 4 }
         }
     );
+}
+
+#[test]
+fn args_raw_reference() {
+    #[derive(BinRead, Debug)]
+    #[br(import_raw(args: &'_ u32))]
+    struct ImportRef {
+        #[br(calc(*args))]
+        a: u32,
+        b: u8,
+    }
+
+    let result = ImportRef::read_args(&mut Cursor::new(b"\xff"), &100).unwrap();
+    assert_eq!(result.a, 100);
+}
+
+#[test]
+fn args_multiple_references() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(x: &'_ u32, y: &'_ str))]
+    struct ImportRefs {
+        #[br(calc(*x))]
+        a: u32,
+
+        #[br(calc(y.to_owned()))]
+        b: String,
+    }
+
+    let y = String::from("test");
+
+    let result = ImportRefs::read_args(&mut Cursor::new(b"\xff"), (&30, &y)).unwrap();
+    assert_eq!(result.a, 30);
+    assert_eq!(result.b, y);
 }
 
 #[test]

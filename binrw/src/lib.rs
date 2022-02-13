@@ -228,6 +228,9 @@ pub use binwrite::*;
 mod builder_types;
 pub use builder_types::*;
 
+mod gats;
+pub use gats::*;
+
 pub mod prelude {
     //! The binrw prelude.
     //!

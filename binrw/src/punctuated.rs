@@ -1,7 +1,7 @@
 //! Type definitions for wrappers which parse interleaved data.
 
 use crate::io::{Read, Seek};
-use crate::{BinRead, BinResult, ReadOptions, VecArgs};
+use crate::{arg_type, args_of, BinRead, BinResult, ReadOptions, VecArgs};
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::fmt;
@@ -21,7 +21,7 @@ use core::fmt;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// # use binrw::{*, io::*};
 /// use binrw::punctuated::Punctuated;
 ///
@@ -45,7 +45,7 @@ pub struct Punctuated<T: BinRead, P: BinRead> {
     pub separators: Vec<P>,
 }
 
-impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
+impl<T: BinRead, P: BinRead<Args = arg_type!(())>> Punctuated<T, P> {
     /// Parses values of type `T` separated by values of type `P` without a
     /// trailing separator value.
     ///
@@ -53,7 +53,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// # use binrw::{*, io::*};
     /// use binrw::punctuated::Punctuated;
     ///
@@ -72,7 +72,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     pub fn separated<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: VecArgs<T::Args>,
+        args: VecArgs<args_of!(T)>,
     ) -> BinResult<Self> {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count.max(1) - 1);
@@ -94,7 +94,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     pub fn separated_trailing<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: VecArgs<T::Args>,
+        args: VecArgs<args_of!(T)>,
     ) -> BinResult<Self> {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count);

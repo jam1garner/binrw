@@ -1,6 +1,7 @@
 //! Helper functions for reading data.
 
 use crate::{
+    arg_type,
     io::{self, Read, Seek},
     BinRead, BinResult, Error, ReadOptions, VecArgs,
 };
@@ -58,7 +59,7 @@ pub fn until<Reader, T, CondFn, Arg, Ret>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: BinRead<Args = arg_type!(Arg)>,
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
@@ -69,6 +70,7 @@ where
         value.after_parse(reader, ro, args)?;
         Ok(value)
     };
+
     until_with(cond, read)
 }
 
@@ -138,7 +140,7 @@ pub fn until_exclusive<Reader, T, CondFn, Arg, Ret>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: BinRead<Args = arg_type!(Arg)>,
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
@@ -219,7 +221,7 @@ pub fn until_eof<Reader, T, Arg, Ret>(
     args: Arg,
 ) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: BinRead<Args = arg_type!(Arg)>,
     Reader: Read + Seek,
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
@@ -305,7 +307,7 @@ fn not_enough_bytes<T>(_: T) -> Error {
 /// ```
 pub fn count<R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: BinRead<Args = arg_type!(Arg)>,
     R: Read + Seek,
     Arg: Clone,
     Ret: core::iter::FromIterator<T> + 'static,

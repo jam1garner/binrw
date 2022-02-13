@@ -53,6 +53,14 @@ pub fn binrw(_: TokenStream, input: TokenStream) -> TokenStream {
     binrw_attr::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
 
+mod args_type;
+
+#[proc_macro]
+#[cfg(not(tarpaulin_include))]
+pub fn arg_type(input: TokenStream) -> TokenStream {
+    args_type::args_type(parse_macro_input!(input as syn::Type)).into()
+}
+
 fn binrw_named_args(input: DeriveInput) -> proc_macro2::TokenStream {
     let fields = match match input.data {
         syn::Data::Struct(s) => s

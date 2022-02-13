@@ -1,4 +1,4 @@
-use binrw::{io::Cursor, BinRead, BinReaderExt, FilePtr8};
+use binrw::{arg_type, io::Cursor, BinRead, BinReaderExt, FilePtr8};
 
 #[test]
 #[allow(non_snake_case)]
@@ -9,7 +9,7 @@ fn BinReaderExt_calls_after_parse() {
 }
 
 #[derive(BinRead)]
-struct Try<BR: BinRead<Args = ()>>(#[br(try)] Option<BR>);
+struct Try<BR: BinRead<Args = arg_type!(())>>(#[br(try)] Option<BR>);
 
 #[test]
 fn try_calls_after_parse() {

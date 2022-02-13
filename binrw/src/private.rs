@@ -1,4 +1,5 @@
 use crate::{
+    arg_type,
     error::CustomError,
     io::{self, Seek, Write},
     BinRead, BinResult, Error, ReadOptions, WriteOptions,
@@ -54,7 +55,7 @@ where
 
 pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
 where
-    B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + 'static,
+    B: BinRead<Args = arg_type!(())> + core::fmt::Debug + PartialEq + Sync + Send + 'static,
     R: io::Read + io::Seek,
 {
     let pos = reader.stream_position()?;
@@ -88,7 +89,7 @@ where
 pub fn map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> Output,
-    Input: BinRead<Args = Args>,
+    Input: BinRead<Args = arg_type!(Args)>,
 {
     args
 }

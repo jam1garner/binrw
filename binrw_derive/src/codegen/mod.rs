@@ -44,10 +44,10 @@ pub(crate) fn generate_binread_impl(
     quote! {
         #[allow(non_snake_case)]
         impl #impl_generics #BINREAD_TRAIT for #name #ty_generics #where_clause {
-            type Args = #arg_type;
+            type Args = ::binrw::arg_type!(#arg_type);
 
             fn read_options<R: #READ_TRAIT + #SEEK_TRAIT>
-                (#READER: &mut R, #OPT: &#READ_OPTIONS, #ARGS: Self::Args)
+                (#READER: &mut R, #OPT: &#READ_OPTIONS, #ARGS: ::binrw::args_of!(Self))
                 -> #BIN_RESULT<Self>
             {
                 #read_opt_impl

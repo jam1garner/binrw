@@ -3,3 +3,9 @@ error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`
   |
 5 | #[br(invalid_struct_keyword)]
   |      ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no function or associated item named `builder` found for trait object `(dyn for<'arg> ArgType<'arg, for<'arg> Item = TestBinReadArgs> + 'static)` in the current scope
+  --> $DIR/invalid_keyword_with_imports.rs:16:34
+   |
+16 |         <Test as BinRead>::Args::builder()
+   |                                  ^^^^^^^ function or associated item not found in `(dyn for<'arg> ArgType<'arg, for<'arg> Item = TestBinReadArgs> + 'static)`
