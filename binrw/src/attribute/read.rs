@@ -856,6 +856,8 @@
 //!
 //! ### Using `count` with [`Vec`]
 //!
+//! See [VecArgs](crate::VecArgs) for passing args to the inner type.
+//!
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
