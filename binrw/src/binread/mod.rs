@@ -10,6 +10,9 @@ pub use options::*;
 mod impls;
 pub use impls::VecArgs;
 
+#[cfg(doc)]
+use crate::{arg_type, args_of};
+
 /// The `BinRead` trait reads data from streams and converts it into objects.
 ///
 /// [`io`]: crate::io
@@ -20,9 +23,9 @@ pub use impls::VecArgs;
 /// [`Args`]: Self::Args
 /// [`read_options()`]: Self::read_options
 ///
-/// # Derivable
+/// ## Derivable
 ///
-/// This trait can be used with `#[derive]` or `#[derive_binread]`. Each field
+/// This trait can be used with `#[derive]` or `#[binread]`. Each field
 /// of a derived type must either implement `BinRead` or be annotated with an
 /// attribute containing a [`map`], [`try_map`], or [`parse_with`] directive.
 ///
@@ -32,6 +35,32 @@ pub use impls::VecArgs;
 ///
 /// Using `#[derive_binread]` instead of `#[derive]` is required when using
 /// [temporary fields].
+///
+/// ## Manual Implementation
+///
+/// For the associated type `Args`, setting it and accessing it involves the use of two macros,
+/// one to wrap your type ([`arg_type`]) and one to access it ([`args_of`]).
+///
+/// ### Setting `Args`
+///
+/// Anywhere you'd write:
+///
+/// ```rust,ignore
+/// type Args = $ty;
+/// ```
+///
+/// You now write:
+///
+/// ```rust,ignore
+/// type Args = arg_type!($ty);
+/// ```
+///
+/// If you wish to include references, you need to annotate them with the default lifetime (`'_`).
+///
+/// ### Retrieving `Args`
+///
+/// Anywhere you'd access a type's arguments you replace it with `args_of`, such that
+/// `T::Args` becomes `args_of!(T)` and `<T as BinRead>::Args` becomes `args_of!(T as BinRead)`.
 ///
 /// [temporary fields]: crate::attribute#temp
 pub trait BinRead: Sized + 'static {
