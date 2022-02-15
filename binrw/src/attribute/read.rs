@@ -308,6 +308,9 @@
 //! passed (can be manually constructed using [`binrw::args`])
 //! * Raw arguments - the arguments are passed as a type of your choice
 //!
+//! For all type of arguments if you wish to use a reference time or another lifetime-reliant
+//! type, you must specify the default lifetime (`'_`).
+//!
 //! ## Examples
 //!
 //! ### Tuple-styled arguments
@@ -317,7 +320,7 @@
 //! ```
 //! # use binrw::prelude::*;
 //! #[derive(BinRead)]
-//! #[br(import(val1: u32, val2: &'static str))]
+//! #[br(import(val1: u32, val2: &'_ str))]
 //! struct ImportTest {
 //!     // ...
 //! }
