@@ -1,9 +1,10 @@
+use crate::args_type::LifetimeReplacer;
 use crate::codegen::typed_builder::{Builder, BuilderField};
 use crate::parser::meta_types::IdentTypeMaybeDefault;
 
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use syn::Ident;
+use syn::{parse_quote, visit_mut::visit_type_mut, GenericParam, Ident};
 
 use crate::parser::Imports;
 
@@ -74,7 +75,23 @@ fn generate_named_arg_type(
     args: &[IdentTypeMaybeDefault],
     is_write: bool,
 ) -> (TokenStream, Option<TokenStream>) {
-    let fields: Vec<BuilderField> = args.iter().map(Into::into).collect();
+    let mut fields: Vec<BuilderField> = args.iter().map(Into::into).collect();
+
+    let mut walker = LifetimeReplacer::new();
+    for field in &mut fields {
+        visit_type_mut(&mut walker, &mut field.ty);
+    }
+
+    let has_lifetime = walker.had_lifetime();
+
+    let generic_param: [GenericParam; 1];
+    let generics = if has_lifetime {
+        generic_param = [parse_quote!('arg)];
+
+        &generic_param[..]
+    } else {
+        &[]
+    };
 
     let builder_ident = if is_write {
         format_ident!("{}BinWriteArgBuilder", ty_name, span = Span::mixed_site())
@@ -87,10 +104,11 @@ fn generate_named_arg_type(
         builder_name: &builder_ident,
         result_name: &result_name,
         fields: &fields,
-        generics: &[],
+        generics,
         vis,
     }
     .generate(true);
 
-    (result_name.to_token_stream(), Some(type_definition))
+    let lifetime = has_lifetime.then(|| quote! { <'_> });
+    (quote!(#result_name #lifetime), Some(type_definition))
 }
