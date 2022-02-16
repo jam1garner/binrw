@@ -175,7 +175,7 @@ impl BinRead for NullWideString {
 }
 
 impl BinWrite for NullWideString {
-    type Args = ();
+    type Args = arg_type!(());
 
     fn write_options<W: Write + Seek>(
         &self,
@@ -205,13 +205,13 @@ impl BinRead for NullString {
 }
 
 impl BinWrite for NullString {
-    type Args = ();
+    type Args = arg_type!(());
 
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
         options: &crate::WriteOptions,
-        args: Self::Args,
+        args: (),
     ) -> BinResult<()> {
         self.0.write_options(writer, options, args)?;
         0u8.write_options(writer, options, args)?;

@@ -106,7 +106,7 @@ where
 pub fn write_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> Output,
-    Output: crate::BinWrite<Args = Args>,
+    Output: crate::BinWrite<Args = arg_type!(Args)>,
 {
     args
 }
@@ -114,7 +114,7 @@ where
 pub fn write_try_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> BinResult<Output>,
-    Output: crate::BinWrite<Args = Args>,
+    Output: crate::BinWrite<Args = arg_type!(Args)>,
 {
     args
 }

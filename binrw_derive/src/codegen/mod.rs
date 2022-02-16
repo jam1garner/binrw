@@ -85,13 +85,13 @@ pub(crate) fn generate_binwrite_impl(
 
     quote! {
         impl #impl_generics #BINWRITE_TRAIT for #name #ty_generics #where_clause {
-            type Args = #arg_type;
+            type Args = ::binrw::arg_type!(#arg_type);
 
             fn write_options<W: #WRITE_TRAIT + #SEEK_TRAIT>(
                 &self,
                 #WRITER: &mut W,
                 #OPT: &#WRITE_OPTIONS,
-                #ARGS: Self::Args
+                #ARGS: ::binrw::args_of!(Self)
             ) -> #BIN_RESULT<()> {
                 #write_opt_impl
             }

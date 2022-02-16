@@ -3,8 +3,11 @@ use core::marker::PhantomData;
 
 use crate::alloc::boxed::Box;
 use crate::alloc::vec::Vec;
-use crate::io::{Seek, Write};
-use crate::{BinResult, BinWrite, Endian, WriteOptions};
+use crate::{
+    arg_type, args_of,
+    io::{Seek, Write},
+    BinResult, BinWrite, Endian, WriteOptions,
+};
 
 // ============================= nums =============================
 
@@ -12,13 +15,13 @@ macro_rules! binwrite_num_impl {
     ($($type_name:ty),*$(,)?) => {
         $(
             impl BinWrite for $type_name {
-                type Args = ();
+                type Args = arg_type!(());
 
                 fn write_options<W: Write + Seek>(
                     &self,
                     writer: &mut W,
                     options: &WriteOptions,
-                    _: Self::Args,
+                    _: (),
                 ) -> BinResult<()> {
                     writer.write_all(&match options.endian() {
                         Endian::Big => self.to_be_bytes(),
@@ -44,7 +47,7 @@ impl<T: BinWrite + 'static, const N: usize> BinWrite for [T; N] {
         &self,
         writer: &mut W,
         options: &WriteOptions,
-        args: Self::Args,
+        args: args_of!(Self),
     ) -> BinResult<()> {
         if let Some(this) = <dyn Any>::downcast_ref::<[u8; N]>(self) {
             writer.write_all(&this[..])?;
@@ -65,7 +68,7 @@ impl<T: BinWrite> BinWrite for [T] {
         &self,
         writer: &mut W,
         options: &WriteOptions,
-        args: Self::Args,
+        args: args_of!(Self),
     ) -> BinResult<()> {
         for item in self {
             T::write_options(item, writer, options, args.clone())?;
@@ -82,7 +85,7 @@ impl<T: BinWrite + 'static> BinWrite for Vec<T> {
         &self,
         writer: &mut W,
         options: &WriteOptions,
-        args: Self::Args,
+        args: args_of!(Self),
     ) -> BinResult<()> {
         if let Some(this) = <dyn Any>::downcast_ref::<Vec<u8>>(self) {
             writer.write_all(this)?;
@@ -107,7 +110,7 @@ impl<T: BinWrite + ?Sized> BinWrite for &T {
         &self,
         writer: &mut W,
         options: &WriteOptions,
-        args: Self::Args,
+        args: args_of!(Self),
     ) -> BinResult<()> {
         (**self).write_options(writer, options, args)
     }
@@ -120,7 +123,7 @@ impl<T: BinWrite + 'static> BinWrite for Box<T> {
         &self,
         writer: &mut W,
         options: &WriteOptions,
-        args: Self::Args,
+        args: args_of!(Self),
     ) -> BinResult<()> {
         if let Some(this) = <dyn Any>::downcast_ref::<Box<[u8]>>(self) {
             writer.write_all(this)?;
@@ -139,7 +142,7 @@ impl<T: BinWrite> BinWrite for Option<T> {
         &self,
         writer: &mut W,
         options: &WriteOptions,
-        args: Self::Args,
+        args: args_of!(Self),
     ) -> BinResult<()> {
         match self {
             Some(inner) => inner.write_options(writer, options, args),
@@ -155,7 +158,7 @@ impl<T: BinWrite> BinWrite for PhantomData<T> {
         &self,
         _: &mut W,
         _: &WriteOptions,
-        _: Self::Args,
+        _: args_of!(Self),
     ) -> BinResult<()> {
         Ok(())
     }
@@ -166,14 +169,9 @@ impl<T: BinWrite> BinWrite for PhantomData<T> {
 // =========================== tuples ===========================
 
 impl BinWrite for () {
-    type Args = ();
+    type Args = arg_type!(());
 
-    fn write_options<W: Write + Seek>(
-        &self,
-        _: &mut W,
-        _: &WriteOptions,
-        _: Self::Args,
-    ) -> BinResult<()> {
+    fn write_options<W: Write + Seek>(&self, _: &mut W, _: &WriteOptions, _: ()) -> BinResult<()> {
         Ok(())
     }
 }
@@ -182,15 +180,15 @@ macro_rules! binwrite_tuple_impl {
     ($type1:ident $(, $types:ident)*) => {
         #[allow(non_camel_case_types)]
         impl<
-            $type1: BinWrite<Args=()>, $($types: BinWrite<Args=()>),*
+            $type1: BinWrite<Args=arg_type!(())>, $($types: BinWrite<Args=arg_type!(())>),*
         > BinWrite for ($type1, $($types),*) {
-            type Args = ();
+            type Args = arg_type!(());
 
             fn write_options<W: Write + Seek>(
                 &self,
                 writer: &mut W,
                 options: &WriteOptions,
-                _: Self::Args,
+                _: (),
             ) -> BinResult<()> {
                 let ($type1, $(
                     $types
