@@ -201,6 +201,10 @@ pub use binrw_derive::BinRead;
 
 /// The attribute version of the derive macro for [`BinRead`]. Use this instead
 /// of `#[derive(BinRead)]` to enable [temporary variables](attribute#temp).
+///
+/// Note that `#[binread]` should be placed above other `#[derive(..)]` directives to avoid
+/// issues where other derived methods (e.g. from `#[derive(Debug)]`) try to access fields that are
+/// removed by `#[binread]`.
 pub use binrw_derive::binread;
 
 /// The derive macro for [`BinWrite`].
@@ -211,6 +215,10 @@ pub use binrw_derive::binwrite;
 
 /// The attribute version of the derive macro for both [`BinRead`] and [`BinWrite`]. Use
 /// instead of `#[derive(BinRead, BinWrite)]` to enable [temporary variables](attribute#temp).
+///
+/// Note that `#[binrw]` should be placed above other `#[derive(..)]` directives to avoid
+/// issues where other derived methods (e.g. from `#[derive(Debug)]`) try to access fields that are
+/// removed by `#[binrw]`.
 pub use binrw_derive::binrw;
 
 pub use binrw_derive::BinrwNamedArgs;
