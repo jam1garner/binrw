@@ -68,6 +68,60 @@ fn not_enough_bytes<T>(_: T) -> Error {
 }
 
 /// Arguments passed to the binread impl for Vec
+///
+/// # Examples
+///
+/// ```rust
+/// use binrw::{BinRead, io::Cursor};
+///
+/// #[derive(BinRead, Debug, PartialEq)]
+/// struct Collection {
+///     count: u32,
+///     #[br(args { count: count as usize, inner: ElementBinReadArgs { count: 2 } })]
+///     elements: Vec<Element>,
+/// }
+///
+/// #[derive(BinRead, Debug, PartialEq)]
+/// #[br(import { count: u32 })]
+/// struct Element(#[br(args { count: count as usize, inner: () })] Vec<u8>);
+///
+/// assert_eq!(
+///     Collection::read(&mut Cursor::new(b"\x03\0\0\0\x04\0\x05\0\x06\0")).unwrap(),
+///     Collection {
+///         count: 3,
+///         elements: vec![
+///             Element(vec![4, 0]),
+///             Element(vec![5, 0]),
+///             Element(vec![6, 0])
+///         ]
+///     }
+/// )
+/// ```
+///
+/// Inner types that don't require args take unit args.
+///
+/// ```rust
+/// # use binrw::prelude::*;
+/// #[derive(BinRead)]
+/// struct Collection {
+///     count: u32,
+///     #[br(args { count: count as usize, inner: () })]
+///     elements: Vec<u32>,
+/// }
+/// ```
+///
+/// Unit args for the inner type can be omitted.
+/// The [count](attribute/read/index.html#count) attribute also assumes unit args for the inner type.
+///
+/// ```
+/// # use binrw::prelude::*;
+/// #[derive(BinRead)]
+/// struct Collection {
+///     count: u32,
+///     #[br(args { count: count as usize })]
+///     elements: Vec<u32>,
+/// }
+/// ```
 #[derive(BinrwNamedArgs, Clone)]
 pub struct VecArgs<B> {
     /// The number of elements to read.

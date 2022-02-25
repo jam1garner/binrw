@@ -1,6 +1,6 @@
 [package]
 name = "binrw_derive"
-version = "0.8.0"
+version = "0.8.4"
 authors = [
     "jam1garner <jam@jam1.re>",
     "Colin Snover <github.com@zetafleet.com>",
@@ -19,7 +19,7 @@ proc-macro = true
 syn = { version = "1", features = ["extra-traits", "full", "visit"] }
 quote = "1"
 proc-macro2 = { version = "1", features = ["span-locations"] }
-owo-colors = "2.0.0"
+owo-colors = "3"
 
 [dev-dependencies]
 runtime-macros-derive = "0.4.0"

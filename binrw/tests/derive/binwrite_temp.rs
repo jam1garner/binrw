@@ -6,7 +6,6 @@ fn binwrite_temp_applies() {
     #[derive(Debug, PartialEq)]
     #[br(big)]
     struct Test {
-        #[br(temp)]
         #[bw(calc = vec.len() as u32)]
         len: u32,
 

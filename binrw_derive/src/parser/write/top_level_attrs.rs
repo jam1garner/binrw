@@ -3,7 +3,7 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use crate::parser::{self, TempableField};
+use crate::parser::TempableField;
 
 use super::super::{
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
@@ -89,13 +89,13 @@ impl Input {
 
     pub(crate) fn is_temp_field(&self, variant_index: usize, index: usize) -> bool {
         match self {
-            Input::Struct(s) => s.fields.get(index).map_or(false, parser::TempableField::is_temp),
+            Input::Struct(s) => s.fields.get(index).map_or(false, TempableField::is_temp),
             Input::Enum(e) => e.variants.get(variant_index).map_or(false, |variant| {
                 if let EnumVariant::Variant { options, .. } = variant {
                     options
                         .fields
                         .get(index)
-                        .map_or(false, parser::TempableField::is_temp)
+                        .map_or(false, TempableField::is_temp)
                 } else {
                     false
                 }
