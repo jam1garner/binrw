@@ -256,17 +256,6 @@ fn magic_byte() {
 }
 
 #[test]
-fn magic_char() {
-    #[derive(BinRead, Debug)]
-    #[br(magic = 'a')]
-    struct Test;
-
-    Test::read(&mut Cursor::new(b"a")).unwrap();
-    Test::read(&mut Cursor::new(b"")).expect_err("accepted bad data");
-    Test::read(&mut Cursor::new(b"x")).expect_err("accepted bad data");
-}
-
-#[test]
 fn magic_field() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(magic(b"A"))]

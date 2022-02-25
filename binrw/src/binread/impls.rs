@@ -45,19 +45,6 @@ macro_rules! binread_impl {
     }
 }
 
-impl BinRead for char {
-    type Args = ();
-
-    fn read_options<R: Read + Seek>(
-        reader: &mut R,
-        options: &ReadOptions,
-        _: Self::Args,
-    ) -> BinResult<Self> {
-        // TODO: somehow do proper unicode handling?
-        Ok(<u8>::read_options(reader, options, ())? as char)
-    }
-}
-
 binread_impl!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
 fn not_enough_bytes<T>(_: T) -> Error {
