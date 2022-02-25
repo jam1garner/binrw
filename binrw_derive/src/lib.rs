@@ -1,6 +1,10 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
-#![allow(clippy::expl_impl_clone_on_copy)]
+#![allow(
+    clippy::expl_impl_clone_on_copy,
+    clippy::large_enum_variant,
+    clippy::redundant_closure_for_method_calls
+)]
 #![cfg_attr(nightly, feature(proc_macro_span))]
 
 #[cfg(nightly)]
