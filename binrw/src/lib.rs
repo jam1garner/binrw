@@ -206,8 +206,7 @@ pub use binrw_derive::binread;
 /// The derive macro for [`BinWrite`].
 pub use binrw_derive::BinWrite;
 
-/// The attribute version of the derive macro for [`BinWrite`]. Use this instead
-/// of `#[derive(BinWrite)]` to enable [temporary variables](attribute#temp).
+/// The attribute version of the derive macro for [`BinWrite`].
 pub use binrw_derive::binwrite;
 
 /// The attribute version of the derive macro for both [`BinRead`] and [`BinWrite`]. Use

@@ -338,8 +338,9 @@
 //! expression in the directive.
 //!
 //! **Note:** within `BinWrite` calc removes the field from the struct, similarly to
-//! `#[bw(temp)]`. The field also needs to be marked `#[bw(temp)]` in order to ensure
-//! the writer does not try and store a value in the non-existent field.
+//! `#[br(temp)]`. When both `BinRead` and `BinWrite` is implemented, the field also needs to be
+//! marked `#[br(temp)]` in order to ensure the reader does not try and store a value in the
+//! non-existent field.
 //!
 //! ## Examples
 //!
@@ -360,7 +361,7 @@
 //! # assert_eq!(&writer.into_inner()[..], &[0, 0, 0, 3, 0, 1, 2]);
 //! ```
 //!
-//! And another example showing how `#[bw(temp)]` is needed when making this round-trip:
+//! And another example showing how `#[br(temp)]` is needed when making this round-trip:
 //!
 //! ```rust
 //! # use binrw::{binrw, prelude::*, io::Cursor};
