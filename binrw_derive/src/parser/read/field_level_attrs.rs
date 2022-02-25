@@ -255,7 +255,10 @@ impl FromField for UnitEnumField {
 
 #[derive(Clone, Debug)]
 pub(crate) enum EnumVariant {
-    Variant { ident: syn::Ident, options: Struct },
+    Variant {
+        ident: syn::Ident,
+        options: Box<Struct>,
+    },
     Unit(UnitEnumField),
 }
 
@@ -284,7 +287,7 @@ impl FromField for EnumVariant {
                 Struct::from_input(None, &variant.attrs, variant.fields.iter()).map(|options| {
                     Self::Variant {
                         ident: variant.ident.clone(),
-                        options,
+                        options: Box::new(options),
                     }
                 })
             }

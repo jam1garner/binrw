@@ -3,9 +3,8 @@ use syn::{
     Expr, Token,
 };
 
-#[allow(clippy::large_enum_variant)]
 pub(crate) enum NamedArgAttr {
-    Default(Expr),
+    Default(Box<Expr>),
     TryOptional,
 }
 
@@ -26,7 +25,7 @@ impl Parse for NamedArgAttr {
             let _: Token![=] = input.parse()?;
             let expr: Expr = input.parse()?;
 
-            Ok(NamedArgAttr::Default(expr))
+            Ok(NamedArgAttr::Default(Box::new(expr)))
         } else {
             Err(lookahead.error())
         }

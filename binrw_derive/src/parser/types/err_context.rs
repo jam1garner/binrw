@@ -1,10 +1,9 @@
 use crate::parser::{keywords, meta_types::MetaList};
 use core::convert::TryFrom;
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub(crate) enum ErrContext {
-    Context(syn::Expr),
+    Context(Box<syn::Expr>),
     Format(syn::LitStr, Vec<syn::Expr>),
 }
 
@@ -48,7 +47,7 @@ impl TryFrom<MetaList<keywords::err_context, syn::Expr>> for ErrContext {
                 ))
             }
             // payload
-            1 => Ok(ErrContext::Context(value.fields[0].clone())),
+            1 => Ok(ErrContext::Context(Box::new(value.fields[0].clone()))),
             _ => Err(syn::Error::new_spanned(
                 &value.fields[0],
                 "format string expected",

@@ -6,9 +6,9 @@ error[E0308]: mismatched types
   |
   = note: expected enum `Result<i32, _>`
              found type `{integer}`
-help: try using a variant of the expected enum
+help: try wrapping the expression in a variant of `Result`
   |
 5 |     #[br(try_map = |_| Ok(0))]
-  |                        ~~~~~
+  |                        +++ +
 5 |     #[br(try_map = |_| Err(0))]
-  |                        ~~~~~~
+  |                        ++++ +
