@@ -29,18 +29,34 @@ pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
 }
 
 /// A macro for creating a binrw argument type
+///
+/// This macro avoids taking an explicit type by inferring the return type.
+/// In general, the result should have an explicit type *immediately*.
+/// i.e. being passed to a function or let binding with specific type.
 #[macro_export]
 macro_rules! args {
     (@ifn { $value:expr } $name:ident) => { $value };
     (@ifn {} $name:ident) => { $name };
     ($($name:ident $(: $value:expr)?),*) => {
         {
+            // I'll use Ret to mean the return type
+            // token representing the return type. we request that the compiler infer it.
             let __args_ty = ::core::marker::PhantomData::<_>;
             if false {
-                 $crate::passthrough_helper(__args_ty)
+                // this statement will never be run, but will be used for type resolution.
+                // since this helper is of PhantomData<T> -> T,
+                // and the compiler knows that the type Ret should be returned,
+                // it infers that __args_ty should be of type PhantomData<Ret>.
+                $crate::passthrough_helper(__args_ty)
             } else {
+                // we now pass the PhantomData<Ret> to a helper of PhantomData<T> -> T::Builder
+                // to obtain a builder for the return type.
                 let __builder = $crate::builder_helper(__args_ty);
+                
                 $(let __builder = __builder.$name($crate::args!(@ifn { $($value)? } $name));)*
+                
+                // since the builder returns the type that we used to obtain the builder,
+                // the type unifies across the if expression
                 __builder.finalize()
             }
         }
