@@ -84,8 +84,30 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
             Lit::ByteStr(bytes) => Kind::ByteStr(format!("[u8; {}]", bytes.value().len())),
             Lit::Byte(_) => Kind::Numeric("u8".to_owned()),
             Lit::Char(_) => Kind::Char,
-            Lit::Int(i) => Kind::Numeric(i.suffix().to_owned()),
-            Lit::Float(f) => Kind::Numeric(f.suffix().to_owned()),
+            Lit::Int(i) => {
+                if i.suffix().is_empty() {
+                    return Err(syn::Error::new(
+                        value.span(),
+                        format!(
+                            "expected explicit type suffix for integer literal\ne.g {}u64",
+                            i
+                        ),
+                    ));
+                }
+                Kind::Numeric(i.suffix().to_owned())
+            }
+            Lit::Float(f) => {
+                if f.suffix().is_empty() {
+                    return Err(syn::Error::new(
+                        value.span(),
+                        format!(
+                            "expected explicit type suffix for float literal\nvalid values are {0}f32 or {0}f64",
+                            f
+                        ),
+                    ));
+                }
+                Kind::Numeric(f.suffix().to_owned())
+            }
             Lit::Str(_) | Lit::Bool(_) | Lit::Verbatim(_) => {
                 return Err(syn::Error::new(
                     value.span(),
