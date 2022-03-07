@@ -409,6 +409,16 @@ fn offset_after() {
 }
 
 #[test]
+fn raw_ident() {
+    #[derive(BinRead)]
+    struct Test {
+        r#type: u32,
+    }
+
+    Test::read(&mut Cursor::new(vec![0x00, 0x00, 0x00, 0x00])).unwrap();
+}
+
+#[test]
 fn rewind_on_assert() {
     #[derive(BinRead, Debug)]
     #[br(assert(b == 1))]
