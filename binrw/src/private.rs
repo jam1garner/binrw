@@ -110,9 +110,13 @@ where
     args
 }
 
-pub fn write_try_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
+pub fn write_try_map_args_type_hint<Input, Output, Error, MapFn, Args>(
+    _: &MapFn,
+    args: Args,
+) -> Args
 where
-    MapFn: FnOnce(Input) -> BinResult<Output>,
+    Error: CustomError,
+    MapFn: FnOnce(Input) -> Result<Output, Error>,
     Output: crate::BinWrite<Args = Args>,
 {
     args
@@ -138,12 +142,13 @@ where
     func
 }
 
-pub fn write_fn_try_map_output_type_hint<Input, Output, MapFn, Writer, WriteFn, Args>(
+pub fn write_fn_try_map_output_type_hint<Input, Output, Error, MapFn, Writer, WriteFn, Args>(
     _: &MapFn,
     func: WriteFn,
 ) -> WriteFn
 where
-    MapFn: FnOnce(Input) -> BinResult<Output>,
+    Error: CustomError,
+    MapFn: FnOnce(Input) -> Result<Output, Error>,
     Args: Clone,
     Writer: Write + Seek,
     WriteFn: Fn(&Output, &mut Writer, &WriteOptions, Args) -> BinResult<()>,

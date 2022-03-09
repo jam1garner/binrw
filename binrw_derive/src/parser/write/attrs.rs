@@ -12,6 +12,8 @@ use syn::{
     Expr,
 };
 
+use core::ops::Deref;
+
 pub struct WriteOnlyAttr<T>(pub T);
 
 impl<T: KeywordToken> KeywordToken for WriteOnlyAttr<T> {
@@ -25,6 +27,19 @@ impl<T: KeywordToken> KeywordToken for WriteOnlyAttr<T> {
 impl<T: Parse> Parse for WriteOnlyAttr<T> {
     fn parse(buf: &ParseBuffer<'_>) -> Result<Self, syn::Error> {
         T::parse(buf).map(|x| WriteOnlyAttr(x))
+    }
+}
+
+impl<T: Into<TokenStream>> From<WriteOnlyAttr<T>> for TokenStream {
+    fn from(w: WriteOnlyAttr<T>) -> Self {
+        w.0.into()
+    }
+}
+
+impl<T> Deref for WriteOnlyAttr<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -51,7 +66,7 @@ pub(crate) type PadBefore = MetaExpr<kw::pad_before>;
 pub(crate) type PadSizeTo = MetaExpr<kw::pad_size_to>;
 pub(crate) type WriteWith = MetaExpr<kw::write_with>;
 pub(crate) type PreAssert = AssertLike<kw::pre_assert>;
-pub(crate) type Repr = MetaType<kw::repr>;
+pub(crate) type Repr = WriteOnlyAttr<MetaType<kw::repr>>;
 pub(crate) type RestorePosition = MetaVoid<kw::restore_position>;
 pub(crate) type ReturnAllErrors = MetaVoid<kw::return_all_errors>;
 pub(crate) type ReturnUnexpectedError = MetaVoid<kw::return_unexpected_error>;

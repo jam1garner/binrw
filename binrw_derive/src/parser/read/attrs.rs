@@ -12,6 +12,8 @@ use syn::{
     Expr, Token,
 };
 
+use core::ops::Deref;
+
 pub struct ReadOnlyAttr<T>(pub T);
 
 impl<T: KeywordToken> KeywordToken for ReadOnlyAttr<T> {
@@ -25,6 +27,19 @@ impl<T: KeywordToken> KeywordToken for ReadOnlyAttr<T> {
 impl<T: Parse> Parse for ReadOnlyAttr<T> {
     fn parse(buf: &ParseBuffer<'_>) -> Result<Self, syn::Error> {
         T::parse(buf).map(|x| ReadOnlyAttr(x))
+    }
+}
+
+impl<T: Into<TokenStream>> From<ReadOnlyAttr<T>> for TokenStream {
+    fn from(r: ReadOnlyAttr<T>) -> Self {
+        r.0.into()
+    }
+}
+
+impl<T> Deref for ReadOnlyAttr<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -58,7 +73,7 @@ pub(crate) type PadSizeTo = MetaExpr<kw::pad_size_to>;
 pub(crate) type ParseWith = MetaExpr<kw::parse_with>;
 pub(crate) type PostProcessNow = MetaVoid<kw::postprocess_now>;
 pub(crate) type PreAssert = AssertLike<kw::pre_assert>;
-pub(crate) type Repr = MetaType<kw::repr>;
+pub(crate) type Repr = ReadOnlyAttr<MetaType<kw::repr>>;
 pub(crate) type RestorePosition = MetaVoid<kw::restore_position>;
 pub(crate) type ReturnAllErrors = MetaVoid<kw::return_all_errors>;
 pub(crate) type ReturnUnexpectedError = MetaVoid<kw::return_unexpected_error>;

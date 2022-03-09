@@ -22,7 +22,7 @@ attr_struct! {
         pub(crate) field: syn::Field,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(Map, TryMap)]
+        #[from(Map, TryMap, Repr)]
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,

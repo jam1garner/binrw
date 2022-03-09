@@ -1,6 +1,6 @@
-use crate::parser::{read::attrs, KeywordToken, TrySet};
+use crate::parser::{read, read::attrs, write, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug)]
@@ -39,6 +39,20 @@ impl From<attrs::Map> for Map {
 impl From<attrs::TryMap> for Map {
     fn from(try_map: attrs::TryMap) -> Self {
         Self::Try(try_map.value.to_token_stream())
+    }
+}
+
+impl From<read::attrs::Repr> for Map {
+    fn from(repr: read::attrs::Repr) -> Self {
+        let ty = repr.value.to_token_stream();
+        Self::Try(quote! { <#ty as core::convert::TryInto<_>>::try_into })
+    }
+}
+
+impl From<write::attrs::Repr> for Map {
+    fn from(repr: write::attrs::Repr) -> Self {
+        let ty = repr.value.to_token_stream();
+        Self::Try(quote! { <#ty as core::convert::TryFrom<_>>::try_from })
     }
 }
 

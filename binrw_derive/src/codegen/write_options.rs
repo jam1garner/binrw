@@ -87,3 +87,14 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
         },
     )
 }
+
+fn get_map_err(pos: IdentStr) -> TokenStream {
+    quote! {
+        .map_err(|e| {
+            #BIN_ERROR::Custom {
+                pos: #pos,
+                err: Box::new(e) as _,
+            }
+        })
+    }
+}
