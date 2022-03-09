@@ -178,13 +178,20 @@ impl<'a> StructFieldGenerator<'a> {
         };
 
         let map_fn = self.field.map.is_some().then(|| self.map_fn_ident());
-        let map_try = self.field.map.is_try().then(|| quote! { ? });
+        let map_try = self.field.map.is_try().then(|| {
+            let map_err = super::get_map_err(SAVED_POSITION);
+            quote! { #map_err? }
+        });
+
+        let store_position = quote! {
+            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#WRITER)?;
+        };
 
         self.out = quote! {
             #initialize
 
             #WRITE_FUNCTION (
-                &(#map_fn (#name) #map_try),
+                { #store_position &(#map_fn (#name) #map_try) },
                 #WRITER,
                 &#OPT#specify_endian,
                 #args

@@ -41,6 +41,27 @@ fn map_field_code_coverage() {
 }
 
 #[test]
+fn map_repr() {
+    #[derive(BinWrite, Debug)]
+    #[bw(big)]
+    struct Test {
+        #[bw(repr = u8)]
+        a: SubTest,
+    }
+
+    #[derive(Debug)]
+    struct SubTest {
+        a: u8,
+    }
+
+    impl From<&SubTest> for u8 {
+        fn from(s: &SubTest) -> Self {
+            s.a
+        }
+    }
+}
+
+#[test]
 fn try_map() {
     use binrw::prelude::*;
     use std::convert::TryInto;

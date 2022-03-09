@@ -35,6 +35,30 @@ fn map_expr() {
 }
 
 #[test]
+fn map_repr() {
+    #[derive(BinRead, Debug)]
+    #[br(big)]
+    struct Test {
+        #[br(repr = u8)]
+        a: SubTest,
+    }
+
+    #[derive(Debug)]
+    struct SubTest {
+        a: u8,
+    }
+
+    impl From<u8> for SubTest {
+        fn from(a: u8) -> Self {
+            Self { a }
+        }
+    }
+
+    let result = Test::read(&mut Cursor::new("\x01")).unwrap();
+    assert_eq!(result.a.a, 1);
+}
+
+#[test]
 fn map_struct() {
     #[derive(BinRead, Debug)]
     #[br(map = Self::from_bytes)]
