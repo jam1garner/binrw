@@ -24,10 +24,13 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
         Map::Try(map) | Map::Map(map) => {
-            let try_op = matches!(input.map(), Map::Try(_)).then(|| quote! { ? });
+            let map_try = matches!(input.map(), Map::Try(_)).then(|| {
+                let map_err = get_map_err(POS);
+                quote! { #map_err? }
+            });
             let write_data = quote! {
                 #WRITE_METHOD(
-                    &((#map)(self) #try_op),
+                    &((#map)(self) #map_try),
                     #WRITER,
                     #OPT,
                     ()
