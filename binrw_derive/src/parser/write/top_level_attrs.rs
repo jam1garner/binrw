@@ -138,7 +138,7 @@ attr_struct! {
         pub(crate) temp_legal: bool,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(Map, TryMap)]
+        #[from(Map, TryMap, Repr)]
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,
@@ -202,7 +202,7 @@ attr_struct! {
     pub(crate) struct Enum {
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(Map, TryMap)]
+        #[from(Map, TryMap, Repr)]
         pub(crate) map: Map,
         #[from(Magic)]
         pub(crate) magic: Magic,
