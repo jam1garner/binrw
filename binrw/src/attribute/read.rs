@@ -426,6 +426,10 @@
 //! Which, due to the fact the associated type `Args` cannot have a lifetime tied to the associated
 //! function `read_options`, the type is inexpressible without [GATs](https://github.com/rust-lang/rfcs/pull/1598).
 //!
+//! Another limitation is that [`count`](#count) may conflict with `args`. To pass arguments to a
+//! type inside a [`Vec`], you can manually specify the count via named arguments instead of using
+//! the `count` directive. See [`VecArgs`](crate::VecArgs) for details.
+//!
 //! # Default
 //!
 //! The `default` directive, and its alias `ignore`, sets the value of the field
