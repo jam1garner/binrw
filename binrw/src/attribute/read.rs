@@ -323,7 +323,7 @@
 //! }
 //!
 //! #[derive(BinRead)]
-//! struct ArgsTets {
+//! struct ArgsTest {
 //!     val: u32,
 //!     #[br(args(val + 3, "test"))]
 //!     test: ImportTest
@@ -343,7 +343,7 @@
 //! }
 //!
 //! #[derive(BinRead)]
-//! struct ArgsTets {
+//! struct ArgsTest {
 //!     count: u32,
 //!
 //!     #[br(args { count, other: 5 })]
@@ -376,7 +376,7 @@
 //! }
 //!
 //! #[derive(BinRead)]
-//! struct ArgsTets {
+//! struct ArgsTest {
 //!     count: u32,
 //!
 //!     #[br(args(1, 2))]
