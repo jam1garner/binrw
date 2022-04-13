@@ -331,13 +331,6 @@ mod tests {
         struct Foo;
     });
 
-    try_error!(magic_conflict: "conflicting magic types" {
-        enum Foo {
-            #[br(magic = 0u8)] A,
-            #[br(magic = 1i16)] B,
-        }
-    });
-
     // Errors on one field should not prevent the parser from surfacing errors
     // on other fields
     #[test]

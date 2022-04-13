@@ -9,6 +9,7 @@ use crate::parser::read::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum}
 use crate::parser::{EnumErrorMode, Imports};
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::collections::HashMap;
 use syn::Ident;
 
 pub(super) fn generate_unit_enum(
@@ -24,7 +25,7 @@ pub(super) fn generate_unit_enum(
 
     let read = match &en.repr {
         Some(repr) => generate_unit_enum_repr(repr, &en.fields),
-        None => generate_unit_enum_magic(en, &en.fields),
+        None => generate_unit_enum_magic(&en.fields),
     };
 
     quote! {
@@ -53,33 +54,72 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
     }
 }
 
-fn generate_unit_enum_magic(en: &UnitOnlyEnum, variants: &[UnitEnumField]) -> TokenStream {
-    let matches = variants.iter().filter_map(|field| {
-        if let Some(magic) = &field.magic {
-            let ident = &field.ident;
-            let magic = magic.match_value();
-            let condition = if field.pre_assertions.is_empty() {
-                quote! { #magic }
+fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
+    // group fields by the type (Kind) of their magic value
+    let fields_by_magic_type =
+        variants
+            .iter()
+            .fold(HashMap::new(), |mut fields_by_magic_type, field| {
+                if let Some(magic) = &field.magic {
+                    let kind = magic.kind();
+                    fields_by_magic_type
+                        .entry(kind)
+                        .or_insert(vec![])
+                        .push(field);
+                }
+                fields_by_magic_type
+            });
+
+    // for each type (Kind), read and try to match the magic of each field
+    let try_each_magic_type = fields_by_magic_type.into_iter().map(|(_, fields)| {
+        let amp = fields[0].magic.as_ref().map(|magic| magic.add_ref());
+
+        let matches = fields.iter().map(|field| {
+            if let Some(magic) = &field.magic {
+                let ident = &field.ident;
+                let magic = magic.match_value();
+                let condition = if field.pre_assertions.is_empty() {
+                    quote! { #magic }
+                } else {
+                    let pre_assertions =
+                        field.pre_assertions.iter().map(|assert| &assert.condition);
+                    quote! { #magic if true #(&& (#pre_assertions))* }
+                };
+                Some(quote! { #condition => Ok(Self::#ident) })
             } else {
-                let pre_assertions = field.pre_assertions.iter().map(|assert| &assert.condition);
-                quote! { #magic if true #(&& (#pre_assertions))* }
-            };
-            Some(quote! { #condition => Ok(Self::#ident) })
-        } else {
-            None
+                None
+            }
+        });
+
+        let body = quote! {
+            match #amp#READ_METHOD(#READER, #OPT, ())? {
+                #(#matches,)*
+                _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS })
+            }
+        };
+
+        quote! {
+            let #TEMP = (|| {
+                #body
+            })();
+
+            if #TEMP.is_ok() {
+                return #TEMP;
+            }
+
+            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
         }
     });
 
-    let amp = en
-        .expected_field_magic
-        .as_ref()
-        .map(|magic| magic.add_ref());
+    let return_error = quote! {
+        Err(#BIN_ERROR::NoVariantMatch {
+               pos: #POS
+           })
+    };
 
     quote! {
-        match #amp#READ_METHOD(#READER, #OPT, ())? {
-            #(#matches,)*
-            _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS })
-        }
+        #(#try_each_magic_type)*
+        #return_error
     }
 }
 
