@@ -285,13 +285,13 @@ attr_struct! {
         #[from(Repr)]
         pub(crate) repr: Option<SpannedValue<TokenStream>>,
         pub(crate) fields: Vec<UnitEnumField>,
-        pub(crate) expected_field_magic: Magic,
+        pub(crate) is_magic_enum: bool,
     }
 }
 
 impl UnitOnlyEnum {
     pub(crate) fn is_magic_enum(&self) -> bool {
-        self.expected_field_magic.is_some()
+        self.is_magic_enum
     }
 }
 
@@ -307,27 +307,7 @@ impl FromInput<UnitEnumAttr> for UnitOnlyEnum {
                 "`repr` and `magic` are mutually exclusive",
             ))
         } else {
-            let expected_magic = self.expected_field_magic.as_ref();
-            match (expected_magic, field.magic.as_ref()) {
-                (Some(expected_magic), Some(magic)) => {
-                    if expected_magic.kind() != magic.kind() {
-                        let magic_span = magic.match_value().span();
-                        let span = magic_span
-                            .join(expected_magic.match_value().span())
-                            .unwrap_or(magic_span);
-                        return Err(syn::Error::new(
-                            span,
-                            format!(
-                                "conflicting magic types; expected {}",
-                                expected_magic.kind()
-                            ),
-                        ));
-                    }
-                }
-                (None, Some(_)) => self.expected_field_magic = field.magic.clone(),
-                _ => {}
-            }
-
+            self.is_magic_enum |= field.magic.is_some();
             self.fields.push(field);
             Ok(())
         }

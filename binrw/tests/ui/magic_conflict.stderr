@@ -1,7 +1,0 @@
-error: conflicting magic types; expected u8
- --> $DIR/magic_conflict.rs:5:18
-  |
-5 |       #[br(magic = 0u8)] A,
-  |  __________________^
-6 | |     #[br(magic = 1i16)] B,
-  | |_____________________^
