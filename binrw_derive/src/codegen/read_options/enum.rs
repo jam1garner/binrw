@@ -7,10 +7,13 @@ use super::{
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
 use crate::parser::{EnumErrorMode, Imports};
+
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::collections::HashMap;
 use syn::Ident;
+
+use std::cmp::Ordering;
+use std::collections::HashMap;
 
 pub(super) fn generate_unit_enum(
     input: &Input,
@@ -61,27 +64,34 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
 
 fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
     // group fields by the type (Kind) of their magic value
-    let fields_by_magic_type =
-        variants
-            .iter()
-            .fold(HashMap::new(), |mut fields_by_magic_type, field| {
-                if let Some(magic) = &field.magic {
-                    let kind = magic.kind();
-                    fields_by_magic_type
-                        .entry(kind)
-                        .or_insert(vec![])
-                        .push(field);
-                }
-                fields_by_magic_type
-            });
+    let mut fields_by_magic_type = variants
+        .iter()
+        .fold(HashMap::new(), |mut fields_by_magic_type, field| {
+            let kind = field.magic.as_ref().map(|magic| magic.kind());
+            fields_by_magic_type
+                .entry(kind)
+                .or_insert(vec![])
+                .push(field);
+
+            fields_by_magic_type
+        })
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    fields_by_magic_type.sort_by(|a, b| match (&a.0, &b.0) {
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        _ => a.0.cmp(&b.0),
+    });
 
     // for each type (Kind), read and try to match the magic of each field
     let try_each_magic_type = fields_by_magic_type.into_iter().map(|(_, fields)| {
         let amp = fields[0].magic.as_ref().map(|magic| magic.add_ref());
 
         let matches = fields.iter().map(|field| {
+            let ident = &field.ident;
+
             if let Some(magic) = &field.magic {
-                let ident = &field.ident;
                 let magic = magic.match_value();
                 let condition = if field.pre_assertions.is_empty() {
                     quote! { #magic }
@@ -90,9 +100,10 @@ fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
                         field.pre_assertions.iter().map(|assert| &assert.condition);
                     quote! { #magic if true #(&& (#pre_assertions))* }
                 };
-                Some(quote! { #condition => Ok(Self::#ident) })
+
+                quote! { #condition => Ok(Self::#ident) }
             } else {
-                None
+                quote! { _ => Ok(Self::#ident) }
             }
         });
 

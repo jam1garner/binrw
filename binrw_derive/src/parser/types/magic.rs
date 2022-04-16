@@ -5,11 +5,11 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::Lit;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord)]
 pub(crate) enum Kind {
-    ByteStr(String),
     Char,
     Numeric(String),
+    ByteStr(String),
 }
 
 impl From<&Kind> for TokenStream {

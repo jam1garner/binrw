@@ -8,10 +8,6 @@ fn unit_enum_magic() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(big)]
     enum Test {
-        // First variant not having any magic ensures that there is no reliance
-        // internally on a specific variant having a magic
-        #[allow(dead_code)]
-        Zero,
         #[br(magic(1u16))]
         One,
         #[br(magic(2u16))]
@@ -29,18 +25,16 @@ fn unit_enum_magic_different_types() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(big)]
     enum Test {
-        // First variant not having any magic ensures that there is no reliance
-        // internally on a specific variant having a magic
-        #[allow(dead_code)]
-        Zero,
         #[br(magic(b"\0\x01"))]
         One,
+
         #[br(magic(2u16))]
         Two,
+
+        Zero,
     }
 
-    let error = Test::read(&mut Cursor::new(b"\0\0")).expect_err("accepted bad data");
-    assert!(matches!(error, binrw::Error::NoVariantMatch { .. }));
+    assert_eq!(Test::read(&mut Cursor::new(b"\0\0")).unwrap(), Test::Zero);
     assert_eq!(Test::read(&mut Cursor::new(b"\0\x01")).unwrap(), Test::One);
     assert_eq!(Test::read(&mut Cursor::new(b"\0\x02")).unwrap(), Test::Two);
 }
@@ -52,8 +46,7 @@ fn unit_enum_magic_bytes() {
     enum Test {
         #[br(magic(b"zero"))]
         Zero,
-        #[allow(dead_code)]
-        One,
+
         #[br(magic(b"two0"))]
         Two,
     }
