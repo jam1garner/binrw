@@ -140,7 +140,10 @@ fn unit_enum_repr() {
         Test::Neg1
     );
     let error = Test::read(&mut Cursor::new(b"\0\x01")).expect_err("accepted bad data");
-    assert!(matches!(error, binrw::Error::NoVariantMatch { .. }));
+    assert!(matches!(
+        error.root_cause(),
+        binrw::Error::NoVariantMatch { .. }
+    ));
     assert_eq!(Test::read(&mut Cursor::new(b"\0\x02")).unwrap(), Test::Two);
 }
 

@@ -47,9 +47,14 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
     quote! {
         let #TEMP: #repr = #READ_METHOD(#READER, #OPT, ())?;
         #(#clauses else)* {
-            Err(#BIN_ERROR::NoVariantMatch {
-                pos: #POS,
-            })
+            Err(#WITH_CONTEXT(
+                #BIN_ERROR::NoVariantMatch {
+                    pos: #POS,
+                },
+                #BACKTRACE_FRAME::OwnedMessage(
+                    ::binrw::alloc::format!("Unexpected value for enum: {:?}", #TEMP)
+                )
+            ))
         }
     }
 }
