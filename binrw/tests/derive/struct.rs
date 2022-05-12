@@ -169,6 +169,27 @@ fn deref_now() {
     );
 }
 
+// See https://github.com/jam1garner/binrw/issues/118
+#[test]
+fn move_temp_field() {
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    pub struct Foo {
+        #[br(temp, postprocess_now)]
+        foo: binrw::NullString,
+
+        #[br(calc = foo)]
+        pub bar: binrw::NullString,
+    }
+
+    assert_eq!(
+        Foo::read(&mut Cursor::new(b"hello\0goodbyte\0")).unwrap(),
+        Foo {
+            bar: binrw::NullString::from_string(String::from("hello")),
+        }
+    );
+}
+
 #[test]
 fn empty_imports() {
     #[derive(BinRead, Debug, PartialEq)]

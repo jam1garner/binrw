@@ -121,14 +121,18 @@ impl<'input> StructGenerator<'input> {
 }
 
 fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
-    get_after_parse_handler(field).map(|after_parse_fn| {
-        let (args_var, options_var) = make_field_vars(field);
-        AfterParseCallGenerator::new(field)
-            .get_value_from_ident()
-            .call_after_parse(after_parse_fn, &options_var, &args_var)
-            .prefix_offset_options(&options_var)
-            .finish()
-    })
+    if field.deref_now.is_none() {
+        get_after_parse_handler(field).map(|after_parse_fn| {
+            let (args_var, options_var) = make_field_vars(field);
+            AfterParseCallGenerator::new(field)
+                .get_value_from_ident()
+                .call_after_parse(after_parse_fn, &options_var, &args_var)
+                .prefix_offset_options(&options_var)
+                .finish()
+        })
+    } else {
+        None
+    }
 }
 
 fn generate_field(

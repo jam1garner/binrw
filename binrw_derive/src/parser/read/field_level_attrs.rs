@@ -69,7 +69,7 @@ impl StructField {
     /// Returns true if this field is read from a parser with an `after_parse`
     /// method.
     pub(crate) fn can_call_after_parse(&self) -> bool {
-        matches!(self.read_mode, ReadMode::Normal) && !self.map.is_some()
+        matches!(self.read_mode, ReadMode::Normal) && self.map.is_none()
     }
 
     /// Returns true if the code generator should emit `BinRead::after_parse()`
