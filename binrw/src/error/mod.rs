@@ -186,7 +186,14 @@ impl Error {
     /// Check if the [root cause][`Self::root_cause`] of this error is an [`Error::Io`] and an
     /// [`io::ErrorKind::UnexpectedEof`].
     pub fn is_eof(&self) -> bool {
-        matches!(self.root_cause(), Error::Io(err) if err.kind() == io::ErrorKind::UnexpectedEof)
+        if let Error::EnumErrors { pos: _, variant_errors } = self {
+            variant_errors.iter().all(|(_, err)| err.is_eof())
+        } else {
+            matches!(
+                self.root_cause(),
+                Error::Io(err) if err.kind() == io::ErrorKind::UnexpectedEof,
+            )
+        }
     }
 
     /// Returns a reference to the boxed error object if this `Error` is a
