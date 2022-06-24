@@ -1,31 +1,47 @@
 error[E0308]: mismatched types
- --> $DIR/invalid_offset_type.rs:6:19
-  |
-6 |     #[br(offset = a)]
-  |                   ^ expected `u64`, found `u8`
-  |
+  --> tests/ui/invalid_offset_type.rs:6:19
+   |
+3  | #[derive(BinRead)]
+   |          ------- arguments to this function are incorrect
+...
+6  |     #[br(offset = a)]
+   |                   ^ expected `u64`, found `u8`
+   |
 note: return type inferred to be `u64` here
- --> $DIR/invalid_offset_type.rs:3:10
-  |
-3 | #[derive(BinRead)]
-  |          ^^^^^^^
+  --> tests/ui/invalid_offset_type.rs:3:10
+   |
+3  | #[derive(BinRead)]
+   |          ^^^^^^^
+note: associated function defined here
+  --> src/binread/options.rs
+   |
+   |     pub fn with_offset(self, offset: u64) -> Self {
+   |            ^^^^^^^^^^^
 help: you can convert a `u8` to a `u64`
-  |
-6 |     #[br(offset = a.into())]
-  |                    +++++++
+   |
+6  |     #[br(offset = a.into())]
+   |                    +++++++
 
 error[E0308]: mismatched types
- --> $DIR/invalid_offset_type.rs:8:25
-  |
-8 |     #[br(offset_after = d)]
-  |                         ^ expected `u64`, found `u8`
-  |
+  --> tests/ui/invalid_offset_type.rs:8:25
+   |
+3  | #[derive(BinRead)]
+   |          ------- arguments to this function are incorrect
+...
+8  |     #[br(offset_after = d)]
+   |                         ^ expected `u64`, found `u8`
+   |
 note: return type inferred to be `u64` here
- --> $DIR/invalid_offset_type.rs:3:10
-  |
-3 | #[derive(BinRead)]
-  |          ^^^^^^^
+  --> tests/ui/invalid_offset_type.rs:3:10
+   |
+3  | #[derive(BinRead)]
+   |          ^^^^^^^
+note: associated function defined here
+  --> src/binread/options.rs
+   |
+   |     pub fn with_offset(self, offset: u64) -> Self {
+   |            ^^^^^^^^^^^
 help: you can convert a `u8` to a `u64`
-  |
-8 |     #[br(offset_after = d.into())]
-  |                          +++++++
+   |
+8  |     #[br(offset_after = d.into())]
+   |                          +++++++
