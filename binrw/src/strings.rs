@@ -214,7 +214,7 @@ impl core::ops::Deref for NullWideString {
 
 impl ToString for NullString {
     fn to_string(&self) -> String {
-        core::str::from_utf8(self).unwrap().to_string()
+        String::from_utf8_lossy(self).to_string()
     }
 }
 
