@@ -3,6 +3,10 @@
 
 use core::fmt;
 use core::ops::{Deref, DerefMut};
+use core::num::{
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8,
+    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8,
+};
 
 use crate::{
     io::{Read, Seek, SeekFrom},
@@ -61,6 +65,17 @@ pub type FilePtr32<T> = FilePtr<u32, T>;
 pub type FilePtr64<T> = FilePtr<u64, T>;
 /// A type alias for [`FilePtr`] with 128-bit offsets.
 pub type FilePtr128<T> = FilePtr<u128, T>;
+
+/// A type alias for [`FilePtr`] with non-zero 8-bit offsets.
+pub type NonZeroFilePtr8<T> = FilePtr<NonZeroU8, T>;
+/// A type alias for [`FilePtr`] with non-zero 16-bit offsets.
+pub type NonZeroFilePtr16<T> = FilePtr<NonZeroU16, T>;
+/// A type alias for [`FilePtr`] with non-zero  32-bit offsets.
+pub type NonZeroFilePtr32<T> = FilePtr<NonZeroU32, T>;
+/// A type alias for [`FilePtr`] with non-zero  64-bit offsets.
+pub type NonZeroFilePtr64<T> = FilePtr<NonZeroU64, T>;
+/// A type alias for [`FilePtr`] with non-zero  128-bit offsets.
+pub type NonZeroFilePtr128<T> = FilePtr<NonZeroU128, T>;
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
     type Args = BR::Args;
@@ -218,6 +233,23 @@ macro_rules! impl_into_seek_from {
 }
 
 impl_into_seek_from!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
+
+macro_rules! impl_into_seek_from_for_non_zero {
+    ($($t:ty),*) => {
+        $(
+            impl IntoSeekFrom for $t {
+                fn into_seek_from(self) -> SeekFrom {
+                    self.get().into_seek_from()
+                }
+            }
+        )*
+    };
+}
+
+impl_into_seek_from_for_non_zero!(
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8,
+    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8
+);
 
 /// Dereferences the value.
 ///
