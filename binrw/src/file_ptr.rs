@@ -2,11 +2,11 @@
 //! a file.
 
 use core::fmt;
-use core::ops::{Deref, DerefMut};
 use core::num::{
-    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8,
-    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8,
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
+    NonZeroU32, NonZeroU64, NonZeroU8,
 };
+use core::ops::{Deref, DerefMut};
 
 use crate::{
     io::{Read, Seek, SeekFrom},
@@ -247,8 +247,16 @@ macro_rules! impl_into_seek_from_for_non_zero {
 }
 
 impl_into_seek_from_for_non_zero!(
-    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8,
-    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8
+    NonZeroI128,
+    NonZeroI16,
+    NonZeroI32,
+    NonZeroI64,
+    NonZeroI8,
+    NonZeroU128,
+    NonZeroU16,
+    NonZeroU32,
+    NonZeroU64,
+    NonZeroU8
 );
 
 /// Dereferences the value.
