@@ -4,6 +4,10 @@ use crate::{
 };
 use core::any::Any;
 use core::convert::TryInto;
+use core::num::{
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8,
+    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8,
+};
 
 use binrw_derive::BinrwNamedArgs;
 
@@ -52,6 +56,39 @@ fn not_enough_bytes<T>(_: T) -> Error {
         io::ErrorKind::UnexpectedEof,
         "not enough bytes in reader",
     ))
+}
+
+fn unexpected_zero_num() -> Error {
+    Error::Io(io::Error::new(
+        io::ErrorKind::InvalidData,
+        "unexpected zero found",
+    ))
+}
+
+macro_rules! binread_tuple_impl {
+    ($($Ty:ty, $Int:ty),* $(,)?) => {
+        $(
+            impl BinRead for $Ty {
+                type Args = ();
+
+                fn read_options<R: Read + Seek>(
+                    reader: &mut R,
+                    options: &ReadOptions,
+                    _: Self::Args,
+                ) -> BinResult<Self> {
+                    match <$Ty>::new(<$Int>::read_options(reader, options, ())?) {
+                        Some(x) => Ok(x),
+                        None => Err(unexpected_zero_num()),
+                    }
+                }
+            }
+        )+
+    }
+}
+
+binread_tuple_impl! {
+    NonZeroU8, u8, NonZeroU16, u16, NonZeroU32, u32, NonZeroU64, u64, NonZeroU128, u128,
+    NonZeroI8, i8, NonZeroI16, i16, NonZeroI32, i32, NonZeroI64, i64, NonZeroI128, i128,
 }
 
 /// Arguments passed to the binread impl for Vec
