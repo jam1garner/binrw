@@ -65,7 +65,7 @@ fn unexpected_zero_num() -> Error {
     ))
 }
 
-macro_rules! binread_tuple_impl {
+macro_rules! binread_nonzero_impl {
     ($($Ty:ty, $Int:ty),* $(,)?) => {
         $(
             impl BinRead for $Ty {
@@ -86,7 +86,7 @@ macro_rules! binread_tuple_impl {
     }
 }
 
-binread_tuple_impl! {
+binread_nonzero_impl! {
     NonZeroU8, u8, NonZeroU16, u16, NonZeroU32, u32, NonZeroU64, u64, NonZeroU128, u128,
     NonZeroI8, i8, NonZeroI16, i16, NonZeroI32, i32, NonZeroI64, i64, NonZeroI128, i128,
 }
