@@ -106,11 +106,21 @@ jobs:
           tool: cargo-llvm-cov
       - name: Generate coverage data
         run: >
+          echo "# Default features"
+          &&
           cargo llvm-cov --doctests
           --ignore-filename-regex 'binrw/tests'
           --no-report
           &&
-          cargo llvm-cov --all-features
+          echo "# All features"
+          &&
+          cargo llvm-cov --doctests --all-features
+          --ignore-filename-regex 'binrw/tests'
+          --no-report
+          &&
+          echo "# No default features"
+          &&
+          cargo llvm-cov --doctests --no-default-features
           --ignore-filename-regex 'binrw/tests'
           --no-report
       - name: Show coverage results
