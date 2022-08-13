@@ -68,7 +68,7 @@ pub(crate) fn generate_try_map(
         #prelude
 
         #READ_METHOD(#READER, #OPT, #ARGS).and_then(|value| {
-            #map(value)#map_err
+            (#map)(value)#map_err
         })
         .and_then(|this| {
             #destructure_ref

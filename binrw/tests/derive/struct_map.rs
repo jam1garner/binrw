@@ -185,3 +185,37 @@ fn try_map_struct() {
     let error = Test::read(&mut Cursor::new(b"\x01\0")).expect_err("accepted bad data");
     error.custom_err::<Oops>().unwrap();
 }
+
+#[test]
+fn try_map_struct_closure() {
+    #[derive(BinRead, Debug)]
+    #[br(try_map = |a| { Self::from_bytes(a) })]
+    struct Test {
+        a: i16,
+    }
+
+    #[derive(Debug)]
+    struct Oops;
+    impl core::fmt::Display for Oops {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            core::fmt::Debug::fmt(self, f)
+        }
+    }
+
+    impl Test {
+        fn from_bytes(bytes: [u8; 2]) -> Result<Self, Oops> {
+            if bytes[0] == 0 {
+                Ok(Self {
+                    a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8),
+                })
+            } else {
+                Err(Oops)
+            }
+        }
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\x01")).unwrap();
+    assert_eq!(result.a, 256);
+    let error = Test::read(&mut Cursor::new(b"\x01\0")).expect_err("accepted bad data");
+    error.custom_err::<Oops>().unwrap();
+}
