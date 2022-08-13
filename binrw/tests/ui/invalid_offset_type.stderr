@@ -7,11 +7,6 @@ error[E0308]: mismatched types
 6  |     #[br(offset = a)]
    |                   ^ expected `u64`, found `u8`
    |
-note: return type inferred to be `u64` here
-  --> tests/ui/invalid_offset_type.rs:3:10
-   |
-3  | #[derive(BinRead)]
-   |          ^^^^^^^
 note: associated function defined here
   --> src/binread/options.rs
    |
@@ -31,11 +26,6 @@ error[E0308]: mismatched types
 8  |     #[br(offset_after = d)]
    |                         ^ expected `u64`, found `u8`
    |
-note: return type inferred to be `u64` here
-  --> tests/ui/invalid_offset_type.rs:3:10
-   |
-3  | #[derive(BinRead)]
-   |          ^^^^^^^
 note: associated function defined here
   --> src/binread/options.rs
    |
