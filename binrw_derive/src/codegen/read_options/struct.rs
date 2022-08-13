@@ -8,7 +8,7 @@ use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
 use syn::Ident;
 
-#[cfg(nightly)]
+#[cfg(all(nightly, not(coverage)))]
 use crate::backtrace::BacktraceFrame;
 
 pub(super) fn generate_unit_struct(
@@ -441,13 +441,13 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn map_err_context(&self, name: Option<&Ident>, variant_name: Option<&str>) -> TokenStream {
-        #[cfg(nightly)]
+        #[cfg(all(nightly, not(coverage)))]
         let code = {
             let code = BacktraceFrame::from_field(self.field).to_string();
             quote!(Some(#code))
         };
 
-        #[cfg(not(nightly))]
+        #[cfg(any(not(nightly), coverage))]
         let code = quote!(None);
 
         match self.field.err_context.as_ref() {

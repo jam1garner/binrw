@@ -5,9 +5,10 @@
     clippy::large_enum_variant,
     clippy::redundant_closure_for_method_calls
 )]
-#![cfg_attr(nightly, feature(proc_macro_span))]
+#![cfg_attr(all(nightly, not(coverage)), feature(proc_macro_span))]
+#![cfg_attr(all(nightly, coverage), feature(no_coverage))]
 
-#[cfg(nightly)]
+#[cfg(all(nightly, not(coverage)))]
 mod backtrace;
 mod binread;
 mod binrw_attr;
@@ -24,7 +25,7 @@ use proc_macro::TokenStream;
 use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br, brw))]
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
     binread::derive_from_input(&parse_macro_input!(input as DeriveInput), true)
         .1
@@ -32,13 +33,13 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn binread(_: TokenStream, input: TokenStream) -> TokenStream {
     binread::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
 
 #[proc_macro_derive(BinWrite, attributes(binwrite, bw, brw))]
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn derive_binwrite_trait(input: TokenStream) -> TokenStream {
     binwrite::derive_from_input(&parse_macro_input!(input as DeriveInput), true)
         .1
@@ -46,13 +47,13 @@ pub fn derive_binwrite_trait(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn binwrite(_: TokenStream, input: TokenStream) -> TokenStream {
     binwrite::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
 
 #[proc_macro_attribute]
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn binrw(_: TokenStream, input: TokenStream) -> TokenStream {
     binrw_attr::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
 }
@@ -126,7 +127,7 @@ fn binrw_named_args(input: DeriveInput) -> proc_macro2::TokenStream {
     .generate(false)
 }
 
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 #[proc_macro_derive(BinrwNamedArgs, attributes(named_args))]
 pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -134,9 +135,9 @@ pub fn derive_binrw_named_args(input: TokenStream) -> TokenStream {
 }
 
 #[cfg(test)]
-#[cfg(tarpaulin)]
+#[cfg(coverage)]
 #[test]
-fn derive_code_coverage_for_tarpaulin() {
+fn derive_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
     use std::{env, fs};
 
@@ -166,9 +167,9 @@ fn derive_code_coverage_for_tarpaulin() {
 }
 
 #[cfg(test)]
-#[cfg(tarpaulin)]
+#[cfg(coverage)]
 #[test]
-fn derive_binwrite_code_coverage_for_tarpaulin() {
+fn derive_binwrite_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
     use std::{env, fs};
 
@@ -196,9 +197,9 @@ fn derive_binwrite_code_coverage_for_tarpaulin() {
 }
 
 #[cfg(test)]
-#[cfg(tarpaulin)]
+#[cfg(coverage)]
 #[test]
-fn derive_named_args_code_coverage_for_tarpaulin() {
+fn derive_named_args_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
     use std::fs;
     let file = fs::File::open("../binrw/tests/builder.rs").unwrap();

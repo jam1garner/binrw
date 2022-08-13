@@ -8,12 +8,12 @@ use crate::parser::{
     read, read::is_binread_attr, write, write::is_binwrite_attr, ParseResult, TempableField,
 };
 
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
     attrs.retain(|attr| !is_binwrite_attr(attr) && !is_binread_attr(attr));
 }
 
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
     let mut binread_input = read::Input::from_input(&derive_input, false);
     let mut binwrite_input = write::Input::from_input(&derive_input, false);
@@ -125,7 +125,7 @@ fn set_fields_temporary<S: TempableField>(fields: &mut [S], temporary_names: &Ha
     }
 }
 
-#[cfg(not(tarpaulin_include))]
+#[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_field_attrs(
     binread_input: &Option<read::Input>,
     binwrite_input: &Option<write::Input>,

@@ -26,13 +26,13 @@ impl fmt::Display for Backtrace {
 
         self.fmt_no_bars(f)?;
 
-        #[cfg(not(nightly))]
+        #[cfg(any(not(nightly), coverage))]
         writeln!(
             f,
             "\n ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
         )?;
 
-        #[cfg(nightly)]
+        #[cfg(all(nightly, not(coverage)))]
         writeln!(
             f,
             " ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"

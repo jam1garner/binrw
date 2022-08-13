@@ -6,6 +6,7 @@
 // stabilised and https://github.com/dtolnay/trybuild/issues/6 is fixed, running
 // these tests all the time makes sense.
 #[rustversion::nightly]
+#[cfg(not(coverage))]
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
