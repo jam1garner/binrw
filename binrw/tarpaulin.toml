@@ -1,5 +1,0 @@
-[no_std]
-no-default-features = true
-
-[all_features]
-all-features = true
