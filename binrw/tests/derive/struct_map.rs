@@ -135,6 +135,26 @@ fn map_struct() {
 }
 
 #[test]
+fn map_struct_closure() {
+    #[derive(BinRead, Debug)]
+    #[br(map = |a| { Self::from_bytes(a) })]
+    struct Test {
+        a: i16,
+    }
+
+    impl Test {
+        fn from_bytes(bytes: [u8; 2]) -> Self {
+            Self {
+                a: i16::from(bytes[0]) | (i16::from(bytes[1]) << 8),
+            }
+        }
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\0\x01")).unwrap();
+    assert_eq!(result.a, 256);
+}
+
+#[test]
 fn try_map_field() {
     #[derive(BinRead, Debug)]
     #[br(big)]
