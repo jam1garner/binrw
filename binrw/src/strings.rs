@@ -34,7 +34,7 @@ use core::fmt;
 ///     "no thanks"
 /// );
 /// ```
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, Eq, PartialEq, Default)]
 pub struct NullString(
     /// The raw byte string.
     pub Vec<u8>,
@@ -66,7 +66,7 @@ pub struct NullString(
 ///     "are endian dependent"
 /// );
 /// ```
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, Eq, PartialEq, Default)]
 pub struct NullWideString(
     /// The raw wide byte string.
     pub Vec<u16>,

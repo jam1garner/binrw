@@ -173,7 +173,7 @@ fn deref_now() {
 #[test]
 fn move_temp_field() {
     #[binread]
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, Eq, PartialEq)]
     pub struct Foo {
         #[br(temp, postprocess_now)]
         foo: binrw::NullString,

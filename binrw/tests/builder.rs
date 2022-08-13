@@ -2,7 +2,7 @@ use binrw::BinrwNamedArgs;
 
 #[test]
 fn test() {
-    #[derive(PartialEq, Debug)]
+    #[derive(Eq, PartialEq, Debug)]
     pub struct NotClone;
 
     #[derive(BinrwNamedArgs)]

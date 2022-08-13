@@ -1,7 +1,7 @@
 use binrw::{binread, BinReaderExt};
 
 #[binread]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct LenString {
     #[br(temp)]
     name_len: u8,
