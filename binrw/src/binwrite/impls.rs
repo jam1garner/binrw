@@ -1,5 +1,9 @@
 use core::any::Any;
 use core::marker::PhantomData;
+use core::num::{
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
+    NonZeroU32, NonZeroU64, NonZeroU8,
+};
 
 use crate::alloc::boxed::Box;
 use crate::alloc::vec::Vec;
@@ -32,6 +36,44 @@ macro_rules! binwrite_num_impl {
 }
 
 binwrite_num_impl!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
+
+macro_rules! binwrite_nonzero_num_impl {
+    ($($non_zero_type:ty => $type_name:ty),*$(,)?) => {
+        $(
+            impl BinWrite for $non_zero_type {
+                type Args = ();
+
+                fn write_options<W: Write + Seek>(
+                    &self,
+                    writer: &mut W,
+                    options: &WriteOptions,
+                    _: Self::Args,
+                ) -> BinResult<()> {
+                    let num = <$type_name>::from(*self);
+
+                    writer.write_all(&match options.endian() {
+                        Endian::Big => num.to_be_bytes(),
+                        Endian::Little => num.to_le_bytes(),
+                        Endian::Native => num.to_ne_bytes(),
+                    }).map_err(Into::into)
+                }
+            }
+        )*
+    };
+}
+
+binwrite_nonzero_num_impl!(
+    NonZeroU8   => u8,
+    NonZeroU16  => u16,
+    NonZeroU32  => u32,
+    NonZeroU64  => u64,
+    NonZeroU128 => u128,
+    NonZeroI8   => i8,
+    NonZeroI16  => i16,
+    NonZeroI32  => i32,
+    NonZeroI64  => i64,
+    NonZeroI128 => i128,
+);
 
 // =========================== end nums ===========================
 
