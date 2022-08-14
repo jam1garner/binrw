@@ -2,6 +2,19 @@ use binrw::io::Cursor;
 use binrw::{BinRead, BinReaderExt, BinWrite, Endian, WriteOptions};
 
 #[test]
+fn padding_big() {
+    #[derive(BinWrite)]
+    struct Test(#[bw(pad_size_to = 0x100)] Vec<u8>);
+
+    let mut data = Cursor::new(Vec::new());
+    Test(vec![b'a'; 0x80]).write_to(&mut data).unwrap();
+
+    let mut expected = vec![0; 0x100];
+    expected[0..0x80].fill(b'a');
+    assert_eq!(data.into_inner(), expected);
+}
+
+#[test]
 fn padding_round_trip() {
     #[derive(BinRead, BinWrite)]
     struct Test {
