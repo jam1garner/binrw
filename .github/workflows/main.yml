@@ -109,19 +109,19 @@ jobs:
           echo "# Default features"
           &&
           cargo llvm-cov --doctests
-          --ignore-filename-regex 'binrw/tests'
+          --ignore-filename-regex 'binrw/(tests|src/attribute)'
           --no-report
           &&
           echo "# All features"
           &&
           cargo llvm-cov --doctests --all-features
-          --ignore-filename-regex 'binrw/tests'
+          --ignore-filename-regex 'binrw/(tests|src/attribute)'
           --no-report
           &&
           echo "# No default features"
           &&
           cargo llvm-cov --doctests --no-default-features
-          --ignore-filename-regex 'binrw/tests'
+          --ignore-filename-regex 'binrw/(tests|src/attribute)'
           --no-report
       - name: Show coverage results
         run: cargo llvm-cov --doctests --no-run
