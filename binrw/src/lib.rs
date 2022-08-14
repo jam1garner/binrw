@@ -144,6 +144,7 @@
 //! functionality. The [`alloc`] crate is required.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(coverage_nightly, feature(no_coverage))]
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)]
 

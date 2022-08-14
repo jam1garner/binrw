@@ -19,6 +19,7 @@ impl SatisfiedOrOptional for Satisfied {}
 impl SatisfiedOrOptional for Optional {}
 
 #[doc(hidden)]
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn passthrough_helper<T>(_a: PhantomData<T>) -> T {
     panic!("This is a type system hack and should never be called!");
 }
