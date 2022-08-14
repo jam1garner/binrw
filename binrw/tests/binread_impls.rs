@@ -61,3 +61,15 @@ fn tuple() {
         (1, 2)
     );
 }
+
+#[test]
+fn vec_u8() {
+    assert!(matches!(
+        Vec::<u8>::read_args(
+            &mut binrw::io::Cursor::new(b""),
+            binrw::VecArgs::builder().count(10).finalize()
+        )
+        .expect_err("accepted bad data"),
+        binrw::Error::Io(..)
+    ));
+}
