@@ -37,6 +37,19 @@ fn clone_args() {
 }
 
 #[test]
+fn non_zero() {
+    assert!(matches!(
+        core::num::NonZeroU8::read(&mut binrw::io::Cursor::new(b"\0"))
+            .expect_err("accepted bad data"),
+        binrw::Error::Io(..)
+    ));
+    assert_eq!(
+        core::num::NonZeroU8::read(&mut binrw::io::Cursor::new(b"\x01")).unwrap(),
+        core::num::NonZeroU8::new(1).unwrap()
+    );
+}
+
+#[test]
 fn phantom_data() {
     core::marker::PhantomData::<()>::read(&mut binrw::io::Cursor::new(b"")).unwrap();
 }
