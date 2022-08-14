@@ -57,6 +57,7 @@ fn punctuated() {
 
     // This behavior may be reworked later
     assert_eq!(format!("{:?}", y.list), "[One, One, One]");
+    assert_eq!(format!("{:?}", y.list.into_values()), "[One, One, One]");
 }
 
 #[test]
