@@ -50,7 +50,7 @@ impl Endian {
     }
 
     /// Converts endian to a UTF-16 BOM representing the given endian
-    pub fn into_utf16_bom_bytes(&self) -> [u8; 2] {
+    pub fn into_utf16_bom_bytes(self) -> [u8; 2] {
         match self {
             Self::Little => u16::to_le_bytes(BOM),
             Self::Big => u16::to_be_bytes(BOM),
