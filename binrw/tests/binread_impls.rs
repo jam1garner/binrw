@@ -1,5 +1,16 @@
 use binrw::BinRead;
 
+#[test]
+fn boxed() {
+    assert_eq!(
+        Box::<u8>::read(&mut binrw::io::Cursor::new(b"\x03")).unwrap(),
+        Box::new(3_u8)
+    );
+    assert!(Box::<u16>::read(&mut binrw::io::Cursor::new(b"\x03"))
+        .unwrap_err()
+        .is_eof());
+}
+
 // This is a compile-time regression test to ensure library types allow
 // cloneable arguments.
 #[test]
@@ -23,4 +34,9 @@ fn clone_args() {
     }
 
     TestCloneArray::read(&mut binrw::io::Cursor::new(b"")).unwrap();
+}
+
+#[test]
+fn phantom_data() {
+    core::marker::PhantomData::<()>::read(&mut binrw::io::Cursor::new(b"")).unwrap();
 }
