@@ -115,7 +115,7 @@
 //! let mut data = Cursor::new(b"DOG\x02\x00\x01\x00\x12\0\0Rudy\0");
 //! let dog = Dog::read(&mut data).unwrap();
 //! assert_eq!(dog.bone_piles, &[0x1, 0x12]);
-//! assert_eq!(dog.name.into_string(), "Rudy")
+//! assert_eq!(dog.name.to_string(), "Rudy")
 //! ```
 //!
 //! Directives can also reference earlier fields by name. For tuple types,

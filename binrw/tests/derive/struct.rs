@@ -185,7 +185,7 @@ fn move_temp_field() {
     assert_eq!(
         Foo::read(&mut Cursor::new(b"hello\0goodbyte\0")).unwrap(),
         Foo {
-            bar: binrw::NullString::from_string(String::from("hello")),
+            bar: binrw::NullString::from("hello"),
         }
     );
 }
