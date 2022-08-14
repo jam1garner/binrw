@@ -69,6 +69,7 @@ fn punctuated_trailing() {
     assert_eq!(y.count, 3);
     assert_eq!(y.list.len(), 3);
 
+    // DerefMut test
     let y = &mut *y.list;
     y[0] = y[1];
 }
