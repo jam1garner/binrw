@@ -53,3 +53,11 @@ fn non_zero() {
 fn phantom_data() {
     core::marker::PhantomData::<()>::read(&mut binrw::io::Cursor::new(b"")).unwrap();
 }
+
+#[test]
+fn tuple() {
+    assert_eq!(
+        <(u8, u8)>::read(&mut binrw::io::Cursor::new(b"\x01\x02")).unwrap(),
+        (1, 2)
+    );
+}

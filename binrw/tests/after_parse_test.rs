@@ -17,3 +17,10 @@ fn try_calls_after_parse() {
 
     assert_eq!(*test.0.unwrap(), 0xFF)
 }
+
+#[test]
+fn tuple_calls_after_parse() {
+    let test: (FilePtr8<u8>, FilePtr8<u8>) = Cursor::new([2, 3, 0xFF, 0xEE]).read_be().unwrap();
+    assert_eq!(*test.0, 0xFF);
+    assert_eq!(*test.1, 0xEE);
+}
