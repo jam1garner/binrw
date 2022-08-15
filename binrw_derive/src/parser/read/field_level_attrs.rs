@@ -237,6 +237,16 @@ attr_struct! {
     }
 }
 
+impl From<UnitEnumField> for Struct {
+    fn from(value: UnitEnumField) -> Self {
+        Self {
+            magic: value.magic,
+            pre_assertions: value.pre_assertions,
+            ..<_>::default()
+        }
+    }
+}
+
 impl FromField for UnitEnumField {
     type In = syn::Variant;
 
@@ -274,6 +284,15 @@ impl EnumVariant {
         match self {
             Self::Variant { options, .. } => options.has_no_attrs(),
             Self::Unit(_) => true,
+        }
+    }
+}
+
+impl From<EnumVariant> for Struct {
+    fn from(value: EnumVariant) -> Self {
+        match value {
+            EnumVariant::Variant { options, .. } => *options,
+            EnumVariant::Unit(options) => options.into(),
         }
     }
 }

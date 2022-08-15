@@ -119,6 +119,28 @@ fn unit_enum_magic_pre_assert() {
 }
 
 #[test]
+fn unit_enum_pre_assert() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(import(one: bool))]
+    enum Test {
+        #[br(pre_assert(false))]
+        Zero(u8),
+        #[br(pre_assert(one))]
+        One,
+        Two,
+    }
+
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b""), (true,)).unwrap(),
+        Test::One
+    );
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b""), (false,)).unwrap(),
+        Test::Two
+    );
+}
+
+#[test]
 fn unit_enum_repr() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(big, repr(i16))]

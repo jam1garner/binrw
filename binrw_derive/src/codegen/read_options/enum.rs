@@ -6,7 +6,7 @@ use super::{
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::read::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
-use crate::parser::{EnumErrorMode, Imports};
+use crate::parser::EnumErrorMode;
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -208,12 +208,7 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
 }
 
 fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
-    // TODO: Kind of expensive since the enum is containing all the fields
-    // and this is a clone.
-    let mut new_enum = en.with_variant(variant);
-    // Drop imports, we already have them in scope
-    new_enum.imports = Imports::None;
-    let input = Input::Enum(new_enum);
+    let input = Input::Struct(variant.clone().into());
 
     match variant {
         EnumVariant::Variant { ident, options } => StructGenerator::new(&input, options)

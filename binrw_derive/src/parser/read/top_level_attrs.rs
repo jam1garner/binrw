@@ -222,39 +222,6 @@ attr_struct! {
     }
 }
 
-impl Enum {
-    pub(crate) fn with_variant(&self, variant: &EnumVariant) -> Self {
-        let mut out = self.clone();
-
-        match variant {
-            EnumVariant::Variant { options, .. } => {
-                if options.endian.is_some() {
-                    out.endian = options.endian.clone();
-                }
-
-                if options.magic.is_some() {
-                    out.magic = options.magic.clone();
-                }
-
-                out.pre_assertions
-                    .extend_from_slice(&options.pre_assertions);
-                out.assertions.extend_from_slice(&options.assertions);
-            }
-
-            EnumVariant::Unit(options) => {
-                if options.magic.is_some() {
-                    out.magic = options.magic.clone();
-                }
-
-                out.pre_assertions
-                    .extend_from_slice(&options.pre_assertions);
-            }
-        }
-
-        out
-    }
-}
-
 impl FromInput<EnumAttr> for Enum {
     type Field = EnumVariant;
 

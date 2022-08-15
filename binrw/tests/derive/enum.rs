@@ -9,13 +9,23 @@ fn enum_assert() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(assert(b == 1))]
     enum Test {
-        A { a: u8, b: u8 },
-        B { a: i16, b: u8 },
+        A {
+            a: u8,
+            b: u8,
+        },
+        #[br(assert(a == -1))]
+        B {
+            a: i16,
+            b: u8,
+        },
     }
 
-    let mut data = Cursor::new(b"\xff\xff\x01");
-    let result = Test::read(&mut data).unwrap();
-    assert_eq!(result, Test::B { a: -1, b: 1 });
+    assert_eq!(
+        Test::read(&mut Cursor::new(b"\xff\xff\x01")).unwrap(),
+        Test::B { a: -1, b: 1 }
+    );
+    Test::read(&mut Cursor::new(b"\xff\xff\0")).expect_err("accepted bad data");
+    Test::read(&mut Cursor::new(b"\0\0\x01")).expect_err("accepted bad data");
 }
 
 #[test]
@@ -65,7 +75,14 @@ fn enum_endianness() {
         #[br(magic(1u16))]
         OneBig,
         #[br(little, magic(2u16))]
-        TwoLittle { a: u16 },
+        TwoLittle {
+            a: u16,
+        },
+        ThreeBig {
+            a: u16,
+            b: u16,
+            c: u16,
+        },
     }
 
     assert_eq!(
@@ -80,6 +97,14 @@ fn enum_endianness() {
     );
     let error = Test::read(&mut Cursor::new(b"\0\x02\x03\0")).expect_err("accepted bad data");
     assert!(matches!(error, binrw::Error::EnumErrors { .. }));
+    assert_eq!(
+        Test::read(&mut Cursor::new(b"\0\x03\x01\x00\x02\x00")).unwrap(),
+        Test::ThreeBig {
+            a: 3,
+            b: 0x100,
+            c: 0x200
+        }
+    );
 }
 
 #[test]
@@ -97,6 +122,42 @@ fn enum_magic() {
 
     let result = Test::read(&mut Cursor::new(b"\x12\x34\x01\x02\x03")).unwrap();
     assert_eq!(result, Test::One { a: 515 });
+}
+
+#[test]
+fn enum_magic_holey() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(big, magic(0x12u8))]
+    enum Test {
+        Wrong(#[br(magic(0x01u8))] u16),
+        #[br(magic(0x12u8))]
+        Right {
+            a: u16,
+        },
+    }
+
+    let result = Test::read(&mut Cursor::new(b"\x12\x12\x01\x02\x03")).unwrap();
+    assert_eq!(result, Test::Right { a: 0x102 });
+}
+
+#[test]
+fn enum_pre_assert() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(big, import(a: bool))]
+    enum Test {
+        #[br(pre_assert(a))]
+        A(u16),
+        B(u16),
+    }
+
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b"\0\x01"), (true,)).unwrap(),
+        Test::A(1)
+    );
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b"\0\x01"), (false,)).unwrap(),
+        Test::B(1)
+    );
 }
 
 #[test]
