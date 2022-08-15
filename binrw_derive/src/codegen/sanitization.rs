@@ -102,6 +102,7 @@ pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
 pub struct IdentStr(&'static str);
 
 impl IdentStr {
+    #[cfg_attr(coverage_nightly, no_coverage)] // const-only function
     pub(crate) const fn new(str: &'static str) -> Self {
         IdentStr(str)
     }
