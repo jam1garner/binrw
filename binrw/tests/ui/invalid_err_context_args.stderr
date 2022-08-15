@@ -1,0 +1,20 @@
+error: multiple unused formatting arguments
+ --> tests/ui/invalid_err_context_args.rs:5:29
+  |
+5 |     #[br(err_context("too", "many", "arguments"))]
+  |                      -----  ^^^^^^  ^^^^^^^^^^^ argument never used
+  |                      |      |
+  |                      |      argument never used
+  |                      multiple missing formatting specifiers
+
+error: err_context requires a value but none were given
+  --> tests/ui/invalid_err_context_args.rs:11:10
+   |
+11 |     #[br(err_context())]
+   |          ^^^^^^^^^^^
+
+error: format string expected
+  --> tests/ui/invalid_err_context_args.rs:17:22
+   |
+17 |     #[br(err_context(a, b))]
+   |                      ^

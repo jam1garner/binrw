@@ -258,6 +258,20 @@ mod tests {
         }
     });
 
+    try_error!(err_context_missing: "requires a value" {
+        struct Foo {
+            #[br(err_context())]
+            a: u8,
+        }
+    });
+
+    try_error!(err_context_missing_format: "format string expected" {
+        struct Foo {
+            #[br(err_context(a, b))]
+            a: u8,
+        }
+    });
+
     try_error!(invalid_assert_args: "too many arguments" {
         #[br(assert(false, String::from("message"), "too", "many", "arguments"))]
         struct Foo;
