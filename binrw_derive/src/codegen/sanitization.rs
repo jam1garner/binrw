@@ -98,7 +98,7 @@ pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
 
 /// A string wrapper that converts the str to a $path `TokenStream`, allowing
 /// for constant-time idents that can be shared across threads
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy)]
 pub struct IdentStr(&'static str);
 
 impl IdentStr {
