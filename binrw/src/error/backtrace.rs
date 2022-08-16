@@ -69,8 +69,8 @@ impl Backtrace {
                 f,
                 &format!(
                     "\x1b[1mError: {}\x1b[22m\n    {}\x1b[1m{}\x1b[22m",
-                    FirstErrorFmt(&*self.error),
-                    if !matches!(&*self.error, Error::EnumErrors { .. }) {
+                    FirstErrorFmt(&self.error),
+                    if !matches!(self.error.as_ref(), Error::EnumErrors { .. }) {
                         "       "
                     } else {
                         "..."

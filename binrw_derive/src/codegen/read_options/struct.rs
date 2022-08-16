@@ -631,7 +631,7 @@ fn generate_seek_before(field: &StructField) -> TokenStream {
 }
 
 fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
-    field.can_call_after_parse().then(|| AFTER_PARSE)
+    field.can_call_after_parse().then_some(AFTER_PARSE)
 }
 
 fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {

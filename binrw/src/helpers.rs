@@ -289,7 +289,7 @@ where
                 .take(n.try_into().map_err(not_enough_bytes)?)
                 .read_to_end(bytes)?;
             (byte_count == n)
-                .then(|| container)
+                .then_some(container)
                 .ok_or_else(|| not_enough_bytes(()))
         } else {
             let read = |reader: &mut R, ro: &ReadOptions, args: Arg| {

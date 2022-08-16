@@ -178,7 +178,7 @@ impl Error {
     /// other error this returns self
     pub fn root_cause(&self) -> &Self {
         match self {
-            Self::Backtrace(backtrace) => &*backtrace.error,
+            Self::Backtrace(backtrace) => &backtrace.error,
             error => error,
         }
     }

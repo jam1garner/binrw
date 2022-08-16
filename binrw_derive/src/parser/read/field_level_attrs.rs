@@ -161,7 +161,7 @@ impl TempableField for StructField {
     }
 
     fn set_crossover_temp(&mut self, temp: bool) {
-        self.temp = temp.then(|| ());
+        self.temp = temp.then_some(());
     }
 }
 
