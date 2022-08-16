@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use super::super::{
     types::{Assert, CondEndian, Magic, Map, PassedArgs, WriteMode},
     write::{FromAttrs, FromInput},
@@ -54,21 +53,10 @@ attr_struct! {
 }
 
 impl StructField {
-    /// Returns true if this field is read from a parser with an `after_parse`
-    /// method.
-    pub(crate) fn can_call_after_parse(&self) -> bool {
-        matches!(self.write_mode, WriteMode::Normal) && !self.map.is_some()
-    }
-
     /// Returns true if this field is generated using a calculated value instead
     /// of being read from the struct.
     pub(crate) fn generated_value(&self) -> bool {
         matches!(self.write_mode, WriteMode::Calc(_))
-    }
-
-    /// Returns true if the field needs `ReadOptions` to be parsed.
-    pub(crate) fn needs_options(&self) -> bool {
-        !self.generated_value() || self.magic.is_some()
     }
 
     /// Returns true if the field is actually written.

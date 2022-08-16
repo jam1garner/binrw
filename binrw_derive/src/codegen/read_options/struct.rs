@@ -145,10 +145,6 @@ fn generate_field(
         return TokenStream::new();
     }
 
-    //use crate::backtrace::BacktraceFrame;
-    //let back = BacktraceFrame::from_field(field);
-    //eprintln!("{}", back);
-
     FieldGenerator::new(field)
         .read_value()
         .try_conversion(name, variant_name)

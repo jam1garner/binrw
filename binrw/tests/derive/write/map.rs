@@ -42,6 +42,7 @@ fn map_field_code_coverage() {
 
 #[test]
 fn map_repr_enum() {
+    #[allow(dead_code)]
     #[derive(BinWrite, Debug)]
     #[bw(repr = u8)]
     enum Test {
@@ -59,6 +60,7 @@ fn map_repr_enum() {
 
 #[test]
 fn map_repr_enum_variant() {
+    #[allow(dead_code)]
     #[derive(BinWrite, Debug)]
     enum Test {
         SubTest(#[bw(repr = u8)] SubTest),

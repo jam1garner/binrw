@@ -121,7 +121,6 @@ pub trait BinWriterExt: Write + Seek + Sized {
         let options = WriteOptions::new(endian);
 
         T::write_options(value, self, &options, args)?;
-        //res.after_parse(self, &options, args)?;
 
         Ok(())
     }

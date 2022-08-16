@@ -9,6 +9,7 @@ fn all_the_things() {
     #[derive(Debug)]
     struct PlainObject;
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     #[br(is_big = true, magic = b"TEST")]
     #[br(assert(entries.len() as u32 == extra_entry_count + 1))]
@@ -36,6 +37,7 @@ fn all_the_things() {
         ))
     }
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     #[br(little, magic = b"TST2")]
     #[br(import { extra_val: u8 })]
@@ -61,6 +63,7 @@ fn all_the_things() {
 
 #[test]
 fn assert() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     struct Test {
         #[br(assert(a == 1))]
@@ -88,6 +91,7 @@ fn assert_custom_err() {
         }
     }
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     struct Test {
         #[br(assert(a == 1, Oops(a)))]
@@ -103,6 +107,7 @@ fn assert_custom_err() {
 
 #[test]
 fn assert_formatted() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     struct Test {
         #[br(assert(a == 1, "a was {}", a))]
@@ -174,12 +179,12 @@ fn deref_now() {
 fn move_temp_field() {
     #[binread]
     #[derive(Debug, Eq, PartialEq)]
-    pub struct Foo {
+    struct Foo {
         #[br(temp, postprocess_now)]
         foo: binrw::NullString,
 
         #[br(calc = foo)]
-        pub bar: binrw::NullString,
+        bar: binrw::NullString,
     }
 
     assert_eq!(
@@ -374,6 +379,7 @@ fn parse_with_default_args() {
 
 #[test]
 fn args_same_name() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     #[br(import { y: u16, x: u8 })]
     struct Test {
@@ -384,6 +390,7 @@ fn args_same_name() {
         z2: u16,
     }
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     struct Test2 {
         #[br(calc(3))]
@@ -418,6 +425,7 @@ fn import_tuple() {
 
 #[test]
 fn offset_after() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     struct Test {
         #[br(offset_after = b.into())]
@@ -431,6 +439,7 @@ fn offset_after() {
 
 #[test]
 fn raw_ident() {
+    #[allow(dead_code)]
     #[derive(BinRead)]
     struct Test {
         r#type: u32,
@@ -441,6 +450,7 @@ fn raw_ident() {
 
 #[test]
 fn rewind_on_assert() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     #[br(assert(b == 1))]
     struct Test {
@@ -458,10 +468,10 @@ fn rewind_on_assert() {
 fn rewind_on_eof() {
     #[derive(BinRead, Debug)]
     struct Test {
-        a: u8,
+        _a: u8,
         // Fail on the second field to actually test that a rewind happens to
         // the beginning of the struct, not just the beginning of the field
-        b: u16,
+        _b: u16,
     }
 
     let mut data = Cursor::new(b"\0\0\0");
@@ -472,6 +482,7 @@ fn rewind_on_eof() {
 
 #[test]
 fn rewind_on_field_assert() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     struct Test {
         a: u8,

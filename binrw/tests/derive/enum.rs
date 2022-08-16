@@ -35,11 +35,11 @@ fn enum_non_copy_args() {
     enum Test {
         A {
             #[br(calc = a.0)]
-            a: u8,
+            _a: u8,
         },
         B {
             #[br(calc = a.0)]
-            b: u8,
+            _b: u8,
         },
     }
 
@@ -166,13 +166,13 @@ fn enum_return_all_errors() {
     #[br(big, return_all_errors)]
     enum Test {
         #[br(magic(0u16))]
-        One { a: u16 },
+        One { _a: u16 },
         #[br(magic(1u16))]
-        Two { a: u16 },
+        Two { _a: u16 },
     }
 
     let error = Test::read(&mut Cursor::new("\0\x01")).expect_err("accepted bad data");
-    dbg!(&error);
+
     match error {
         binrw::Error::EnumErrors {
             pos,
@@ -199,6 +199,7 @@ fn enum_return_all_errors() {
 
 #[test]
 fn enum_rewind_on_assert() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     #[br(assert(b == 1))]
     enum Test {
@@ -217,10 +218,10 @@ fn enum_rewind_on_eof() {
     #[derive(BinRead, Debug)]
     enum Test {
         A {
-            a: u8,
+            _a: u8,
             // Fail on the second field to actually test that a rewind happens
             // to the beginning of the enum, not just the beginning of the field
-            b: u16,
+            _b: u16,
         },
     }
 
@@ -232,6 +233,7 @@ fn enum_rewind_on_eof() {
 
 #[test]
 fn enum_rewind_on_variant_assert() {
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     enum Test {
         #[br(assert(b == 1))]
@@ -250,9 +252,9 @@ fn enum_return_unexpected_error() {
     #[br(big, return_unexpected_error)]
     enum Test {
         #[br(magic(0u16))]
-        One { a: u16 },
+        One { _a: u16 },
         #[br(magic(1u16))]
-        Two { a: u16 },
+        Two { _a: u16 },
     }
 
     let error = Test::read(&mut Cursor::new("\0\x01")).expect_err("accepted bad data");

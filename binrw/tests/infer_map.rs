@@ -2,7 +2,7 @@ use binrw::{binread, BinReaderExt};
 
 #[binread]
 #[derive(Debug, Eq, PartialEq)]
-pub struct LenString {
+struct LenString {
     #[br(temp)]
     name_len: u8,
     #[br(count = name_len, map = |bytes: Vec<u8>| String::from_utf8_lossy(&bytes).into_owned())]

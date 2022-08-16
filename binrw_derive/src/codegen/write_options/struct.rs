@@ -3,9 +3,6 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
 
-//#[allow(clippy::wildcard_imports)]
-//use crate::codegen::sanitization::*;
-
 use super::prelude::PreludeGenerator;
 use super::struct_field::write_field;
 

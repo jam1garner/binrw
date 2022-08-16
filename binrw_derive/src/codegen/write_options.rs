@@ -18,7 +18,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
     let name = Some(&derive_input.ident);
     let inner = match input.map() {
         Map::None => match input {
-            Input::UnitStruct(_) => todo!(), //generate_unit_struct(input, name, None),
+            Input::UnitStruct(_) => todo!(),
             Input::Struct(s) => generate_struct(input, name, s),
             Input::Enum(e) => generate_data_enum(input, name, e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
@@ -46,16 +46,6 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
                 .finish()
         }
     };
-
-    //quote! {
-    //    let #POS = #SEEK_TRAIT::stream_position(#READER)?;
-    //    (|| {
-    //        #inner
-    //    })().or_else(|error| {
-    //        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
-    //        Err(error)
-    //    })
-    //}
 
     quote! {
         let #POS = #SEEK_TRAIT::stream_position(#WRITER)?;

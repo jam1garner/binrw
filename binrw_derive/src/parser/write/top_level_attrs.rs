@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
@@ -119,14 +117,6 @@ impl Input {
             Input::UnitOnlyEnum(e) => &e.magic,
         }
     }
-
-    pub(crate) fn pre_assertions(&self) -> &Vec<Assert> {
-        match self {
-            Input::Struct(s) | Input::UnitStruct(s) => &s.pre_assertions,
-            Input::Enum(e) => &e.pre_assertions,
-            Input::UnitOnlyEnum(_) => unimplemented!("`Input::pre_assert()` called on unit enum"),
-        }
-    }
 }
 
 attr_struct! {
@@ -220,39 +210,6 @@ attr_struct! {
         #[from(ReturnAllErrors, ReturnUnexpectedError)]
         pub(crate) error_mode: EnumErrorMode,
         pub(crate) variants: Vec<EnumVariant>,
-    }
-}
-
-impl Enum {
-    pub(crate) fn with_variant(&self, variant: &EnumVariant) -> Self {
-        let mut out = self.clone();
-
-        match variant {
-            EnumVariant::Variant { options, .. } => {
-                if options.endian.is_some() {
-                    out.endian = options.endian.clone();
-                }
-
-                if options.magic.is_some() {
-                    out.magic = options.magic.clone();
-                }
-
-                out.pre_assertions
-                    .extend_from_slice(&options.pre_assertions);
-                out.assertions.extend_from_slice(&options.assertions);
-            }
-
-            EnumVariant::Unit(options) => {
-                if options.magic.is_some() {
-                    out.magic = options.magic.clone();
-                }
-
-                out.pre_assertions
-                    .extend_from_slice(&options.pre_assertions);
-            }
-        }
-
-        out
     }
 }
 

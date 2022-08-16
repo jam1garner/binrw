@@ -15,12 +15,6 @@ pub(crate) enum CondEndian {
     Cond(Endian, TokenStream),
 }
 
-impl CondEndian {
-    pub(crate) fn is_some(&self) -> bool {
-        !matches!(self, CondEndian::Inherited)
-    }
-}
-
 impl Default for CondEndian {
     fn default() -> Self {
         Self::Inherited

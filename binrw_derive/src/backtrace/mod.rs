@@ -29,7 +29,6 @@ impl BacktraceFrame {
             span: field.field.span(),
             highlight_line: field.ty.span().start().line,
             syntax_info: syntax_highlighting::get_syntax_highlights(field),
-            //ty: field.ty.clone(),
         }
     }
 
@@ -169,7 +168,6 @@ impl Display for BacktraceFrame {
 
         let bars = "─".repeat(max_digits);
 
-        //writeln!(f)?;
         writeln!(f, "  ┄{}─╮", bars)?;
         for line in self.iter_lines() {
             self.write_line(line, f)?;

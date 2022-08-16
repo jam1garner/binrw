@@ -10,7 +10,6 @@ fn assert_fail() {
 
     let mut x = Cursor::new(Vec::new());
     if let Err(err) = x.write_be(&Test { x: 1 }) {
-        dbg!(format!("{}", err));
         assert!(matches!(err, binrw::Error::AssertFail { .. }));
     } else {
         panic!("Assert error expected");
@@ -27,7 +26,6 @@ fn top_level_assert_fail() {
 
     let mut x = Cursor::new(Vec::new());
     if let Err(err) = x.write_be(&Test { x: 1 }) {
-        dbg!(format!("{}", err));
         assert!(matches!(err, binrw::Error::AssertFail { .. }));
     } else {
         panic!("Assert error expected");
