@@ -235,7 +235,7 @@ impl fmt::Display for Error {
                 }
                 Ok(())
             }
-            Self::Backtrace(backtrace) => write!(f, "{}", backtrace),
+            Self::Backtrace(backtrace) => fmt::Display::fmt(backtrace, f),
         }
     }
 }
