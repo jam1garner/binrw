@@ -1,3 +1,8 @@
+#[path = "error/backtrace.rs"]
+mod backtrace;
+#[path = "error/backtrace_2.rs"]
+mod backtrace_2;
+
 use binrw::Error;
 
 #[test]
@@ -32,76 +37,36 @@ fn custom_error_trait() {
     }
 }
 
+#[rustversion::nightly]
+#[cfg(all(feature = "std", not(coverage)))]
 #[test]
 fn show_backtrace() {
-    #![allow(dead_code)]
-    use binrw::{io::Cursor, BinRead, BinReaderExt};
-
-    #[derive(BinRead)]
-    struct InnerMostStruct {
-        #[br(little)]
-        len: u32,
-
-        #[br(count = len)]
-        items: Vec<u32>,
-    }
-
-    #[derive(BinRead)]
-    enum MiddleEnum {
-        OnlyOption {
-            #[br(big)]
-            #[br(assert(inner.len == 3))]
-            inner: InnerMostStruct,
-        },
-
-        OtherOption(u32, u32),
-    }
-
-    #[derive(BinRead)]
-    struct MiddleStruct {
-        #[br(little)]
-        middle: MiddleEnum,
-    }
-
-    #[derive(BinRead)]
-    struct OutermostStruct {
-        #[br(little)]
-        middle: MiddleStruct,
-    }
+    use binrw::{io::Cursor, BinReaderExt};
 
     let mut x = Cursor::new(b"\0\0\0\x06");
-    let err = x.read_be::<OutermostStruct>().map(|_| ()).unwrap_err();
+    let err = format!(
+        "{}",
+        x.read_be::<backtrace::OutermostStruct>()
+            .map(|_| ())
+            .unwrap_err()
+    );
     println!("{}", err);
+    assert_eq!(err, include_str!("./error/backtrace.stderr"));
 }
 
+#[rustversion::nightly]
+#[cfg(all(feature = "std", not(coverage)))]
 #[test]
 fn show_backtrace_2() {
-    #![allow(dead_code)]
-    use binrw::{io::Cursor, BinRead, BinReaderExt};
-
-    #[derive(BinRead)]
-    struct InnerMostStruct {
-        #[br(little)]
-        len: u32,
-
-        #[br(count = len, err_context("len = {}", len))]
-        items: Vec<u32>,
-    }
-
-    #[derive(BinRead)]
-    struct MiddleStruct {
-        #[br(little)]
-        #[br(err_context("While parsing the innerest most struct"))]
-        inner: InnerMostStruct,
-    }
-
-    #[derive(BinRead)]
-    struct OutermostStruct {
-        #[br(little)]
-        middle: MiddleStruct,
-    }
+    use binrw::{io::Cursor, BinReaderExt};
 
     let mut x = Cursor::new(b"\0\0\0\x06");
-    let err = x.read_be::<OutermostStruct>().map(|_| ()).unwrap_err();
+    let err = format!(
+        "{}",
+        x.read_be::<backtrace_2::OutermostStruct>()
+            .map(|_| ())
+            .unwrap_err()
+    );
     println!("{}", err);
+    assert_eq!(err, include_str!("./error/backtrace_2.stderr"));
 }
