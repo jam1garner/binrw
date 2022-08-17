@@ -350,7 +350,7 @@ mod tests {
         struct Foo;
     });
 
-    try_error!(invalid_magic_type: "expected byte string, byte, char, float, or int" {
+    try_error!(invalid_magic_type: "expected byte string, byte, float, or int" {
         #[br(magic = "invalid_type")]
         struct Foo;
     });

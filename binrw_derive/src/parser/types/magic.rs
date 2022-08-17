@@ -1,13 +1,12 @@
 use super::SpannedValue;
 use crate::parser::{read::attrs, KeywordToken};
-use core::convert::TryFrom;
+use core::{convert::TryFrom, fmt::Display};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::Lit;
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord)]
 pub(crate) enum Kind {
-    Char,
     Numeric(String),
     ByteStr(String),
 }
@@ -15,7 +14,6 @@ pub(crate) enum Kind {
 impl From<&Kind> for TokenStream {
     fn from(kind: &Kind) -> Self {
         match kind {
-            Kind::Char => quote! { char },
             Kind::ByteStr(ty) | Kind::Numeric(ty) => {
                 let ty: TokenStream = ty.parse().unwrap();
                 quote! { #ty }
@@ -24,16 +22,11 @@ impl From<&Kind> for TokenStream {
     }
 }
 
-impl core::fmt::Display for Kind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Kind::Char => "char",
-                Kind::ByteStr(ty) | Kind::Numeric(ty) => ty,
-            }
-        )
+impl Display for Kind {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Kind::ByteStr(ty) | Kind::Numeric(ty) => Display::fmt(ty, f),
+        }
     }
 }
 
@@ -46,7 +39,7 @@ impl Inner {
     pub(crate) fn add_ref(&self) -> TokenStream {
         match &self.0 {
             Kind::ByteStr(_) => quote! { & },
-            _ => TokenStream::new(),
+            Kind::Numeric(_) => TokenStream::new(),
         }
     }
 
@@ -56,7 +49,7 @@ impl Inner {
                 let value = &self.1;
                 quote! { *#value }
             }
-            _ => self.1.clone(),
+            Kind::Numeric(_) => self.1.clone(),
         }
     }
 
@@ -83,7 +76,6 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
         let kind = match &value {
             Lit::ByteStr(bytes) => Kind::ByteStr(format!("[u8; {}]", bytes.value().len())),
             Lit::Byte(_) => Kind::Numeric("u8".to_owned()),
-            Lit::Char(_) => Kind::Char,
             Lit::Int(i) => {
                 if i.suffix().is_empty() {
                     return Err(syn::Error::new(
@@ -108,10 +100,10 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
                 }
                 Kind::Numeric(f.suffix().to_owned())
             }
-            Lit::Str(_) | Lit::Bool(_) | Lit::Verbatim(_) => {
+            Lit::Char(_) | Lit::Str(_) | Lit::Bool(_) | Lit::Verbatim(_) => {
                 return Err(syn::Error::new(
                     value.span(),
-                    "expected byte string, byte, char, float, or int",
+                    "expected byte string, byte, float, or int",
                 ))
             }
         };
