@@ -1,0 +1,6 @@
+error: expected explicit type suffix for integer literal
+       e.g 0u64
+ --> tests/ui/invalid_magic_int.rs:4:14
+  |
+4 | #[br(magic = 0)]
+  |              ^

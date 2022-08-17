@@ -340,6 +340,16 @@ mod tests {
         }
     });
 
+    try_error!(invalid_magic_float: "expected explicit type suffix for float" {
+        #[br(magic = 0.0)]
+        struct Foo;
+    });
+
+    try_error!(invalid_magic_int: "expected explicit type suffix for integer" {
+        #[br(magic = 0)]
+        struct Foo;
+    });
+
     try_error!(invalid_magic_type: "expected byte string, byte, char, float, or int" {
         #[br(magic = "invalid_type")]
         struct Foo;

@@ -1,0 +1,6 @@
+error: expected explicit type suffix for float literal
+       valid values are 0.0f32 or 0.0f64
+ --> tests/ui/invalid_magic_float.rs:4:14
+  |
+4 | #[br(magic = 0.0)]
+  |              ^^^
