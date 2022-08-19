@@ -3,8 +3,8 @@
 //!
 //! ---
 //!
-//! |**Quick links**|[`#[br]`](attribute::read)|[`#[bw]`](attribute::write)|[`BinReaderExt`]|[discord]|[matrix]|
-//! |-|-|-|-|-|-|
+//! |**Quick links**|[`#[br]`/`#[bw]`/`#[brw]`](attribute)|[`BinReaderExt`]|[discord]|[matrix]|
+//! |-|-|-|-|-|
 //!
 //! ---
 //!
