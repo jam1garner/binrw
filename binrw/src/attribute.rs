@@ -1035,6 +1035,77 @@
 //! TODO!
 //! </div>
 //!
+//! <div class="br">
+//!
+//! # Enum errors
+//!
+//! The `return_all_errors` (default) and `return_unexpected_error` directives
+//! define how to handle errors when parsing an enum:
+//!
+//! ```text
+//! #[br(return_all_errors)]
+//! #[br(return_unexpected_error)]
+//! ```
+//!
+//! `return_all_errors` collects the errors that occur when enum variants fail
+//! to parse and returns them in [`binrw::Error::EnumErrors`] when no variants
+//! parse successfully:
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug)]
+//! #[br(return_all_errors)]
+//! enum Test {
+//!     #[br(magic(0u8))]
+//!     A { a: u8 },
+//!     B { b: u32 },
+//!     C { #[br(assert(c != 1))] c: u8 },
+//! }
+//!
+//! let error = Test::read(&mut Cursor::new(b"\x01")).unwrap_err();
+//! if let binrw::Error::EnumErrors { pos, variant_errors } = error {
+//!     assert_eq!(pos, 0);
+//!     assert!(matches!(variant_errors[0], ("A", binrw::Error::BadMagic { .. })));
+//!     assert!(matches!(
+//!         (variant_errors[1].0, variant_errors[1].1.root_cause()),
+//!         ("B", binrw::Error::Io(..))
+//!     ));
+//!     assert!(matches!(variant_errors[2], ("C", binrw::Error::AssertFail { .. })));
+//! }
+//! # else {
+//! #    panic!("wrong error type");
+//! # }
+//! ```
+//!
+//! `return_unexpected_error` discards the errors and instead returns a generic
+//! [`binrw::Error::NoVariantMatch`] if all variants fail to parse. This avoids
+//! extra memory allocations required to collect errors, but only provides the
+//! position when parsing fails:
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug)]
+//! #[br(return_unexpected_error)]
+//! enum Test {
+//!     #[br(magic(0u8))]
+//!     A { a: u8 },
+//!     B { b: u32 },
+//!     C { #[br(assert(c != 1))] c: u8 },
+//! }
+//!
+//! let error = Test::read(&mut Cursor::new(b"\x01")).unwrap_err();
+//! if let binrw::Error::NoVariantMatch { pos } = error {
+//!     assert_eq!(pos, 0);
+//! }
+//! # else {
+//! #    panic!("wrong error type");
+//! # }
+//! ```
+//!
+//! </div>
+//!
 //! # Ignore
 //!
 //! <div class="br">
