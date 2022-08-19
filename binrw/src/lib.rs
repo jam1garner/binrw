@@ -247,9 +247,7 @@ pub mod prelude {
     //! use binrw::prelude::*;
     //! ```
 
-    pub use crate::BinRead;
-    pub use crate::BinReaderExt;
-    pub use crate::BinResult;
-    pub use crate::BinWrite;
-    pub use crate::BinWriterExt;
+    pub use crate::{
+        binread, binrw, binwrite, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt,
+    };
 }
