@@ -14,7 +14,7 @@ pub trait BinWrite {
     type Args: Clone;
 
     /// Write a type to a writer while assuming no arguments are needed.
-    fn write_to<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
+    fn write_to<W: Write + Seek + ?Sized>(&self, writer: &mut W) -> BinResult<()>
     where
         Self::Args: Default,
     {
@@ -22,13 +22,17 @@ pub trait BinWrite {
     }
 
     /// Write the type to a writer while providing the default [`WriteOptions`]
-    fn write_with_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+    fn write_with_args<W: Write + Seek + ?Sized>(
+        &self,
+        writer: &mut W,
+        args: Self::Args,
+    ) -> BinResult<()> {
         self.write_options(writer, &WriteOptions::default(), args)
     }
 
     /// Write the type to a writer, given the options on how to write it and the type-specific
     /// arguments
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &WriteOptions,

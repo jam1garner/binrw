@@ -84,7 +84,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     ///
     /// The actual value will not be read until
     /// [`after_parse()`](Self::after_parse) is called.
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         _: Self::Args,
@@ -98,7 +98,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
     /// Finalizes the `FilePtr` by seeking to and reading the pointed-to value.
     fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: BR::Args) -> BinResult<()>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
     {
         self.after_parse_with_parser(BR::read_options, BR::after_parse, reader, ro, args)
     }
@@ -113,7 +113,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
         args: Args,
     ) -> BinResult<Self>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
         Args: Clone,
         Parser: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
         AfterParse: Fn(&mut T, &mut R, &ReadOptions, Args) -> BinResult<()>,
@@ -135,7 +135,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
         args: Args,
     ) -> BinResult<()>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
         Args: Clone,
         Parser: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
         AfterParse: Fn(&mut T, &mut R, &ReadOptions, Args) -> BinResult<()>,
@@ -160,7 +160,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     /// value as the result.
     pub fn parse<R, Args>(reader: &mut R, options: &ReadOptions, args: Args) -> BinResult<T>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
         Args: Clone,
         T: BinRead<Args = Args>,
     {
@@ -176,7 +176,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     /// value as the result.
     pub fn parse_with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<T>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
         Args: Clone,
         F: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
     {
@@ -192,7 +192,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     /// as the result.
     pub fn with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<Self>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
         Args: Clone,
         F: Fn(&mut R, &ReadOptions, Args) -> BinResult<T>,
     {

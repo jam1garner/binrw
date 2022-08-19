@@ -39,7 +39,7 @@ pub struct NullString(
 impl BinRead for NullString {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         _: Self::Args,
@@ -59,7 +59,7 @@ impl BinRead for NullString {
 impl BinWrite for NullString {
     type Args = ();
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &crate::WriteOptions,
@@ -161,7 +161,7 @@ pub struct NullWideString(
 impl BinRead for NullWideString {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         _: Self::Args,
@@ -181,7 +181,7 @@ impl BinRead for NullWideString {
 impl BinWrite for NullWideString {
     type Args = ();
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &crate::WriteOptions,

@@ -52,7 +52,7 @@ pub trait BinRead: Sized + 'static {
     type Args: Clone;
 
     /// Read `Self` from the reader using default arguments.
-    fn read<R: Read + Seek>(reader: &mut R) -> BinResult<Self>
+    fn read<R: Read + Seek + ?Sized>(reader: &mut R) -> BinResult<Self>
     where
         Self::Args: Default,
     {
@@ -66,7 +66,7 @@ pub trait BinRead: Sized + 'static {
 
     /// Read `Self` from the reader using the given [`ReadOptions`] and
     /// arguments.
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         args: Self::Args,
@@ -74,7 +74,7 @@ pub trait BinRead: Sized + 'static {
 
     /// Runs any post-processing steps required to finalize construction of the
     /// object.
-    fn after_parse<R: Read + Seek>(
+    fn after_parse<R: Read + Seek + ?Sized>(
         &mut self,
         _: &mut R,
         _: &ReadOptions,

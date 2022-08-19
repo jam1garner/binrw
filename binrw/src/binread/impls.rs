@@ -20,7 +20,7 @@ macro_rules! binread_impl {
             impl BinRead for $type_name {
                 type Args = ();
 
-                fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
+                fn read_options<R: Read + Seek + ?Sized>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
                     let mut val = [0; core::mem::size_of::<$type_name>()];
                     let pos = reader.stream_position()?;
 
@@ -71,7 +71,7 @@ macro_rules! binread_nonzero_impl {
             impl BinRead for $Ty {
                 type Args = ();
 
-                fn read_options<R: Read + Seek>(
+                fn read_options<R: Read + Seek + ?Sized>(
                     reader: &mut R,
                     options: &ReadOptions,
                     _: Self::Args,
@@ -159,7 +159,7 @@ pub struct VecArgs<B> {
 impl<B: BinRead> BinRead for Vec<B> {
     type Args = VecArgs<B::Args>;
 
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         args: Self::Args,
@@ -191,7 +191,7 @@ impl<B: BinRead> BinRead for Vec<B> {
         args: Self::Args,
     ) -> BinResult<()>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
     {
         for val in self.iter_mut() {
             val.after_parse(reader, ro, args.inner.clone())?;
@@ -204,7 +204,7 @@ impl<B: BinRead> BinRead for Vec<B> {
 impl<B: BinRead, const N: usize> BinRead for [B; N] {
     type Args = B::Args;
 
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         args: Self::Args,
@@ -214,7 +214,7 @@ impl<B: BinRead, const N: usize> BinRead for [B; N] {
 
     fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args) -> BinResult<()>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
     {
         for val in self.iter_mut() {
             val.after_parse(reader, ro, args.clone())?;
@@ -230,7 +230,7 @@ macro_rules! binread_tuple_impl {
         impl<$type1: BinRead<Args=()>, $($types: BinRead<Args=()>),*> BinRead for ($type1, $($types),*) {
             type Args = ();
 
-            fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
+            fn read_options<R: Read + Seek + ?Sized>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
                 Ok((
                     BinRead::read_options(reader, options, ())?,
                     $(
@@ -239,7 +239,7 @@ macro_rules! binread_tuple_impl {
                 ))
             }
 
-            fn after_parse<R: Read + Seek>(&mut self, reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<()> {
+            fn after_parse<R: Read + Seek + ?Sized>(&mut self, reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<()> {
                 let ($type1, $(
                     $types
                 ),*) = self;
@@ -267,7 +267,11 @@ binread_tuple_impl!(
 impl BinRead for () {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(_: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self> {
+    fn read_options<R: Read + Seek + ?Sized>(
+        _: &mut R,
+        _: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<Self> {
         Ok(())
     }
 }
@@ -275,7 +279,7 @@ impl BinRead for () {
 impl<T: BinRead> BinRead for Box<T> {
     type Args = T::Args;
 
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         args: Self::Args,
@@ -287,7 +291,7 @@ impl<T: BinRead> BinRead for Box<T> {
 impl<T: BinRead> BinRead for Option<T> {
     type Args = T::Args;
 
-    fn read_options<R: Read + Seek>(
+    fn read_options<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         args: Self::Args,
@@ -302,7 +306,7 @@ impl<T: BinRead> BinRead for Option<T> {
         args: Self::Args,
     ) -> BinResult<()>
     where
-        R: Read + Seek,
+        R: Read + Seek + ?Sized,
     {
         match self {
             Some(val) => val.after_parse(reader, ro, args),
@@ -314,7 +318,11 @@ impl<T: BinRead> BinRead for Option<T> {
 impl<T: 'static> BinRead for core::marker::PhantomData<T> {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(_: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self> {
+    fn read_options<R: Read + Seek + ?Sized>(
+        _: &mut R,
+        _: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<Self> {
         Ok(core::marker::PhantomData)
     }
 }

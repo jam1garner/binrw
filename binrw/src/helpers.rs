@@ -30,7 +30,7 @@ pub fn until<Reader, T, CondFn, Arg, Ret>(
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
-    Reader: Read + Seek,
+    Reader: Read + Seek + ?Sized,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
@@ -66,7 +66,7 @@ pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
     read: ReadFn,
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    Reader: Read + Seek,
+    Reader: Read + Seek + ?Sized,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
     ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
@@ -110,7 +110,7 @@ pub fn until_exclusive<Reader, T, CondFn, Arg, Ret>(
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
-    Reader: Read + Seek,
+    Reader: Read + Seek + ?Sized,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
@@ -146,7 +146,7 @@ pub fn until_exclusive_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
     read: ReadFn,
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    Reader: Read + Seek,
+    Reader: Read + Seek + ?Sized,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
     ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
@@ -191,7 +191,7 @@ pub fn until_eof<Reader, T, Arg, Ret>(
 ) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
-    Reader: Read + Seek,
+    Reader: Read + Seek + ?Sized,
     Arg: Clone,
     Ret: core::iter::FromIterator<T>,
 {
@@ -225,7 +225,7 @@ pub fn until_eof_with<Reader, T, Arg, ReadFn, Ret>(
     read: ReadFn,
 ) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    Reader: Read + Seek,
+    Reader: Read + Seek + ?Sized,
     Arg: Clone,
     ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
     Ret: core::iter::FromIterator<T>,
@@ -277,7 +277,7 @@ fn not_enough_bytes<T>(_: T) -> Error {
 pub fn count<R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
-    R: Read + Seek,
+    R: Read + Seek + ?Sized,
     Arg: Clone,
     Ret: core::iter::FromIterator<T> + 'static,
 {
@@ -326,7 +326,7 @@ pub fn count_with<R, T, Arg, ReadFn, Ret>(
     read: ReadFn,
 ) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
 where
-    R: Read + Seek,
+    R: Read + Seek + ?Sized,
     Arg: Clone,
     ReadFn: Fn(&mut R, &ReadOptions, Arg) -> BinResult<T>,
     Ret: core::iter::FromIterator<T> + 'static,

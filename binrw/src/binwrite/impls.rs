@@ -18,7 +18,7 @@ macro_rules! binwrite_num_impl {
             impl BinWrite for $type_name {
                 type Args = ();
 
-                fn write_options<W: Write + Seek>(
+                fn write_options<W: Write + Seek + ?Sized>(
                     &self,
                     writer: &mut W,
                     options: &WriteOptions,
@@ -43,7 +43,7 @@ macro_rules! binwrite_nonzero_num_impl {
             impl BinWrite for $non_zero_type {
                 type Args = ();
 
-                fn write_options<W: Write + Seek>(
+                fn write_options<W: Write + Seek + ?Sized>(
                     &self,
                     writer: &mut W,
                     options: &WriteOptions,
@@ -82,7 +82,7 @@ binwrite_nonzero_num_impl!(
 impl<T: BinWrite + 'static, const N: usize> BinWrite for [T; N] {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &WriteOptions,
@@ -103,7 +103,7 @@ impl<T: BinWrite + 'static, const N: usize> BinWrite for [T; N] {
 impl<T: BinWrite> BinWrite for [T] {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &WriteOptions,
@@ -120,7 +120,7 @@ impl<T: BinWrite> BinWrite for [T] {
 impl<T: BinWrite + 'static> BinWrite for Vec<T> {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &WriteOptions,
@@ -145,7 +145,7 @@ impl<T: BinWrite + 'static> BinWrite for Vec<T> {
 impl<T: BinWrite + ?Sized> BinWrite for &T {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &WriteOptions,
@@ -158,7 +158,7 @@ impl<T: BinWrite + ?Sized> BinWrite for &T {
 impl<T: BinWrite + ?Sized + 'static> BinWrite for Box<T> {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &WriteOptions,
@@ -177,7 +177,7 @@ impl<T: BinWrite + ?Sized + 'static> BinWrite for Box<T> {
 impl<T: BinWrite> BinWrite for Option<T> {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         writer: &mut W,
         options: &WriteOptions,
@@ -193,7 +193,7 @@ impl<T: BinWrite> BinWrite for Option<T> {
 impl<T: BinWrite> BinWrite for PhantomData<T> {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         _: &mut W,
         _: &WriteOptions,
@@ -210,7 +210,7 @@ impl<T: BinWrite> BinWrite for PhantomData<T> {
 impl BinWrite for () {
     type Args = ();
 
-    fn write_options<W: Write + Seek>(
+    fn write_options<W: Write + Seek + ?Sized>(
         &self,
         _: &mut W,
         _: &WriteOptions,
@@ -228,7 +228,7 @@ macro_rules! binwrite_tuple_impl {
         > BinWrite for ($type1, $($types),*) {
             type Args = ();
 
-            fn write_options<W: Write + Seek>(
+            fn write_options<W: Write + Seek + ?Sized>(
                 &self,
                 writer: &mut W,
                 options: &WriteOptions,

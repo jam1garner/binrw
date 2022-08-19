@@ -69,7 +69,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// # assert_eq!(*y.x, vec![3, 2, 1]);
     /// # assert_eq!(y.x.separators, vec![0, 1]);
     /// ```
-    pub fn separated<R: Read + Seek>(
+    pub fn separated<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         args: VecArgs<T::Args>,
@@ -91,7 +91,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// a trailing `P`.
     ///
     /// Requires a count to be passed via `#[br(count)]`.
-    pub fn separated_trailing<R: Read + Seek>(
+    pub fn separated_trailing<R: Read + Seek + ?Sized>(
         reader: &mut R,
         options: &ReadOptions,
         args: VecArgs<T::Args>,

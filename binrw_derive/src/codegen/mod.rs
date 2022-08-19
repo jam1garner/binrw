@@ -46,7 +46,7 @@ pub(crate) fn generate_binread_impl(
         impl #impl_generics #BINREAD_TRAIT for #name #ty_generics #where_clause {
             type Args = #arg_type;
 
-            fn read_options<R: #READ_TRAIT + #SEEK_TRAIT>
+            fn read_options<R: #READ_TRAIT + #SEEK_TRAIT + ?Sized>
                 (#READER: &mut R, #OPT: &#READ_OPTIONS, #ARGS: Self::Args)
                 -> #BIN_RESULT<Self>
             {
@@ -87,7 +87,7 @@ pub(crate) fn generate_binwrite_impl(
         impl #impl_generics #BINWRITE_TRAIT for #name #ty_generics #where_clause {
             type Args = #arg_type;
 
-            fn write_options<W: #WRITE_TRAIT + #SEEK_TRAIT>(
+            fn write_options<W: #WRITE_TRAIT + #SEEK_TRAIT + ?Sized>(
                 &self,
                 #WRITER: &mut W,
                 #OPT: &#WRITE_OPTIONS,

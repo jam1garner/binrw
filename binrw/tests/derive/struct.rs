@@ -26,7 +26,7 @@ fn all_the_things() {
         calc_test: u32,
     }
 
-    fn read_offsets<R: Read + Seek>(
+    fn read_offsets<R: Read + Seek + ?Sized>(
         reader: &mut R,
         ro: &ReadOptions,
         _: (),

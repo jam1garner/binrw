@@ -1037,7 +1037,7 @@
 //! ```
 //! # use binrw::{prelude::*, io::*, ReadOptions};
 //! # use std::collections::HashMap;
-//! fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
+//! fn custom_parser<R: Read + Seek + ?Sized>(reader: &mut R, ro: &ReadOptions, _: ())
 //!     -> BinResult<HashMap<u16, u16>>
 //! {
 //!     let mut map = HashMap::new();
@@ -1065,7 +1065,7 @@
 //! ```
 //! # use binrw::{prelude::*, io::*, WriteOptions};
 //! # use std::collections::BTreeMap;
-//! fn custom_writer<R: Write + Seek>(
+//! fn custom_writer<R: Write + Seek + ?Sized>(
 //!     map: &BTreeMap<u16, u16>,
 //!     writer: &mut R,
 //!     wo: &WriteOptions,

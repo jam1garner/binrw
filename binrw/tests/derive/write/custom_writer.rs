@@ -10,7 +10,7 @@ fn custom_writer() {
         y: u16,
     }
 
-    fn custom_writer<W: binrw::io::Write + binrw::io::Seek>(
+    fn custom_writer<W: binrw::io::Write + binrw::io::Seek + ?Sized>(
         _this: &u16,
         writer: &mut W,
         _opts: &WriteOptions,

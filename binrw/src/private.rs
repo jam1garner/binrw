@@ -55,7 +55,7 @@ where
 pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
 where
     B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + 'static,
-    R: io::Read + io::Seek,
+    R: io::Read + io::Seek + ?Sized,
 {
     let pos = reader.stream_position()?;
     let val = B::read_options(reader, options, ())?;
@@ -71,7 +71,7 @@ where
 
 pub fn parse_function_args_type_hint<R, Res, Args, F>(_: F, a: Args) -> Args
 where
-    R: crate::io::Read + Seek,
+    R: crate::io::Read + Seek + ?Sized,
     F: FnOnce(&mut R, &crate::ReadOptions, Args) -> crate::BinResult<Res>,
 {
     a
@@ -79,7 +79,7 @@ where
 
 pub fn write_function_args_type_hint<T, W, Args, F>(_: F, a: Args) -> Args
 where
-    W: Write + Seek,
+    W: Write + Seek + ?Sized,
     F: FnOnce(&T, &mut W, &crate::WriteOptions, Args) -> crate::BinResult<()>,
 {
     a
@@ -96,7 +96,7 @@ where
 pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
 where
     Args: Clone,
-    Writer: Write + Seek,
+    Writer: Write + Seek + ?Sized,
     WriterFn: Fn(&T, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
 {
     x
@@ -136,7 +136,7 @@ pub fn write_fn_map_output_type_hint<Input, Output, MapFn, Writer, WriteFn, Args
 where
     MapFn: FnOnce(Input) -> Output,
     Args: Clone,
-    Writer: Write + Seek,
+    Writer: Write + Seek + ?Sized,
     WriteFn: Fn(&Output, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
 {
     func
@@ -150,13 +150,13 @@ where
     Error: CustomError,
     MapFn: FnOnce(Input) -> Result<Output, Error>,
     Args: Clone,
-    Writer: Write + Seek,
+    Writer: Write + Seek + ?Sized,
     WriteFn: Fn(&Output, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
 {
     func
 }
 
-pub fn write_zeroes<W: Write>(writer: &mut W, count: u64) -> BinResult<()> {
+pub fn write_zeroes<W: Write + ?Sized>(writer: &mut W, count: u64) -> BinResult<()> {
     const BUF_SIZE: u64 = 0x20;
     const ZEROES: [u8; BUF_SIZE as usize] = [0u8; BUF_SIZE as usize];
 
