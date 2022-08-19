@@ -22,33 +22,49 @@
 //!     .show-rw [for]::before {
 //!         background-clip: content-box;
 //!         border: thin solid var(--color-standard, #000);
-//!         border-radius: 0.5rem;
+//!         border-radius: 0.5em;
 //!         content: '';
 //!         display: inline-block;
-//!         height: 0.5rem;
+//!         height: 0.5em;
+//!         margin-right: 0.3em;
 //!         padding: 1px;
-//!         width: 0.5rem;
+//!         width: 0.5em;
 //!     }
 //!     #show_write:checked ~ .br:not(.bw),
 //!     #show_write:checked ~ * .br:not(.bw),
 //!     #show_read:checked ~ .bw:not(.br),
-//!     #show_read:checked ~ * .bw:not(.br) {
+//!     #show_read:checked ~ * .bw:not(.br),
+//!     #show_both:not(:checked) ~ .brw,
+//!     #show_both:not(:checked) ~ * .brw {
 //!         display: none;
 //!     }
 //!     #show_read:checked ~ .show-rw [for=show_read]::before,
-//!     #show_write:checked ~ .show-rw [for=show_write]::before {
+//!     #show_write:checked ~ .show-rw [for=show_write]::before,
+//!     #show_both:checked ~ .show-rw [for=show_both]::before {
 //!         background-color: var(--color-standard, #000);
 //!     }
-//!     .br, .bw {
+//!     .br, .bw, .brw {
 //!         display: contents;
 //!     }
+//!     #show_both:checked ~ span.brw + span.br,
+//!     #show_both:checked ~ span.brw + span.br + span.bw,
+//!     #show_both:checked ~ * span.brw + span.br,
+//!     #show_both:checked ~ * span.brw + span.br + span.bw {
+//!         display: none;
+//!     }
+//!     #show_both:checked ~ span.br + span.bw::before,
+//!     #show_both:checked ~ * span.br + span.bw::before {
+//!         content: '/';
+//!     }
 //! </style>
-//! <input name="show_rw" id="show_read" type="radio" hidden checked>
+//! <input name="show_rw" id="show_read" type="radio" hidden>
 //! <input name="show_rw" id="show_write" type="radio" hidden>
+//! <input name="show_rw" id="show_both" type="radio" hidden checked>
 //! <fieldset class="show-rw">
 //!   <legend>View for:</legend>
 //!   <label for="show_read"><code>#[br]</code></label>
 //!   <label for="show_write"><code>#[bw]</code></label>
+//!   <label for="show_both">Both</label>
 //! </fieldset>
 //!
 //! # List of directives
@@ -67,7 +83,7 @@
 //! | r   | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
 //! | r   | [`err_context`](#backtrace) | field | Adds additional context to errors.
 //! | r   | [`if`](#conditional-values) | field | Reads data only if a condition is true.
-//! | rw  | [`ignore`](#ignore) | field | <span class="br">Uses the [`default`](core::default::Default) value for a field instead of reading data.</span><span class="bw">Skips writing the field.</span>
+//! | rw  | [`ignore`](#ignore) | field | <span class="brw">For `BinRead`, uses the [`default`](core::default::Default) value for a field instead of reading data. For `BinWrite`, skips writing the field.</span><span class="br">Uses the [`default`](core::default::Default) value for a field instead of reading data.</span><span class="bw">Skips writing the field.</span>
 //! | rw  | [`import`](#arguments) | struct, non-unit enum, unit-like enum | Defines extra arguments for a struct or enum.
 //! | rw  | [`import_tuple`](#arguments) | struct, non-unit enum, unit-like enum | Like `import`, but receives the arguments as a tuple.
 //! | rw  | [`is_big`](#byte-order) | field | Conditionally sets the byte order to big-endian.
@@ -266,8 +282,8 @@
 //! ### Raw arguments
 //!
 //! Raw arguments allow the
-//! <span class="br">[`Args`](crate::BinRead::Args)</span>
-//! <span class="bw">[`Args`](crate::BinWrite::Args)</span>
+//! <span class="br">[`BinRead::Args`](crate::BinRead::Args)</span>
+//! <span class="bw">[`BinWrite::Args`](crate::BinWrite::Args)</span>
 //! type to be specified explicitly and to receive all arguments into a single
 //! variable:
 //!
@@ -647,14 +663,11 @@
 //! ```
 //! </div>
 //!
-//! <span class="br">When manually implementing
-//! [`BinRead::read_options`](crate::BinRead::read_options) or a
-//! [custom parser function](#custom-parserswriters), the byte order is accessible
-//! from [`ReadOptions::endian`](crate::ReadOptions::endian).</span>
-//! <span class="bw">When manually implementing
-//! [`BinWrite::write_options`](crate::BinWrite::write_options) or a
-//! [custom writer function](#custom-parserswriters), the byte order is accessible
-//! from [`WriteOptions::endian`](crate::WriteOptions::endian).</span>
+//! When manually implementing
+//! <span class="br">[`BinRead::read_options`](crate::BinRead::read_options)</span><span class="bw">[`BinWrite::write_options`](crate::BinWrite::write_options)</span> or a
+//! [custom <span class="br">parser</span><span class="bw">writer</span> function](#custom-parserswriters),
+//! the byte order is accessible from
+//! <span class="br">[`ReadOptions::endian`](crate::ReadOptions::endian)</span><span class="bw">[`WriteOptions::endian`](crate::WriteOptions::endian)</span>.
 //!
 //! ## Examples
 //!
@@ -742,9 +755,9 @@
 //! with `#[derive(BinWrite)]`.**
 //! </div>
 //!
-//! The `calc` directive computes the value of a field
-//! <span class="br">instead of reading data from the reader:</span>
-//! <span class="bw">to use when writing to the writer:</span>
+//! The `calc` directive computes the value of a field <span class="br">instead
+//! of reading data from the reader</span><span class="bw">to use when writing
+//! to the writer</span>:
 //!
 //! <div class="br">
 //!
@@ -1110,11 +1123,9 @@
 //!
 //! <div class="br">
 //!
-//! The `ignore` directive, and its alias `default`, sets the value of the field
-//! to its [`Default`](core::default::Default) instead of reading data from the
-//! reader:
-//!
-//! <div class="br">
+//! For [`BinRead`](crate::BinRead), the `ignore` directive, and its alias
+//! `default`, sets the value of the field to its
+//! [`Default`](core::default::Default) instead of reading data from the reader:
 //!
 //! ```text
 //! #[br(default)] or #[br(ignore)]
@@ -1122,12 +1133,17 @@
 //! </div>
 //! <div class="bw">
 //!
+//! For [`BinWrite`](crate::BinWrite), the `ignore` directive skips writing the
+//! field to the writer:
+//!
 //! ```text
 //! #[bw(ignore)]
 //! ```
 //! </div>
 //!
 //! ## Examples
+//!
+//! <div class="br">
 //!
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
@@ -1145,14 +1161,6 @@
 //! ```
 //! </div>
 //! <div class="bw">
-//!
-//! The `ignore` directive skips writing the field to the writer:
-//!
-//! ```text
-//! #[br(ignore)]
-//! ```
-//!
-//! ## Examples
 //!
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
@@ -1337,19 +1345,29 @@
 //! ```
 //! </div>
 //!
+//! <span class="brw">When using `#[br(map)]` on a field, the map function must
+//! explicitly declare the type of the data to be read in its first parameter
+//! and return a value which matches the type of the field.
+//! When using `#[bw(map)]` on a field, the map function will receive
+//! an immutable reference to the field value and must return a type which
+//! implements [`BinWrite`](binrw::BinWrite).</span>
 //! <span class="br">When using `map` on a field, the map function must
 //! explicitly declare the type of the data to be read in its first parameter
 //! and return a value which matches the type of the field.</span>
 //! <span class="bw">When using `map` on a field, the map function will receive
 //! an immutable reference to the field value and must return a type which
-//! implements [`BinWrite`](binrw::BinWrite).</span> The map function can be a
-//! plain function, closure, or call expression which returns a plain function
-//! or closure.
+//! implements [`BinWrite`](binrw::BinWrite).</span>
+//! The map function can be a plain function, closure, or call expression which
+//! returns a plain function or closure.
 //!
 //! When using `try_map`, the same rules apply, except that the function must
 //! return a [`Result<T, E>`](Result) instead.
 //!
 //! When using `map` or `try_map` on a struct or enum, the map function
+//! <span class="brw">must return `Self` or `Result<Self, E>` for `BinRead`, and
+//! will receive an immutable reference to the entire object
+//! and must return a type that implements [`BinWrite`](binrw::BinWrite) for
+//! `BinWrite`.</span>
 //! <span class="br">must return `Self` or `Result<Self, E>`.</span>
 //! <span class="bw">will receive an immutable reference to the entire object
 //! and must return a type that implements [`BinWrite`](binrw::BinWrite).</span>
@@ -1590,6 +1608,7 @@
 //! respectively:
 //!
 //! <div class="br">
+//!
 //! ```text
 //! #[br(align_after = $align_to:expr)] or #[br(align_after($align_to:expr))]
 //! #[br(align_before = $align_to:expr)] or #[br(align_before($align_to:expr))]
