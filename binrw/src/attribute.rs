@@ -79,7 +79,7 @@
 //! | rw  | [`pad_after`](#padding-and-alignment) | field | Skips N bytes after <span class="br">reading</span><span class="bw">writing</span> a field.
 //! | rw  | [`pad_before`](#padding-and-alignment) | field | Skips N bytes before <span class="br">reading</span><span class="bw">writing</span> a field.
 //! | rw  | [`pad_size_to`](#padding-and-alignment) | field | Ensures the <span class="br">reader</span><span class="bw">writer</span> is always advanced at least N bytes.
-//! | r   | [`parse_with`](#custom-parsers) | field | Specifies a custom function for reading a field.
+//! | r   | [`parse_with`](#custom-parserswriters) | field | Specifies a custom function for reading a field.
 //! | r   | [`postprocess_now`](#postprocessing) | field | Calls [`after_parse`](crate::BinRead::after_parse) immediately after reading data instead of after all fields have been read.
 //! | r   | [`pre_assert`](#pre-assert) | struct, non-unit enum, unit variant | Like `assert`, but checks the condition before parsing.
 //! | rw  | [`repr`](#repr) | unit-like enum | Specifies the underlying type for a unit-like (C-style) enum.
@@ -90,504 +90,7 @@
 //! | r   | [`temp`](#temp) | field | Uses a field as a temporary variable. Only usable with the [`macro@binread`] attribute macro.
 //! | r   | [`try`](#try) | field | Tries to parse and stores the [`default`](core::default::Default) value for the type if parsing fails instead of returning an error.
 //! | rw  | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`BinResult`](crate::BinResult).
-//! |  w  | [`write_with`](#custom-writers) | field | Specifies a custom function for writing a field.
-//!
-//! # Byte order
-//!
-//! The `big` and `little` directives specify the [byte order](https://en.wikipedia.org/wiki/Endianness)
-//! of data in a struct, enum, variant, or field:
-//!
-//! <div class="br">
-//!
-//! ```text
-//! #[br(big)]
-//! #[br(little)]
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```text
-//! #[bw(big)]
-//! #[bw(little)]
-//! ```
-//! </div>
-//!
-//! The `is_big` and `is_little` directives conditionally set the byte order of
-//! a struct field:
-//!
-//! <div class="br">
-//!
-//! ```text
-//! #[br(is_little = $cond:expr)] or #[br(is_little($cond:expr))]
-//! #[br(is_big = $cond:expr)] or #[br(is_big($cond:expr))]
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```text
-//! #[bw(is_little = $cond:expr)] or #[bw(is_little($cond:expr))]
-//! #[bw(is_big = $cond:expr)] or #[bw(is_big($cond:expr))]
-//! ```
-//! </div>
-//!
-//! The `is_big` and `is_little` directives are primarily useful when byte order
-//! is defined in the data itself. Any earlier field or [import](#arguments) can
-//! be referenced in the condition. Conditional byte order directives can only
-//! be used on struct fields.
-//!
-//! The order of precedence (from highest to lowest) for determining byte order
-//! within an object is:
-//!
-//! 1. A directive on a field
-//! 2. A directive on an enum variant
-//! 3. A directive on the struct or enum
-//! 4. <span class="br">The [`endian`](crate::ReadOptions::endian) property of the
-//!    [`ReadOptions`](crate::ReadOptions) object passed to
-//!    [`BinRead::read_options`](crate::BinRead::read_options) by the caller</span>
-//!    <span class="bw">The [`endian`](crate::WriteOptions::endian) property of the
-//!    [`WriteOptions`](crate::WriteOptions) object passed to
-//!    [`BinWrite::write_options`](crate::BinWrite::write_options) by the caller</span>
-//! 5. The host machine’s native byte order
-//!
-//! However, if a byte order directive is added to a struct or enum, that byte
-//! order will *always* be used, even if the object is embedded in another
-//! object or explicitly called with a different byte order:
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{Endian, ReadOptions, prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! #[br(little)] // ← this *forces* the struct to be little-endian
-//! struct Child(u32);
-//!
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! struct Parent {
-//!     #[br(big)] // ← this will be ignored
-//!     child: Child,
-//! };
-//!
-//! let mut options = ReadOptions::new(Endian::Big /* ← this will be ignored */);
-//! # assert_eq!(
-//! Parent::read_options(&mut Cursor::new(b"\x01\0\0\0"), &options, ())
-//! # .unwrap(), Parent { child: Child(1) });
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```
-//! # use binrw::{Endian, WriteOptions, prelude::*, io::Cursor};
-//! #[derive(BinWrite)]
-//! # #[derive(Debug, PartialEq)]
-//! #[bw(little)] // ← this *forces* the struct to be little-endian
-//! struct Child(u32);
-//!
-//! #[derive(BinWrite)]
-//! # #[derive(Debug, PartialEq)]
-//! struct Parent {
-//!     #[bw(big)] // ← this will be ignored
-//!     child: Child,
-//! };
-//!
-//! let object = Parent { child: Child(1) };
-//!
-//! let mut options = WriteOptions::new(Endian::Big /* ← this will be ignored */);
-//! let mut output = Cursor::new(vec![]);
-//! object.write_options(&mut output, &options, ())
-//! # .unwrap();
-//! # assert_eq!(output.into_inner(), b"\x01\0\0\0");
-//! ```
-//! </div>
-//!
-//! <span class="br">When manually implementing
-//! [`BinRead::read_options`](crate::BinRead::read_options) or a
-//! [custom parser function](#custom-parsers), the byte order is accessible
-//! from [`ReadOptions::endian`](crate::ReadOptions::endian).</span>
-//! <span class="bw">When manually implementing
-//! [`BinWrite::write_options`](crate::BinWrite::write_options) or a
-//! [custom writer function](#custom-writers), the byte order is accessible
-//! from [`WriteOptions::endian`](crate::WriteOptions::endian).</span>
-//!
-//! ## Examples
-//!
-//! ### Mixed endianness in one object
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! #[br(little)]
-//! struct MyType (
-//!     #[br(big)] u32, // ← will be big-endian
-//!     u32, // ← will be little-endian
-//! );
-//!
-//! # assert_eq!(MyType::read(&mut Cursor::new(b"\0\0\0\x01\x01\0\0\0")).unwrap(), MyType(1, 1));
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinWrite)]
-//! #[bw(little)]
-//! struct MyType (
-//!     #[bw(big)] u32, // ← will be big-endian
-//!     u32, // ← will be little-endian
-//! );
-//!
-//! # let object = MyType(1, 1);
-//! # let mut output = Cursor::new(vec![]);
-//! # object.write_to(&mut output).unwrap();
-//! # assert_eq!(output.into_inner(), b"\0\0\0\x01\x01\0\0\0");
-//! ```
-//! </div>
-//!
-//! ### Conditional field endianness
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! # #[derive(Debug, PartialEq)]
-//! #[derive(BinRead)]
-//! #[br(big)]
-//! struct MyType {
-//!     val: u8,
-//!     #[br(is_little = (val == 3))]
-//!     other_val: u16 // ← little-endian if `val == 3`, otherwise big-endian
-//! }
-//!
-//! # assert_eq!(
-//! MyType::read(&mut Cursor::new(b"\x03\x01\x00"))
-//! # .unwrap(), MyType { val: 3, other_val: 1 });
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! # #[derive(Debug, PartialEq)]
-//! #[derive(BinWrite)]
-//! #[bw(big)]
-//! struct MyType {
-//!     val: u8,
-//!     #[bw(is_little = (*val == 3))]
-//!     other_val: u16 // ← little-endian if `val == 3`, otherwise big-endian
-//! }
-//!
-//! let object = MyType { val: 3, other_val: 1 };
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output)
-//! # .unwrap();
-//! # assert_eq!(output.into_inner(), b"\x03\x01\x00");
-//! ```
-//! </div>
-//!
-//! # Magic
-//!
-//! The `magic` directive matches [magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
-//! in data:
-//!
-//! <div class="br">
-//!
-//! ```text
-//! #[br(magic = $magic:literal)] or #[br(magic($magic:literal))]
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```text
-//! #[bw(magic = $magic:literal)] or #[bw(magic($magic:literal))]
-//! ```
-//! </div>
-//!
-//! The magic number can be a byte literal, byte string, float, or integer. When
-//! a magic number is matched, parsing begins with the first byte after the
-//! magic number in the data. When a magic number is not matched, an error is
-//! returned.
-//!
-//! ## Examples
-//!
-//! ### Using byte strings
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! #[br(magic = b"TEST")]
-//! struct Test {
-//!     val: u32
-//! }
-//!
-//! # assert_eq!(
-//! Test::read(&mut Cursor::new(b"TEST\0\0\0\0"))
-//! # .unwrap(), Test { val: 0 });
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinWrite)]
-//! # #[derive(Debug, PartialEq)]
-//! #[bw(magic = b"TEST")]
-//! struct Test {
-//!     val: u32
-//! }
-//!
-//! let object = Test { val: 0 };
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output)
-//! # .unwrap();
-//! # assert_eq!(output.into_inner(), b"TEST\0\0\0\0");
-//! ```
-//! </div>
-//!
-//! ### Using float literals
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! #[br(big, magic = 1.2f32)]
-//! struct Version(u16);
-//!
-//! # assert_eq!(
-//! Version::read(&mut Cursor::new(b"\x3f\x99\x99\x9a\0\0"))
-//! # .unwrap(), Version(0));
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinWrite)]
-//! # #[derive(Debug, PartialEq)]
-//! #[bw(big, magic = 1.2f32)]
-//! struct Version(u16);
-//!
-//! let object = Version(0);
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output)
-//! # .unwrap();
-//! # assert_eq!(output.into_inner(), b"\x3f\x99\x99\x9a\0\0");
-//! ```
-//! </div>
-//!
-//! ### Enum variant selection using magic
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! enum Command {
-//!     #[br(magic = 0u8)] Nop,
-//!     #[br(magic = 1u8)] Jump { loc: u32 },
-//!     #[br(magic = 2u8)] Begin { var_count: u16, local_count: u16 }
-//! }
-//!
-//! # assert_eq!(
-//! Command::read(&mut Cursor::new(b"\x01\0\0\0\0"))
-//! # .unwrap(), Command::Jump { loc: 0 });
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinWrite)]
-//! # #[derive(Debug, PartialEq)]
-//! enum Command {
-//!     #[bw(magic = 0u8)] Nop,
-//!     #[bw(magic = 1u8)] Jump { loc: u32 },
-//!     #[bw(magic = 2u8)] Begin { var_count: u16, local_count: u16 }
-//! }
-//!
-//! let object = Command::Jump { loc: 0 };
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output)
-//! # .unwrap();
-//! # assert_eq!(output.into_inner(), b"\x01\0\0\0\0");
-//! ```
-//! </div>
-//!
-//! <div class="br">
-//!
-//! ## Errors
-//!
-//! If the specified magic number does not match the data, a
-//! [`BadMagic`](crate::Error::BadMagic) error is returned and the reader’s
-//! position is reset to where it was before parsing started.
-//! </div>
-//!
-//! # Assert
-//!
-//! The `assert` directive validates objects and fields
-//! <span class="br">after they are read,</span>
-//! <span class="bw">before they are written,</span>
-//! returning an error if the assertion condition evaluates to `false`:
-//!
-//! <div class="br">
-//!
-//! ```text
-//! #[br(assert($cond:expr $(,)?))]
-//! #[br(assert($cond:expr, $msg:literal $(,)?)]
-//! #[br(assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
-//! #[br(assert($cond:expr, $err:expr $(,)?)]
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```text
-//! #[bw(assert($cond:expr $(,)?))]
-//! #[bw(assert($cond:expr, $msg:literal $(,)?)]
-//! #[bw(assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
-//! #[bw(assert($cond:expr, $err:expr $(,)?)]
-//! ```
-//! </div>
-//!
-//! Multiple assertion directives can be used; they will be combined and
-//! executed in order.
-//!
-//! Assertions added to the top of an enum will be checked against every variant
-//! in the enum.
-//!
-//! Any earlier field or [import](#arguments) can be referenced by expressions
-//! in the directive.
-//!
-//! ## Examples
-//!
-//! ### Formatted error
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug)]
-//! #[br(assert(some_val > some_smaller_val, "oops! {} <= {}", some_val, some_smaller_val))]
-//! struct Test {
-//!     some_val: u32,
-//!     some_smaller_val: u32
-//! }
-//!
-//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").read_be::<Test>();
-//! assert!(error.is_err());
-//! let error = error.unwrap_err();
-//! let expected = "oops! 1 <= 255".to_string();
-//! assert!(matches!(error, binrw::Error::AssertFail { message: expected, .. }));
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! TODO!
-//! </div>
-//!
-//! ### Custom error
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(Debug, PartialEq)]
-//! struct NotSmallerError(u32, u32);
-//! impl core::fmt::Display for NotSmallerError {
-//!     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-//!         write!(f, "{} <= {}", self.0, self.1)
-//!     }
-//! }
-//!
-//! #[derive(BinRead, Debug)]
-//! #[br(assert(some_val > some_smaller_val, NotSmallerError(some_val, some_smaller_val)))]
-//! struct Test {
-//!     some_val: u32,
-//!     some_smaller_val: u32
-//! }
-//!
-//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").read_be::<Test>();
-//! assert!(error.is_err());
-//! let error = error.unwrap_err();
-//! assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! TODO!
-//! </div>
-//!
-//! ## Errors
-//!
-//! If the assertion fails and there is no second argument, or a string literal
-//! is given as the second argument, an [`AssertFail`](crate::Error::AssertFail)
-//! error is returned.
-//!
-//! If the assertion fails and an expression is given as the second argument,
-//! a [`Custom`](crate::Error::Custom) error containing the result of the
-//! expression is returned.
-//!
-//! Arguments other than the condition are not evaluated unless the assertion
-//! fails, so it is safe for them to contain expensive operations without
-//! impacting performance.
-//!
-//! In all cases, the <span class="br">reader</span><span class="bw">writer</span>’s
-//! position is reset to where it was before
-//! <span class="br">parsing</span><span class="bw">serialisation</span>
-//! started.
-//!
-//! <div class="br">
-//!
-//! # Pre-assert
-//!
-//! `pre_assert` works like [`assert`](#assert), but checks the condition before
-//! data is read instead of after:
-//!
-//! ```text
-//! #[br(pre_assert($cond:expr $(,)?))]
-//! #[br(pre_assert($cond:expr, $msg:literal $(,)?)]
-//! #[br(pre_assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
-//! #[br(pre_assert($cond:expr, $err:expr $(,)?)]
-//! ```
-//!
-//! This is most useful when validating arguments or selecting an enum variant.
-//!
-//! ## Examples
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! #[br(import { ty: u8 })]
-//! enum Command {
-//!     #[br(pre_assert(ty == 0))] Variant0(u16, u16),
-//!     #[br(pre_assert(ty == 1))] Variant1(u32)
-//! }
-//!
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! struct Message {
-//!     ty: u8,
-//!     len: u8,
-//!     #[br(args { ty })]
-//!     data: Command
-//! }
-//!
-//! let msg = Cursor::new(b"\x01\x04\0\0\0\xFF").read_be::<Message>();
-//! assert!(msg.is_ok());
-//! let msg = msg.unwrap();
-//! assert_eq!(msg, Message { ty: 1, len: 4, data: Command::Variant1(0xFF) });
-//! ```
-//! </div>
+//! |  w  | [`write_with`](#custom-parserswriters) | field | Specifies a custom function for writing a field.
 //!
 //! # Arguments
 //!
@@ -779,7 +282,7 @@
 //!
 //! ```text
 //! #[bw(import_raw($binding:ident : $ty:ty))]
-//! #[bw(args_raw($value:expr))] or #[br(args_raw = $value:expr)]
+//! #[bw(args_raw($value:expr))] or #[bw(args_raw = $value:expr)]
 //! ```
 //! </div>
 //!
@@ -866,262 +369,121 @@
 //! instead of using the `count` directive. See [`VecArgs`](crate::VecArgs) for
 //! details.
 //!
-//! # Ignore
+//! # Assert
+//!
+//! The `assert` directive validates objects and fields
+//! <span class="br">after they are read,</span>
+//! <span class="bw">before they are written,</span>
+//! returning an error if the assertion condition evaluates to `false`:
 //!
 //! <div class="br">
 //!
-//! The `ignore` directive, and its alias `default`, sets the value of the field
-//! to its [`Default`](core::default::Default) instead of reading data from the
-//! reader:
-//!
 //! ```text
-//! #[br(default)] or #[br(ignore)]
-//! ```
-//!
-//! ## Examples
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! struct Test {
-//!     #[br(ignore)]
-//!     path: Option<std::path::PathBuf>,
-//! }
-//!
-//! assert_eq!(
-//!     Test::read(&mut Cursor::new(b"")).unwrap(),
-//!     Test { path: None }
-//! );
+//! #[br(assert($cond:expr $(,)?))]
+//! #[br(assert($cond:expr, $msg:literal $(,)?)]
+//! #[br(assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
+//! #[br(assert($cond:expr, $err:expr $(,)?)]
 //! ```
 //! </div>
 //! <div class="bw">
 //!
-//! The `ignore` directive skips writing the field to the writer:
-//!
 //! ```text
-//! #[br(ignore)]
-//! ```
-//!
-//! ## Examples
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinWrite)]
-//! struct Test {
-//!     a: u8,
-//!     #[bw(ignore)]
-//!     b: u8,
-//!     c: u8,
-//! }
-//!
-//! let object = Test { a: 1, b: 2, c: 3 };
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output).unwrap();
-//! assert_eq!(
-//!     output.into_inner(),
-//!     b"\x01\x03"
-//! );
+//! #[bw(assert($cond:expr $(,)?))]
+//! #[bw(assert($cond:expr, $msg:literal $(,)?)]
+//! #[bw(assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
+//! #[bw(assert($cond:expr, $err:expr $(,)?)]
 //! ```
 //! </div>
 //!
-//! <div class="br">
+//! Multiple assertion directives can be used; they will be combined and
+//! executed in order.
 //!
-//! # Temp
+//! Assertions added to the top of an enum will be checked against every variant
+//! in the enum.
 //!
-//! **This directive can only be used with [`macro@binread`]. It will not work
-//! with `#[derive(BinRead)]`.**
-//!
-//! The `temp` directive causes a field to be treated as a temporary variable
-//! instead of an actual field. The field will be removed from the struct
-//! definition generated by [`macro@binread`]:
-//!
-//! ```text
-//! #[br(temp)]
-//! ```
-//!
-//! This allows data to be read which is necessary for parsing an object but
-//! which doesn’t need to be stored in the final object. To skip data, entirely
-//! use an [alignment directive](#padding-and-alignment) instead.
+//! Any earlier field or [import](#arguments) can be referenced by expressions
+//! in the directive.
 //!
 //! ## Examples
 //!
+//! ### Formatted error
+//!
+//! <div class="br">
+//!
 //! ```
-//! # use binrw::{BinRead, io::Cursor, binread};
-//! #[binread]
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug)]
+//! #[br(assert(some_val > some_smaller_val, "oops! {} <= {}", some_val, some_smaller_val))]
+//! struct Test {
+//!     some_val: u32,
+//!     some_smaller_val: u32
+//! }
+//!
+//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").read_be::<Test>();
+//! assert!(error.is_err());
+//! let error = error.unwrap_err();
+//! let expected = "oops! 1 <= 255".to_string();
+//! assert!(matches!(error, binrw::Error::AssertFail { message: expected, .. }));
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! TODO!
+//! </div>
+//!
+//! ### Custom error
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(Debug, PartialEq)]
-//! struct Test {
-//!     // Since `Vec` stores its own length, this field is redundant
-//!     #[br(temp, big)]
-//!     len: u32,
-//!
-//!     #[br(count = len)]
-//!     data: Vec<u8>
+//! struct NotSmallerError(u32, u32);
+//! impl core::fmt::Display for NotSmallerError {
+//!     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+//!         write!(f, "{} <= {}", self.0, self.1)
+//!     }
 //! }
 //!
-//! assert_eq!(
-//!     Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap(),
-//!     Test { data: Vec::from(&b"ABCDE"[..]) }
-//! );
-//! ```
-//!
-//! # Postprocessing
-//!
-//! The `deref_now` directive, and its alias `postprocess_now`, cause a
-//! field’s [`after_parse`](crate::BinRead::after_parse) function to be called
-//! immediately after the field is parsed, instead of deferring the call until
-//! the entire parent object has been parsed:
-//!
-//! ```text
-//! #[br(deref_now)] or #[br(postprocess_now)]
-//! ```
-//!
-//! The [`BinRead::after_parse`](crate::BinRead::after_parse) function is
-//! normally used to perform additional work after the whole parent object has
-//! been parsed. For example, the [`FilePtr`](crate::FilePtr) type reads an
-//! object offset during parsing with
-//! [`read_options`](crate::BinRead::read_options), then actually seeks to and
-//! parses the pointed-to object in `after_parse`. This improves read
-//! performance by reading the whole parent object sequentially before seeking
-//! to read the pointed-to object.
-//!
-//! However, if another field in the parent object needs to access data from the
-//! pointed-to object, `after_parse` needs to be called earlier. Adding
-//! `deref_now` (or its alias, `postprocess_now`) to the earlier field causes
-//! this to happen.
-//!
-//! ## Examples
-//!
-//! ```
-//! # use binrw::{prelude::*, FilePtr32, NullString, io::Cursor};
 //! #[derive(BinRead, Debug)]
-//! #[br(big, magic = b"TEST")]
-//! struct TestFile {
-//!     #[br(deref_now)]
-//!     ptr: FilePtr32<NullString>,
-//!
-//!     value: i32,
-//!
-//!     // Notice how `ptr` can be used as it has already been postprocessed
-//!     #[br(calc = ptr.len())]
-//!     ptr_len: usize,
+//! #[br(assert(some_val > some_smaller_val, NotSmallerError(some_val, some_smaller_val)))]
+//! struct Test {
+//!     some_val: u32,
+//!     some_smaller_val: u32
 //! }
 //!
-//! # let test_contents = b"\x54\x45\x53\x54\x00\x00\x00\x10\xFF\xFF\xFF\xFF\x00\x00\x00\x00\x54\x65\x73\x74\x20\x73\x74\x72\x69\x6E\x67\x00\x00\x00\x00\x69";
-//! # let test = Cursor::new(test_contents).read_be::<TestFile>().unwrap();
-//! # assert_eq!(test.ptr_len, 11);
-//! # assert_eq!(test.value, -1);
-//! # assert_eq!(test.ptr.to_string(), "Test string");
-//! ```
-//! </div>
-//!
-//! # Restore position
-//!
-//! The `restore_position` directive restores the position of the
-//! <span class="br">reader</span><span class="bw">writer</span> after a field
-//! is <span class="br">read</span><span class="bw">written</span>:
-//!
-//! ```text
-//! #[br(restore_position)]
-//! ```
-//!
-//! To seek to an arbitrary position, use [`seek_before`](#padding-and-alignment)
-//! instead.
-//!
-//! ## Examples
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! # #[derive(Debug, PartialEq)]
-//! struct MyType {
-//!     #[br(restore_position)]
-//!     test: u32,
-//!     test_bytes: [u8; 4]
-//! }
-//!
-//! # assert_eq!(
-//! #   Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap(),
-//! #   MyType { test: 1, test_bytes: [0,0,0,1]}
-//! # );
+//! let error = Cursor::new(b"\0\0\0\x01\0\0\0\xFF").read_be::<Test>();
+//! assert!(error.is_err());
+//! let error = error.unwrap_err();
+//! assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
 //! ```
 //! </div>
 //! <div class="bw">
 //!
-//! ```
-//! # use binrw::{prelude::*, io::{Cursor, SeekFrom}};
-//! #[derive(BinWrite)]
-//! # #[derive(Debug, PartialEq)]
-//! #[bw(big)]
-//! struct Relocation {
-//!     #[bw(ignore)]
-//!     delta: u32,
-//!     #[bw(seek_before(SeekFrom::Current((*delta).into())))]
-//!     reloc: u32,
-//! }
-//!
-//! #[derive(BinWrite)]
-//! # #[derive(Debug, PartialEq)]
-//! struct Executable {
-//!     #[bw(restore_position)]
-//!     code: Vec<u8>,
-//!     relocations: Vec<Relocation>,
-//! }
-//!
-//! let object = Executable {
-//!     code: vec![ 1, 2, 3, 4, 0, 0, 0, 0, 9, 10, 0, 0, 0, 0 ],
-//!     relocations: vec![
-//!         Relocation { delta: 4, reloc: 84281096 },
-//!         Relocation { delta: 2, reloc: 185339150 },
-//!     ]
-//! };
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output).unwrap();
-//! assert_eq!(
-//!   output.into_inner(),
-//!   b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e"
-//! );
-//! ```
+//! TODO!
 //! </div>
 //!
 //! ## Errors
 //!
-//! If querying or restoring the
-//! <span class="br">reader</span><span class="bw">writer</span> position fails,
-//! an [`Io`](crate::Error::Io) error is returned and the
-//! <span class="br">reader’s</span><span class="bw">writer’s</span>
+//! If the assertion fails and there is no second argument, or a string literal
+//! is given as the second argument, an [`AssertFail`](crate::Error::AssertFail)
+//! error is returned.
+//!
+//! If the assertion fails and an expression is given as the second argument,
+//! a [`Custom`](crate::Error::Custom) error containing the result of the
+//! expression is returned.
+//!
+//! Arguments other than the condition are not evaluated unless the assertion
+//! fails, so it is safe for them to contain expensive operations without
+//! impacting performance.
+//!
+//! In all cases, the <span class="br">reader</span><span class="bw">writer</span>’s
 //! position is reset to where it was before
 //! <span class="br">parsing</span><span class="bw">serialisation</span>
 //! started.
 //!
 //! <div class="br">
-//!
-//! # Try
-//!
-//! The `try` directive allows parsing of a field to fail instead
-//! of returning an error:
-//!
-//! ```text
-//! #[br(try)]
-//! ```
-//!
-//! If the field cannot be parsed, the position of the reader will be restored
-//! and the value of the field will be set to the [`default`](core::default::Default) value for the type.
-//!
-//! ## Examples
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! struct MyType {
-//!     #[br(try)]
-//!     maybe_u32: Option<u32>
-//! }
-//!
-//! assert_eq!(Cursor::new(b"").read_be::<MyType>().unwrap().maybe_u32, None);
-//! ```
 //!
 //! # Backtrace
 //!
@@ -1174,7 +536,714 @@
 //! #     }
 //! # }
 //! ```
+//! </div>
 //!
+//! # Byte order
+//!
+//! The `big` and `little` directives specify the [byte order](https://en.wikipedia.org/wiki/Endianness)
+//! of data in a struct, enum, variant, or field:
+//!
+//! <div class="br">
+//!
+//! ```text
+//! #[br(big)]
+//! #[br(little)]
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```text
+//! #[bw(big)]
+//! #[bw(little)]
+//! ```
+//! </div>
+//!
+//! The `is_big` and `is_little` directives conditionally set the byte order of
+//! a struct field:
+//!
+//! <div class="br">
+//!
+//! ```text
+//! #[br(is_little = $cond:expr)] or #[br(is_little($cond:expr))]
+//! #[br(is_big = $cond:expr)] or #[br(is_big($cond:expr))]
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```text
+//! #[bw(is_little = $cond:expr)] or #[bw(is_little($cond:expr))]
+//! #[bw(is_big = $cond:expr)] or #[bw(is_big($cond:expr))]
+//! ```
+//! </div>
+//!
+//! The `is_big` and `is_little` directives are primarily useful when byte order
+//! is defined in the data itself. Any earlier field or [import](#arguments) can
+//! be referenced in the condition. Conditional byte order directives can only
+//! be used on struct fields.
+//!
+//! The order of precedence (from highest to lowest) for determining byte order
+//! within an object is:
+//!
+//! 1. A directive on a field
+//! 2. A directive on an enum variant
+//! 3. A directive on the struct or enum
+//! 4. <span class="br">The [`endian`](crate::ReadOptions::endian) property of the
+//!    [`ReadOptions`](crate::ReadOptions) object passed to
+//!    [`BinRead::read_options`](crate::BinRead::read_options) by the caller</span>
+//!    <span class="bw">The [`endian`](crate::WriteOptions::endian) property of the
+//!    [`WriteOptions`](crate::WriteOptions) object passed to
+//!    [`BinWrite::write_options`](crate::BinWrite::write_options) by the caller</span>
+//! 5. The host machine’s native byte order
+//!
+//! However, if a byte order directive is added to a struct or enum, that byte
+//! order will *always* be used, even if the object is embedded in another
+//! object or explicitly called with a different byte order:
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{Endian, ReadOptions, prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! #[br(little)] // ← this *forces* the struct to be little-endian
+//! struct Child(u32);
+//!
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! struct Parent {
+//!     #[br(big)] // ← this will be ignored
+//!     child: Child,
+//! };
+//!
+//! let mut options = ReadOptions::new(Endian::Big /* ← this will be ignored */);
+//! # assert_eq!(
+//! Parent::read_options(&mut Cursor::new(b"\x01\0\0\0"), &options, ())
+//! # .unwrap(), Parent { child: Child(1) });
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{Endian, WriteOptions, prelude::*, io::Cursor};
+//! #[derive(BinWrite)]
+//! # #[derive(Debug, PartialEq)]
+//! #[bw(little)] // ← this *forces* the struct to be little-endian
+//! struct Child(u32);
+//!
+//! #[derive(BinWrite)]
+//! # #[derive(Debug, PartialEq)]
+//! struct Parent {
+//!     #[bw(big)] // ← this will be ignored
+//!     child: Child,
+//! };
+//!
+//! let object = Parent { child: Child(1) };
+//!
+//! let mut options = WriteOptions::new(Endian::Big /* ← this will be ignored */);
+//! let mut output = Cursor::new(vec![]);
+//! object.write_options(&mut output, &options, ())
+//! # .unwrap();
+//! # assert_eq!(output.into_inner(), b"\x01\0\0\0");
+//! ```
+//! </div>
+//!
+//! <span class="br">When manually implementing
+//! [`BinRead::read_options`](crate::BinRead::read_options) or a
+//! [custom parser function](#custom-parserswriters), the byte order is accessible
+//! from [`ReadOptions::endian`](crate::ReadOptions::endian).</span>
+//! <span class="bw">When manually implementing
+//! [`BinWrite::write_options`](crate::BinWrite::write_options) or a
+//! [custom writer function](#custom-parserswriters), the byte order is accessible
+//! from [`WriteOptions::endian`](crate::WriteOptions::endian).</span>
+//!
+//! ## Examples
+//!
+//! ### Mixed endianness in one object
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! #[br(little)]
+//! struct MyType (
+//!     #[br(big)] u32, // ← will be big-endian
+//!     u32, // ← will be little-endian
+//! );
+//!
+//! # assert_eq!(MyType::read(&mut Cursor::new(b"\0\0\0\x01\x01\0\0\0")).unwrap(), MyType(1, 1));
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite)]
+//! #[bw(little)]
+//! struct MyType (
+//!     #[bw(big)] u32, // ← will be big-endian
+//!     u32, // ← will be little-endian
+//! );
+//!
+//! # let object = MyType(1, 1);
+//! # let mut output = Cursor::new(vec![]);
+//! # object.write_to(&mut output).unwrap();
+//! # assert_eq!(output.into_inner(), b"\0\0\0\x01\x01\0\0\0");
+//! ```
+//! </div>
+//!
+//! ### Conditional field endianness
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! # #[derive(Debug, PartialEq)]
+//! #[derive(BinRead)]
+//! #[br(big)]
+//! struct MyType {
+//!     val: u8,
+//!     #[br(is_little = (val == 3))]
+//!     other_val: u16 // ← little-endian if `val == 3`, otherwise big-endian
+//! }
+//!
+//! # assert_eq!(
+//! MyType::read(&mut Cursor::new(b"\x03\x01\x00"))
+//! # .unwrap(), MyType { val: 3, other_val: 1 });
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! # #[derive(Debug, PartialEq)]
+//! #[derive(BinWrite)]
+//! #[bw(big)]
+//! struct MyType {
+//!     val: u8,
+//!     #[bw(is_little = (*val == 3))]
+//!     other_val: u16 // ← little-endian if `val == 3`, otherwise big-endian
+//! }
+//!
+//! let object = MyType { val: 3, other_val: 1 };
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output)
+//! # .unwrap();
+//! # assert_eq!(output.into_inner(), b"\x03\x01\x00");
+//! ```
+//! </div>
+//!
+//! # Calculations
+//!
+//! <div class="bw">
+//!
+//! **This directive can only be used with [`macro@binwrite`]. It will not work
+//! with `#[derive(BinWrite)]`.**
+//! </div>
+//!
+//! The `calc` directive computes the value of a field
+//! <span class="br">instead of reading data from the reader:</span>
+//! <span class="bw">to use when writing to the writer:</span>
+//!
+//! <div class="br">
+//!
+//! ```text
+//! #[br(calc = $value:expr)] or #[br(calc($value:expr))]
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```text
+//! #[bw(calc = $value:expr)] or #[bw(calc($value:expr))]
+//! ```
+//! </div>
+//!
+//! Any <span class="br">earlier</span> field or [import](#arguments) can be
+//! referenced by the expression in the directive.
+//!
+//! <div class="bw">
+//!
+//! Since the field is treated as a temporary variable instead of an actual
+//! field, when deriving `BinRead`, the field should also be annotated with
+//! `#[br(temp)]`.
+//! </div>
+//!
+//! ## Examples
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     var: u32,
+//!     #[br(calc = 3 + var)]
+//!     var_plus_3: u32,
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().var_plus_3, 4);
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[binwrite]
+//! #[bw(big)]
+//! struct MyType {
+//!     var: u32,
+//!     #[bw(calc = var - 3)]
+//!     var_minus_3: u32,
+//! }
+//!
+//! let object = MyType { var: 4 };
+//!
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output).unwrap();
+//! assert_eq!(output.into_inner(), b"\0\0\0\x04\0\0\0\x01");
+//! ```
+//! </div>
+//!
+//! <div class="br">
+//!
+//! # Conditional values
+//!
+//! The `if` directive allows conditional parsing of a field, reading from data
+//! if the condition is true and using a computed value if the condition is
+//! false:
+//!
+//! ```text
+//! #[br(if = $cond:expr)] or #[br(if($cond:expr))]
+//! #[br(if = $cond:expr, $alternate:expr)] or #[br(if($cond:expr, $alternate:expr))]
+//! ```
+//!
+//! If an alternate is provided, that value will be used when the condition is
+//! false; otherwise, the [`default`](core::default::Default) value for the type
+//! will be used.
+//!
+//! The alternate expression is not evaluated unless the condition is false, so
+//! it is safe for it to contain expensive operations without impacting
+//! performance.
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! ## Examples
+//!
+//! ### Using an [`Option`] field with no alternate
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     var: u32,
+//!
+//!     #[br(if(var == 1))]
+//!     original_byte: Option<u8>,
+//!
+//!     #[br(if(var != 1))]
+//!     other_byte: Option<u8>,
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().original_byte, Some(3));
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, None);
+//! ```
+//!
+//! ### Using a scalar field with an explicit alternate
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     var: u32,
+//!
+//!     #[br(if(var == 1, 0))]
+//!     original_byte: u8,
+//!
+//!     #[br(if(var != 1, 42))]
+//!     other_byte: u8,
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().original_byte, 3);
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, 42);
+//! ```
+//! </div>
+//!
+//! <div class="br">
+//!
+//! # Count
+//!
+//! The `count` directive is a shorthand for passing a `count` argument to a
+//! parser like [`Vec`]:
+//!
+//! ```text
+//! #[br(count = $count:expr) or #[br(count($count:expr))]
+//! ```
+//!
+//! It desugars to:
+//!
+//! ```text
+//! #[br(args { count: $count as usize })]
+//! ```
+//!
+//! When manually implementing
+//! [`BinRead::read_options`](crate::BinRead::read_options) or a
+//! [custom parser function](#custom-parserswriters), the `count` value is accessible
+//! from a named argument named `count`.
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive.
+//!
+//! ## Examples
+//!
+//! ### Using `count` with [`Vec`]
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     size: u32,
+//!     #[br(count = size)]
+//!     data: Vec<u8>,
+//! }
+//!
+//! # assert_eq!(
+//! #    Cursor::new(b"\0\0\0\x04\x01\x02\x03\x04").read_be::<MyType>().unwrap().data,
+//! #    &[1u8, 2, 3, 4]
+//! # );
+//! ```
+//! </div>
+//!
+//! # Custom <span class="br">parsers</span><span class="bw">writers</span>
+//!
+//! <div class="br">
+//!
+//! The `parse_with` directive specifies a custom parsing function which can be
+//! used to override the default [`BinRead`](crate::BinRead) implementation for
+//! a type, or to parse types which have no `BinRead` implementation at all:
+//!
+//! ```text
+//! #[br(parse_with = $parse_fn:expr)] or #[br(parse_with($parse_fn:expr))]
+//! ```
+//!
+//! Any earlier field or [import](#arguments) can be referenced by the
+//! expression in the directive (for example, to construct a parser function at
+//! runtime by calling a function generator).
+//! </div>
+//! <div class="bw">
+//!
+//! The `write_with` directive specifies a custom serialisation function which
+//! can be used to override the default [`BinWrite`](crate::BinWrite)
+//! implementation for a type, or to serialise types which have no `BinWrite`
+//! implementation at all:
+//!
+//! ```text
+//! #[bw(write_with = $write_fn:expr)] or #[bw(write_with($write_fn:expr))]
+//! ```
+//!
+//! Any field or [import](#arguments) can be referenced by the expression in the
+//! directive (for example, to construct a serialisation function at runtime by
+//! calling a function generator).
+//! </div>
+//!
+//! ## Examples
+//!
+//! <div class="br">
+//!
+//! ### Using a custom parser to generate a [`HashMap`](std::collections::HashMap)
+//!
+//! ```
+//! # use binrw::{prelude::*, io::*, ReadOptions};
+//! # use std::collections::HashMap;
+//! fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
+//!     -> BinResult<HashMap<u16, u16>>
+//! {
+//!     let mut map = HashMap::new();
+//!     map.insert(
+//!         <_>::read_options(reader, ro, ())?,
+//!         <_>::read_options(reader, ro, ())?,
+//!     );
+//!     Ok(map)
+//! }
+//!
+//! #[derive(BinRead)]
+//! #[br(big)]
+//! struct MyType {
+//!     #[br(parse_with = custom_parser)]
+//!     offsets: HashMap<u16, u16>
+//! }
+//!
+//! # assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().offsets.get(&0), Some(&1));
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ### Using a custom serialiser to write a [`BTreeMap`](std::collections::BTreeMap)
+//!
+//! ```
+//! # use binrw::{prelude::*, io::*, WriteOptions};
+//! # use std::collections::BTreeMap;
+//! fn custom_writer<R: Write + Seek>(
+//!     map: &BTreeMap<u16, u16>,
+//!     writer: &mut R,
+//!     wo: &WriteOptions,
+//!     _: ()
+//! ) -> BinResult<()> {
+//!     for (key, val) in map.iter() {
+//!         key.write_options(writer, wo, ())?;
+//!         val.write_options(writer, wo, ())?;
+//!     }
+//!     Ok(())
+//! }
+//!
+//! #[derive(BinWrite)]
+//! #[bw(big)]
+//! struct MyType {
+//!     #[bw(write_with = custom_writer)]
+//!     offsets: BTreeMap<u16, u16>
+//! }
+//!
+//! let object = MyType {
+//!     offsets: BTreeMap::from([(0, 1), (2, 3)]),
+//! };
+//!
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output).unwrap();
+//! assert_eq!(output.into_inner(), b"\0\0\0\x01\0\x02\0\x03");
+//! ```
+//! </div>
+//!
+//! <div class="br">
+//!
+//! ### Using `FilePtr::parse` to read a `NullString` without storing a `FilePtr`
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor, FilePtr32, NullString};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     #[br(parse_with = FilePtr32::parse)]
+//!     some_string: NullString,
+//! }
+//!
+//! # let val: MyType = Cursor::new(b"\0\0\0\x04Test\0").read_be().unwrap();
+//! # assert_eq!(val.some_string.to_string(), "Test");
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! TODO!
+//! </div>
+//!
+//! # Ignore
+//!
+//! <div class="br">
+//!
+//! The `ignore` directive, and its alias `default`, sets the value of the field
+//! to its [`Default`](core::default::Default) instead of reading data from the
+//! reader:
+//!
+//! <div class="br">
+//!
+//! ```text
+//! #[br(default)] or #[br(ignore)]
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```text
+//! #[bw(ignore)]
+//! ```
+//! </div>
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! struct Test {
+//!     #[br(ignore)]
+//!     path: Option<std::path::PathBuf>,
+//! }
+//!
+//! assert_eq!(
+//!     Test::read(&mut Cursor::new(b"")).unwrap(),
+//!     Test { path: None }
+//! );
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! The `ignore` directive skips writing the field to the writer:
+//!
+//! ```text
+//! #[br(ignore)]
+//! ```
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite)]
+//! struct Test {
+//!     a: u8,
+//!     #[bw(ignore)]
+//!     b: u8,
+//!     c: u8,
+//! }
+//!
+//! let object = Test { a: 1, b: 2, c: 3 };
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output).unwrap();
+//! assert_eq!(
+//!     output.into_inner(),
+//!     b"\x01\x03"
+//! );
+//! ```
+//! </div>
+//!
+//! # Magic
+//!
+//! The `magic` directive matches [magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
+//! in data:
+//!
+//! <div class="br">
+//!
+//! ```text
+//! #[br(magic = $magic:literal)] or #[br(magic($magic:literal))]
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```text
+//! #[bw(magic = $magic:literal)] or #[bw(magic($magic:literal))]
+//! ```
+//! </div>
+//!
+//! The magic number can be a byte literal, byte string, float, or integer. When
+//! a magic number is matched, parsing begins with the first byte after the
+//! magic number in the data. When a magic number is not matched, an error is
+//! returned.
+//!
+//! ## Examples
+//!
+//! ### Using byte strings
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! #[br(magic = b"TEST")]
+//! struct Test {
+//!     val: u32
+//! }
+//!
+//! # assert_eq!(
+//! Test::read(&mut Cursor::new(b"TEST\0\0\0\0"))
+//! # .unwrap(), Test { val: 0 });
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite)]
+//! # #[derive(Debug, PartialEq)]
+//! #[bw(magic = b"TEST")]
+//! struct Test {
+//!     val: u32
+//! }
+//!
+//! let object = Test { val: 0 };
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output)
+//! # .unwrap();
+//! # assert_eq!(output.into_inner(), b"TEST\0\0\0\0");
+//! ```
+//! </div>
+//!
+//! ### Using float literals
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! #[br(big, magic = 1.2f32)]
+//! struct Version(u16);
+//!
+//! # assert_eq!(
+//! Version::read(&mut Cursor::new(b"\x3f\x99\x99\x9a\0\0"))
+//! # .unwrap(), Version(0));
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite)]
+//! # #[derive(Debug, PartialEq)]
+//! #[bw(big, magic = 1.2f32)]
+//! struct Version(u16);
+//!
+//! let object = Version(0);
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output)
+//! # .unwrap();
+//! # assert_eq!(output.into_inner(), b"\x3f\x99\x99\x9a\0\0");
+//! ```
+//! </div>
+//!
+//! ### Enum variant selection using magic
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! enum Command {
+//!     #[br(magic = 0u8)] Nop,
+//!     #[br(magic = 1u8)] Jump { loc: u32 },
+//!     #[br(magic = 2u8)] Begin { var_count: u16, local_count: u16 }
+//! }
+//!
+//! # assert_eq!(
+//! Command::read(&mut Cursor::new(b"\x01\0\0\0\0"))
+//! # .unwrap(), Command::Jump { loc: 0 });
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite)]
+//! # #[derive(Debug, PartialEq)]
+//! enum Command {
+//!     #[bw(magic = 0u8)] Nop,
+//!     #[bw(magic = 1u8)] Jump { loc: u32 },
+//!     #[bw(magic = 2u8)] Begin { var_count: u16, local_count: u16 }
+//! }
+//!
+//! let object = Command::Jump { loc: 0 };
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output)
+//! # .unwrap();
+//! # assert_eq!(output.into_inner(), b"\x01\0\0\0\0");
+//! ```
+//! </div>
+//!
+//! <div class="br">
+//!
+//! ## Errors
+//!
+//! If the specified magic number does not match the data, a
+//! [`BadMagic`](crate::Error::BadMagic) error is returned and the reader’s
+//! position is reset to where it was before parsing started.
 //! </div>
 //!
 //! # Map
@@ -1182,10 +1251,20 @@
 //! The `map` and `try_map` directives allow data to be read using one type and
 //! stored as another:
 //!
+//! <div class="br">
+//!
 //! ```text
 //! #[br(map = $map_fn:expr)] or #[br(map($map_fn:expr)))]
 //! #[br(try_map = $map_fn:expr)] or #[br(try_map($map_fn:expr)))]
 //! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```text
+//! #[bw(map = $map_fn:expr)] or #[bw(map($map_fn:expr)))]
+//! #[bw(try_map = $map_fn:expr)] or #[bw(try_map($map_fn:expr)))]
+//! ```
+//! </div>
 //!
 //! <span class="br">When using `map` on a field, the map function must
 //! explicitly declare the type of the data to be read in its first parameter
@@ -1341,249 +1420,13 @@
 //!
 //! ## Errors
 //!
-//! If the `try_map` function returns a [`binread::io::Error`](crate::io::Error)
+//! If the `try_map` function returns a [`binrw::io::Error`](crate::io::Error)
 //! or [`std::io::Error`], an [`Io`](crate::Error::Io) error is returned. For
 //! any other error type, a [`Custom`](crate::Error::Custom) error is returned.
 //!
 //! In all cases, the
 //! <span class="br">reader’s</span><span class="bw">writer’s</span> position is
 //! reset to where it was before parsing started.
-//!
-//! # Custom parsers
-//!
-//! <div class="br">
-//!
-//! The `parse_with` directive specifies a custom parsing function which can be
-//! used to override the default [`BinRead`](crate::BinRead) implementation for
-//! a type, or to parse types which have no `BinRead` implementation at all:
-//!
-//! ```text
-//! #[br(parse_with = $parse_fn:expr)] or #[br(parse_with($parse_fn:expr))]
-//! ```
-//!
-//! Any earlier field or [import](#arguments) can be referenced by the
-//! expression in the directive (for example, to construct a parser function at
-//! runtime by calling a function generator).
-//! </div>
-//! <div class="bw">
-//!
-//! The `write_with` directive specifies a custom serialisation function which
-//! can be used to override the default [`BinWrite`](crate::BinWrite)
-//! implementation for a type, or to serialise types which have no `BinWrite`
-//! implementation at all:
-//!
-//! ```text
-//! #[bw(write_with = $write_fn:expr)] or #[bw(write_with($write_fn:expr))]
-//! ```
-//!
-//! Any field or [import](#arguments) can be referenced by the expression in the
-//! directive (for example, to construct a serialisation function at runtime by
-//! calling a function generator).
-//! </div>
-//!
-//! ## Examples
-//!
-//! <div class="br">
-//!
-//! ### Using a custom parser to generate a [`HashMap`](std::collections::HashMap)
-//!
-//! ```
-//! # use binrw::{prelude::*, io::*, ReadOptions};
-//! # use std::collections::HashMap;
-//! fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
-//!     -> BinResult<HashMap<u16, u16>>
-//! {
-//!     let mut map = HashMap::new();
-//!     map.insert(
-//!         <_>::read_options(reader, ro, ())?,
-//!         <_>::read_options(reader, ro, ())?,
-//!     );
-//!     Ok(map)
-//! }
-//!
-//! #[derive(BinRead)]
-//! #[br(big)]
-//! struct MyType {
-//!     #[br(parse_with = custom_parser)]
-//!     offsets: HashMap<u16, u16>
-//! }
-//!
-//! # assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().offsets.get(&0), Some(&1));
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ### Using a custom serialiser to write a [`HashMap`](std::collections::HashMap)
-//!
-//! ```
-//! # use binrw::{prelude::*, io::*, WriteOptions};
-//! # use std::collections::BTreeMap;
-//! fn custom_writer<R: Write + Seek>(
-//!     map: &BTreeMap<u16, u16>,
-//!     writer: &mut R,
-//!     wo: &WriteOptions,
-//!     _: ()
-//! ) -> BinResult<()> {
-//!     for (key, val) in map.iter() {
-//!         key.write_options(writer, wo, ())?;
-//!         val.write_options(writer, wo, ())?;
-//!     }
-//!     Ok(())
-//! }
-//!
-//! #[derive(BinWrite)]
-//! #[bw(big)]
-//! struct MyType {
-//!     #[bw(write_with = custom_writer)]
-//!     offsets: BTreeMap<u16, u16>
-//! }
-//!
-//! let object = MyType {
-//!     offsets: BTreeMap::from([(0, 1), (2, 3)]),
-//! };
-//!
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output).unwrap();
-//! assert_eq!(output.into_inner(), b"\0\0\0\x01\0\x02\0\x03");
-//! ```
-//! </div>
-//!
-//! <div class="br">
-//!
-//! ### Using `FilePtr::parse` to read a `NullString` without storing a `FilePtr`
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor, FilePtr32, NullString};
-//! #[derive(BinRead)]
-//! struct MyType {
-//!     #[br(parse_with = FilePtr32::parse)]
-//!     some_string: NullString,
-//! }
-//!
-//! # let val: MyType = Cursor::new(b"\0\0\0\x04Test\0").read_be().unwrap();
-//! # assert_eq!(val.some_string.to_string(), "Test");
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! TODO!
-//! </div>
-//!
-//! # Calculations
-//!
-//! <div class="bw">
-//!
-//! **This directive can only be used with [`macro@binwrite`]. It will not work
-//! with `#[derive(BinWrite)]`.**
-//! </div>
-//!
-//! The `calc` directive computes the value of a field
-//! <span class="br">instead of reading data from the reader:</span>
-//! <span class="bw">to use when writing to the writer:</span>
-//!
-//! <div class="br">
-//!
-//! ```text
-//! #[br(calc = $value:expr)] or #[br(calc($value:expr))]
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```text
-//! #[bw(calc = $value:expr)] or #[bw(calc($value:expr))]
-//! ```
-//! </div>
-//!
-//! Any <span class="br">earlier</span> field or [import](#arguments) can be
-//! referenced by the expression in the directive.
-//!
-//! <div class="bw">
-//!
-//! Since the field is treated as a temporary variable instead of an actual
-//! field, when deriving `BinRead`, the field should also be annotated with
-//! `#[br(temp)]`.
-//! </div>
-//!
-//! ## Examples
-//!
-//! <div class="br">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! struct MyType {
-//!     var: u32,
-//!     #[br(calc = 3 + var)]
-//!     var_plus_3: u32,
-//! }
-//!
-//! # assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().var_plus_3, 4);
-//! ```
-//! </div>
-//! <div class="bw">
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[binwrite]
-//! #[bw(big)]
-//! struct MyType {
-//!     var: u32,
-//!     #[bw(calc = var - 3)]
-//!     var_minus_3: u32,
-//! }
-//!
-//! let object = MyType { var: 4 };
-//!
-//! let mut output = Cursor::new(vec![]);
-//! object.write_to(&mut output).unwrap();
-//! assert_eq!(output.into_inner(), b"\0\0\0\x04\0\0\0\x01");
-//! ```
-//! </div>
-//!
-//! <div class="br">
-//!
-//! # Count
-//!
-//! The `count` directive is a shorthand for passing a `count` argument to a
-//! parser like [`Vec`]:
-//!
-//! ```text
-//! #[br(count = $count:expr) or #[br(count($count:expr))]
-//! ```
-//!
-//! It desugars to:
-//!
-//! ```text
-//! #[br(args { count: $count as usize })]
-//! ```
-//!
-//! When manually implementing
-//! [`BinRead::read_options`](crate::BinRead::read_options) or a
-//! [custom parser function](#custom-parsers), the `count` value is accessible
-//! from a named argument named `count`.
-//!
-//! Any earlier field or [import](#arguments) can be referenced by the
-//! expression in the directive.
-//!
-//! ## Examples
-//!
-//! ### Using `count` with [`Vec`]
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! struct MyType {
-//!     size: u32,
-//!     #[br(count = size)]
-//!     data: Vec<u8>,
-//! }
-//!
-//! # assert_eq!(
-//! #    Cursor::new(b"\0\0\0\x04\x01\x02\x03\x04").read_be::<MyType>().unwrap().data,
-//! #    &[1u8, 2, 3, 4]
-//! # );
-//! ```
-//! </div>
 //!
 //! <div class="br">
 //!
@@ -1600,7 +1443,7 @@
 //!
 //! When manually implementing
 //! [`BinRead::read_options`](crate::BinRead::read_options) or a
-//! [custom parser function](#custom-parsers), the offset is accessible
+//! [custom parser function](#custom-parserswriters), the offset is accessible
 //! from [`ReadOptions::offset`](crate::ReadOptions::offset).
 //!
 //! For `offset`, any earlier field or [import](#arguments) can be referenced by
@@ -1634,71 +1477,6 @@
 //!
 //! </div>
 //!
-//! <div class="br">
-//!
-//! # Conditional values
-//!
-//! The `if` directive allows conditional parsing of a field, reading from data
-//! if the condition is true and using a computed value if the condition is
-//! false:
-//!
-//! ```text
-//! #[br(if = $cond:expr)] or #[br(if($cond:expr))]
-//! #[br(if = $cond:expr, $alternate:expr)] or #[br(if($cond:expr, $alternate:expr))]
-//! ```
-//!
-//! If an alternate is provided, that value will be used when the condition is
-//! false; otherwise, the [`default`](core::default::Default) value for the type
-//! will be used.
-//!
-//! The alternate expression is not evaluated unless the condition is false, so
-//! it is safe for it to contain expensive operations without impacting
-//! performance.
-//!
-//! Any earlier field or [import](#arguments) can be referenced by the
-//! expression in the directive.
-//!
-//! ## Examples
-//!
-//! ### Using an [`Option`] field with no alternate
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! struct MyType {
-//!     var: u32,
-//!
-//!     #[br(if(var == 1))]
-//!     original_byte: Option<u8>,
-//!
-//!     #[br(if(var != 1))]
-//!     other_byte: Option<u8>,
-//! }
-//!
-//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().original_byte, Some(3));
-//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, None);
-//! ```
-//!
-//! ### Using a scalar field with an explicit alternate
-//!
-//! ```
-//! # use binrw::{prelude::*, io::Cursor};
-//! #[derive(BinRead)]
-//! struct MyType {
-//!     var: u32,
-//!
-//!     #[br(if(var == 1, 0))]
-//!     original_byte: u8,
-//!
-//!     #[br(if(var != 1, 42))]
-//!     other_byte: u8,
-//! }
-//!
-//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().original_byte, 3);
-//! # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, 42);
-//! ```
-//! </div>
-//!
 //! # Padding and alignment
 //!
 //! binrw includes directives for common forms of
@@ -1726,7 +1504,9 @@
 //!
 //! This is equivalent to:
 //!
-//! ```ignore
+//! ```
+//! # let mut pos = 0;
+//! # let padding = 0;
 //! pos += padding;
 //! ```
 //!
@@ -1738,6 +1518,7 @@
 //! <span class="br">reading</span><span class="bw">writing</span> a field,
 //! respectively:
 //!
+//! <div class="br">
 //! ```text
 //! #[br(align_after = $align_to:expr)] or #[br(align_after($align_to:expr))]
 //! #[br(align_before = $align_to:expr)] or #[br(align_before($align_to:expr))]
@@ -1745,13 +1526,17 @@
 //! </div>
 //! <div class="bw">
 //!
+//! ```text
 //! #[bw(align_after = $align_to:expr)] or #[bw(align_after($align_to:expr))]
 //! #[bw(align_before = $align_to:expr)] or #[bw(align_before($align_to:expr))]
+//! ```
 //! </div>
 //!
 //! This is equivalent to:
 //!
-//! ```ignore
+//! ```
+//! # let mut pos = 0;
+//! # let align = 1;
 //! if pos % align != 0 {
 //!     pos += align - (pos % align);
 //! }
@@ -1780,8 +1565,12 @@
 //!
 //! This is equivalent to:
 //!
-//! ```ignore
-//! reader.seek($seek_from)?;
+//! ```
+//! # use binrw::io::Seek;
+//! # let mut stream = binrw::io::Cursor::new(vec![]);
+//! # let seek_from = binrw::io::SeekFrom::Start(0);
+//! stream.seek(seek_from)?;
+//! # Ok::<(), binrw::io::Error>(())
 //! ```
 //!
 //! The position of the
@@ -1865,6 +1654,102 @@
 //! <span class="br">parsing</span><span class="bw">serialisation</span>
 //! started.
 //!
+//! <div class="br">
+//!
+//! # Postprocessing
+//!
+//! The `deref_now` directive, and its alias `postprocess_now`, cause a
+//! field’s [`after_parse`](crate::BinRead::after_parse) function to be called
+//! immediately after the field is parsed, instead of deferring the call until
+//! the entire parent object has been parsed:
+//!
+//! ```text
+//! #[br(deref_now)] or #[br(postprocess_now)]
+//! ```
+//!
+//! The [`BinRead::after_parse`](crate::BinRead::after_parse) function is
+//! normally used to perform additional work after the whole parent object has
+//! been parsed. For example, the [`FilePtr`](crate::FilePtr) type reads an
+//! object offset during parsing with
+//! [`read_options`](crate::BinRead::read_options), then actually seeks to and
+//! parses the pointed-to object in `after_parse`. This improves read
+//! performance by reading the whole parent object sequentially before seeking
+//! to read the pointed-to object.
+//!
+//! However, if another field in the parent object needs to access data from the
+//! pointed-to object, `after_parse` needs to be called earlier. Adding
+//! `deref_now` (or its alias, `postprocess_now`) to the earlier field causes
+//! this to happen.
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{prelude::*, FilePtr32, NullString, io::Cursor};
+//! #[derive(BinRead, Debug)]
+//! #[br(big, magic = b"TEST")]
+//! struct TestFile {
+//!     #[br(deref_now)]
+//!     ptr: FilePtr32<NullString>,
+//!
+//!     value: i32,
+//!
+//!     // Notice how `ptr` can be used as it has already been postprocessed
+//!     #[br(calc = ptr.len())]
+//!     ptr_len: usize,
+//! }
+//!
+//! # let test_contents = b"\x54\x45\x53\x54\x00\x00\x00\x10\xFF\xFF\xFF\xFF\x00\x00\x00\x00\x54\x65\x73\x74\x20\x73\x74\x72\x69\x6E\x67\x00\x00\x00\x00\x69";
+//! # let test = Cursor::new(test_contents).read_be::<TestFile>().unwrap();
+//! # assert_eq!(test.ptr_len, 11);
+//! # assert_eq!(test.value, -1);
+//! # assert_eq!(test.ptr.to_string(), "Test string");
+//! ```
+//! </div>
+//!
+//! <div class="br">
+//!
+//! # Pre-assert
+//!
+//! `pre_assert` works like [`assert`](#assert), but checks the condition before
+//! data is read instead of after:
+//!
+//! ```text
+//! #[br(pre_assert($cond:expr $(,)?))]
+//! #[br(pre_assert($cond:expr, $msg:literal $(,)?)]
+//! #[br(pre_assert($cond:expr, $fmt:literal, $($arg:expr),* $(,)?))]
+//! #[br(pre_assert($cond:expr, $err:expr $(,)?)]
+//! ```
+//!
+//! This is most useful when validating arguments or selecting an enum variant.
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! #[br(import { ty: u8 })]
+//! enum Command {
+//!     #[br(pre_assert(ty == 0))] Variant0(u16, u16),
+//!     #[br(pre_assert(ty == 1))] Variant1(u32)
+//! }
+//!
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! struct Message {
+//!     ty: u8,
+//!     len: u8,
+//!     #[br(args { ty })]
+//!     data: Command
+//! }
+//!
+//! let msg = Cursor::new(b"\x01\x04\0\0\0\xFF").read_be::<Message>();
+//! assert!(msg.is_ok());
+//! let msg = msg.unwrap();
+//! assert_eq!(msg, Message { ty: 1, len: 4, data: Command::Variant1(0xFF) });
+//! ```
+//! </div>
+//!
 //! # Repr
 //!
 //! The `repr` directive is used on a unit-like (C-style) enum to specify the
@@ -1887,6 +1772,8 @@
 //!
 //! ## Examples
 //!
+//! <div class="br">
+//!
 //! ```
 //! # use binrw::BinRead;
 //! #[derive(BinRead)]
@@ -1899,6 +1786,22 @@
 //!     Picture,
 //! }
 //! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::BinWrite;
+//! #[derive(BinWrite)]
+//! #[bw(big, repr = i16)]
+//! enum FileKind {
+//!     Unknown = -1,
+//!     Text,
+//!     Archive,
+//!     Document,
+//!     Picture,
+//! }
+//! ```
+//! </div>
 //!
 //! ## Errors
 //!
@@ -1912,6 +1815,165 @@
 //! reset to where it was before
 //! <span class="br">parsing</span><span class="bw">serialisation</span>
 //! started.
+//!
+//! # Restore position
+//!
+//! The `restore_position` directive restores the position of the
+//! <span class="br">reader</span><span class="bw">writer</span> after a field
+//! is <span class="br">read</span><span class="bw">written</span>:
+//!
+//! <div class="br">
+//!
+//! ```text
+//! #[br(restore_position)]
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```text
+//! #[bw(restore_position)]
+//! ```
+//! </div>
+//!
+//! To seek to an arbitrary position, use [`seek_before`](#padding-and-alignment)
+//! instead.
+//!
+//! ## Examples
+//!
+//! <div class="br">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! struct MyType {
+//!     #[br(restore_position)]
+//!     test: u32,
+//!     test_bytes: [u8; 4]
+//! }
+//!
+//! # assert_eq!(
+//! #   Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap(),
+//! #   MyType { test: 1, test_bytes: [0,0,0,1]}
+//! # );
+//! ```
+//! </div>
+//! <div class="bw">
+//!
+//! ```
+//! # use binrw::{prelude::*, io::{Cursor, SeekFrom}};
+//! #[derive(BinWrite)]
+//! # #[derive(Debug, PartialEq)]
+//! #[bw(big)]
+//! struct Relocation {
+//!     #[bw(ignore)]
+//!     delta: u32,
+//!     #[bw(seek_before(SeekFrom::Current((*delta).into())))]
+//!     reloc: u32,
+//! }
+//!
+//! #[derive(BinWrite)]
+//! # #[derive(Debug, PartialEq)]
+//! struct Executable {
+//!     #[bw(restore_position)]
+//!     code: Vec<u8>,
+//!     relocations: Vec<Relocation>,
+//! }
+//!
+//! let object = Executable {
+//!     code: vec![ 1, 2, 3, 4, 0, 0, 0, 0, 9, 10, 0, 0, 0, 0 ],
+//!     relocations: vec![
+//!         Relocation { delta: 4, reloc: 84281096 },
+//!         Relocation { delta: 2, reloc: 185339150 },
+//!     ]
+//! };
+//! let mut output = Cursor::new(vec![]);
+//! object.write_to(&mut output).unwrap();
+//! assert_eq!(
+//!   output.into_inner(),
+//!   b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e"
+//! );
+//! ```
+//! </div>
+//!
+//! ## Errors
+//!
+//! If querying or restoring the
+//! <span class="br">reader</span><span class="bw">writer</span> position fails,
+//! an [`Io`](crate::Error::Io) error is returned and the
+//! <span class="br">reader’s</span><span class="bw">writer’s</span>
+//! position is reset to where it was before
+//! <span class="br">parsing</span><span class="bw">serialisation</span>
+//! started.
+//!
+//! <div class="br">
+//!
+//! # Temp
+//!
+//! **This directive can only be used with [`macro@binread`]. It will not work
+//! with `#[derive(BinRead)]`.**
+//!
+//! The `temp` directive causes a field to be treated as a temporary variable
+//! instead of an actual field. The field will be removed from the struct
+//! definition generated by [`macro@binread`]:
+//!
+//! ```text
+//! #[br(temp)]
+//! ```
+//!
+//! This allows data to be read which is necessary for parsing an object but
+//! which doesn’t need to be stored in the final object. To skip data, entirely
+//! use an [alignment directive](#padding-and-alignment) instead.
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{BinRead, io::Cursor, binread};
+//! #[binread]
+//! #[derive(Debug, PartialEq)]
+//! struct Test {
+//!     // Since `Vec` stores its own length, this field is redundant
+//!     #[br(temp, big)]
+//!     len: u32,
+//!
+//!     #[br(count = len)]
+//!     data: Vec<u8>
+//! }
+//!
+//! assert_eq!(
+//!     Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap(),
+//!     Test { data: Vec::from(&b"ABCDE"[..]) }
+//! );
+//! ```
+//! </div>
+//!
+//! <div class="br">
+//!
+//! # Try
+//!
+//! The `try` directive allows parsing of a field to fail instead
+//! of returning an error:
+//!
+//! ```text
+//! #[br(try)]
+//! ```
+//!
+//! If the field cannot be parsed, the position of the reader will be restored
+//! and the value of the field will be set to the [`default`](core::default::Default) value for the type.
+//!
+//! ## Examples
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinRead)]
+//! struct MyType {
+//!     #[br(try)]
+//!     maybe_u32: Option<u32>
+//! }
+//!
+//! assert_eq!(Cursor::new(b"").read_be::<MyType>().unwrap().maybe_u32, None);
+//! ```
+//! </div>
 
 #![allow(unused_imports)]
 
