@@ -888,7 +888,7 @@
 //! # Count
 //!
 //! The `count` directive is a shorthand for passing a `count` argument to a
-//! parser like [`Vec`]:
+//! type that accepts it as a named argument:
 //!
 //! ```text
 //! #[br(count = $count:expr) or #[br(count($count:expr))]
@@ -899,6 +899,10 @@
 //! ```text
 //! #[br(args { count: $count as usize })]
 //! ```
+//!
+//! This directive is most commonly used with [`Vec`], which accepts `count`
+//! and `inner` arguments through its
+//! [associated `VecArgs` type](crate::VecArgs).
 //!
 //! When manually implementing
 //! [`BinRead::read_options`](crate::BinRead::read_options) or a
@@ -915,15 +919,39 @@
 //! ```
 //! # use binrw::{prelude::*, io::Cursor};
 //! #[derive(BinRead)]
-//! struct MyType {
+//! struct Collection {
 //!     size: u32,
 //!     #[br(count = size)]
 //!     data: Vec<u8>,
 //! }
 //!
 //! # assert_eq!(
-//! #    Cursor::new(b"\0\0\0\x04\x01\x02\x03\x04").read_be::<MyType>().unwrap().data,
+//! #    Cursor::new(b"\0\0\0\x04\x01\x02\x03\x04").read_be::<Collection>().unwrap().data,
 //! #    &[1u8, 2, 3, 4]
+//! # );
+//! ```
+//!
+//! ### Using `count` with a [`Vec`] with arguments for the inner type
+//!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//!
+//! #[derive(BinRead)]
+//! # #[derive(Debug, PartialEq)]
+//! #[br(import(version: i16))]
+//! struct Inner(#[br(if(version > 0))] u8);
+//!
+//! #[derive(BinRead)]
+//! struct Collection {
+//!     version: i16,
+//!     size: u32,
+//!     #[br(count = size, args { inner: (version,) })]
+//!     data: Vec<Inner>,
+//! }
+//!
+//! # assert_eq!(
+//! #    Cursor::new(b"\0\x01\0\0\0\x04\x01\x02\x03\x04").read_be::<Collection>().unwrap().data,
+//! #    &[Inner(1), Inner(2), Inner(3), Inner(4)]
 //! # );
 //! ```
 //! </div>
