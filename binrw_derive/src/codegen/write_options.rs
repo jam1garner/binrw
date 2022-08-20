@@ -1,4 +1,4 @@
-use crate::parser::{read::Input, Assert, AssertionError, Map};
+use crate::parser::{Assert, AssertionError, Input, Map};
 use proc_macro2::TokenStream;
 use quote::quote;
 

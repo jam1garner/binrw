@@ -1,9 +1,8 @@
-use super::super::{
-    read::FromInput,
+use super::{
+    attr_struct,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    ParseResult, SpannedValue, TrySet,
+    EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
 };
-use super::{EnumVariant, StructField, UnitEnumField};
 
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;

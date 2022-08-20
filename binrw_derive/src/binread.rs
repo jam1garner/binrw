@@ -1,6 +1,6 @@
 use crate::{
     codegen::generate_binread_impl,
-    parser::{read, read::is_binread_attr, read::is_binwrite_attr, ParseResult},
+    parser::{is_binread_attr, is_binwrite_attr, Input, ParseResult},
 };
 
 use quote::quote;
@@ -64,15 +64,15 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
 pub(crate) fn derive_from_input(
     derive_input: &DeriveInput,
     is_inside_derive: bool,
-) -> (ParseResult<read::Input>, proc_macro2::TokenStream) {
-    let binread_input = read::Input::from_input(derive_input, is_inside_derive, false);
+) -> (ParseResult<Input>, proc_macro2::TokenStream) {
+    let binread_input = Input::from_input(derive_input, is_inside_derive, false);
     let generated_impl = generate_binread_impl(derive_input, &binread_input);
     (binread_input, generated_impl)
 }
 
 #[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_field_attrs(
-    binread_input: &Option<read::Input>,
+    binread_input: &Option<Input>,
     variant_index: usize,
     fields: &mut syn::Fields,
 ) {

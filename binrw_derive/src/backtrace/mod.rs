@@ -7,7 +7,7 @@ use syn::spanned::Spanned;
 
 use syntax_highlighting::{conditional_bold, CondOwo, SyntaxInfo};
 
-use crate::parser::read::StructField;
+use crate::parser::StructField;
 
 mod syntax_highlighting;
 

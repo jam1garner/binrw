@@ -1,5 +1,5 @@
 use super::SpannedValue;
-use crate::parser::{read::attrs, KeywordToken};
+use crate::parser::{attrs, KeywordToken};
 use core::{convert::TryFrom, fmt::Display};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};

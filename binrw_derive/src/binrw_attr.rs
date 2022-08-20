@@ -4,8 +4,9 @@ use quote::quote;
 use syn::DeriveInput;
 
 use crate::codegen::{generate_binread_impl, generate_binwrite_impl};
-use crate::parser::read::StructField;
-use crate::parser::{read, read::is_binread_attr, read::is_binwrite_attr, ParseResult};
+use crate::parser::{
+    is_binread_attr, is_binwrite_attr, EnumVariant, Input, ParseResult, Struct, StructField,
+};
 
 #[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
@@ -14,8 +15,8 @@ fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
 
 #[cfg_attr(coverage_nightly, no_coverage)]
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
-    let mut binread_input = read::Input::from_input(&derive_input, false, false);
-    let mut binwrite_input = read::Input::from_input(&derive_input, false, true);
+    let mut binread_input = Input::from_input(&derive_input, false, false);
+    let mut binwrite_input = Input::from_input(&derive_input, false, true);
 
     apply_temp_crossover(&mut binread_input, &mut binwrite_input);
 
@@ -53,8 +54,8 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
 
 /// Check the fields of each input and copy temp state to the other input.
 fn apply_temp_crossover(
-    binread_input: &mut ParseResult<read::Input>,
-    binwrite_input: &mut ParseResult<read::Input>,
+    binread_input: &mut ParseResult<Input>,
+    binwrite_input: &mut ParseResult<Input>,
 ) {
     let (binread_input, binwrite_input) = match (binread_input, binwrite_input) {
         (ParseResult::Ok(binread), ParseResult::Ok(binwrite)) => (binread, binwrite),
@@ -63,10 +64,10 @@ fn apply_temp_crossover(
         _ => return,
     };
     match (binread_input, binwrite_input) {
-        (read::Input::Struct(binread_struct), read::Input::Struct(binwrite_struct)) => {
+        (Input::Struct(binread_struct), Input::Struct(binwrite_struct)) => {
             apply_temp_crossover_struct(binread_struct, binwrite_struct);
         }
-        (read::Input::Enum(binread_enum), read::Input::Enum(binwrite_enum)) => {
+        (Input::Enum(binread_enum), Input::Enum(binwrite_enum)) => {
             for (read_variant, write_variant) in binread_enum
                 .variants
                 .iter_mut()
@@ -74,31 +75,28 @@ fn apply_temp_crossover(
             {
                 match (read_variant, write_variant) {
                     (
-                        read::EnumVariant::Variant {
+                        EnumVariant::Variant {
                             options: read_struct,
                             ..
                         },
-                        read::EnumVariant::Variant {
+                        EnumVariant::Variant {
                             options: write_struct,
                             ..
                         },
                     ) => apply_temp_crossover_struct(read_struct, write_struct),
-                    (read::EnumVariant::Unit(_), read::EnumVariant::Unit(_)) => continue,
+                    (EnumVariant::Unit(_), EnumVariant::Unit(_)) => continue,
                     _ => unreachable!("read and write input should always be the same kind"),
                 };
             }
         }
         // These don't have temp fields.
-        (read::Input::UnitStruct(_), read::Input::UnitStruct(_))
-        | (read::Input::UnitOnlyEnum(_), read::Input::UnitOnlyEnum(_)) => {}
+        (Input::UnitStruct(_), Input::UnitStruct(_))
+        | (Input::UnitOnlyEnum(_), Input::UnitOnlyEnum(_)) => {}
         _ => unreachable!("read and write input should always be the same kind"),
     }
 }
 
-fn apply_temp_crossover_struct(
-    binread_struct: &mut read::Struct,
-    binwrite_struct: &mut read::Struct,
-) {
+fn apply_temp_crossover_struct(binread_struct: &mut Struct, binwrite_struct: &mut Struct) {
     // Index temporary fields
     let read_temporary = extract_temporary_field_names(&binread_struct.fields, false);
     let write_temporary = extract_temporary_field_names(&binwrite_struct.fields, true);
@@ -126,8 +124,8 @@ fn set_fields_temporary(fields: &mut [StructField], temporary_names: &HashSet<sy
 
 #[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_field_attrs(
-    binread_input: &Option<read::Input>,
-    binwrite_input: &Option<read::Input>,
+    binread_input: &Option<Input>,
+    binwrite_input: &Option<Input>,
     variant_index: usize,
     fields: &mut syn::Fields,
 ) {

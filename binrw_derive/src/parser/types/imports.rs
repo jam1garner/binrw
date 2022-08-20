@@ -1,6 +1,7 @@
 use crate::parser::{
+    attrs,
     meta_types::{Enclosure, IdentPatType, IdentTypeMaybeDefault},
-    read, KeywordToken, TrySet,
+    KeywordToken, TrySet,
 };
 
 use syn::{Ident, Type};
@@ -43,14 +44,14 @@ fn imports_from_attr(list: &Enclosure<IdentPatType, IdentTypeMaybeDefault>) -> I
     }
 }
 
-impl From<read::attrs::Import> for Imports {
-    fn from(value: read::attrs::Import) -> Self {
+impl From<attrs::Import> for Imports {
+    fn from(value: attrs::Import) -> Self {
         imports_from_attr(&value.list)
     }
 }
 
-impl From<read::attrs::ImportRaw> for Imports {
-    fn from(value: read::attrs::ImportRaw) -> Self {
+impl From<attrs::ImportRaw> for Imports {
+    fn from(value: attrs::ImportRaw) -> Self {
         Imports::Raw(value.value.ident, value.value.ty.into())
     }
 }

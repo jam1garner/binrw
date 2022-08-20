@@ -7,7 +7,7 @@ pub(crate) mod typed_builder;
 mod types;
 mod write_options;
 
-use crate::parser::{read, ParseResult};
+use crate::parser::{Input, ParseResult};
 use proc_macro2::TokenStream;
 use quote::quote;
 #[allow(clippy::wildcard_imports)]
@@ -15,7 +15,7 @@ use sanitization::*;
 
 pub(crate) fn generate_binread_impl(
     derive_input: &syn::DeriveInput,
-    binread_input: &ParseResult<read::Input>,
+    binread_input: &ParseResult<Input>,
 ) -> TokenStream {
     // Generate the argument type name and (if needed) definition
     let (arg_type, arg_type_declaration) = match binread_input {
@@ -62,7 +62,7 @@ pub(crate) fn generate_binread_impl(
 
 pub(crate) fn generate_binwrite_impl(
     derive_input: &syn::DeriveInput,
-    binwrite_input: &ParseResult<read::Input>,
+    binwrite_input: &ParseResult<Input>,
 ) -> TokenStream {
     // Generate the argument type name and (if needed) definition
     let (arg_type, arg_type_declaration) = match binwrite_input {

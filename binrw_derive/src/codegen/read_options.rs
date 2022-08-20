@@ -4,7 +4,7 @@ mod r#struct;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{read::Input, Assert, AssertionError, CondEndian, Endian, Magic, Map};
+use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::Ident;

@@ -1,8 +1,8 @@
 use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::read::{Input, Struct, StructField};
 use crate::parser::{ErrContext, Map, PassedArgs, ReadMode};
+use crate::parser::{Input, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;

@@ -1,4 +1,4 @@
-use crate::parser::{read, read::attrs, KeywordToken, TrySet};
+use crate::parser::{attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -43,8 +43,8 @@ impl From<attrs::TryMap> for Map {
     }
 }
 
-impl From<read::attrs::Repr> for Map {
-    fn from(repr: read::attrs::Repr) -> Self {
+impl From<attrs::Repr> for Map {
+    fn from(repr: attrs::Repr) -> Self {
         Self::Repr(repr.value.to_token_stream())
     }
 }

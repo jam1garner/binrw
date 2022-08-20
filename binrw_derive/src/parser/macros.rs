@@ -30,6 +30,8 @@ macro_rules! parse_any {
     };
 }
 
+pub(super) use parse_any;
+
 // The way this works sucks for a couple reasons which are not really worth
 // dealing with right now, but maybe are worth dealing with in the future:
 //
@@ -80,7 +82,7 @@ macro_rules! attr_struct {
             pub(crate) keyword_spans: Vec<proc_macro2::Span>,
         }
 
-        impl $crate::parser::read::FromAttrs<$attr_ty> for $ident {
+        impl $crate::parser::FromAttrs<$attr_ty> for $ident {
             fn try_set_attr(&mut self, attr: $attr_ty) -> ::syn::Result<()> {
                 use crate::parser::KeywordToken;
                 match attr {
@@ -94,12 +96,14 @@ macro_rules! attr_struct {
             }
         }
 
-        parse_any! {
+        $crate::parser::macros::parse_any! {
             $vis enum $attr_ty {
                 $($(
-                    $($field_attr_id($crate::parser::read::attrs::$field_attr_id),)+
+                    $($field_attr_id($crate::parser::attrs::$field_attr_id),)+
                 )?)+
             }
         }
     }
 }
+
+pub(super) use attr_struct;
