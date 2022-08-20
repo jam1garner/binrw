@@ -3,18 +3,18 @@ use quote::quote;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{write, CondEndian, Magic};
+use crate::parser::{read, CondEndian, Magic};
 
 pub(crate) struct PreludeGenerator<'a> {
     out: TokenStream,
-    input: Option<&'a write::Input>,
+    input: Option<&'a read::Input>,
     name: Option<&'a Ident>,
 }
 
 impl<'a> PreludeGenerator<'a> {
     pub(crate) fn new(
         out: TokenStream,
-        input: Option<&'a write::Input>,
+        input: Option<&'a read::Input>,
         name: Option<&'a Ident>,
     ) -> Self {
         Self { out, input, name }
@@ -23,7 +23,7 @@ impl<'a> PreludeGenerator<'a> {
     pub(crate) fn prefix_imports(mut self) -> Self {
         if let Some(imports) = self
             .input
-            .and_then(|input| input.imports().destructure(self.name))
+            .and_then(|input| input.imports().destructure(self.name, true))
         {
             let out = self.out;
             self.out = quote! {

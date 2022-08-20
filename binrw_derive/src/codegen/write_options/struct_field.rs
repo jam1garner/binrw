@@ -7,8 +7,8 @@ use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::write::StructField;
-use crate::parser::{CondEndian, Map, PassedArgs, TempableField, WriteMode};
+use crate::parser::read::StructField;
+use crate::parser::{CondEndian, Map, PassedArgs, ReadMode};
 
 pub(crate) fn write_field(field: &StructField, temp_legal: bool) -> TokenStream {
     StructFieldGenerator::new(field, temp_legal)
@@ -81,10 +81,10 @@ impl<'a> StructFieldGenerator<'a> {
             return self;
         }
 
-        let write_fn = match &self.field.write_mode {
-            WriteMode::Normal | WriteMode::Calc(_) => quote! { #WRITE_METHOD },
-            WriteMode::WriteWith(write_fn) => write_fn.clone(),
-            WriteMode::Ignore => unreachable!("Ignored fields are not written"),
+        let write_fn = match &self.field.read_mode {
+            ReadMode::Normal | ReadMode::Calc(_) => quote! { #WRITE_METHOD },
+            ReadMode::ParseWith(write_fn) => write_fn.clone(),
+            ReadMode::Default => unreachable!("Ignored fields are not written"),
         };
 
         let write_fn = if self.field.map.is_some() {
@@ -110,6 +110,7 @@ impl<'a> StructFieldGenerator<'a> {
     fn field_mapping(&self) -> Option<TokenStream> {
         match &self.field.map {
             Map::Try(map_fn) | Map::Map(map_fn) => Some(quote! { (#map_fn) }),
+            Map::Repr(ty) => Some(quote! { (<#ty as core::convert::TryFrom<_>>::try_from) }),
             Map::None => None,
         }
     }
@@ -139,41 +140,43 @@ impl<'a> StructFieldGenerator<'a> {
         let args = self.args_ident();
         let specify_endian = self.specify_endian();
 
-        if !self.temp_legal && self.field.is_temp_for_crossover() {
-            // Emit error regarding temp.
-            let ty = &self.field.ty;
-            self.out = quote_spanned! {self.field.field.span()=>
-                let #name: #ty = compile_error!(concat!(
-                    "The attribute `temp` removes this field, but this is not possible under",
-                    " the derive macro. Try using `#[binwrite]` instead of `#[derive(BinWrite)]`."
-                ));
-            };
-            return self;
-        }
+        // TODO: Errors are only supposed to be emitted by the parser
+        // if !self.temp_legal && self.field.is_temp_for_crossover() {
+        //     // Emit error regarding temp.
+        //     let ty = &self.field.ty;
+        //     self.out = quote_spanned! {self.field.field.span()=>
+        //         let #name: #ty = compile_error!(concat!(
+        //             "The attribute `temp` removes this field, but this is not possible under",
+        //             " the derive macro. Try using `#[binwrite]` instead of `#[derive(BinWrite)]`."
+        //         ));
+        //     };
+        //     return self;
+        // }
 
-        let initialize = match &self.field.write_mode {
-            WriteMode::Calc(expr) => Some({
+        let initialize = match &self.field.read_mode {
+            ReadMode::Calc(expr) => Some({
                 let ty = &self.field.ty;
                 quote! {
                     let #name: #ty = #expr;
                 }
             }),
             // If ignored, just skip this now
-            WriteMode::Ignore => return self,
+            ReadMode::Default => return self,
             // If field is temp, it should also be calc or ignore
             // Fail with a detailed error if it's not.
-            _ if self.field.binread_temp => {
-                let ty = &self.field.ty;
-                self.out = quote_spanned! {self.field.field.span()=>
-                    let #name: #ty = compile_error!(concat!(
-                        "The field ",
-                        stringify!(#name),
-                        " is temp but not provided a value in its BinWrite derivation.",
-                        " Try using `bw(calc = ...)` or `bw(ignore)`"
-                    ));
-                };
-                return self;
-            }
+            // TODO: Errors are only supposed to be emitted by the parser
+            // _ if self.field.binread_temp => {
+            //     let ty = &self.field.ty;
+            //     self.out = quote_spanned! {self.field.field.span()=>
+            //         let #name: #ty = compile_error!(concat!(
+            //             "The field ",
+            //             stringify!(#name),
+            //             " is temp but not provided a value in its BinWrite derivation.",
+            //             " Try using `bw(calc = ...)` or `bw(ignore)`"
+            //         ));
+            //     };
+            //     return self;
+            // }
             _ => None,
         };
 
@@ -315,13 +318,13 @@ impl<'a> StructFieldGenerator<'a> {
 
         let map_fn = self.map_fn_ident();
         let out = &self.out;
-        self.out = match self.field.write_mode {
-            WriteMode::Normal => match &self.field.map {
+        self.out = match self.field.read_mode {
+            ReadMode::Normal => match &self.field.map {
                 Map::Map(_) => quote! {
                     let #args = #WRITE_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
                 },
-                Map::Try(_) => quote! {
+                Map::Try(_) | Map::Repr(_) => quote! {
                     let #args = #WRITE_TRY_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
                 },
@@ -333,25 +336,26 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 }
             },
-            WriteMode::Calc(_) => {
-                if self.field.args.is_some() {
-                    let name = &self.field.ident;
-                    quote_spanned! { self.field.ident.span() =>
-                        compile_error!(concat!(
-                            "Cannot pass arguments to the field '",
-                            stringify!(#name),
-                            "'  as it is uses the 'calc' directive"
-                        ));
-                        #out
-                    }
-                } else {
-                    quote! {
-                        let #args = ();
-                        #out
-                    }
+            ReadMode::Calc(_) => {
+                // TODO: Errors are only supposed to be emitted by the parser
+                // if self.field.args.is_some() {
+                //     let name = &self.field.ident;
+                //     quote_spanned! { self.field.ident.span() =>
+                //         compile_error!(concat!(
+                //             "Cannot pass arguments to the field '",
+                //             stringify!(#name),
+                //             "'  as it is uses the 'calc' directive"
+                //         ));
+                //         #out
+                //     }
+                // } else {
+                quote! {
+                    let #args = ();
+                    #out
                 }
+                // }
             }
-            WriteMode::WriteWith(_) => {
+            ReadMode::ParseWith(_) => {
                 let ty = &self.field.ty;
                 quote! {
                     let #args = #WRITE_WITH_ARGS_TYPE_HINT::<#ty, W, _, _>(
@@ -360,7 +364,7 @@ impl<'a> StructFieldGenerator<'a> {
                     #out
                 }
             }
-            WriteMode::Ignore => unreachable!("Ignored fields are not written"),
+            ReadMode::Default => unreachable!("Ignored fields are not written"),
         };
 
         self

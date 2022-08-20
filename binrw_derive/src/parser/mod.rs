@@ -10,7 +10,7 @@ pub(crate) mod meta_types;
 mod types;
 
 pub(crate) mod read;
-pub(crate) mod write;
+// pub(crate) mod write;
 
 fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
     if let Some(all_errors) = all_errors {
@@ -20,25 +20,10 @@ fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
     }
 }
 
-pub(crate) trait TempableField {
-    // The identifier for this field.
-    fn ident(&self) -> &syn::Ident;
-
-    /// Returns true if this field is temporary and should be removed from the struct.
-    fn is_temp(&self) -> bool;
-
-    /// Returns true if this field is temporary and should be removed from the struct.
-    /// Ignores the value set by `set_crossover_temp`.
-    fn is_temp_for_crossover(&self) -> bool;
-
-    /// Set the crossover temporary field.
-    fn set_crossover_temp(&mut self, temp: bool);
-}
-
 pub(crate) trait FromField {
     type In;
 
-    fn from_field(field: &Self::In, index: usize) -> ParseResult<Self>
+    fn from_field(field: &Self::In, index: usize, for_write: bool) -> ParseResult<Self>
     where
         Self: Sized;
 }
@@ -179,7 +164,7 @@ mod tests {
     use super::*;
 
     fn try_input(input: TokenStream) -> ParseResult<read::Input> {
-        read::Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap(), false)
+        read::Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap(), false, false)
     }
 
     macro_rules! try_error (

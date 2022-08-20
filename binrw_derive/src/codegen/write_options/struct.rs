@@ -1,4 +1,4 @@
-use crate::parser::write::{Input, Struct};
+use crate::parser::read::{Input, Struct};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;

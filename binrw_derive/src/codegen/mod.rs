@@ -7,7 +7,7 @@ pub(crate) mod typed_builder;
 mod types;
 mod write_options;
 
-use crate::parser::{read, write, ParseResult};
+use crate::parser::{read, ParseResult};
 use proc_macro2::TokenStream;
 use quote::quote;
 #[allow(clippy::wildcard_imports)]
@@ -21,7 +21,7 @@ pub(crate) fn generate_binread_impl(
     let (arg_type, arg_type_declaration) = match binread_input {
         ParseResult::Ok(binread_input) | ParseResult::Partial(binread_input, _) => binread_input
             .imports()
-            .args_type(&derive_input.ident, &derive_input.vis),
+            .args_type(&derive_input.ident, &derive_input.vis, false),
         ParseResult::Err(_) => (quote! { () }, None),
     };
 
@@ -62,13 +62,13 @@ pub(crate) fn generate_binread_impl(
 
 pub(crate) fn generate_binwrite_impl(
     derive_input: &syn::DeriveInput,
-    binwrite_input: &ParseResult<write::Input>,
+    binwrite_input: &ParseResult<read::Input>,
 ) -> TokenStream {
     // Generate the argument type name and (if needed) definition
     let (arg_type, arg_type_declaration) = match binwrite_input {
         ParseResult::Ok(binwrite_input) | ParseResult::Partial(binwrite_input, _) => binwrite_input
             .imports()
-            .args_type(&derive_input.ident, &derive_input.vis),
+            .args_type(&derive_input.ident, &derive_input.vis, true),
         ParseResult::Err(_) => (quote! { () }, None),
     };
 

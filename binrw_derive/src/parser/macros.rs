@@ -58,12 +58,11 @@ macro_rules! parse_any {
 // So, you know… here be dragons, and I’m sorry in advance.
 macro_rules! attr_struct {
     (
-        @$mode:ident $mod:ident
-
         #[from($attr_ty:ident)]
         $(#[$meta:meta])*
         $vis:vis struct $ident:ident {
         $(
+            $(#[doc = $field_doc:literal])*
             $(#[cfg($cfg_ident:ident)])?
             $(#[from($($field_attr_id:ident),+)])?
             $field_vis:vis $field:ident : $field_ty:ty
@@ -73,16 +72,15 @@ macro_rules! attr_struct {
         $(#[$meta])*
         $vis struct $ident {
             $(
-                $(
-                    #[cfg($cfg_ident)]
-                 )?
+                $(#[cfg($cfg_ident)])?
+                $(#[doc = $field_doc])*
                 $field_vis $field: $field_ty,
             )+
 
             pub(crate) keyword_spans: Vec<proc_macro2::Span>,
         }
 
-        impl $crate::parser::$mode::FromAttrs<$attr_ty> for $ident {
+        impl $crate::parser::read::FromAttrs<$attr_ty> for $ident {
             fn try_set_attr(&mut self, attr: $attr_ty) -> ::syn::Result<()> {
                 use crate::parser::KeywordToken;
                 match attr {
@@ -96,20 +94,12 @@ macro_rules! attr_struct {
             }
         }
 
-        mod $mod {
-            #[allow(unused_imports)]
-            use super::*;
-            use $crate::parser::$mode::attrs;
-
-            parse_any! {
-                $vis enum $attr_ty {
-                    $($(
-                        $($field_attr_id(attrs::$field_attr_id),)+
-                    )?)+
-                }
+        parse_any! {
+            $vis enum $attr_ty {
+                $($(
+                    $($field_attr_id($crate::parser::read::attrs::$field_attr_id),)+
+                )?)+
             }
         }
-
-        $vis use $mod::$attr_ty;
     }
 }

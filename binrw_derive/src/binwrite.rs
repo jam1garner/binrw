@@ -1,6 +1,6 @@
 use crate::{
     codegen::generate_binwrite_impl,
-    parser::{read::is_binread_attr, write, write::is_binwrite_attr, ParseResult},
+    parser::{read, read::is_binread_attr, read::is_binwrite_attr, ParseResult},
 };
 
 use quote::quote;
@@ -26,10 +26,11 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
     let (binwrite_input, generated_impl) = derive_from_input(&derive_input, false);
     let binwrite_input = binwrite_input.ok();
 
+    // TODO: Huh?
     // only clean fields if binread isn't going to be applied after
     if has_attr(&derive_input, "binread") {
         return quote! {
-            compile_error!("`binread` and `binwrite` cannot be used togeter, try using `#[binrw]`");
+            compile_error!("`binread` and `binwrite` cannot be used together, try using `#[binrw]`");
 
             #derive_input
             #generated_impl
@@ -61,19 +62,18 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
     )
 }
 
-#[allow(unreachable_code)]
 pub(crate) fn derive_from_input(
     derive_input: &DeriveInput,
     is_inside_derive: bool,
-) -> (ParseResult<write::Input>, proc_macro2::TokenStream) {
-    let binwrite_input = write::Input::from_input(derive_input, is_inside_derive);
+) -> (ParseResult<read::Input>, proc_macro2::TokenStream) {
+    let binwrite_input = read::Input::from_input(derive_input, is_inside_derive, true);
     let generated_impl = generate_binwrite_impl(derive_input, &binwrite_input);
     (binwrite_input, generated_impl)
 }
 
 #[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_field_attrs(
-    binwrite_input: &Option<write::Input>,
+    binwrite_input: &Option<read::Input>,
     variant_index: usize,
     fields: &mut syn::Fields,
 ) {

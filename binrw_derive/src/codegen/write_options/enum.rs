@@ -1,4 +1,4 @@
-use crate::parser::write::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
+use crate::parser::read::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 

@@ -1,6 +1,6 @@
 use crate::{
     codegen::generate_binread_impl,
-    parser::{read, read::is_binread_attr, write::is_binwrite_attr, ParseResult},
+    parser::{read, read::is_binread_attr, read::is_binwrite_attr, ParseResult},
 };
 
 use quote::quote;
@@ -65,7 +65,7 @@ pub(crate) fn derive_from_input(
     derive_input: &DeriveInput,
     is_inside_derive: bool,
 ) -> (ParseResult<read::Input>, proc_macro2::TokenStream) {
-    let binread_input = read::Input::from_input(derive_input, is_inside_derive);
+    let binread_input = read::Input::from_input(derive_input, is_inside_derive, false);
     let generated_impl = generate_binread_impl(derive_input, &binread_input);
     (binread_input, generated_impl)
 }

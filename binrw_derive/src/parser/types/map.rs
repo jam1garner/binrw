@@ -1,4 +1,4 @@
-use crate::parser::{read, read::attrs, write, KeywordToken, TrySet};
+use crate::parser::{read, read::attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -8,6 +8,7 @@ pub(crate) enum Map {
     None,
     Map(TokenStream),
     Try(TokenStream),
+    Repr(TokenStream),
 }
 
 impl Map {
@@ -20,7 +21,7 @@ impl Map {
     }
 
     pub(crate) fn is_try(&self) -> bool {
-        matches!(self, Self::Try(_))
+        matches!(self, Self::Try(_) | Self::Repr(_))
     }
 }
 
@@ -44,15 +45,7 @@ impl From<attrs::TryMap> for Map {
 
 impl From<read::attrs::Repr> for Map {
     fn from(repr: read::attrs::Repr) -> Self {
-        let ty = repr.value.to_token_stream();
-        Self::Try(quote! { <#ty as core::convert::TryInto<_>>::try_into })
-    }
-}
-
-impl From<write::attrs::Repr> for Map {
-    fn from(repr: write::attrs::Repr) -> Self {
-        let ty = repr.value.to_token_stream();
-        Self::Try(quote! { <#ty as core::convert::TryFrom<_>>::try_from })
+        Self::Repr(repr.value.to_token_stream())
     }
 }
 

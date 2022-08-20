@@ -40,6 +40,12 @@ impl From<attrs::ParseWith> for ReadMode {
     }
 }
 
+impl From<attrs::WriteWith> for ReadMode {
+    fn from(write_with: attrs::WriteWith) -> Self {
+        Self::ParseWith(write_with.into_token_stream())
+    }
+}
+
 impl<T: Into<ReadMode> + KeywordToken> TrySet<ReadMode> for T {
     fn try_set(self, to: &mut ReadMode) -> syn::Result<()> {
         if matches!(*to, ReadMode::Normal) {

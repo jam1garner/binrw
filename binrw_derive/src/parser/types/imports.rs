@@ -1,6 +1,6 @@
 use crate::parser::{
     meta_types::{Enclosure, IdentPatType, IdentTypeMaybeDefault},
-    read, write, KeywordToken, TrySet,
+    read, KeywordToken, TrySet,
 };
 
 use syn::{Ident, Type};
@@ -10,7 +10,7 @@ pub(crate) enum Imports {
     None,
     Raw(Ident, Box<Type>),
     List(Vec<Ident>, Vec<Type>),
-    Named(Vec<IdentTypeMaybeDefault>, bool),
+    Named(Vec<IdentTypeMaybeDefault>),
 }
 
 impl Default for Imports {
@@ -19,10 +19,7 @@ impl Default for Imports {
     }
 }
 
-fn imports_from_attr(
-    list: &Enclosure<IdentPatType, IdentTypeMaybeDefault>,
-    is_write: bool,
-) -> Imports {
+fn imports_from_attr(list: &Enclosure<IdentPatType, IdentTypeMaybeDefault>) -> Imports {
     match list {
         Enclosure::Paren { fields, .. } => {
             if fields.is_empty() {
@@ -40,7 +37,7 @@ fn imports_from_attr(
             if fields.is_empty() {
                 Imports::None
             } else {
-                Imports::Named(fields.iter().cloned().collect(), is_write)
+                Imports::Named(fields.iter().cloned().collect())
             }
         }
     }
@@ -48,13 +45,7 @@ fn imports_from_attr(
 
 impl From<read::attrs::Import> for Imports {
     fn from(value: read::attrs::Import) -> Self {
-        imports_from_attr(&value.0.list, false)
-    }
-}
-
-impl From<write::attrs::Import> for Imports {
-    fn from(value: write::attrs::Import) -> Self {
-        imports_from_attr(&value.0.list, true)
+        imports_from_attr(&value.list)
     }
 }
 

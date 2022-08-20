@@ -8,7 +8,11 @@ use syn::Ident;
 use crate::parser::Imports;
 
 impl Imports {
-    pub fn destructure(&self, type_name: Option<&Ident>) -> Option<TokenStream> {
+    pub(crate) fn destructure(
+        &self,
+        type_name: Option<&Ident>,
+        is_write: bool,
+    ) -> Option<TokenStream> {
         match self {
             Imports::None => None,
             Imports::List(idents, _) => {
@@ -24,8 +28,8 @@ impl Imports {
             Imports::Raw(ident, _) => Some(quote! {
                 mut #ident
             }),
-            Imports::Named(args, is_write) => type_name.map(|type_name| {
-                let args_ty_name = arg_type_name(type_name, *is_write);
+            Imports::Named(args) => type_name.map(|type_name| {
+                let args_ty_name = arg_type_name(type_name, is_write);
                 let idents = args.iter().map(|x| &x.ident);
                 quote! {
                     #args_ty_name {
@@ -36,10 +40,11 @@ impl Imports {
         }
     }
 
-    pub fn args_type(
+    pub(crate) fn args_type(
         &self,
         type_name: &Ident,
         ty_vis: &syn::Visibility,
+        is_write: bool,
     ) -> (TokenStream, Option<TokenStream>) {
         match self {
             Imports::None => (quote! { () }, None),
@@ -53,9 +58,7 @@ impl Imports {
                 )
             }
             Imports::Raw(_, ty) => (ty.to_token_stream(), None),
-            Imports::Named(args, is_write) => {
-                generate_named_arg_type(type_name, ty_vis, args, *is_write)
-            }
+            Imports::Named(args) => generate_named_arg_type(type_name, ty_vis, args, is_write),
         }
     }
 }
