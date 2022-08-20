@@ -22,14 +22,6 @@ impl From<&Kind> for TokenStream {
     }
 }
 
-impl Display for Kind {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Kind::ByteStr(ty) | Kind::Numeric(ty) => Display::fmt(ty, f),
-        }
-    }
-}
-
 pub(crate) type Magic = Option<SpannedValue<Inner>>;
 
 #[derive(Clone, Debug)]
