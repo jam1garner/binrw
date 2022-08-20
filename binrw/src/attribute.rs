@@ -91,7 +91,8 @@
 //! | rw  | [`little`](#byte-order) | all except unit variant | Sets the byte order to little-endian.
 //! | rw  | [`magic`](#magic) | all | <span class="br">Matches</span><span class="bw">Writes</span> a magic number.
 //! | rw  | [`map`](#map) | all except unit variant | Maps an object or value to a new value.
-//! | r   | [`offset`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr).
+//! | r   | [`offset`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr) while parsing.
+//! | r   | [`offset_after`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr) after parsing.
 //! | rw  | [`pad_after`](#padding-and-alignment) | field | Skips N bytes after <span class="br">reading</span><span class="bw">writing</span> a field.
 //! | rw  | [`pad_before`](#padding-and-alignment) | field | Skips N bytes before <span class="br">reading</span><span class="bw">writing</span> a field.
 //! | rw  | [`pad_size_to`](#padding-and-alignment) | field | Ensures the <span class="br">reader</span><span class="bw">writer</span> is always advanced at least N bytes.
