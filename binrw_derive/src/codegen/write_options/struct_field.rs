@@ -7,8 +7,7 @@ use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::read::StructField;
-use crate::parser::{CondEndian, Map, PassedArgs, ReadMode};
+use crate::parser::{CondEndian, Map, PassedArgs, ReadMode, StructField};
 
 pub(crate) fn write_field(field: &StructField, temp_legal: bool) -> TokenStream {
     StructFieldGenerator::new(field, temp_legal)

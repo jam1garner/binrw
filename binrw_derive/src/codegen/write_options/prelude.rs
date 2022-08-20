@@ -3,20 +3,16 @@ use quote::quote;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{read, CondEndian, Magic};
+use crate::parser::{CondEndian, Input, Magic};
 
 pub(crate) struct PreludeGenerator<'a> {
     out: TokenStream,
-    input: Option<&'a read::Input>,
+    input: Option<&'a Input>,
     name: Option<&'a Ident>,
 }
 
 impl<'a> PreludeGenerator<'a> {
-    pub(crate) fn new(
-        out: TokenStream,
-        input: Option<&'a read::Input>,
-        name: Option<&'a Ident>,
-    ) -> Self {
+    pub(crate) fn new(out: TokenStream, input: Option<&'a Input>, name: Option<&'a Ident>) -> Self {
         Self { out, input, name }
     }
 

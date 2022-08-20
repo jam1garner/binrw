@@ -1,7 +1,7 @@
-use super::super::{
-    read::{FromAttrs, FromInput},
+use super::{
+    attr_struct,
     types::{Assert, CondEndian, Condition, ErrContext, Magic, Map, PassedArgs, ReadMode},
-    FromField, ParseResult, SpannedValue, TrySet,
+    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, TrySet,
 };
 
 use super::Struct;

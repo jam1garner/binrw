@@ -13,8 +13,8 @@ use syn::{
 };
 
 use crate::parser::{
-    meta_types::FieldValue, read::StructField, AssertionError, CondEndian, Condition, ErrContext,
-    Map, PassedArgs, ReadMode,
+    meta_types::FieldValue, AssertionError, CondEndian, Condition, ErrContext, Map, PassedArgs,
+    ReadMode, StructField,
 };
 
 #[derive(Default)]

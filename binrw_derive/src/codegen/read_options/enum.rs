@@ -5,8 +5,7 @@ use super::{
 };
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::read::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
-use crate::parser::EnumErrorMode;
+use crate::parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
 
 use proc_macro2::TokenStream;
 use quote::quote;

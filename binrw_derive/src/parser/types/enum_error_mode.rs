@@ -1,4 +1,4 @@
-use crate::parser::{read::attrs, KeywordToken, TrySet};
+use crate::parser::{attrs, KeywordToken, TrySet};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum EnumErrorMode {
