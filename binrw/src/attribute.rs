@@ -74,7 +74,7 @@
 //! | rw  | [`align_after`](#padding-and-alignment) | field | Aligns the <span class="br">reader</span><span class="bw">writer</span> to the Nth byte after a field.
 //! | rw  | [`align_before`](#padding-and-alignment) | field | Aligns the <span class="br">reader</span><span class="bw">writer</span> to the Nth byte before a field.
 //! | rw  | [`args`](#arguments) | struct field, data variant | Passes arguments to another binrw object.
-//! | rw  | [`args_raw`](#arguments) | struct field, data variant | Like `args`, but specifies a tuple containing the arguments.
+//! | rw  | [`args_raw`](#arguments) | struct field, data variant | Like `args`, but specifies a single variable containing the arguments.
 //! | rw  | [`assert`](#assert) | struct, field, non-unit enum, data variant | Asserts that a condition is true. Can be used multiple times.
 //! | rw  | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
 //! | rw  | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.
@@ -85,7 +85,7 @@
 //! | r   | [`if`](#conditional-values) | field | Reads data only if a condition is true.
 //! | rw  | [`ignore`](#ignore) | field | <span class="brw">For `BinRead`, uses the [`default`](core::default::Default) value for a field instead of reading data. For `BinWrite`, skips writing the field.</span><span class="br">Uses the [`default`](core::default::Default) value for a field instead of reading data.</span><span class="bw">Skips writing the field.</span>
 //! | rw  | [`import`](#arguments) | struct, non-unit enum, unit-like enum | Defines extra arguments for a struct or enum.
-//! | rw  | [`import_tuple`](#arguments) | struct, non-unit enum, unit-like enum | Like `import`, but receives the arguments as a tuple.
+//! | rw  | [`import_raw`](#arguments) | struct, non-unit enum, unit-like enum | Like `import`, but receives the arguments as a single variable.
 //! | rw  | [`is_big`](#byte-order) | field | Conditionally sets the byte order to big-endian.
 //! | rw  | [`is_little`](#byte-order) | field | Conditionally set the byte order to little-endian.
 //! | rw  | [`little`](#byte-order) | all except unit variant | Sets the byte order to little-endian.
