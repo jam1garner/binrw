@@ -1,4 +1,4 @@
-use crate::parser::{write::Input, Assert, AssertionError, Map};
+use crate::parser::{read::Input, Assert, AssertionError, Map};
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -22,11 +22,16 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
             Input::Enum(e) => generate_data_enum(input, name, e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
-        Map::Try(map) | Map::Map(map) => {
-            let map_try = matches!(input.map(), Map::Try(_)).then(|| {
+        Map::Try(map) | Map::Map(map) | Map::Repr(map) => {
+            let map_try = input.map().is_try().then(|| {
                 let map_err = get_map_err(POS);
                 quote! { #map_err? }
             });
+            let map = if matches!(input.map(), Map::Repr(_)) {
+                quote! { <#map as core::convert::TryFrom<_>>::try_from }
+            } else {
+                map.clone()
+            };
             let write_data = quote! {
                 #WRITE_METHOD(
                     &((#map)(self) #map_try),

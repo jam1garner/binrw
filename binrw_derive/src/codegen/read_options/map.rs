@@ -91,13 +91,14 @@ fn verify_map(input: &Input, span: Span) -> Option<TokenStream> {
         _ => false,
     };
 
-    if has_field_attr {
-        Some(quote_spanned! {
-            span => compile_error!("Field-level attributes cannot be used with top-level map");
-        })
-    } else {
-        None
-    }
+    // TODO: Errors are only supposed to be emitted by the parser
+    // if has_field_attr {
+    //     Some(quote_spanned! {
+    //         span => compile_error!("Field-level attributes cannot be used with top-level map");
+    //     })
+    // } else {
+    None
+    // }
 }
 
 fn destructure_ref(input: &Input) -> Option<TokenStream> {

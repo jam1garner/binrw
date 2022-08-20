@@ -1,32 +1,40 @@
 use super::super::{
     read::FromInput,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    ParseResult, SpannedValue, TempableField, TrySet,
+    ParseResult, SpannedValue, TrySet,
 };
 use super::{EnumVariant, StructField, UnitEnumField};
 
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
+/// The parsed representation of binrw attributes on a data structure.
 pub(crate) enum Input {
+    /// A normal or tuple struct.
     Struct(Struct),
+    /// A unit struct.
     UnitStruct(Struct),
+    /// An enum with at least one data variant.
     Enum(Enum),
+    /// An enum containing only unit variants.
     UnitOnlyEnum(UnitOnlyEnum),
 }
 
 impl Input {
+    /// Tries parsing the binrw attributes on a data structure.
     pub(crate) fn from_input(
         input: &syn::DeriveInput,
         is_inside_derive: bool,
+        for_write: bool,
     ) -> ParseResult<Self> {
         let attrs = &input.attrs;
         let ident = Some(&input.ident);
         match &input.data {
             syn::Data::Struct(st) => {
-                let read_struct =
-                    Struct::from_input(ident, attrs, st.fields.iter()).map(|mut read_struct| {
+                let read_struct = Struct::from_input(ident, attrs, st.fields.iter(), for_write)
+                    .map(|mut read_struct| {
                         read_struct.temp_legal = !is_inside_derive;
+                        read_struct.for_write = for_write;
                         read_struct
                     });
 
@@ -47,17 +55,20 @@ impl Input {
                     .iter()
                     .all(|v| matches!(v.fields, syn::Fields::Unit))
                 {
-                    UnitOnlyEnum::from_input(ident, attrs, variants.iter()).map(Self::UnitOnlyEnum)
+                    UnitOnlyEnum::from_input(ident, attrs, variants.iter(), for_write)
+                        .map(Self::UnitOnlyEnum)
                 } else {
-                    let read_enum =
-                        Enum::from_input(ident, attrs, variants.iter()).map(|mut read_enum| {
+                    let read_enum = Enum::from_input(ident, attrs, variants.iter(), for_write).map(
+                        |mut read_enum| {
                             for x in &mut read_enum.variants {
                                 if let EnumVariant::Variant { options, .. } = x {
                                     options.temp_legal = !is_inside_derive;
+                                    options.for_write = for_write;
                                 }
                             }
                             read_enum
-                        });
+                        },
+                    );
                     read_enum.map(Self::Enum)
                 }
             }
@@ -85,13 +96,16 @@ impl Input {
 
     pub(crate) fn is_temp_field(&self, variant_index: usize, index: usize) -> bool {
         match self {
-            Input::Struct(s) => s.fields.get(index).map_or(false, TempableField::is_temp),
+            Input::Struct(s) => s
+                .fields
+                .get(index)
+                .map_or(false, |field| field.is_temp(s.for_write)),
             Input::Enum(e) => e.variants.get(variant_index).map_or(false, |variant| {
                 if let EnumVariant::Variant { options, .. } = variant {
                     options
                         .fields
                         .get(index)
-                        .map_or(false, TempableField::is_temp)
+                        .map_or(false, |field| field.is_temp(options.for_write))
                 } else {
                     false
                 }
@@ -134,12 +148,9 @@ impl Input {
 }
 
 attr_struct! {
-    @read struct_struct
-
     #[from(StructAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Struct {
-        pub(crate) temp_legal: bool,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(Map, TryMap, Repr)]
@@ -153,6 +164,9 @@ attr_struct! {
         #[from(PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
         pub(crate) fields: Vec<StructField>,
+        /// If `true`, the struct itself can be modified.
+        pub(crate) temp_legal: bool,
+        pub(crate) for_write: bool,
     }
 }
 
@@ -166,7 +180,7 @@ impl Struct {
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
         let temp_legal = self.temp_legal;
         self.fields.iter().filter_map(move |field| {
-            if temp_legal && field.is_temp() {
+            if temp_legal && field.is_temp(self.for_write) {
                 None
             } else {
                 Some(&field.ident)
@@ -181,6 +195,20 @@ impl Struct {
             && matches!(self.imports, Imports::None)
             && self.fields.iter().all(StructField::has_no_attrs)
     }
+
+    pub(crate) fn fields_pattern(&self) -> TokenStream {
+        let fields = self.iter_permanent_idents();
+
+        if self.is_tuple() {
+            quote::quote! {
+                (#(ref #fields),*)
+            }
+        } else {
+            quote::quote! {
+                { #(ref #fields),* }
+            }
+        }
+    }
 }
 
 impl FromInput<StructAttr> for Struct {
@@ -193,8 +221,6 @@ impl FromInput<StructAttr> for Struct {
 }
 
 attr_struct! {
-    @read enum_struct
-
     #[from(EnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
@@ -236,8 +262,6 @@ impl FromInput<EnumAttr> for Enum {
 }
 
 attr_struct! {
-    @read unit_only_enum
-
     #[from(UnitEnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct UnitOnlyEnum {

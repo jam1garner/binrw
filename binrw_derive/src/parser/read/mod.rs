@@ -12,21 +12,31 @@ pub(crate) fn is_binread_attr(attr: &syn::Attribute) -> bool {
     attr.path.is_ident("br") || attr.path.is_ident("brw") || attr.path.is_ident("binread")
 }
 
+pub(crate) fn is_binwrite_attr(attr: &syn::Attribute) -> bool {
+    attr.path.is_ident("bw") || attr.path.is_ident("brw") || attr.path.is_ident("binwrite")
+}
+
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
-    fn try_from_attrs(attrs: &[syn::Attribute]) -> ParseResult<Self>
+    fn try_from_attrs(attrs: &[syn::Attribute], for_write: bool) -> ParseResult<Self>
     where
         Self: Default + Sized,
     {
-        Self::set_from_attrs(Self::default(), attrs)
+        Self::set_from_attrs(Self::default(), attrs, for_write)
     }
 
-    fn set_from_attrs(mut self, attrs: &[syn::Attribute]) -> ParseResult<Self>
+    fn set_from_attrs(mut self, attrs: &[syn::Attribute], for_write: bool) -> ParseResult<Self>
     where
         Self: Sized,
     {
         let attrs = attrs
             .iter()
-            .filter(|attr| is_binread_attr(attr))
+            .filter(|attr| {
+                if for_write {
+                    is_binwrite_attr(attr)
+                } else {
+                    is_binread_attr(attr)
+                }
+            })
             .flat_map(
                 |attr| match syn::parse2::<MetaAttrList<Attr>>(attr.tokens.clone()) {
                     Ok(list) => list.into_iter().map(Ok).collect::<Vec<_>>().into_iter(),
@@ -46,8 +56,6 @@ pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
             }
         }
 
-        // https://github.com/rust-lang/rust-clippy/issues/5822
-        #[allow(clippy::option_if_let_else)]
         if let Some(error) = all_errors {
             ParseResult::Partial(self, error)
         } else {
@@ -65,18 +73,20 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
         ident: Option<&syn::Ident>,
         attrs: &'input [syn::Attribute],
         fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>,
+        for_write: bool,
     ) -> ParseResult<Self>
     where
         Self: Sized + Default,
     {
-        let (mut this, mut all_errors) = Self::try_from_attrs(attrs).unwrap_tuple();
+        let (mut this, mut all_errors) = Self::try_from_attrs(attrs, for_write).unwrap_tuple();
 
         if let Some(ident) = ident {
             this.set_ident(ident);
         }
 
         for (index, field) in fields.enumerate() {
-            let (field, mut field_error) = Self::Field::from_field(field, index).unwrap_tuple();
+            let (field, mut field_error) =
+                Self::Field::from_field(field, index, for_write).unwrap_tuple();
             if field_error.is_none() {
                 field_error = this.push_field(field).err();
             }

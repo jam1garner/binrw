@@ -1,4 +1,4 @@
-use crate::parser::{write::attrs, KeywordToken, TrySet};
+use crate::parser::{read::attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 

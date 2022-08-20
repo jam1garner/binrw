@@ -23,6 +23,11 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
         },
         Map::Try(map) => map::generate_try_map(input, name, map),
         Map::Map(map) => map::generate_map(input, name, map),
+        Map::Repr(ty) => map::generate_try_map(
+            input,
+            name,
+            &quote! { <#ty as core::convert::TryInto<_>>::try_into },
+        ),
     };
 
     quote! {
@@ -54,7 +59,7 @@ impl<'input> PreludeGenerator<'input> {
     }
 
     fn add_imports(mut self, name: Option<&Ident>) -> Self {
-        if let Some(imports) = self.input.imports().destructure(name) {
+        if let Some(imports) = self.input.imports().destructure(name, false) {
             let head = self.out;
             self.out = quote! {
                 #head

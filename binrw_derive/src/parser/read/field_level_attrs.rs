@@ -6,13 +6,10 @@ use super::super::{
 
 use super::Struct;
 
-use crate::parser::TempableField;
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
 attr_struct! {
-    @read struct_field
-
     #[from(StructFieldAttr)]
     #[derive(Clone, Debug)]
     pub(crate) struct StructField {
@@ -28,7 +25,7 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(Args, ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(Calc, Default, Ignore, ParseWith)]
+        #[from(Calc, Default, Ignore, ParseWith, WriteWith)]
         pub(crate) read_mode: ReadMode,
         #[from(Count)]
         pub(crate) count: Option<TokenStream>,
@@ -84,6 +81,20 @@ impl StructField {
         matches!(self.read_mode, ReadMode::Calc(_) | ReadMode::Default)
     }
 
+    pub(crate) fn is_temp(&self, for_write: bool) -> bool {
+        for_write && matches!(self.read_mode, ReadMode::Calc(_)) || self.temp.is_some()
+    }
+
+    /// Returns true if the field is actually written.
+    pub(crate) fn is_written(&self) -> bool {
+        // Non-calc temp fields are not written
+        if self.is_temp(true) && !matches!(self.read_mode, ReadMode::Calc(_)) {
+            return false;
+        }
+        // Ignored fields are not written
+        !matches!(self.read_mode, ReadMode::Default)
+    }
+
     /// Returns true if the field needs `ReadOptions` to be parsed.
     pub(crate) fn needs_options(&self) -> bool {
         !self.generated_value() || self.magic.is_some()
@@ -124,6 +135,10 @@ impl StructField {
             )
     }
 
+    pub(crate) fn force_temp(&mut self) {
+        self.temp = Some(());
+    }
+
     fn validate(&self) -> syn::Result<()> {
         if let (Some(offset_after), Some(deref_now)) = (&self.offset_after, &self.deref_now) {
             let offset_after_span = offset_after.span();
@@ -147,28 +162,10 @@ impl StructField {
     }
 }
 
-impl TempableField for StructField {
-    fn ident(&self) -> &syn::Ident {
-        &self.ident
-    }
-
-    fn is_temp(&self) -> bool {
-        self.is_temp_for_crossover()
-    }
-
-    fn is_temp_for_crossover(&self) -> bool {
-        self.temp.is_some()
-    }
-
-    fn set_crossover_temp(&mut self, temp: bool) {
-        self.temp = temp.then_some(());
-    }
-}
-
 impl FromField for StructField {
     type In = syn::Field;
 
-    fn from_field(field: &Self::In, index: usize) -> ParseResult<Self> {
+    fn from_field(field: &Self::In, index: usize, for_write: bool) -> ParseResult<Self> {
         let result = Self::set_from_attrs(
             Self {
                 ident: field
@@ -202,6 +199,7 @@ impl FromField for StructField {
                 err_context: <_>::default(),
             },
             &field.attrs,
+            for_write,
         );
 
         match result {
@@ -224,8 +222,6 @@ impl FromField for StructField {
 }
 
 attr_struct! {
-    @read unit_enum_field
-
     #[from(UnitEnumFieldAttr)]
     #[derive(Clone, Debug)]
     pub(crate) struct UnitEnumField {
@@ -250,7 +246,7 @@ impl From<UnitEnumField> for Struct {
 impl FromField for UnitEnumField {
     type In = syn::Variant;
 
-    fn from_field(field: &Self::In, _: usize) -> ParseResult<Self> {
+    fn from_field(field: &Self::In, _: usize, for_write: bool) -> ParseResult<Self> {
         Self::set_from_attrs(
             Self {
                 ident: field.ident.clone(),
@@ -259,6 +255,7 @@ impl FromField for UnitEnumField {
                 keyword_spans: <_>::default(),
             },
             &field.attrs,
+            for_write,
         )
     }
 }
@@ -300,17 +297,19 @@ impl From<EnumVariant> for Struct {
 impl FromField for EnumVariant {
     type In = syn::Variant;
 
-    fn from_field(variant: &Self::In, index: usize) -> ParseResult<Self> {
+    fn from_field(variant: &Self::In, index: usize, for_write: bool) -> ParseResult<Self> {
         match variant.fields {
             syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
-                Struct::from_input(None, &variant.attrs, variant.fields.iter()).map(|options| {
-                    Self::Variant {
+                Struct::from_input(None, &variant.attrs, variant.fields.iter(), for_write).map(
+                    |options| Self::Variant {
                         ident: variant.ident.clone(),
                         options: Box::new(options),
-                    }
-                })
+                    },
+                )
             }
-            syn::Fields::Unit => UnitEnumField::from_field(variant, index).map(Self::Unit),
+            syn::Fields::Unit => {
+                UnitEnumField::from_field(variant, index, for_write).map(Self::Unit)
+            }
         }
     }
 }
