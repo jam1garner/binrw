@@ -1,7 +1,7 @@
 use super::{
     attr_struct,
     types::{Assert, CondEndian, Condition, ErrContext, Magic, Map, PassedArgs, ReadMode},
-    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, TrySet,
+    FromAttrs, FromField, FromInput, Options, ParseResult, SpannedValue, TrySet,
 };
 
 use super::Struct;
@@ -16,6 +16,7 @@ attr_struct! {
         pub(crate) ident: syn::Ident,
         pub(crate) generated_ident: bool,
         pub(crate) ty: syn::Type,
+        #[cfg(all(nightly, not(coverage)))]
         pub(crate) field: syn::Field,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
@@ -82,16 +83,11 @@ impl StructField {
     }
 
     pub(crate) fn is_temp(&self, for_write: bool) -> bool {
-        for_write && matches!(self.read_mode, ReadMode::Calc(_)) || self.temp.is_some()
+        (for_write && matches!(self.read_mode, ReadMode::Calc(_))) || self.temp.is_some()
     }
 
     /// Returns true if the field is actually written.
     pub(crate) fn is_written(&self) -> bool {
-        // Non-calc temp fields are not written
-        if self.is_temp(true) && !matches!(self.read_mode, ReadMode::Calc(_)) {
-            return false;
-        }
-        // Ignored fields are not written
         !matches!(self.read_mode, ReadMode::Default)
     }
 
@@ -106,7 +102,7 @@ impl StructField {
             ($($field:ident),*) => {
                 $(
                     matches!(self.$field, None) &&
-                 )*
+                )*
 
                 true
             }
@@ -139,7 +135,7 @@ impl StructField {
         self.temp = Some(());
     }
 
-    fn validate(&self) -> syn::Result<()> {
+    fn validate(&self, _: Options) -> syn::Result<()> {
         if let (Some(offset_after), Some(deref_now)) = (&self.offset_after, &self.deref_now) {
             let offset_after_span = offset_after.span();
             let span = offset_after_span
@@ -156,6 +152,12 @@ impl StructField {
                 span,
                 "`try` is incompatible with `default` and `calc`",
             ))
+        } else if matches!(self.read_mode, ReadMode::Calc(_)) && self.args.is_some() {
+            // TODO: Correct span (args + calc keywords)
+            Err(syn::Error::new(
+                self.ident.span(),
+                "`args` is incompatible with `calc`",
+            ))
         } else {
             Ok(())
         }
@@ -165,7 +167,7 @@ impl StructField {
 impl FromField for StructField {
     type In = syn::Field;
 
-    fn from_field(field: &Self::In, index: usize, for_write: bool) -> ParseResult<Self> {
+    fn from_field(field: &Self::In, index: usize, options: Options) -> ParseResult<Self> {
         let result = Self::set_from_attrs(
             Self {
                 ident: field
@@ -174,6 +176,7 @@ impl FromField for StructField {
                     .unwrap_or_else(|| quote::format_ident!("self_{}", index)),
                 generated_ident: field.ident.is_none(),
                 ty: field.ty.clone(),
+                #[cfg(all(nightly, not(coverage)))]
                 field: field.clone(),
                 endian: <_>::default(),
                 map: <_>::default(),
@@ -199,19 +202,19 @@ impl FromField for StructField {
                 err_context: <_>::default(),
             },
             &field.attrs,
-            for_write,
+            options,
         );
 
         match result {
             ParseResult::Ok(this) => {
-                if let Err(error) = this.validate() {
+                if let Err(error) = this.validate(options) {
                     ParseResult::Partial(this, error)
                 } else {
                     ParseResult::Ok(this)
                 }
             }
             ParseResult::Partial(this, mut parse_error) => {
-                if let Err(error) = this.validate() {
+                if let Err(error) = this.validate(options) {
                     parse_error.combine(error);
                 }
                 ParseResult::Partial(this, parse_error)
@@ -246,7 +249,7 @@ impl From<UnitEnumField> for Struct {
 impl FromField for UnitEnumField {
     type In = syn::Variant;
 
-    fn from_field(field: &Self::In, _: usize, for_write: bool) -> ParseResult<Self> {
+    fn from_field(field: &Self::In, _: usize, options: Options) -> ParseResult<Self> {
         Self::set_from_attrs(
             Self {
                 ident: field.ident.clone(),
@@ -255,7 +258,7 @@ impl FromField for UnitEnumField {
                 keyword_spans: <_>::default(),
             },
             &field.attrs,
-            for_write,
+            options,
         )
     }
 }
@@ -297,19 +300,17 @@ impl From<EnumVariant> for Struct {
 impl FromField for EnumVariant {
     type In = syn::Variant;
 
-    fn from_field(variant: &Self::In, index: usize, for_write: bool) -> ParseResult<Self> {
+    fn from_field(variant: &Self::In, index: usize, options: Options) -> ParseResult<Self> {
         match variant.fields {
             syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
-                Struct::from_input(None, &variant.attrs, variant.fields.iter(), for_write).map(
-                    |options| Self::Variant {
+                Struct::from_input(&variant.attrs, variant.fields.iter(), options).map(|options| {
+                    Self::Variant {
                         ident: variant.ident.clone(),
                         options: Box::new(options),
-                    },
-                )
+                    }
+                })
             }
-            syn::Fields::Unit => {
-                UnitEnumField::from_field(variant, index, for_write).map(Self::Unit)
-            }
+            syn::Fields::Unit => UnitEnumField::from_field(variant, index, options).map(Self::Unit),
         }
     }
 }

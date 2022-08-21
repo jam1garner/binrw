@@ -1,16 +1,15 @@
 use std::ops::Not;
 
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
-use syn::spanned::Spanned;
+use quote::quote;
 use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::{CondEndian, Map, PassedArgs, ReadMode, StructField};
 
-pub(crate) fn write_field(field: &StructField, temp_legal: bool) -> TokenStream {
-    StructFieldGenerator::new(field, temp_legal)
+pub(crate) fn write_field(field: &StructField) -> TokenStream {
+    StructFieldGenerator::new(field)
         .write_field()
         .wrap_padding()
         .prefix_args()
@@ -24,15 +23,13 @@ pub(crate) fn write_field(field: &StructField, temp_legal: bool) -> TokenStream 
 struct StructFieldGenerator<'input> {
     field: &'input StructField,
     out: TokenStream,
-    temp_legal: bool,
 }
 
 impl<'a> StructFieldGenerator<'a> {
-    fn new(field: &'a StructField, temp_legal: bool) -> Self {
+    fn new(field: &'a StructField) -> Self {
         Self {
             field,
             out: TokenStream::new(),
-            temp_legal,
         }
     }
 
@@ -139,19 +136,6 @@ impl<'a> StructFieldGenerator<'a> {
         let args = self.args_ident();
         let specify_endian = self.specify_endian();
 
-        // TODO: Errors are only supposed to be emitted by the parser
-        // if !self.temp_legal && self.field.is_temp_for_crossover() {
-        //     // Emit error regarding temp.
-        //     let ty = &self.field.ty;
-        //     self.out = quote_spanned! {self.field.field.span()=>
-        //         let #name: #ty = compile_error!(concat!(
-        //             "The attribute `temp` removes this field, but this is not possible under",
-        //             " the derive macro. Try using `#[binwrite]` instead of `#[derive(BinWrite)]`."
-        //         ));
-        //     };
-        //     return self;
-        // }
-
         let initialize = match &self.field.read_mode {
             ReadMode::Calc(expr) => Some({
                 let ty = &self.field.ty;
@@ -161,21 +145,6 @@ impl<'a> StructFieldGenerator<'a> {
             }),
             // If ignored, just skip this now
             ReadMode::Default => return self,
-            // If field is temp, it should also be calc or ignore
-            // Fail with a detailed error if it's not.
-            // TODO: Errors are only supposed to be emitted by the parser
-            // _ if self.field.binread_temp => {
-            //     let ty = &self.field.ty;
-            //     self.out = quote_spanned! {self.field.field.span()=>
-            //         let #name: #ty = compile_error!(concat!(
-            //             "The field ",
-            //             stringify!(#name),
-            //             " is temp but not provided a value in its BinWrite derivation.",
-            //             " Try using `bw(calc = ...)` or `bw(ignore)`"
-            //         ));
-            //     };
-            //     return self;
-            // }
             _ => None,
         };
 
@@ -335,25 +304,10 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 }
             },
-            ReadMode::Calc(_) => {
-                // TODO: Errors are only supposed to be emitted by the parser
-                // if self.field.args.is_some() {
-                //     let name = &self.field.ident;
-                //     quote_spanned! { self.field.ident.span() =>
-                //         compile_error!(concat!(
-                //             "Cannot pass arguments to the field '",
-                //             stringify!(#name),
-                //             "'  as it is uses the 'calc' directive"
-                //         ));
-                //         #out
-                //     }
-                // } else {
-                quote! {
-                    let #args = ();
-                    #out
-                }
-                // }
-            }
+            ReadMode::Calc(_) => quote! {
+                let #args = ();
+                #out
+            },
             ReadMode::ParseWith(_) => {
                 let ty = &self.field.ty;
                 quote! {

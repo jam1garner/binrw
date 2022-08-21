@@ -18,14 +18,12 @@ impl Parse for NamedArgAttr {
         let lookahead = input.lookahead1();
 
         if lookahead.peek(kw::try_optional) {
-            let _: kw::try_optional = input.parse()?;
+            input.parse::<kw::try_optional>()?;
             Ok(NamedArgAttr::TryOptional)
         } else if lookahead.peek(kw::default) {
-            let _: kw::default = input.parse()?;
-            let _: Token![=] = input.parse()?;
-            let expr: Expr = input.parse()?;
-
-            Ok(NamedArgAttr::Default(Box::new(expr)))
+            input.parse::<kw::default>()?;
+            input.parse::<Token![=]>()?;
+            Ok(NamedArgAttr::Default(Box::new(input.parse()?)))
         } else {
             Err(lookahead.error())
         }

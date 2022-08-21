@@ -4,13 +4,9 @@ use super::{
         IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList, MetaLit,
         MetaType, MetaValue, MetaVoid,
     },
-    KeywordToken,
 };
-use proc_macro2::{Span, TokenStream};
-use syn::{
-    parse::{Parse, ParseBuffer},
-    Expr, Token,
-};
+use proc_macro2::TokenStream;
+use syn::{Expr, Token};
 
 pub(crate) type AlignAfter = MetaExpr<kw::align_after>;
 pub(crate) type AlignBefore = MetaExpr<kw::align_before>;

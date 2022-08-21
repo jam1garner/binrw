@@ -1,7 +1,7 @@
 use super::{
     attr_struct,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
+    EnumVariant, FromInput, Options, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
 };
 
 use proc_macro2::TokenStream;
@@ -26,16 +26,15 @@ impl Input {
         is_inside_derive: bool,
         for_write: bool,
     ) -> ParseResult<Self> {
+        let options = Options {
+            derive: is_inside_derive,
+            write: for_write,
+        };
         let attrs = &input.attrs;
         let ident = Some(&input.ident);
         match &input.data {
             syn::Data::Struct(st) => {
-                let read_struct = Struct::from_input(ident, attrs, st.fields.iter(), for_write)
-                    .map(|mut read_struct| {
-                        read_struct.temp_legal = !is_inside_derive;
-                        read_struct.for_write = for_write;
-                        read_struct
-                    });
+                let read_struct = Struct::from_input(attrs, st.fields.iter(), options);
 
                 if matches!(st.fields, syn::Fields::Unit) {
                     read_struct.map(Self::UnitStruct)
@@ -54,21 +53,13 @@ impl Input {
                     .iter()
                     .all(|v| matches!(v.fields, syn::Fields::Unit))
                 {
-                    UnitOnlyEnum::from_input(ident, attrs, variants.iter(), for_write)
+                    UnitOnlyEnum::from_input(attrs, variants.iter(), options)
                         .map(Self::UnitOnlyEnum)
                 } else {
-                    let read_enum = Enum::from_input(ident, attrs, variants.iter(), for_write).map(
-                        |mut read_enum| {
-                            for x in &mut read_enum.variants {
-                                if let EnumVariant::Variant { options, .. } = x {
-                                    options.temp_legal = !is_inside_derive;
-                                    options.for_write = for_write;
-                                }
-                            }
-                            read_enum
-                        },
-                    );
-                    read_enum.map(Self::Enum)
+                    Enum::from_input(attrs, variants.iter(), options).map(|mut e| {
+                        e.ident = ident.cloned();
+                        Self::Enum(e)
+                    })
                 }
             }
             syn::Data::Union(_) => {
@@ -163,8 +154,6 @@ attr_struct! {
         #[from(PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
         pub(crate) fields: Vec<StructField>,
-        /// If `true`, the struct itself can be modified.
-        pub(crate) temp_legal: bool,
         pub(crate) for_write: bool,
     }
 }
@@ -177,9 +166,8 @@ impl Struct {
     }
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {
-        let temp_legal = self.temp_legal;
         self.fields.iter().filter_map(move |field| {
-            if temp_legal && field.is_temp(self.for_write) {
+            if field.is_temp(self.for_write) {
                 None
             } else {
                 Some(&field.ident)
@@ -215,6 +203,38 @@ impl FromInput<StructAttr> for Struct {
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
         self.fields.push(field);
+        Ok(())
+    }
+
+    fn set_options(&mut self, options: Options) {
+        self.for_write = options.write;
+    }
+
+    fn validate(&self, options: Options) -> syn::Result<()> {
+        if !self.map.is_some() && !options.derive {
+            return Ok(());
+        }
+
+        for field in self.fields.iter() {
+            if self.map.is_some() && !field.has_no_attrs() {
+                return Err(syn::Error::new(
+                    field.ident.span(),
+                    "cannot use attributes on fields inside a struct with a struct-level `map`",
+                ));
+            }
+
+            if !options.derive && field.is_temp(self.for_write) {
+                return Err(syn::Error::new(
+                    field.ident.span(),
+                    if self.for_write {
+                        "cannot create temporary fields with `#[derive(BinWrite)]`; use `#[binrw]` or `#[binwrite]` instead"
+                    } else {
+                        "cannot create temporary fields with `#[derive(BinRead)]`; use `#[binrw]` or `#[binread]` instead"
+                    },
+                ));
+            }
+        }
+
         Ok(())
     }
 }
@@ -255,8 +275,16 @@ impl FromInput<EnumAttr> for Enum {
         Ok(())
     }
 
-    fn set_ident(&mut self, ident: &syn::Ident) {
-        self.ident = Some(ident.clone());
+    fn validate(&self, _: Options) -> syn::Result<()> {
+        if self.map.is_some() {
+            if let Some(variant) = self.variants.iter().find(|variant| !variant.has_no_attrs()) {
+                return Err(syn::Error::new(
+                    variant.ident().span(),
+                    "cannot use attributes on variants inside an enum with an enum-level `map`",
+                ));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -303,9 +331,11 @@ impl FromInput<UnitEnumAttr> for UnitOnlyEnum {
         }
     }
 
-    fn validate(&self) -> syn::Result<()> {
+    fn validate(&self, options: Options) -> syn::Result<()> {
         if self.repr.is_some() || self.is_magic_enum() {
             Ok(())
+        } else if options.write {
+            Err(syn::Error::new(proc_macro2::Span::call_site(), "BinWrite on unit-like enums requires either `#[bw(repr = ...)]` on the enum or `#[bw(magic = ...)]` on at least one variant"))
         } else {
             Err(syn::Error::new(proc_macro2::Span::call_site(), "BinRead on unit-like enums requires either `#[br(repr = ...)]` on the enum or `#[br(magic = ...)]` on at least one variant"))
         }
