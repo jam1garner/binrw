@@ -65,7 +65,7 @@ macro_rules! attr_struct {
         $vis:vis struct $ident:ident {
         $(
             $(#[doc = $field_doc:literal])*
-            $(#[cfg($cfg_ident:ident)])?
+            $(#[cfg($($cfg_ident:tt)*)])?
             $(#[from($($field_attr_id:ident),+)])?
             $field_vis:vis $field:ident : $field_ty:ty
         ),+ $(,)?
@@ -74,7 +74,7 @@ macro_rules! attr_struct {
         $(#[$meta])*
         $vis struct $ident {
             $(
-                $(#[cfg($cfg_ident)])?
+                $(#[cfg($($cfg_ident)*)])?
                 $(#[doc = $field_doc])*
                 $field_vis $field: $field_ty,
             )+

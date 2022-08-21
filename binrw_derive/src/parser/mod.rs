@@ -26,7 +26,7 @@ fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
 pub(crate) trait FromField {
     type In;
 
-    fn from_field(field: &Self::In, index: usize, for_write: bool) -> ParseResult<Self>
+    fn from_field(field: &Self::In, index: usize, options: Options) -> ParseResult<Self>
     where
         Self: Sized;
 }
@@ -159,6 +159,12 @@ impl<T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySe
     }
 }
 
+#[derive(Clone, Copy)]
+pub(crate) struct Options {
+    pub(crate) write: bool,
+    pub(crate) derive: bool,
+}
+
 pub(crate) fn is_binread_attr(attr: &syn::Attribute) -> bool {
     attr.path.is_ident("br") || attr.path.is_ident("brw") || attr.path.is_ident("binread")
 }
@@ -168,21 +174,21 @@ pub(crate) fn is_binwrite_attr(attr: &syn::Attribute) -> bool {
 }
 
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
-    fn try_from_attrs(attrs: &[syn::Attribute], for_write: bool) -> ParseResult<Self>
+    fn try_from_attrs(attrs: &[syn::Attribute], options: Options) -> ParseResult<Self>
     where
         Self: Default + Sized,
     {
-        Self::set_from_attrs(Self::default(), attrs, for_write)
+        Self::set_from_attrs(Self::default(), attrs, options)
     }
 
-    fn set_from_attrs(mut self, attrs: &[syn::Attribute], for_write: bool) -> ParseResult<Self>
+    fn set_from_attrs(mut self, attrs: &[syn::Attribute], options: Options) -> ParseResult<Self>
     where
         Self: Sized,
     {
         let attrs = attrs
             .iter()
             .filter(|attr| {
-                if for_write {
+                if options.write {
                     is_binwrite_attr(attr)
                 } else {
                     is_binread_attr(attr)
@@ -221,23 +227,20 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     type Field: FromField + 'static;
 
     fn from_input<'input>(
-        ident: Option<&syn::Ident>,
         attrs: &'input [syn::Attribute],
         fields: impl Iterator<Item = &'input <Self::Field as FromField>::In>,
-        for_write: bool,
+        options: Options,
     ) -> ParseResult<Self>
     where
         Self: Sized + Default,
     {
-        let (mut this, mut all_errors) = Self::try_from_attrs(attrs, for_write).unwrap_tuple();
+        let (mut this, mut all_errors) = Self::try_from_attrs(attrs, options).unwrap_tuple();
 
-        if let Some(ident) = ident {
-            this.set_ident(ident);
-        }
+        this.set_options(options);
 
         for (index, field) in fields.enumerate() {
             let (field, mut field_error) =
-                Self::Field::from_field(field, index, for_write).unwrap_tuple();
+                Self::Field::from_field(field, index, options).unwrap_tuple();
             if field_error.is_none() {
                 field_error = this.push_field(field).err();
             }
@@ -247,12 +250,10 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
             }
         }
 
-        if let Err(validation_error) = this.validate() {
+        if let Err(validation_error) = this.validate(options) {
             combine_error(&mut all_errors, validation_error);
         }
 
-        // https://github.com/rust-lang/rust-clippy/issues/5822
-        #[allow(clippy::option_if_let_else)]
         if let Some(error) = all_errors {
             ParseResult::Partial(this, error)
         } else {
@@ -260,11 +261,11 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
         }
     }
 
-    fn set_ident(&mut self, _ident: &syn::Ident) {}
-
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()>;
 
-    fn validate(&self) -> syn::Result<()> {
+    fn set_options(&mut self, _: Options) {}
+
+    fn validate(&self, _: Options) -> syn::Result<()> {
         Ok(())
     }
 }
