@@ -135,7 +135,7 @@ binread_nonzero_impl! {
 /// ```
 ///
 /// Unit args for the inner type can be omitted.
-/// The [count](attribute/read/index.html#count) attribute also assumes unit args for the inner type.
+/// The [count](crate::attribute#count) attribute also assumes unit args for the inner type.
 ///
 /// ```
 /// # use binrw::prelude::*;

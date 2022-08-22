@@ -63,7 +63,7 @@
 //!
 //! Types that can’t implement `BinRead` directly (e.g. types from third party
 //! crates) can also be read using
-//! [free parser functions](attribute#custom-parsers) or by
+//! [free parser functions](attribute#custom-parserswriters) or by
 //! [mapping values](attribute#map).
 //!
 //! Unlike “zero-copy” libraries, the in-memory representation of binrw structs
