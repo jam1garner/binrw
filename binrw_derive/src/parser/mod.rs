@@ -1,6 +1,3 @@
-use proc_macro2::Span;
-use syn::token::Token;
-
 pub(crate) mod attrs;
 pub(crate) mod field_level_attrs;
 mod keywords;
@@ -11,7 +8,10 @@ mod types;
 
 use self::macros::attr_struct;
 use self::meta_types::MetaAttrList;
+use crate::{is_binread_attr, is_binwrite_attr, Options};
 pub(crate) use field_level_attrs::*;
+use proc_macro2::Span;
+use syn::token::Token;
 pub(crate) use top_level_attrs::*;
 pub(crate) use types::*;
 
@@ -159,20 +159,6 @@ impl<T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySe
     }
 }
 
-#[derive(Clone, Copy)]
-pub(crate) struct Options {
-    pub(crate) write: bool,
-    pub(crate) derive: bool,
-}
-
-pub(crate) fn is_binread_attr(attr: &syn::Attribute) -> bool {
-    attr.path.is_ident("br") || attr.path.is_ident("brw") || attr.path.is_ident("binread")
-}
-
-pub(crate) fn is_binwrite_attr(attr: &syn::Attribute) -> bool {
-    attr.path.is_ident("bw") || attr.path.is_ident("brw") || attr.path.is_ident("binwrite")
-}
-
 pub(crate) trait FromAttrs<Attr: syn::parse::Parse> {
     fn try_from_attrs(attrs: &[syn::Attribute], options: Options) -> ParseResult<Self>
     where
@@ -278,7 +264,13 @@ mod tests {
     use super::*;
 
     fn try_input(input: TokenStream) -> ParseResult<Input> {
-        Input::from_input(&syn::parse2::<DeriveInput>(input).unwrap(), false, false)
+        Input::from_input(
+            &syn::parse2::<DeriveInput>(input).unwrap(),
+            Options {
+                derive: false,
+                write: false,
+            },
+        )
     }
 
     macro_rules! try_error (

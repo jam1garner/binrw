@@ -1,23 +1,34 @@
-use std::collections::HashSet;
-
+use crate::{
+    codegen::{generate_binread_impl, generate_binwrite_impl},
+    is_binread_attr, is_binwrite_attr,
+    parser::{EnumVariant, Input, ParseResult, Struct, StructField},
+    Options,
+};
 use quote::quote;
+use std::collections::HashSet;
 use syn::DeriveInput;
 
-use crate::codegen::{generate_binread_impl, generate_binwrite_impl};
-use crate::parser::{
-    is_binread_attr, is_binwrite_attr, EnumVariant, Input, ParseResult, Struct, StructField,
-};
-
-#[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
     attrs.retain(|attr| !is_binwrite_attr(attr) && !is_binread_attr(attr));
 }
 
-#[cfg_attr(coverage_nightly, no_coverage)]
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
-    let mut binread_input = Input::from_input(&derive_input, false, false);
-    let mut binwrite_input = Input::from_input(&derive_input, false, true);
+    let mut binread_input = Input::from_input(
+        &derive_input,
+        Options {
+            derive: false,
+            write: false,
+        },
+    );
+    let mut binwrite_input = Input::from_input(
+        &derive_input,
+        Options {
+            derive: false,
+            write: true,
+        },
+    );
 
+    // TODO: Perform cross validation here
     apply_temp_crossover(&mut binread_input, &mut binwrite_input);
 
     let generated_impl_rd = generate_binread_impl(&derive_input, &binread_input);
