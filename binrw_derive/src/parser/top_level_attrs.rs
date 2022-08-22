@@ -207,21 +207,21 @@ impl FromInput<StructAttr> for Struct {
             return Ok(());
         }
 
-        for field in self.fields.iter() {
+        for field in &self.fields {
             if self.map.is_some() && !field.has_no_attrs() {
                 return Err(syn::Error::new(
-                    field.ident.span(),
+                    field.field.span(),
                     "cannot use attributes on fields inside a struct with a struct-level `map`",
                 ));
             }
 
             if options.derive && field.is_temp(self.for_write) {
                 return Err(syn::Error::new(
-                    field.ident.span(),
+                    field.field.span(),
                     if self.for_write {
-                        "cannot create temporary fields with `#[derive(BinWrite)]`; use `#[binrw]` or `#[binwrite]` instead"
+                        "`#[derive(BinWrite)]` cannot create temporary fields; use `#[binrw]` or `#[binwrite]` instead"
                     } else {
-                        "cannot create temporary fields with `#[derive(BinRead)]`; use `#[binrw]` or `#[binread]` instead"
+                        "`#[derive(BinRead)]` cannot create temporary fields; use `#[binrw]` or `#[binread]` instead"
                     },
                 ));
             }

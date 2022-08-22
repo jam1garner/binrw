@@ -14,7 +14,6 @@ attr_struct! {
         pub(crate) ident: syn::Ident,
         pub(crate) generated_ident: bool,
         pub(crate) ty: syn::Type,
-        #[cfg(all(nightly, not(coverage)))]
         pub(crate) field: syn::Field,
         #[from(Big, Little, IsBig, IsLittle)]
         pub(crate) endian: CondEndian,
@@ -153,7 +152,7 @@ impl StructField {
         } else if matches!(self.read_mode, ReadMode::Calc(_)) && self.args.is_some() {
             // TODO: Correct span (args + calc keywords)
             Err(syn::Error::new(
-                self.ident.span(),
+                self.field.span(),
                 "`args` is incompatible with `calc`",
             ))
         } else {
@@ -174,7 +173,6 @@ impl FromField for StructField {
                     .unwrap_or_else(|| quote::format_ident!("self_{}", index)),
                 generated_ident: field.ident.is_none(),
                 ty: field.ty.clone(),
-                #[cfg(all(nightly, not(coverage)))]
                 field: field.clone(),
                 endian: <_>::default(),
                 map: <_>::default(),
