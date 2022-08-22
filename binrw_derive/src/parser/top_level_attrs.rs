@@ -1,9 +1,9 @@
 use super::{
     attr_struct,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    EnumVariant, FromInput, Options, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
+    EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
 };
-
+use crate::Options;
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
@@ -21,15 +21,7 @@ pub(crate) enum Input {
 
 impl Input {
     /// Tries parsing the binrw attributes on a data structure.
-    pub(crate) fn from_input(
-        input: &syn::DeriveInput,
-        is_inside_derive: bool,
-        for_write: bool,
-    ) -> ParseResult<Self> {
-        let options = Options {
-            derive: is_inside_derive,
-            write: for_write,
-        };
+    pub(crate) fn from_input(input: &syn::DeriveInput, options: Options) -> ParseResult<Self> {
         let attrs = &input.attrs;
         let ident = Some(&input.ident);
         match &input.data {
@@ -211,7 +203,7 @@ impl FromInput<StructAttr> for Struct {
     }
 
     fn validate(&self, options: Options) -> syn::Result<()> {
-        if !self.map.is_some() && !options.derive {
+        if self.map.is_none() && !options.derive {
             return Ok(());
         }
 
@@ -223,7 +215,7 @@ impl FromInput<StructAttr> for Struct {
                 ));
             }
 
-            if !options.derive && field.is_temp(self.for_write) {
+            if options.derive && field.is_temp(self.for_write) {
                 return Err(syn::Error::new(
                     field.ident.span(),
                     if self.for_write {

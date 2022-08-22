@@ -1,11 +1,9 @@
 use super::{
     attr_struct,
     types::{Assert, CondEndian, Condition, ErrContext, Magic, Map, PassedArgs, ReadMode},
-    FromAttrs, FromField, FromInput, Options, ParseResult, SpannedValue, TrySet,
+    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
 };
-
-use super::Struct;
-
+use crate::Options;
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
