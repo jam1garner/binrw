@@ -1,16 +1,11 @@
 use crate::{
     codegen::{generate_binread_impl, generate_binwrite_impl},
-    is_binread_attr, is_binwrite_attr,
-    parser::{EnumVariant, Input, ParseResult, Struct, StructField},
+    parser::{combine_error, Enum, EnumVariant, Input, ParseResult, ReadMode, Struct, StructField},
     Options,
 };
 use quote::quote;
 use std::collections::HashSet;
-use syn::DeriveInput;
-
-fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
-    attrs.retain(|attr| !is_binwrite_attr(attr) && !is_binread_attr(attr));
-}
+use syn::{spanned::Spanned, DeriveInput};
 
 pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
     let mut binread_input = Input::from_input(
@@ -28,93 +23,120 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
         },
     );
 
-    // TODO: Perform cross validation here
-    apply_temp_crossover(&mut binread_input, &mut binwrite_input);
-
-    let generated_impl_rd = generate_binread_impl(&derive_input, &binread_input);
-    let generated_impl_wr = generate_binwrite_impl(&derive_input, &binwrite_input);
-
-    let binread_input = binread_input.ok();
-    let binwrite_input = binwrite_input.ok();
-
-    clean_struct_attrs(&mut derive_input.attrs);
-
-    match &mut derive_input.data {
-        syn::Data::Struct(input_struct) => {
-            clean_field_attrs(&binread_input, &binwrite_input, 0, &mut input_struct.fields);
-        }
-        syn::Data::Enum(input_enum) => {
-            for (index, variant) in input_enum.variants.iter_mut().enumerate() {
-                clean_struct_attrs(&mut variant.attrs);
-                clean_field_attrs(&binread_input, &binwrite_input, index, &mut variant.fields);
-            }
-        }
-        syn::Data::Union(union) => {
-            for field in union.fields.named.iter_mut() {
-                clean_struct_attrs(&mut field.attrs);
-            }
-        }
+    // TODO: Make this not bad
+    if let Some(error) = apply_temp_crossover(&mut binread_input, &mut binwrite_input) {
+        binwrite_input = ParseResult::Partial(binwrite_input.unwrap_tuple().0, error);
     }
+
+    let generated_read_impl = generate_binread_impl(&derive_input, &binread_input);
+    let generated_write_impl = generate_binwrite_impl(&derive_input, &binwrite_input);
+
+    // Since temporary fields must be synchronised between binread and binwrite,
+    // the same cleaning mechanism can be used as-if there was only one input
+    super::clean_attr(&mut derive_input, &binread_input.ok());
 
     quote!(
         #derive_input
-        #generated_impl_rd
-        #generated_impl_wr
+        #generated_read_impl
+        #generated_write_impl
     )
 }
 
 /// Check the fields of each input and copy temp state to the other input.
 fn apply_temp_crossover(
-    binread_input: &mut ParseResult<Input>,
-    binwrite_input: &mut ParseResult<Input>,
-) {
-    let (binread_input, binwrite_input) = match (binread_input, binwrite_input) {
+    binread_result: &mut ParseResult<Input>,
+    binwrite_result: &mut ParseResult<Input>,
+) -> Option<syn::Error> {
+    let (binread_input, binwrite_input) = match (binread_result, binwrite_result) {
         (ParseResult::Ok(binread), ParseResult::Ok(binwrite)) => (binread, binwrite),
-        // We don't need to apply this in the case of Partial because no implementation is
-        // generated.
-        _ => return,
+        // We don't need to apply this in the case of Partial because no
+        // implementation is generated.
+        _ => return None,
     };
+
     match (binread_input, binwrite_input) {
         (Input::Struct(binread_struct), Input::Struct(binwrite_struct)) => {
-            apply_temp_crossover_struct(binread_struct, binwrite_struct);
+            apply_temp_crossover_struct(binread_struct, binwrite_struct)
         }
         (Input::Enum(binread_enum), Input::Enum(binwrite_enum)) => {
-            for (read_variant, write_variant) in binread_enum
-                .variants
-                .iter_mut()
-                .zip(binwrite_enum.variants.iter_mut())
-            {
-                match (read_variant, write_variant) {
-                    (
-                        EnumVariant::Variant {
-                            options: read_struct,
-                            ..
-                        },
-                        EnumVariant::Variant {
-                            options: write_struct,
-                            ..
-                        },
-                    ) => apply_temp_crossover_struct(read_struct, write_struct),
-                    (EnumVariant::Unit(_), EnumVariant::Unit(_)) => continue,
-                    _ => unreachable!("read and write input should always be the same kind"),
-                };
-            }
+            apply_temp_crossover_enum(binread_enum, binwrite_enum)
         }
         // These don't have temp fields.
         (Input::UnitStruct(_), Input::UnitStruct(_))
-        | (Input::UnitOnlyEnum(_), Input::UnitOnlyEnum(_)) => {}
+        | (Input::UnitOnlyEnum(_), Input::UnitOnlyEnum(_)) => None,
         _ => unreachable!("read and write input should always be the same kind"),
     }
 }
 
-fn apply_temp_crossover_struct(binread_struct: &mut Struct, binwrite_struct: &mut Struct) {
+fn apply_temp_crossover_enum(
+    binread_enum: &mut Enum,
+    binwrite_enum: &mut Enum,
+) -> Option<syn::Error> {
+    let mut all_errors = None::<syn::Error>;
+    for (read_variant, write_variant) in binread_enum
+        .variants
+        .iter_mut()
+        .zip(binwrite_enum.variants.iter_mut())
+    {
+        match (read_variant, write_variant) {
+            (
+                EnumVariant::Variant {
+                    options: read_struct,
+                    ..
+                },
+                EnumVariant::Variant {
+                    options: write_struct,
+                    ..
+                },
+            ) => {
+                if let Some(error) = apply_temp_crossover_struct(read_struct, write_struct) {
+                    combine_error(&mut all_errors, error);
+                }
+            }
+            (EnumVariant::Unit(_), EnumVariant::Unit(_)) => continue,
+            _ => unreachable!("read and write input should always be the same kind"),
+        };
+    }
+    all_errors
+}
+
+fn apply_temp_crossover_struct(
+    binread_struct: &mut Struct,
+    binwrite_struct: &mut Struct,
+) -> Option<syn::Error> {
     // Index temporary fields
     let read_temporary = extract_temporary_field_names(&binread_struct.fields, false);
     let write_temporary = extract_temporary_field_names(&binwrite_struct.fields, true);
 
+    if let Some(error) = validate_fields_temporary(&binwrite_struct.fields, &read_temporary) {
+        return Some(error);
+    }
+
     // Iterate the fields again and set temp flags
     set_fields_temporary(&mut binread_struct.fields, &write_temporary);
     set_fields_temporary(&mut binwrite_struct.fields, &read_temporary);
+    None
+}
+
+fn validate_fields_temporary(
+    fields: &[StructField],
+    read_temporary: &HashSet<syn::Ident>,
+) -> Option<syn::Error> {
+    let mut all_errors = None::<syn::Error>;
+    for field in fields {
+        if read_temporary.contains(&field.ident)
+            && !matches!(field.read_mode, ReadMode::Calc(_) | ReadMode::Default)
+        {
+            combine_error(
+                &mut all_errors,
+                syn::Error::new(
+                    field.field.span(),
+                    "`#[br(temp)]` is invalid without `#[bw(ignore)]` or `#[bw(calc)]`",
+                ),
+            );
+        }
+    }
+    all_errors
 }
 
 fn extract_temporary_field_names(fields: &[StructField], for_write: bool) -> HashSet<syn::Ident> {
@@ -130,37 +152,5 @@ fn set_fields_temporary(fields: &mut [StructField], temporary_names: &HashSet<sy
         if temporary_names.contains(&field.ident) {
             field.force_temp();
         }
-    }
-}
-
-#[cfg_attr(coverage_nightly, no_coverage)]
-fn clean_field_attrs(
-    binread_input: &Option<Input>,
-    binwrite_input: &Option<Input>,
-    variant_index: usize,
-    fields: &mut syn::Fields,
-) {
-    if let (Some(binread_input), Some(binwrite_input)) = (binread_input, binwrite_input) {
-        let fields = match fields {
-            syn::Fields::Named(fields) => &mut fields.named,
-            syn::Fields::Unnamed(fields) => &mut fields.unnamed,
-            syn::Fields::Unit => return,
-        };
-
-        *fields = fields
-            .iter_mut()
-            .enumerate()
-            .filter_map(|(index, value)| {
-                if binread_input.is_temp_field(variant_index, index)
-                    || binwrite_input.is_temp_field(variant_index, index)
-                {
-                    None
-                } else {
-                    let mut value = value.clone();
-                    clean_struct_attrs(&mut value.attrs);
-                    Some(value)
-                }
-            })
-            .collect();
     }
 }

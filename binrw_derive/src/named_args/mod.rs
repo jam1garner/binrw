@@ -100,3 +100,15 @@ mod kw {
     syn::custom_keyword!(default);
     syn::custom_keyword!(try_optional);
 }
+
+#[cfg(test)]
+#[cfg(coverage)]
+#[cfg_attr(coverage_nightly, no_coverage)]
+#[test]
+fn derive_named_args_code_coverage_for_tool() {
+    use runtime_macros_derive::emulate_derive_expansion_fallible;
+    use std::fs;
+    let file = fs::File::open("../binrw/tests/builder.rs").unwrap();
+    emulate_derive_expansion_fallible(file, "BinrwNamedArgs", |input| derive_from_attribute(input))
+        .unwrap();
+}

@@ -15,7 +15,8 @@ use syn::token::Token;
 pub(crate) use top_level_attrs::*;
 pub(crate) use types::*;
 
-fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
+// TODO: Put in util mod or something
+pub(crate) fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
     if let Some(all_errors) = all_errors {
         all_errors.combine(new_error);
     } else {

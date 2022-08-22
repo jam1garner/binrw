@@ -95,6 +95,28 @@ struct Options {
 }
 
 #[cfg_attr(coverage_nightly, no_coverage)]
+fn clean_attr(derive_input: &mut DeriveInput, binrw_input: &Option<Input>) {
+    clean_struct_attrs(&mut derive_input.attrs);
+
+    match &mut derive_input.data {
+        syn::Data::Struct(st) => {
+            clean_field_attrs(binrw_input, 0, &mut st.fields);
+        }
+        syn::Data::Enum(en) => {
+            for (index, variant) in en.variants.iter_mut().enumerate() {
+                clean_struct_attrs(&mut variant.attrs);
+                clean_field_attrs(binrw_input, index, &mut variant.fields);
+            }
+        }
+        syn::Data::Union(union) => {
+            for field in union.fields.named.iter_mut() {
+                clean_struct_attrs(&mut field.attrs);
+            }
+        }
+    }
+}
+
+#[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_field_attrs(input: &Option<Input>, variant_index: usize, fields: &mut syn::Fields) {
     if let Some(input) = input {
         let fields = match fields {
@@ -204,6 +226,7 @@ fn parse(
 
 #[cfg(test)]
 #[cfg(coverage)]
+#[cfg_attr(coverage_nightly, no_coverage)]
 #[test]
 fn derive_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
@@ -243,6 +266,7 @@ fn derive_code_coverage_for_tool() {
 
 #[cfg(test)]
 #[cfg(coverage)]
+#[cfg_attr(coverage_nightly, no_coverage)]
 #[test]
 fn derive_binwrite_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
@@ -276,15 +300,4 @@ fn derive_binwrite_code_coverage_for_tool() {
     }
 
     assert!(run_success)
-}
-
-#[cfg(test)]
-#[cfg(coverage)]
-#[test]
-fn derive_named_args_code_coverage_for_tool() {
-    use runtime_macros_derive::emulate_derive_expansion_fallible;
-    use std::fs;
-    let file = fs::File::open("../binrw/tests/builder.rs").unwrap();
-    emulate_derive_expansion_fallible(file, "BinrwNamedArgs", |input| binrw_named_args(input))
-        .unwrap();
 }
