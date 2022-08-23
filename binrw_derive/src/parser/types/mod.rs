@@ -3,11 +3,11 @@ mod cond_endian;
 mod condition;
 mod enum_error_mode;
 mod err_context;
+mod field_mode;
 mod imports;
 mod magic;
 mod map;
 mod passed_args;
-mod read_mode;
 mod spanned_value;
 
 pub(crate) use assert::{Assert, Error as AssertionError};
@@ -15,11 +15,11 @@ pub(crate) use cond_endian::{CondEndian, Endian};
 pub(crate) use condition::Condition;
 pub(crate) use enum_error_mode::EnumErrorMode;
 pub(crate) use err_context::ErrContext;
+pub(crate) use field_mode::FieldMode;
 pub(crate) use imports::Imports;
 pub(crate) use magic::Magic;
 pub(crate) use map::Map;
 pub(crate) use passed_args::PassedArgs;
-pub(crate) use read_mode::ReadMode;
 pub(crate) use spanned_value::SpannedValue;
 
 fn assert_all_args_consumed<Iter, IterItem>(

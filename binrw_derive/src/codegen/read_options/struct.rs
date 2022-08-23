@@ -1,7 +1,7 @@
 use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{ErrContext, Map, PassedArgs, ReadMode};
+use crate::parser::{ErrContext, FieldMode, Map, PassedArgs};
 use crate::parser::{Input, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
@@ -124,7 +124,7 @@ fn generate_field(
     variant_name: Option<&str>,
 ) -> TokenStream {
     // temp + ignore == just don't bother
-    if field.is_temp(false) && matches!(field.read_mode, ReadMode::Default) {
+    if field.is_temp(false) && matches!(field.read_mode, FieldMode::Default) {
         return TokenStream::new();
     }
 
@@ -338,8 +338,8 @@ impl<'field> FieldGenerator<'field> {
 
     fn prefix_read_function(mut self) -> Self {
         let read_function = match &self.field.read_mode {
-            ReadMode::ParseWith(parser) => Some(parser.clone()),
-            ReadMode::Normal => Some(READ_METHOD.to_token_stream()),
+            FieldMode::Function(parser) => Some(parser.clone()),
+            FieldMode::Normal => Some(READ_METHOD.to_token_stream()),
             _ => None,
         };
 
@@ -358,7 +358,7 @@ impl<'field> FieldGenerator<'field> {
             let args = get_passed_args(self.field);
             let ty = &self.field.ty;
 
-            if let ReadMode::ParseWith(_) = &self.field.read_mode {
+            if let FieldMode::Function(_) = &self.field.read_mode {
                 quote! {
                     let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
                 }
@@ -412,9 +412,9 @@ impl<'field> FieldGenerator<'field> {
 
     fn read_value(mut self) -> Self {
         self.out = match &self.field.read_mode {
-            ReadMode::Default => quote! { <_>::default() },
-            ReadMode::Calc(calc) => quote! { #calc },
-            ReadMode::Normal | ReadMode::ParseWith(_) => {
+            FieldMode::Default => quote! { <_>::default() },
+            FieldMode::Calc(calc) => quote! { #calc },
+            FieldMode::Normal | FieldMode::Function(_) => {
                 let args_arg = get_args_argument(&self.args_var);
                 let options_var = &self.options_var;
 

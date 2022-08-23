@@ -6,7 +6,7 @@ use syn::Ident;
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::{CondEndian, Map, PassedArgs, ReadMode, StructField};
+use crate::parser::{CondEndian, FieldMode, Map, PassedArgs, StructField};
 
 pub(crate) fn write_field(field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field)
@@ -78,9 +78,9 @@ impl<'a> StructFieldGenerator<'a> {
         }
 
         let write_fn = match &self.field.read_mode {
-            ReadMode::Normal | ReadMode::Calc(_) => quote! { #WRITE_METHOD },
-            ReadMode::ParseWith(write_fn) => write_fn.clone(),
-            ReadMode::Default => unreachable!("Ignored fields are not written"),
+            FieldMode::Normal | FieldMode::Calc(_) => quote! { #WRITE_METHOD },
+            FieldMode::Function(write_fn) => write_fn.clone(),
+            FieldMode::Default => unreachable!("Ignored fields are not written"),
         };
 
         let write_fn = if self.field.map.is_some() {
@@ -137,14 +137,14 @@ impl<'a> StructFieldGenerator<'a> {
         let specify_endian = self.specify_endian();
 
         let initialize = match &self.field.read_mode {
-            ReadMode::Calc(expr) => Some({
+            FieldMode::Calc(expr) => Some({
                 let ty = &self.field.ty;
                 quote! {
                     let #name: #ty = #expr;
                 }
             }),
             // If ignored, just skip this now
-            ReadMode::Default => return self,
+            FieldMode::Default => return self,
             _ => None,
         };
 
@@ -287,7 +287,7 @@ impl<'a> StructFieldGenerator<'a> {
         let map_fn = self.map_fn_ident();
         let out = &self.out;
         self.out = match self.field.read_mode {
-            ReadMode::Normal => match &self.field.map {
+            FieldMode::Normal => match &self.field.map {
                 Map::Map(_) => quote! {
                     let #args = #WRITE_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
@@ -304,11 +304,11 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 }
             },
-            ReadMode::Calc(_) => quote! {
+            FieldMode::Calc(_) => quote! {
                 let #args = ();
                 #out
             },
-            ReadMode::ParseWith(_) => {
+            FieldMode::Function(_) => {
                 let ty = &self.field.ty;
                 quote! {
                     let #args = #WRITE_WITH_ARGS_TYPE_HINT::<#ty, W, _, _>(
@@ -317,7 +317,7 @@ impl<'a> StructFieldGenerator<'a> {
                     #out
                 }
             }
-            ReadMode::Default => unreachable!("Ignored fields are not written"),
+            FieldMode::Default => unreachable!("Ignored fields are not written"),
         };
 
         self
