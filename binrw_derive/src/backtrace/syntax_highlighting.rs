@@ -13,8 +13,7 @@ use syn::{
 };
 
 use crate::parser::{
-    meta_types::FieldValue, AssertionError, CondEndian, Condition, ErrContext, Map, PassedArgs,
-    ReadMode, StructField,
+    AssertionError, CondEndian, Condition, ErrContext, FieldMode, Map, PassedArgs, StructField,
 };
 
 #[derive(Default)]
@@ -248,7 +247,7 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         PassedArgs::None => (),
     }
 
-    if let ReadMode::Calc(expr) | ReadMode::ParseWith(expr) = &field.read_mode {
+    if let FieldMode::Calc(expr) | FieldMode::Function(expr) = &field.read_mode {
         visit!(expr.clone());
     }
 
@@ -412,4 +411,32 @@ fn is_keyword_ident(ident: &syn::Ident) -> bool {
     );
 
     is_keyword
+}
+
+#[derive(Debug, Clone)]
+struct FieldValue {
+    ident: syn::Ident,
+    expr: Option<syn::Expr>,
+}
+
+impl From<FieldValue> for (syn::Ident, Option<syn::Expr>) {
+    fn from(x: FieldValue) -> Self {
+        let FieldValue { ident, expr, .. } = x;
+
+        (ident, expr)
+    }
+}
+
+impl Parse for FieldValue {
+    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        let ident = input.parse()?;
+        let expr = if input.lookahead1().peek(syn::Token![:]) {
+            input.parse::<syn::Token![:]>()?;
+            Some(input.parse()?)
+        } else {
+            None
+        };
+
+        Ok(Self { ident, expr })
+    }
 }

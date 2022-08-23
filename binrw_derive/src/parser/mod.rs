@@ -8,11 +8,11 @@ mod top_level_attrs;
 mod try_set;
 mod types;
 
+use crate::{combine_error, is_binread_attr, is_binwrite_attr, Options};
+pub(crate) use field_level_attrs::{EnumVariant, StructField, UnitEnumField};
 use macros::attr_struct;
 use meta_types::MetaAttrList;
 // TODO: Should export a processed type, not a meta type
-use crate::{combine_error, is_binread_attr, is_binwrite_attr, Options};
-pub(crate) use field_level_attrs::{EnumVariant, StructField, UnitEnumField};
 pub(crate) use meta_types::IdentTypeMaybeDefault;
 use proc_macro2::Span;
 pub(crate) use result::*;

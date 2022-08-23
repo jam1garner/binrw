@@ -254,46 +254,6 @@ impl Parse for IdentTypeMaybeDefault {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct FieldValue {
-    pub(crate) ident: syn::Ident,
-    #[allow(dead_code)]
-    pub(crate) colon_token: Option<Token![:]>,
-    pub(crate) expr: Option<syn::Expr>,
-}
-
-impl From<FieldValue> for (syn::Ident, Option<syn::Expr>) {
-    fn from(x: FieldValue) -> Self {
-        let FieldValue { ident, expr, .. } = x;
-
-        (ident, expr)
-    }
-}
-
-impl Parse for FieldValue {
-    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let ident = input.parse()?;
-        let lookahead = input.lookahead1();
-
-        let expr;
-        let colon_token;
-
-        if lookahead.peek(Token![:]) {
-            colon_token = Some(input.parse()?);
-            expr = Some(input.parse()?);
-        } else {
-            colon_token = None;
-            expr = None;
-        }
-
-        Ok(Self {
-            ident,
-            colon_token,
-            expr,
-        })
-    }
-}
-
 pub(crate) struct MetaAttrList<P>(Fields<P>);
 
 impl<P> MetaAttrList<P> {
