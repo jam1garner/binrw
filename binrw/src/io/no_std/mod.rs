@@ -4,7 +4,7 @@ extern crate std;
 mod cursor;
 mod error;
 
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use core::{cmp, fmt, mem};
 pub use {
     cursor::Cursor,
@@ -59,6 +59,17 @@ pub trait Read {
                 err @ Err(_) => return err,
             }
         }
+    }
+
+    /// Read all bytes until EOF in this source, appending them to `buf`.
+    fn read_to_string(&mut self, buf: &mut String) -> Result<usize> {
+        let mut tmp = Vec::new();
+        let amt = self.read_to_end(&mut tmp)?;
+        let str = core::str::from_utf8(&tmp).map_err(|_| {
+            Error::new(ErrorKind::InvalidData, "stream did not contain valid UTF-8")
+        })?;
+        buf.push_str(str);
+        Ok(amt)
     }
 
     /// Transforms this `Read` instance to an [`Iterator`] over its bytes.
@@ -174,6 +185,57 @@ impl<R: Read> Iterator for Bytes<R> {
                 Err(e) => Some(Err(e)),
             };
         }
+    }
+}
+
+impl Read for &[u8] {
+    #[inline]
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let amt = cmp::min(buf.len(), self.len());
+        let (a, b) = self.split_at(amt);
+
+        // First check if the amount of bytes we want to read is small:
+        // `copy_from_slice` will generally expand to a call to `memcpy`, and
+        // for a single byte the overhead is significant.
+        if amt == 1 {
+            buf[0] = a[0];
+        } else {
+            buf[..amt].copy_from_slice(a);
+        }
+
+        *self = b;
+        Ok(amt)
+    }
+
+    #[inline]
+    fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
+        if buf.len() > self.len() {
+            return Err(Error::new(
+                ErrorKind::UnexpectedEof,
+                "failed to fill whole buffer",
+            ));
+        }
+        let (a, b) = self.split_at(buf.len());
+
+        // First check if the amount of bytes we want to read is small:
+        // `copy_from_slice` will generally expand to a call to `memcpy`, and
+        // for a single byte the overhead is significant.
+        if buf.len() == 1 {
+            buf[0] = a[0];
+        } else {
+            buf.copy_from_slice(a);
+        }
+
+        *self = b;
+        Ok(())
+    }
+
+    #[inline]
+    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<usize> {
+        buf.extend_from_slice(*self);
+        let len = self.len();
+        *self = &self[len..];
+        Ok(len)
     }
 }
 
@@ -305,6 +367,25 @@ impl Write for &mut [u8] {
                 &"failed to write whole buffer",
             ))
         }
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl Write for Vec<u8> {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        self.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    #[inline]
+    fn write_all(&mut self, buf: &[u8]) -> Result<()> {
+        self.extend_from_slice(buf);
+        Ok(())
     }
 
     #[inline]
