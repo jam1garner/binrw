@@ -1,0 +1,6 @@
+error: `args` is incompatible with `calc`
+ --> tests/ui/args_calc_conflict.rs:5:5
+  |
+5 | /     #[br(args(()), calc(None))]
+6 | |     a: Option<u8>,
+  | |_________________^
