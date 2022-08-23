@@ -217,6 +217,19 @@ fn read_to_end() {
 }
 
 #[test]
+fn read_to_string() {
+    let mut s = String::from("hello");
+
+    let mut cursor = Cursor::new(b"world");
+    assert_eq!(cursor.read_to_string(&mut s).unwrap(), 5);
+    assert_eq!(s, "helloworld");
+
+    let mut cursor = Cursor::new(b"oops\x80");
+    cursor.read_to_string(&mut s).unwrap_err();
+    assert_eq!(s, "helloworld");
+}
+
+#[test]
 fn take() {
     const IN: &[u8] = b"ABCD";
     const LIMIT: usize = 2;
