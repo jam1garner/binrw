@@ -24,27 +24,27 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(RW:Args, RW:ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(RW:Calc, R:Default, RW:Ignore, R:ParseWith, W:WriteWith)]
+        #[from(RW:Calc, RO:Default, RW:Ignore, RO:ParseWith, WO:WriteWith)]
         pub(crate) read_mode: FieldMode,
-        #[from(R:Count)]
+        #[from(RO:Count)]
         pub(crate) count: Option<TokenStream>,
-        #[from(R:Offset)]
+        #[from(RO:Offset)]
         pub(crate) offset: Option<TokenStream>,
-        #[from(R:OffsetAfter)]
+        #[from(RO:OffsetAfter)]
         pub(crate) offset_after: Option<SpannedValue<TokenStream>>,
-        #[from(R:If)]
+        #[from(RO:If)]
         pub(crate) if_cond: Option<Condition>,
-        #[from(R:DerefNow, R:PostProcessNow)]
+        #[from(RO:DerefNow, RO:PostProcessNow)]
         pub(crate) deref_now: Option<SpannedValue<()>>,
         #[from(RW:RestorePosition)]
         pub(crate) restore_position: Option<()>,
-        #[from(R:Try)]
+        #[from(RO:Try)]
         pub(crate) do_try: Option<SpannedValue<()>>,
-        #[from(R:Temp)]
+        #[from(RO:Temp)]
         pub(crate) temp: Option<()>,
         #[from(RW:Assert)]
         pub(crate) assertions: Vec<Assert>,
-        #[from(R:ErrContext)]
+        #[from(RO:ErrContext)]
         pub(crate) err_context: Option<ErrContext>,
         #[from(RW:PadBefore)]
         pub(crate) pad_before: Option<TokenStream>,
@@ -230,7 +230,7 @@ attr_struct! {
         pub(crate) ident: syn::Ident,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
-        #[from(R:PreAssert)]
+        #[from(RO:PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
     }
 }
