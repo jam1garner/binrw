@@ -21,6 +21,7 @@ fn boxed() {
     compare!(Box::new(3_u8), b"\x03");
     compare!(Box::new(3_u16), Endian::Big, b"\0\x03");
     compare!(Box::new(3_u16), Endian::Little, b"\x03\0");
+    compare!(vec![3_u8; 2].into_boxed_slice(), b"\x03\x03");
 }
 
 // This is a compile-time regression test to ensure library types allow

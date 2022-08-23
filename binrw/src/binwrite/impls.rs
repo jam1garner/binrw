@@ -155,7 +155,7 @@ impl<T: BinWrite + ?Sized> BinWrite for &T {
     }
 }
 
-impl<T: BinWrite + 'static> BinWrite for Box<T> {
+impl<T: BinWrite + ?Sized + 'static> BinWrite for Box<T> {
     type Args = T::Args;
 
     fn write_options<W: Write + Seek>(
