@@ -8,21 +8,12 @@ mod types;
 
 use self::macros::attr_struct;
 use self::meta_types::MetaAttrList;
-use crate::{is_binread_attr, is_binwrite_attr, Options};
+use crate::{combine_error, is_binread_attr, is_binwrite_attr, Options};
 pub(crate) use field_level_attrs::*;
 use proc_macro2::Span;
 use syn::token::Token;
 pub(crate) use top_level_attrs::*;
 pub(crate) use types::*;
-
-// TODO: Put in util mod or something
-pub(crate) fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
-    if let Some(all_errors) = all_errors {
-        all_errors.combine(new_error);
-    } else {
-        *all_errors = Some(new_error);
-    }
-}
 
 pub(crate) trait FromField {
     type In;

@@ -94,6 +94,14 @@ struct Options {
     write: bool,
 }
 
+fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {
+    if let Some(all_errors) = all_errors {
+        all_errors.combine(new_error);
+    } else {
+        *all_errors = Some(new_error);
+    }
+}
+
 #[cfg_attr(coverage_nightly, no_coverage)]
 fn clean_attr(derive_input: &mut DeriveInput, binrw_input: &Option<Input>) {
     clean_struct_attrs(&mut derive_input.attrs);
