@@ -388,6 +388,7 @@
 //! # Assert
 //!
 //! The `assert` directive validates objects and fields
+//! <span class="brw">after they are read or before they are written,</span>
 //! <span class="br">after they are read,</span>
 //! <span class="bw">before they are written,</span>
 //! returning an error if the assertion condition evaluates to `false`:
