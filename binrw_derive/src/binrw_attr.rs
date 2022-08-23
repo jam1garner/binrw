@@ -1,8 +1,7 @@
 use crate::{
     codegen::{generate_binread_impl, generate_binwrite_impl},
-    parser::{
-        combine_error, Enum, EnumVariant, FieldMode, Input, ParseResult, Struct, StructField,
-    },
+    combine_error,
+    parser::{Enum, EnumVariant, FieldMode, Input, ParseResult, Struct, StructField},
     Options,
 };
 use quote::quote;
