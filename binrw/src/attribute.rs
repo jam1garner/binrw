@@ -1534,12 +1534,12 @@
 //! //      0       1        0      1     0011
 //! //  false    true    false   true        3
 //!
-//! # let data = Cursor::new(b"\x53").read_le::<PackedData>().unwrap();
-//! # assert_eq!(data.is_good(), false);
-//! # assert_eq!(data.is_alive(), true);
-//! # assert_eq!(data.is_static(), false);
-//! # assert_eq!(data.is_fast(), true);
-//! # assert_eq!(data.status(), 3);
+//! let data = Cursor::new(b"\x53").read_le::<PackedData>().unwrap();
+//! assert_eq!(data.is_good(), false);
+//! assert_eq!(data.is_alive(), true);
+//! assert_eq!(data.is_static(), false);
+//! assert_eq!(data.is_fast(), true);
+//! assert_eq!(data.status(), 3);
 //! ```
 //! </div>
 //! <div class="bw">
@@ -1560,13 +1560,13 @@
 //!     is_good: bool,
 //! }
 //!
-//! // example byte: 0x53
-//! // [good] [alive] [static] [fast] [status]
-//! //      0       1        0      1     0011
-//! //  false    true    false   true        3
-//! # let mut output = Cursor::new(vec![]);
-//! # output.write_le(&PackedData::new().with_status(3)).unwrap();
-//! # assert_eq!(output.into_inner(), b"\x03");
+//! let object = PackedData::new()
+//!     .with_is_alive(true)
+//!     .with_is_fast(true)
+//!     .with_status(3);
+//! let mut output = Cursor::new(vec![]);
+//! output.write_le(&object).unwrap();
+//! assert_eq!(output.into_inner(), b"\x53");
 //! ```
 //! </div>
 //!
