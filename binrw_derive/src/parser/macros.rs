@@ -14,12 +14,13 @@ macro_rules! parse_any {
 
         impl<const WRITE: bool> ::syn::parse::Parse for $enum<WRITE> {
             fn parse(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Self> {
-                $(if (<$ty as $crate::parser::RwMarker>::READ == !WRITE || <$ty as $crate::parser::RwMarker>::WRITE == WRITE) && <<$ty as $crate::parser::KeywordToken>::Token as ::syn::token::Token>::peek(input.cursor()) {
+                use $crate::parser::macros::RwMarker;
+                $(if (<$ty as RwMarker>::READ == !WRITE || <$ty as RwMarker>::WRITE == WRITE) && <<$ty as $crate::parser::KeywordToken>::Token as ::syn::token::Token>::peek(input.cursor()) {
                     input.parse().map(Self::$variant)
                 } else)* {
                     let mut error = String::from("expected one of: ");
                     $(
-                        if <$ty as $crate::parser::RwMarker>::READ == !WRITE || <$ty as $crate::parser::RwMarker>::WRITE == WRITE {
+                        if <$ty as RwMarker>::READ == !WRITE || <$ty as RwMarker>::WRITE == WRITE {
                             error.push_str(<$ty as $crate::parser::KeywordToken>::display());
                             error.push_str(", ");
                         }
@@ -101,7 +102,7 @@ macro_rules! attr_struct {
         $crate::parser::macros::parse_any! {
             $vis enum $attr_ty {
                 $($(
-                    $($field_attr_id($crate::parser::$field_rw<$crate::parser::attrs::$field_attr_id>),)+
+                    $($field_attr_id($crate::parser::macros::$field_rw<$crate::parser::attrs::$field_attr_id>),)+
                 )?)+
             }
         }
@@ -109,3 +110,43 @@ macro_rules! attr_struct {
 }
 
 pub(super) use attr_struct;
+
+pub(super) trait RwMarker {
+    const READ: bool;
+    const WRITE: bool;
+}
+
+macro_rules! rw_marker {
+    ($ident:ident, $read:literal, $write:literal) => {
+        pub(crate) struct $ident<T>(T);
+
+        impl<T> $ident<T> {
+            pub(super) fn into_inner(self) -> T {
+                self.0
+            }
+        }
+
+        impl<T> RwMarker for $ident<T> {
+            const READ: bool = $read;
+            const WRITE: bool = $write;
+        }
+
+        impl<T: crate::parser::KeywordToken> crate::parser::KeywordToken for $ident<T> {
+            type Token = T::Token;
+
+            fn keyword_span(&self) -> proc_macro2::Span {
+                T::keyword_span(&self.0)
+            }
+        }
+
+        impl<T: syn::parse::Parse> syn::parse::Parse for $ident<T> {
+            fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+                T::parse(input).map(Self)
+            }
+        }
+    };
+}
+
+rw_marker!(R, true, false);
+rw_marker!(W, false, true);
+rw_marker!(RW, true, true);

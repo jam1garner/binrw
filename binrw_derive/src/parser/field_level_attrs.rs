@@ -1,7 +1,8 @@
 use super::{
     attr_struct,
+    top_level_attrs::StructAttr,
     types::{Assert, CondEndian, Condition, ErrContext, FieldMode, Magic, Map, PassedArgs},
-    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, StructAttr, TrySet,
+    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
 };
 use crate::Options;
 use proc_macro2::TokenStream;

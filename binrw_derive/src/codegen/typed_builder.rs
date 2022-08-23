@@ -4,7 +4,7 @@ use syn::{GenericArgument, GenericParam, Ident, Type, Visibility};
 
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
-use crate::parser::meta_types::IdentTypeMaybeDefault;
+use crate::parser::IdentTypeMaybeDefault;
 
 pub(crate) enum BuilderFieldKind {
     Required,
