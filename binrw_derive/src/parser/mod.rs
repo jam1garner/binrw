@@ -21,28 +21,6 @@ pub(crate) use top_level_attrs::{Enum, Input, Struct, UnitOnlyEnum};
 use try_set::TrySet;
 pub(crate) use types::*;
 
-trait FromField {
-    type In;
-
-    fn from_field(field: &Self::In, index: usize, options: Options) -> ParseResult<Self>
-    where
-        Self: Sized;
-}
-
-trait KeywordToken {
-    type Token: Token;
-
-    fn display() -> &'static str {
-        <Self::Token as Token>::display()
-    }
-
-    fn dyn_display(&self) -> &'static str {
-        Self::display()
-    }
-
-    fn keyword_span(&self) -> Span;
-}
-
 trait FromAttrs<Attr: syn::parse::Parse> {
     fn try_from_attrs(attrs: &[syn::Attribute], options: Options) -> ParseResult<Self>
     where
@@ -93,6 +71,14 @@ trait FromAttrs<Attr: syn::parse::Parse> {
     fn try_set_attr(&mut self, attr: Attr) -> syn::Result<()>;
 }
 
+trait FromField {
+    type In;
+
+    fn from_field(field: &Self::In, index: usize, options: Options) -> ParseResult<Self>
+    where
+        Self: Sized;
+}
+
 trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     type Field: FromField + 'static;
 
@@ -138,6 +124,20 @@ trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     fn validate(&self, _: Options) -> syn::Result<()> {
         Ok(())
     }
+}
+
+trait KeywordToken {
+    type Token: Token;
+
+    fn display() -> &'static str {
+        <Self::Token as Token>::display()
+    }
+
+    fn dyn_display(&self) -> &'static str {
+        Self::display()
+    }
+
+    fn keyword_span(&self) -> Span;
 }
 
 #[cfg(test)]
