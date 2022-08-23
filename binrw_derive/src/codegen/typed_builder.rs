@@ -19,11 +19,13 @@ pub(crate) struct BuilderField {
 }
 
 pub(crate) struct Builder<'a> {
+    pub(crate) owner_name: Option<&'a Ident>,
     pub(crate) builder_name: &'a Ident,
     pub(crate) result_name: &'a Ident,
     pub(crate) fields: &'a [BuilderField],
     pub(crate) generics: &'a [GenericParam],
     pub(crate) vis: &'a Visibility,
+    pub(crate) is_write: bool,
 }
 
 impl<'a> Builder<'a> {
@@ -45,6 +47,18 @@ impl<'a> Builder<'a> {
         let optional_finalizers = self.optional_finalizers();
 
         let res_struct = if define_result {
+            let docs = self.owner_name.map(|owner_name| {
+                format!(
+                    "Named arguments for [`{}::{}`].",
+                    owner_name,
+                    if self.is_write {
+                        "write_options"
+                    } else {
+                        "read_options"
+                    }
+                )
+            });
+
             let derives = if self.are_all_fields_optional() {
                 quote!(#[derive(Clone, Default)])
             } else {
@@ -52,6 +66,7 @@ impl<'a> Builder<'a> {
             };
             Some(quote!(
                 #derives
+                #[doc = #docs]
                 #vis struct #name < #( #user_bounds ),* > {
                     #fields
                 }

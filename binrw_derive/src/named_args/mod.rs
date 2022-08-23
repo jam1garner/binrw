@@ -87,6 +87,8 @@ pub(super) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStr
     let generics: Vec<_> = input.generics.params.iter().cloned().collect();
 
     Builder {
+        owner_name: None,
+        is_write: false,
         result_name: &input.ident,
         builder_name: &quote::format_ident!("{}Builder", input.ident),
         fields: &fields,

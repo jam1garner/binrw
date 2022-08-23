@@ -87,6 +87,8 @@ fn generate_named_arg_type(
     let result_name = arg_type_name(ty_name, is_write);
 
     let type_definition = Builder {
+        owner_name: Some(ty_name),
+        is_write,
         builder_name: &builder_ident,
         result_name: &result_name,
         fields: &fields,
