@@ -103,8 +103,6 @@ impl<Keyword> From<MetaVoid<Keyword>> for () {
 #[derive(Debug, Clone)]
 pub(crate) struct MetaList<Keyword, ItemType> {
     pub(crate) ident: Keyword,
-    #[allow(dead_code)]
-    pub(crate) parens: token::Paren,
     pub(crate) fields: Fields<ItemType>,
 }
 
@@ -112,10 +110,9 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
         let content;
-        let parens = parenthesized!(content in input);
+        parenthesized!(content in input);
         Ok(MetaList {
             ident,
-            parens,
             fields: content.parse_terminated::<_, Token![,]>(ItemType::parse)?,
         })
     }
@@ -131,16 +128,8 @@ impl<Keyword: Token + Spanned, ItemType> KeywordToken for MetaList<Keyword, Item
 
 #[derive(Debug, Clone)]
 pub(crate) enum Enclosure<ParenType, BraceType> {
-    Paren {
-        #[allow(dead_code)]
-        parens: token::Paren,
-        fields: Fields<ParenType>,
-    },
-    Brace {
-        #[allow(dead_code)]
-        braces: token::Brace,
-        fields: Fields<BraceType>,
-    },
+    Paren { fields: Fields<ParenType> },
+    Brace { fields: Fields<BraceType> },
 }
 
 #[derive(Debug, Clone)]
@@ -161,20 +150,18 @@ where
         let content;
         let lookahead = input.lookahead1();
         if lookahead.peek(token::Paren) {
-            let parens = parenthesized!(content in input);
+            parenthesized!(content in input);
             Ok(Self {
                 ident,
                 list: Enclosure::Paren {
-                    parens,
                     fields: content.parse_terminated::<_, Token![,]>(ParenItemType::parse)?,
                 },
             })
         } else if lookahead.peek(token::Brace) {
-            let braces = braced!(content in input);
+            braced!(content in input);
             Ok(Self {
                 ident,
                 list: Enclosure::Brace {
-                    braces,
                     fields: content.parse_terminated::<_, Token![,]>(BraceItemType::parse)?,
                 },
             })
@@ -201,18 +188,15 @@ impl<Keyword: Token + Spanned, ParenItemType, BraceItemType> KeywordToken
 #[derive(Debug, Clone)]
 pub(crate) struct IdentPatType {
     pub(crate) ident: syn::Ident,
-    #[allow(dead_code)]
-    pub(crate) colon_token: Token![:],
     pub(crate) ty: syn::Type,
 }
 
 impl Parse for IdentPatType {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        Ok(Self {
-            ident: input.parse()?,
-            colon_token: input.parse()?,
-            ty: input.parse()?,
-        })
+        let ident = input.parse()?;
+        input.parse::<Token![:]>()?;
+        let ty = input.parse()?;
+        Ok(Self { ident, ty })
     }
 }
 
@@ -224,33 +208,23 @@ impl Parse for IdentPatType {
 #[derive(Debug, Clone)]
 pub(crate) struct IdentTypeMaybeDefault {
     pub(crate) ident: syn::Ident,
-    #[allow(dead_code)]
-    pub(crate) colon_token: Token![:],
     pub(crate) ty: syn::Type,
-    #[allow(dead_code)]
-    pub(crate) eq: Option<Token![=]>,
     pub(crate) default: Option<Box<syn::Expr>>,
 }
 
 impl Parse for IdentTypeMaybeDefault {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let ident = input.parse()?;
-        let colon_token = input.parse()?;
+        input.parse::<Token![:]>()?;
         let ty = input.parse()?;
-        let lookahead = input.lookahead1();
-        let (eq, default) = if lookahead.peek(Token![=]) {
-            (Some(input.parse()?), Some(input.parse()?))
+        let default = if input.lookahead1().peek(Token![=]) {
+            input.parse::<Token![=]>()?;
+            Some(input.parse()?)
         } else {
-            (None, None)
+            None
         };
 
-        Ok(Self {
-            ident,
-            colon_token,
-            ty,
-            eq,
-            default,
-        })
+        Ok(Self { ident, ty, default })
     }
 }
 
