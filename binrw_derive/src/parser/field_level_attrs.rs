@@ -1,7 +1,7 @@
 use super::{
     attr_struct,
     types::{Assert, CondEndian, Condition, ErrContext, Magic, Map, PassedArgs, ReadMode},
-    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
+    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, StructAttr, TrySet,
 };
 use crate::Options;
 use proc_macro2::TokenStream;
@@ -15,47 +15,47 @@ attr_struct! {
         pub(crate) generated_ident: bool,
         pub(crate) ty: syn::Type,
         pub(crate) field: syn::Field,
-        #[from(Big, Little, IsBig, IsLittle)]
+        #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(Map, TryMap, Repr)]
+        #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
-        #[from(Magic)]
+        #[from(RW:Magic)]
         pub(crate) magic: Magic,
-        #[from(Args, ArgsRaw)]
+        #[from(RW:Args, RW:ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(Calc, Default, Ignore, ParseWith, WriteWith)]
+        #[from(RW:Calc, R:Default, RW:Ignore, R:ParseWith, W:WriteWith)]
         pub(crate) read_mode: ReadMode,
-        #[from(Count)]
+        #[from(R:Count)]
         pub(crate) count: Option<TokenStream>,
-        #[from(Offset)]
+        #[from(R:Offset)]
         pub(crate) offset: Option<TokenStream>,
-        #[from(OffsetAfter)]
+        #[from(R:OffsetAfter)]
         pub(crate) offset_after: Option<SpannedValue<TokenStream>>,
-        #[from(If)]
+        #[from(R:If)]
         pub(crate) if_cond: Option<Condition>,
-        #[from(DerefNow, PostProcessNow)]
+        #[from(R:DerefNow, R:PostProcessNow)]
         pub(crate) deref_now: Option<SpannedValue<()>>,
-        #[from(RestorePosition)]
+        #[from(RW:RestorePosition)]
         pub(crate) restore_position: Option<()>,
-        #[from(Try)]
+        #[from(R:Try)]
         pub(crate) do_try: Option<SpannedValue<()>>,
-        #[from(Temp)]
+        #[from(R:Temp)]
         pub(crate) temp: Option<()>,
-        #[from(Assert)]
+        #[from(RW:Assert)]
         pub(crate) assertions: Vec<Assert>,
-        #[from(ErrContext)]
+        #[from(R:ErrContext)]
         pub(crate) err_context: Option<ErrContext>,
-        #[from(PadBefore)]
+        #[from(RW:PadBefore)]
         pub(crate) pad_before: Option<TokenStream>,
-        #[from(PadAfter)]
+        #[from(RW:PadAfter)]
         pub(crate) pad_after: Option<TokenStream>,
-        #[from(AlignBefore)]
+        #[from(RW:AlignBefore)]
         pub(crate) align_before: Option<TokenStream>,
-        #[from(AlignAfter)]
+        #[from(RW:AlignAfter)]
         pub(crate) align_after: Option<TokenStream>,
-        #[from(SeekBefore)]
+        #[from(RW:SeekBefore)]
         pub(crate) seek_before: Option<TokenStream>,
-        #[from(PadSizeTo)]
+        #[from(RW:PadSizeTo)]
         pub(crate) pad_size_to: Option<TokenStream>,
     }
 }
@@ -165,41 +165,43 @@ impl FromField for StructField {
     type In = syn::Field;
 
     fn from_field(field: &Self::In, index: usize, options: Options) -> ParseResult<Self> {
-        let result = Self::set_from_attrs(
-            Self {
-                ident: field
-                    .ident
-                    .clone()
-                    .unwrap_or_else(|| quote::format_ident!("self_{}", index)),
-                generated_ident: field.ident.is_none(),
-                ty: field.ty.clone(),
-                field: field.clone(),
-                endian: <_>::default(),
-                map: <_>::default(),
-                magic: <_>::default(),
-                args: <_>::default(),
-                read_mode: <_>::default(),
-                count: <_>::default(),
-                offset: <_>::default(),
-                offset_after: <_>::default(),
-                if_cond: <_>::default(),
-                deref_now: <_>::default(),
-                restore_position: <_>::default(),
-                do_try: <_>::default(),
-                temp: <_>::default(),
-                assertions: <_>::default(),
-                pad_before: <_>::default(),
-                pad_after: <_>::default(),
-                align_before: <_>::default(),
-                align_after: <_>::default(),
-                seek_before: <_>::default(),
-                pad_size_to: <_>::default(),
-                keyword_spans: <_>::default(),
-                err_context: <_>::default(),
-            },
-            &field.attrs,
-            options,
-        );
+        let this = Self {
+            ident: field
+                .ident
+                .clone()
+                .unwrap_or_else(|| quote::format_ident!("self_{}", index)),
+            generated_ident: field.ident.is_none(),
+            ty: field.ty.clone(),
+            field: field.clone(),
+            endian: <_>::default(),
+            map: <_>::default(),
+            magic: <_>::default(),
+            args: <_>::default(),
+            read_mode: <_>::default(),
+            count: <_>::default(),
+            offset: <_>::default(),
+            offset_after: <_>::default(),
+            if_cond: <_>::default(),
+            deref_now: <_>::default(),
+            restore_position: <_>::default(),
+            do_try: <_>::default(),
+            temp: <_>::default(),
+            assertions: <_>::default(),
+            pad_before: <_>::default(),
+            pad_after: <_>::default(),
+            align_before: <_>::default(),
+            align_after: <_>::default(),
+            seek_before: <_>::default(),
+            pad_size_to: <_>::default(),
+            keyword_spans: <_>::default(),
+            err_context: <_>::default(),
+        };
+
+        let result = if options.write {
+            <Self as FromAttrs<StructFieldAttr<true>>>::set_from_attrs(this, &field.attrs, options)
+        } else {
+            <Self as FromAttrs<StructFieldAttr<false>>>::set_from_attrs(this, &field.attrs, options)
+        };
 
         match result {
             ParseResult::Ok(this) => {
@@ -225,9 +227,9 @@ attr_struct! {
     #[derive(Clone, Debug)]
     pub(crate) struct UnitEnumField {
         pub(crate) ident: syn::Ident,
-        #[from(Magic)]
+        #[from(RW:Magic)]
         pub(crate) magic: Magic,
-        #[from(PreAssert)]
+        #[from(R:PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
     }
 }
@@ -246,16 +248,26 @@ impl FromField for UnitEnumField {
     type In = syn::Variant;
 
     fn from_field(field: &Self::In, _: usize, options: Options) -> ParseResult<Self> {
-        Self::set_from_attrs(
-            Self {
-                ident: field.ident.clone(),
-                magic: <_>::default(),
-                pre_assertions: <_>::default(),
-                keyword_spans: <_>::default(),
-            },
-            &field.attrs,
-            options,
-        )
+        let this = Self {
+            ident: field.ident.clone(),
+            magic: <_>::default(),
+            pre_assertions: <_>::default(),
+            keyword_spans: <_>::default(),
+        };
+
+        if options.write {
+            <Self as FromAttrs<UnitEnumFieldAttr<true>>>::set_from_attrs(
+                this,
+                &field.attrs,
+                options,
+            )
+        } else {
+            <Self as FromAttrs<UnitEnumFieldAttr<false>>>::set_from_attrs(
+                this,
+                &field.attrs,
+                options,
+            )
+        }
     }
 }
 
@@ -298,14 +310,23 @@ impl FromField for EnumVariant {
 
     fn from_field(variant: &Self::In, index: usize, options: Options) -> ParseResult<Self> {
         match variant.fields {
-            syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
-                Struct::from_input(&variant.attrs, variant.fields.iter(), options).map(|options| {
-                    Self::Variant {
-                        ident: variant.ident.clone(),
-                        options: Box::new(options),
-                    }
-                })
+            syn::Fields::Named(_) | syn::Fields::Unnamed(_) => if options.write {
+                <Struct as FromInput<StructAttr<true>>>::from_input(
+                    &variant.attrs,
+                    variant.fields.iter(),
+                    options,
+                )
+            } else {
+                <Struct as FromInput<StructAttr<false>>>::from_input(
+                    &variant.attrs,
+                    variant.fields.iter(),
+                    options,
+                )
             }
+            .map(|options| Self::Variant {
+                ident: variant.ident.clone(),
+                options: Box::new(options),
+            }),
             syn::Fields::Unit => UnitEnumField::from_field(variant, index, options).map(Self::Unit),
         }
     }

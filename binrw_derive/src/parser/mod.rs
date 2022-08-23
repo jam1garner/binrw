@@ -257,6 +257,46 @@ pub(crate) trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
     }
 }
 
+pub(crate) trait RwMarker {
+    const READ: bool;
+    const WRITE: bool;
+}
+
+macro_rules! rw_marker {
+    ($ident:ident, $read:literal, $write:literal) => {
+        pub(crate) struct $ident<T>(T);
+
+        impl<T> $ident<T> {
+            pub(crate) fn into_inner(self) -> T {
+                self.0
+            }
+        }
+
+        impl<T> RwMarker for $ident<T> {
+            const READ: bool = $read;
+            const WRITE: bool = $write;
+        }
+
+        impl<T: KeywordToken> KeywordToken for $ident<T> {
+            type Token = T::Token;
+
+            fn keyword_span(&self) -> Span {
+                T::keyword_span(&self.0)
+            }
+        }
+
+        impl<T: syn::parse::Parse> syn::parse::Parse for $ident<T> {
+            fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+                T::parse(input).map(Self)
+            }
+        }
+    };
+}
+
+rw_marker!(R, true, false);
+rw_marker!(W, false, true);
+rw_marker!(RW, true, true);
+
 #[cfg(test)]
 mod tests {
     use proc_macro2::TokenStream;

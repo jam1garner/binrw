@@ -6,21 +6,23 @@ macro_rules! parse_any {
         ),*
         $(,)?
     }) => {
-        $vis enum $enum {
+        $vis enum $enum<const WRITE: bool> {
             $(
                 $variant($ty)
             ),*
         }
 
-        impl ::syn::parse::Parse for $enum {
+        impl<const WRITE: bool> ::syn::parse::Parse for $enum<WRITE> {
             fn parse(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Self> {
-                $(if <<$ty as $crate::parser::KeywordToken>::Token as ::syn::token::Token>::peek(input.cursor()) {
+                $(if (<$ty as $crate::parser::RwMarker>::READ == !WRITE || <$ty as $crate::parser::RwMarker>::WRITE == WRITE) && <<$ty as $crate::parser::KeywordToken>::Token as ::syn::token::Token>::peek(input.cursor()) {
                     input.parse().map(Self::$variant)
                 } else)* {
                     let mut error = String::from("expected one of: ");
                     $(
-                        error.push_str(<$ty as $crate::parser::KeywordToken>::display());
-                        error.push_str(", ");
+                        if <$ty as $crate::parser::RwMarker>::READ == !WRITE || <$ty as $crate::parser::RwMarker>::WRITE == WRITE {
+                            error.push_str(<$ty as $crate::parser::KeywordToken>::display());
+                            error.push_str(", ");
+                        }
                     )*
                     error.truncate(error.len() - 2);
                     Err(input.error(error))
@@ -66,7 +68,7 @@ macro_rules! attr_struct {
         $(
             $(#[doc = $field_doc:literal])*
             $(#[cfg($($cfg_ident:tt)*)])?
-            $(#[from($($field_attr_id:ident),+)])?
+            $(#[from($($field_rw:ident : $field_attr_id:ident),+)])?
             $field_vis:vis $field:ident : $field_ty:ty
         ),+ $(,)?
         }
@@ -82,14 +84,14 @@ macro_rules! attr_struct {
             pub(crate) keyword_spans: Vec<proc_macro2::Span>,
         }
 
-        impl $crate::parser::FromAttrs<$attr_ty> for $ident {
-            fn try_set_attr(&mut self, attr: $attr_ty) -> ::syn::Result<()> {
+        impl<const WRITE: bool> $crate::parser::FromAttrs<$attr_ty<WRITE>> for $ident {
+            fn try_set_attr(&mut self, attr: $attr_ty<WRITE>) -> ::syn::Result<()> {
                 use crate::parser::KeywordToken;
                 match attr {
                     $($(
                         $($attr_ty::$field_attr_id(value) => {
                             self.keyword_spans.push(value.keyword_span());
-                            value.try_set(&mut self.$field)
+                            value.into_inner().try_set(&mut self.$field)
                         },)+
                     )?)+
                 }
@@ -99,7 +101,7 @@ macro_rules! attr_struct {
         $crate::parser::macros::parse_any! {
             $vis enum $attr_ty {
                 $($(
-                    $($field_attr_id($crate::parser::attrs::$field_attr_id),)+
+                    $($field_attr_id($crate::parser::$field_rw<$crate::parser::attrs::$field_attr_id>),)+
                 )?)+
             }
         }

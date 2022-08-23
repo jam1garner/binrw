@@ -1,5 +1,5 @@
-error: The field len is temp but not provided a value in its BinWrite derivation. Try using `bw(calc = ...)` or `bw(ignore)`
- --> $DIR/binrw_br_temp_no_bw_ignore.rs:5:5
+error: `#[br(temp)]` is invalid without a corresponding `#[bw(ignore)]` or `#[bw(calc)]`
+ --> tests/ui/binrw_br_temp_no_bw_ignore.rs:5:5
   |
 5 | /     #[br(temp)]
 6 | |     len: u32,

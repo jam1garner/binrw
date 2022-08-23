@@ -131,7 +131,7 @@ fn validate_fields_temporary(
                 &mut all_errors,
                 syn::Error::new(
                     field.field.span(),
-                    "`#[br(temp)]` is invalid without `#[bw(ignore)]` or `#[bw(calc)]`",
+                    "`#[br(temp)]` is invalid without a corresponding `#[bw(ignore)]` or `#[bw(calc)]`",
                 ),
             );
         }
