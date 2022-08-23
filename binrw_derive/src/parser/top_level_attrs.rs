@@ -180,7 +180,7 @@ attr_struct! {
         pub(crate) imports: Imports,
         #[from(RW:Assert)]
         pub(crate) assertions: Vec<Assert>,
-        #[from(R:PreAssert)]
+        #[from(RO:PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
         pub(crate) fields: Vec<StructField>,
         pub(crate) for_write: bool,
@@ -288,9 +288,9 @@ attr_struct! {
         // properties being checked by the assertion.
         #[from(RW:Assert)]
         pub(crate) assertions: Vec<Assert>,
-        #[from(R:PreAssert)]
+        #[from(RO:PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
-        #[from(R:ReturnAllErrors, R:ReturnUnexpectedError)]
+        #[from(RO:ReturnAllErrors, RO:ReturnUnexpectedError)]
         pub(crate) error_mode: EnumErrorMode,
         pub(crate) variants: Vec<EnumVariant>,
     }

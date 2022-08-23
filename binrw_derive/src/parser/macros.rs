@@ -147,6 +147,6 @@ macro_rules! rw_marker {
     };
 }
 
-rw_marker!(R, true, false);
-rw_marker!(W, false, true);
+rw_marker!(RO, true, false);
+rw_marker!(WO, false, true);
 rw_marker!(RW, true, true);
