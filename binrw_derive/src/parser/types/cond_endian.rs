@@ -2,7 +2,7 @@ use crate::parser::{attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) enum Endian {
     Big,
     Little,

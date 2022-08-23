@@ -121,9 +121,7 @@ trait FromInput<Attr: syn::parse::Parse>: FromAttrs<Attr> {
 
     fn set_options(&mut self, _: Options) {}
 
-    fn validate(&self, _: Options) -> syn::Result<()> {
-        Ok(())
-    }
+    fn validate(&self, _: Options) -> syn::Result<()>;
 }
 
 trait KeywordToken {
@@ -173,6 +171,13 @@ mod tests {
             }
         };
     );
+
+    try_error!(args_calc_conflict: "`args` is incompatible" {
+        struct Foo {
+            #[br(args(()), calc(None))]
+            a: Option<u8>,
+        }
+    });
 
     try_error!(conflicting_keyword_bool: "conflicting `restore_position` keyword" {
         struct Foo {
@@ -328,6 +333,20 @@ mod tests {
     try_error!(invalid_magic_type: "expected byte string, byte, float, or int" {
         #[br(magic = "invalid_type")]
         struct Foo;
+    });
+
+    try_error!(try_calc_conflict: "`try` is incompatible" {
+        struct Foo {
+            #[br(try, calc(None))]
+            a: Option<u8>,
+        }
+    });
+
+    try_error!(try_default_conflict: "`try` is incompatible" {
+        struct Foo {
+            #[br(try, default)]
+            a: Option<u8>,
+        }
     });
 
     // Errors on one field should not prevent the parser from surfacing errors
