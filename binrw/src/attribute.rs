@@ -445,7 +445,23 @@
 //! </div>
 //! <div class="bw">
 //!
-//! TODO!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(BinWrite)]
+//! # #[derive(Debug)]
+//! #[bw(assert(some_val > some_smaller_val, "oops! {} <= {}", some_val, some_smaller_val))]
+//! struct Test {
+//!     some_val: u32,
+//!     some_smaller_val: u32
+//! }
+//!
+//! let object = Test { some_val: 1, some_smaller_val: 255 };
+//! let error = object.write_to(&mut Cursor::new(vec![]));
+//! assert!(error.is_err());
+//! let error = error.unwrap_err();
+//! let expected = "oops! 1 <= 255".to_string();
+//! assert!(matches!(error, binrw::Error::AssertFail { message: expected, .. }));
+//! ```
 //! </div>
 //!
 //! ### Custom error
@@ -477,7 +493,29 @@
 //! </div>
 //! <div class="bw">
 //!
-//! TODO!
+//! ```
+//! # use binrw::{prelude::*, io::Cursor};
+//! #[derive(Debug, PartialEq)]
+//! struct NotSmallerError(u32, u32);
+//! impl core::fmt::Display for NotSmallerError {
+//!     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+//!         write!(f, "{} <= {}", self.0, self.1)
+//!     }
+//! }
+//!
+//! #[derive(BinWrite, Debug)]
+//! #[bw(assert(some_val > some_smaller_val, NotSmallerError(*some_val, *some_smaller_val)))]
+//! struct Test {
+//!     some_val: u32,
+//!     some_smaller_val: u32
+//! }
+//!
+//! let object = Test { some_val: 1, some_smaller_val: 255 };
+//! let error = object.write_to(&mut Cursor::new(vec![]));
+//! assert!(error.is_err());
+//! let error = error.unwrap_err();
+//! assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
+//! ```
 //! </div>
 //!
 //! ## Errors
@@ -1070,10 +1108,6 @@
 //! # let val: MyType = Cursor::new(b"\0\0\0\x04Test\0").read_be().unwrap();
 //! # assert_eq!(val.some_string.to_string(), "Test");
 //! ```
-//! </div>
-//! <div class="bw">
-//!
-//! TODO!
 //! </div>
 //!
 //! <div class="br">
