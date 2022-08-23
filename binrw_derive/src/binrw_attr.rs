@@ -1,6 +1,8 @@
 use crate::{
     codegen::{generate_binread_impl, generate_binwrite_impl},
-    parser::{combine_error, Enum, EnumVariant, Input, ParseResult, ReadMode, Struct, StructField},
+    parser::{
+        combine_error, Enum, EnumVariant, FieldMode, Input, ParseResult, Struct, StructField,
+    },
     Options,
 };
 use quote::quote;
@@ -125,7 +127,7 @@ fn validate_fields_temporary(
     let mut all_errors = None::<syn::Error>;
     for field in fields {
         if read_temporary.contains(&field.ident)
-            && !matches!(field.read_mode, ReadMode::Calc(_) | ReadMode::Default)
+            && !matches!(field.read_mode, FieldMode::Calc(_) | FieldMode::Default)
         {
             combine_error(
                 &mut all_errors,
