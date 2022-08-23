@@ -18,8 +18,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
     let name = Some(&derive_input.ident);
     let inner = match input.map() {
         Map::None => match input {
-            Input::UnitStruct(_) => todo!(),
-            Input::Struct(s) => generate_struct(input, name, s),
+            Input::UnitStruct(s) | Input::Struct(s) => generate_struct(input, name, s),
             Input::Enum(e) => generate_data_enum(input, name, e),
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
