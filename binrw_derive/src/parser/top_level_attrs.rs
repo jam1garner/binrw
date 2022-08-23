@@ -26,7 +26,19 @@ impl Input {
         let ident = Some(&input.ident);
         match &input.data {
             syn::Data::Struct(st) => {
-                let read_struct = Struct::from_input(attrs, st.fields.iter(), options);
+                let read_struct = if options.write {
+                    <Struct as FromInput<StructAttr<true>>>::from_input(
+                        attrs,
+                        st.fields.iter(),
+                        options,
+                    )
+                } else {
+                    <Struct as FromInput<StructAttr<false>>>::from_input(
+                        attrs,
+                        st.fields.iter(),
+                        options,
+                    )
+                };
 
                 if matches!(st.fields, syn::Fields::Unit) {
                     read_struct.map(Self::UnitStruct)
@@ -45,10 +57,35 @@ impl Input {
                     .iter()
                     .all(|v| matches!(v.fields, syn::Fields::Unit))
                 {
-                    UnitOnlyEnum::from_input(attrs, variants.iter(), options)
-                        .map(Self::UnitOnlyEnum)
+                    if options.write {
+                        <UnitOnlyEnum as FromInput<UnitEnumAttr<true>>>::from_input(
+                            attrs,
+                            variants.iter(),
+                            options,
+                        )
+                    } else {
+                        <UnitOnlyEnum as FromInput<UnitEnumAttr<false>>>::from_input(
+                            attrs,
+                            variants.iter(),
+                            options,
+                        )
+                    }
+                    .map(Self::UnitOnlyEnum)
                 } else {
-                    Enum::from_input(attrs, variants.iter(), options).map(|mut e| {
+                    if options.write {
+                        <Enum as FromInput<EnumAttr<true>>>::from_input(
+                            attrs,
+                            variants.iter(),
+                            options,
+                        )
+                    } else {
+                        <Enum as FromInput<EnumAttr<false>>>::from_input(
+                            attrs,
+                            variants.iter(),
+                            options,
+                        )
+                    }
+                    .map(|mut e| {
                         e.ident = ident.cloned();
                         Self::Enum(e)
                     })
@@ -133,17 +170,17 @@ attr_struct! {
     #[from(StructAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Struct {
-        #[from(Big, Little, IsBig, IsLittle)]
+        #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(Map, TryMap, Repr)]
+        #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
-        #[from(Magic)]
+        #[from(RW:Magic)]
         pub(crate) magic: Magic,
-        #[from(Import, ImportRaw)]
+        #[from(RW:Import, RW:ImportRaw)]
         pub(crate) imports: Imports,
-        #[from(Assert)]
+        #[from(RW:Assert)]
         pub(crate) assertions: Vec<Assert>,
-        #[from(PreAssert)]
+        #[from(R:PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
         pub(crate) fields: Vec<StructField>,
         pub(crate) for_write: bool,
@@ -190,7 +227,7 @@ impl Struct {
     }
 }
 
-impl FromInput<StructAttr> for Struct {
+impl<const WRITE: bool> FromInput<StructAttr<WRITE>> for Struct {
     type Field = StructField;
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
@@ -215,10 +252,10 @@ impl FromInput<StructAttr> for Struct {
                 ));
             }
 
-            if options.derive && field.is_temp(self.for_write) {
+            if options.derive && field.is_temp(options.write) {
                 return Err(syn::Error::new(
                     field.field.span(),
-                    if self.for_write {
+                    if options.write {
                         "`#[derive(BinWrite)]` cannot create temporary fields; use `#[binrw]` or `#[binwrite]` instead"
                     } else {
                         "`#[derive(BinRead)]` cannot create temporary fields; use `#[binrw]` or `#[binread]` instead"
@@ -236,30 +273,30 @@ attr_struct! {
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
         pub(crate) ident: Option<syn::Ident>,
-        #[from(Big, Little, IsBig, IsLittle)]
+        #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(Map, TryMap, Repr)]
+        #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
-        #[from(Magic)]
+        #[from(RW:Magic)]
         pub(crate) magic: Magic,
-        #[from(Import, ImportRaw)]
+        #[from(RW:Import, RW:ImportRaw)]
         pub(crate) imports: Imports,
         // TODO: Does this make sense? It is not known what properties will
         // exist in order to construct a valid variant. The assertions all get
         // copied and used as if they were applied to each variant in the enum,
         // so the only way this ever works is if every variant contains the same
         // properties being checked by the assertion.
-        #[from(Assert)]
+        #[from(RW:Assert)]
         pub(crate) assertions: Vec<Assert>,
-        #[from(PreAssert)]
+        #[from(R:PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
-        #[from(ReturnAllErrors, ReturnUnexpectedError)]
+        #[from(R:ReturnAllErrors, R:ReturnUnexpectedError)]
         pub(crate) error_mode: EnumErrorMode,
         pub(crate) variants: Vec<EnumVariant>,
     }
 }
 
-impl FromInput<EnumAttr> for Enum {
+impl<const WRITE: bool> FromInput<EnumAttr<WRITE>> for Enum {
     type Field = EnumVariant;
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
@@ -284,15 +321,15 @@ attr_struct! {
     #[from(UnitEnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct UnitOnlyEnum {
-        #[from(Big, Little, IsBig, IsLittle)]
+        #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(Map, TryMap)]
+        #[from(RW:Map, RW:TryMap)]
         pub(crate) map: Map,
-        #[from(Magic)]
+        #[from(RW:Magic)]
         pub(crate) magic: Magic,
-        #[from(Import, ImportRaw)]
+        #[from(RW:Import, RW:ImportRaw)]
         pub(crate) imports: Imports,
-        #[from(Repr)]
+        #[from(RW:Repr)]
         pub(crate) repr: Option<SpannedValue<TokenStream>>,
         pub(crate) fields: Vec<UnitEnumField>,
         pub(crate) is_magic_enum: bool,
@@ -305,7 +342,7 @@ impl UnitOnlyEnum {
     }
 }
 
-impl FromInput<UnitEnumAttr> for UnitOnlyEnum {
+impl<const WRITE: bool> FromInput<UnitEnumAttr<WRITE>> for UnitOnlyEnum {
     type Field = UnitEnumField;
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {

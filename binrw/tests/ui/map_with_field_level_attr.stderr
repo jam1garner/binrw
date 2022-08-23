@@ -1,5 +1,6 @@
-error: Field-level attributes cannot be used with top-level map
- --> $DIR/map_with_field_level_attr.rs:4:12
+error: cannot use attributes on fields inside a struct with a struct-level `map`
+ --> tests/ui/map_with_field_level_attr.rs:6:5
   |
-4 | #[br(map = |_: u8| Test { y: 3 })]
-  |            ^^^^^^^^^^^^^^^^^^^^^
+6 | /     #[br(map(|x| x + 1))]
+7 | |     y: u64,
+  | |__________^
