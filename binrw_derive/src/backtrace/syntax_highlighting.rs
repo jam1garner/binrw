@@ -226,15 +226,15 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
 
     match &field.args {
         PassedArgs::List(args) => {
-            for arg in args {
+            for arg in args.as_ref() {
                 visit!(arg.clone());
             }
         }
         PassedArgs::Tuple(expr) => {
-            visit!(expr.clone());
+            visit!(expr.as_ref().clone());
         }
         PassedArgs::Named(args) => {
-            for arg in args {
+            for arg in args.as_ref() {
                 if let Ok(args) = syn::parse2::<ArgList>(arg.clone()) {
                     for arg in args.0 {
                         if let Some(expr) = arg.expr {

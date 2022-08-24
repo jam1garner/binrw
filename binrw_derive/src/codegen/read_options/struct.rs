@@ -5,7 +5,7 @@ use crate::parser::{ErrContext, FieldMode, Map, PassedArgs};
 use crate::parser::{Input, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
-use syn::Ident;
+use syn::{spanned::Spanned, Ident};
 
 #[cfg(all(nightly, not(coverage)))]
 use crate::backtrace::BacktraceFrame;
@@ -359,18 +359,18 @@ impl<'field> FieldGenerator<'field> {
             let ty = &self.field.ty;
 
             if let FieldMode::Function(_) = &self.field.read_mode {
-                quote! {
+                quote_spanned! {ty.span()=>
                     let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
                 }
             } else {
                 match &self.field.map {
                     Map::Map(_) | Map::Try(_) | Map::Repr(_) => {
-                        quote! {
+                        quote_spanned! {ty.span()=>
                             let #args_var = #MAP_ARGS_TYPE_HINT(&#map_func, #args);
                         }
                     }
                     Map::None => {
-                        quote! {
+                        quote_spanned! {ty.span()=>
                             let #args_var: <#ty as #BINREAD_TRAIT>::Args = #args;
                         }
                     }
@@ -554,16 +554,26 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
     let args = &field.args;
     match args {
         PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
+            // quote-spanning changes the resolution behaviour such that clippy
+            // thinks `(#count) as usize` is part of the source code instead of
+            // generated code, so instead only set the span on the fields-part
+            // to try to get the error reporting benefits without the incorrect
+            // lints
+            let fields = quote_spanned! {fields.span()=> #(, #fields)* };
+
             quote! {
-                #ARGS_MACRO! { count: ((#count) as usize) #(, #fields)* }
+                #ARGS_MACRO! { count: ((#count) as usize) #fields }
             }
         } else {
-            quote! {
+            quote_spanned! {fields.span()=>
                 #ARGS_MACRO! { #(#fields),* }
             }
         }),
-        PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
-        PassedArgs::Tuple(tuple) => Some(tuple.clone()),
+        PassedArgs::List(list) => Some(quote_spanned! {list.span()=> (#(#list,)*) }),
+        PassedArgs::Tuple(tuple) => {
+            let tuple = tuple.as_ref();
+            Some(quote_spanned! {tuple.span()=> #tuple })
+        }
         PassedArgs::None => field
             .count
             .as_ref()

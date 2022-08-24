@@ -1,13 +1,15 @@
+use super::SpannedValue;
 use crate::parser::{attrs, meta_types::Enclosure, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
+use syn::spanned::Spanned;
 
 #[derive(Debug, Clone)]
 pub(crate) enum PassedArgs {
     None,
-    List(Vec<TokenStream>),
-    Tuple(TokenStream),
-    Named(Vec<TokenStream>),
+    List(SpannedValue<Vec<TokenStream>>),
+    Tuple(SpannedValue<TokenStream>),
+    Named(SpannedValue<Vec<TokenStream>>),
 }
 
 impl PassedArgs {
@@ -25,19 +27,27 @@ impl Default for PassedArgs {
 impl From<attrs::Args> for PassedArgs {
     fn from(args: attrs::Args) -> Self {
         match args.list {
-            Enclosure::Brace { fields, .. } => {
-                Self::Named(fields.into_iter().map(Into::into).collect())
-            }
-            Enclosure::Paren { fields, .. } => {
-                Self::List(fields.iter().map(ToTokens::into_token_stream).collect())
-            }
+            Enclosure::Brace { fields, .. } => Self::Named(SpannedValue::new(
+                fields.into_iter().map(Into::into).collect(),
+                args.ident.span(),
+            )),
+            Enclosure::Paren { fields, .. } => Self::List(SpannedValue::new(
+                fields
+                    .into_iter()
+                    .map(ToTokens::into_token_stream)
+                    .collect(),
+                args.ident.span(),
+            )),
         }
     }
 }
 
 impl From<attrs::ArgsRaw> for PassedArgs {
     fn from(args: attrs::ArgsRaw) -> Self {
-        Self::Tuple(args.value.into_token_stream())
+        Self::Tuple(SpannedValue::new(
+            args.value.into_token_stream(),
+            args.ident.span(),
+        ))
     }
 }
 

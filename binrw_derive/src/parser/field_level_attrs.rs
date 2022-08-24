@@ -4,7 +4,7 @@ use super::{
     types::{Assert, CondEndian, Condition, ErrContext, FieldMode, Magic, Map, PassedArgs},
     FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
 };
-use crate::Options;
+use crate::{combine_error, Options};
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
@@ -134,28 +134,61 @@ impl StructField {
     }
 
     fn validate(&self, _: Options) -> syn::Result<()> {
+        let mut all_errors = None::<syn::Error>;
+
         if let (Some(offset_after), Some(deref_now)) = (&self.offset_after, &self.deref_now) {
             let offset_after_span = offset_after.span();
             let span = offset_after_span
                 .join(deref_now.span())
                 .unwrap_or(offset_after_span);
-            Err(syn::Error::new(
-                span,
-                "`deref_now` and `offset_after` are mutually exclusive",
-            ))
-        } else if self.do_try.is_some() && self.generated_value() {
+            combine_error(
+                &mut all_errors,
+                syn::Error::new(
+                    span,
+                    "`deref_now` and `offset_after` are mutually exclusive",
+                ),
+            );
+        }
+
+        if self.do_try.is_some() && self.generated_value() {
             //TODO: join with span of read mode somehow
             let span = self.do_try.as_ref().unwrap().span();
-            Err(syn::Error::new(
-                span,
-                "`try` is incompatible with `default` and `calc`",
-            ))
-        } else if matches!(self.read_mode, FieldMode::Calc(_)) && self.args.is_some() {
+            combine_error(
+                &mut all_errors,
+                syn::Error::new(span, "`try` is incompatible with `default` and `calc`"),
+            );
+        }
+
+        if matches!(self.read_mode, FieldMode::Calc(_)) && self.args.is_some() {
             // TODO: Correct span (args + calc keywords)
-            Err(syn::Error::new(
-                self.field.span(),
-                "`args` is incompatible with `calc`",
-            ))
+            combine_error(
+                &mut all_errors,
+                syn::Error::new(self.field.span(), "`args` is incompatible with `calc`"),
+            );
+        }
+
+        if self.count.is_some() && !matches!(self.args, PassedArgs::None | PassedArgs::Named(..)) {
+            let (span, repr) = match &self.args {
+                PassedArgs::Named(_) | PassedArgs::None => unreachable!(),
+                PassedArgs::List(list) => (
+                    list.span(),
+                    format!(
+                        "({},{})",
+                        list.first().map_or_else(<_>::default, |t| t.to_string()),
+                        if list.len() > 1 { " ..." } else { "" }
+                    ),
+                ),
+                PassedArgs::Tuple(raw) => (raw.span(), raw.to_string()),
+            };
+
+            combine_error(&mut all_errors, syn::Error::new(
+                span,
+                format!("`count` can only be used with named args; did you mean `args {{ inner: {} }}`?", repr)
+            ));
+        }
+
+        if let Some(error) = all_errors {
+            Err(error)
         } else {
             Ok(())
         }

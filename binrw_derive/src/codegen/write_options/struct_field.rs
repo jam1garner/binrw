@@ -361,7 +361,7 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
             }
         }),
         PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
-        PassedArgs::Tuple(tuple) => Some(tuple.clone()),
+        PassedArgs::Tuple(tuple) => Some(tuple.as_ref().clone()),
         PassedArgs::None => field
             .count
             .as_ref()

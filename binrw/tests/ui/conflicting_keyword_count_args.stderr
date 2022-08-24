@@ -1,0 +1,17 @@
+error: `count` can only be used with named args; did you mean `args { inner: (a,) }`?
+  --> tests/ui/conflicting_keyword_count_args.rs:11:21
+   |
+11 |     #[br(count = b, args(a))]
+   |                     ^^^^
+
+error: `count` can only be used with named args; did you mean `args { inner: a }`?
+  --> tests/ui/conflicting_keyword_count_args.rs:19:21
+   |
+19 |     #[br(count = b, args_raw = a)]
+   |                     ^^^^^^^^
+
+error: `count` can only be used with named args; did you mean `args { inner: (a, ...) }`?
+  --> tests/ui/conflicting_keyword_count_args.rs:27:21
+   |
+27 |     #[br(count = b, args(a, b))]
+   |                     ^^^^

@@ -186,6 +186,33 @@ mod tests {
         }
     });
 
+    try_error!(conflicting_keyword_count_args_list: "did you mean `args { inner: (a,) }`" {
+        struct Foo {
+            a: u8,
+            b: u8,
+            #[br(count = b, args(a))]
+            c: Vec<Item>,
+        }
+    });
+
+    try_error!(conflicting_keyword_count_args_list_long: "did you mean `args { inner: (a, ...) }`" {
+        struct Foo {
+            a: u8,
+            b: u8,
+            #[br(count = b, args(a, b))]
+            c: Vec<Item>,
+        }
+    });
+
+    try_error!(conflicting_keyword_count_args_raw: "did you mean `args { inner: a }`" {
+        struct Foo {
+            a: u8,
+            b: u8,
+            #[br(count = b, args_raw = a)]
+            c: Vec<Item>,
+        }
+    });
+
     try_error!(conflicting_keyword_cond_endian: "conflicting endianness keyword" {
         struct Foo {
             #[br(big, little, is_big = true, is_little = true)]
