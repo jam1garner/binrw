@@ -91,7 +91,7 @@ impl dyn CustomError {
 /// The error type used by [`BinRead`](crate::BinRead).
 #[non_exhaustive]
 pub enum Error {
-    /// An expected [magic number](crate::attribute#magic) was not found.
+    /// An expected [magic number](crate::docs::attribute#magic) was not found.
     BadMagic {
         /// The byte position of the unexpected magic in the reader.
         pos: u64,
@@ -106,7 +106,7 @@ pub enum Error {
     /// literal instead of an error object. Assertions that use error objects
     /// are represented by the [`Custom`] variant.
     ///
-    /// [`assert`]: crate::attribute#assert
+    /// [`assert`]: crate::docs::attribute#assert
     /// [`Custom`]: Self::Custom
     AssertFail {
         /// The byte position of the start of the field or object that raised
@@ -127,7 +127,7 @@ pub enum Error {
     /// instead of a string literal. Assertions that use string literals are
     /// represented by the [`AssertFail`] variant.
     ///
-    /// [`assert`]: crate::attribute#assert
+    /// [`assert`]: crate::docs::attribute#assert
     /// [`AssertFail`]: Self::AssertFail
     Custom {
         /// The byte position of the start of the field or object that raised
@@ -144,7 +144,7 @@ pub enum Error {
     /// This variant is used when the [`return_unexpected_error`] directive is
     /// set on an enum.
     ///
-    /// [`return_unexpected_error`]: crate::attribute#enum-errors
+    /// [`return_unexpected_error`]: crate::docs::attribute#enum-errors
     NoVariantMatch {
         /// The byte position of the unparsable data in the reader.
         pos: u64,
@@ -156,7 +156,7 @@ pub enum Error {
     /// This variant is used when the [`return_all_errors`] directive is
     /// set on an enum (which is the default).
     ///
-    /// [`return_all_errors`]: crate::attribute#enum-errors
+    /// [`return_all_errors`]: crate::docs::attribute#enum-errors
     EnumErrors {
         /// The byte position of the unparsable data in the reader.
         pos: u64,

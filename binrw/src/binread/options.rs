@@ -11,7 +11,7 @@ pub struct ReadOptions {
     /// The [byte order](crate::Endian) to use when reading data.
     ///
     /// Note that if a derived type uses one of the
-    /// [byte order directives](crate::attribute#byte-order), this option
+    /// [byte order directives](crate::docs::attribute#byte-order), this option
     /// will be overridden by the directive.
     endian: Endian,
 
@@ -37,7 +37,7 @@ impl ReadOptions {
     /// The [byte order](crate::Endian) to use when reading data.
     ///
     /// Note that if a derived type uses one of the
-    /// [byte order directives](crate::attribute#byte-order), this option
+    /// [byte order directives](crate::docs::attribute#byte-order), this option
     /// will be overridden by the directive.
     pub fn endian(&self) -> Endian {
         self.endian

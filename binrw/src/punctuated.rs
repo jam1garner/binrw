@@ -14,7 +14,7 @@ use core::fmt;
 ///
 /// [`separated()`]: Self::separated
 /// [`separated_trailing()`]: Self::separated_trailing
-/// [`parse_with`]: crate::attribute#custom-parsers
+/// [`parse_with`]: crate::docs::attribute#custom-parserswriters
 ///
 /// Consider using a `Vec<(T, P)>` or `(Vec<(T, P)>, Option<T>>)` instead if you
 /// do not need the parsed data to be transformed into a structure of arrays.
@@ -114,7 +114,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// directive to skip over data while parsing instead of reading it into
     /// memory and then discarding it.
     ///
-    /// [`pad_after`]: crate::attribute#padding-and-alignment
+    /// [`pad_after`]: crate::docs::attribute#padding-and-alignment
     pub fn into_values(self) -> Vec<T> {
         self.data
     }
