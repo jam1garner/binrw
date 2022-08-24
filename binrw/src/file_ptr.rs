@@ -21,7 +21,7 @@ use crate::{
 /// [finalized](crate::BinRead::after_parse), [dereferencing] it will yield the
 /// pointed-to value.
 ///
-/// When deriving `BinRead`, [offset](crate::attribute#offset) directives
+/// When deriving `BinRead`, [offset](crate::docs::attribute#offset) directives
 /// can be used to adjust the offset before the pointed-to value is read.
 ///
 /// [dereferencing]: core::ops::Deref
@@ -155,7 +155,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     }
 
     /// Custom parser for use with the
-    /// [`parse_with`](crate::attribute#custom-parserswriters) directive that reads
+    /// [`parse_with`](crate::docs::attribute#custom-parserswriters) directive that reads
     /// and then immediately finalizes a [`FilePtr`], returning the pointed-to
     /// value as the result.
     pub fn parse<R, Args>(reader: &mut R, options: &ReadOptions, args: Args) -> BinResult<T>
@@ -171,7 +171,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     }
 
     /// Custom parser for use with the
-    /// [`parse_with`](crate::attribute#custom-parserswriters) directive that reads and then
+    /// [`parse_with`](crate::docs::attribute#custom-parserswriters) directive that reads and then
     /// immediately finalizes a [`FilePtr`] using the specified parser, returning the pointed-to
     /// value as the result.
     pub fn parse_with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<T>
@@ -187,7 +187,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     }
 
     /// Custom parser for use with the
-    /// [`parse_with`](crate::attribute#custom-parserswriters) directive that reads and then
+    /// [`parse_with`](crate::docs::attribute#custom-parserswriters) directive that reads and then
     /// immediately finalizes a [`FilePtr`] using the specified parser, returning the [`FilePtr`]
     /// as the result.
     pub fn with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<Self>

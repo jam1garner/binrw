@@ -25,14 +25,14 @@ pub use impls::VecArgs;
 /// of a derived type must either implement `BinRead` or be annotated with an
 /// attribute containing a [`map`], [`try_map`], or [`parse_with`] directive.
 ///
-/// [`map`]: crate::attribute#map
-/// [`parse_with`]: crate::attribute#parse_with
-/// [`try_map`]: crate::attribute#map
+/// [`map`]: crate::docs::attribute#map
+/// [`parse_with`]: crate::docs::attribute#custom-parserswriters
+/// [`try_map`]: crate::docs::attribute#map
 ///
 /// Using `#[derive_binread]` instead of `#[derive]` is required when using
 /// [temporary fields].
 ///
-/// [temporary fields]: crate::attribute#temp
+/// [temporary fields]: crate::docs::attribute#temp
 pub trait BinRead: Sized + 'static {
     /// The type used for the `args` parameter of [`read_args()`] and
     /// [`read_options()`].
@@ -44,8 +44,8 @@ pub trait BinRead: Sized + 'static {
     /// When `BinRead` is derived, the [`import`] and [`import_tuple`]
     /// directives define this type.
     ///
-    /// [`import`]: crate::attribute#arguments
-    /// [`import_tuple`]: crate::attribute#arguments
+    /// [`import`]: crate::docs::attribute#arguments
+    /// [`import_tuple`]: crate::docs::attribute#arguments
     /// [`read()`]: Self::read
     /// [`read_args()`]: Self::read_args
     /// [`read_options()`]: Self::read_options
