@@ -4,11 +4,15 @@
 //! used by binrw. In no_std environments, a compatible subset API is exposed
 //! instead.
 
+#[cfg(feature = "std")]
+mod bufreader;
 pub mod prelude;
 #[cfg(all(doc, not(feature = "std")))]
 extern crate std;
 #[cfg(not(feature = "std"))]
 mod no_std;
+#[cfg(feature = "std")]
+pub use bufreader::BufReader;
 #[cfg(not(feature = "std"))]
 pub use no_std::*;
 #[cfg(feature = "std")]
