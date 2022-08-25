@@ -1,14 +1,28 @@
-//! Wrapper type for [`std::io::BufReader`] with improved performance
-//! characteristics.
+//! Wrapper type to add buffering to read streams.
 
 use super::SeekFrom;
 use core::convert::TryFrom;
 
-/// A wrapper for [`std::io::BufReader`] that does not invalidate the read
-/// buffer any time a seek occurs.
+/// A wrapper to add buffering to a read stream.
+///
+/// Unlike [`std::io::BufReader`], this wrapper does not invalidate the read
+/// buffer every time a [`Seek`](super::Seek) method is called. It also caches
+/// the underlying stream position to avoid unnecessary system calls.
+///
+/// # Limitations
+///
+/// The first time any [`Seek`](super::Seek) method is called, the read buffer
+/// will be invalidated. This is an implementation detail caused by this wrapper
+/// itself being a wrapper around [`std::io::BufReader`]. It may be resolved
+/// in the future.
+///
+/// Reading or seeking the wrapped stream object directly will cause an
+/// inconsistency in the internal state of the `BufReader`. Calling
+/// [`BufReader::seek_invalidate`] will clear the read buffer and reset the
+/// internal state to be consistent with the wrapped stream.
 pub struct BufReader<T> {
     inner: std::io::BufReader<T>,
-    pos: u64,
+    pos: Option<u64>,
 }
 
 impl<T: super::Read> BufReader<T> {
@@ -16,7 +30,7 @@ impl<T: super::Read> BufReader<T> {
     pub fn new(inner: T) -> BufReader<T> {
         BufReader {
             inner: std::io::BufReader::new(inner),
-            pos: 0,
+            pos: None,
         }
     }
 
@@ -24,7 +38,7 @@ impl<T: super::Read> BufReader<T> {
     pub fn with_capacity(capacity: usize, inner: T) -> BufReader<T> {
         BufReader {
             inner: std::io::BufReader::with_capacity(capacity, inner),
-            pos: 0,
+            pos: None,
         }
     }
 }
@@ -66,39 +80,50 @@ impl<T: super::Seek> BufReader<T> {
     /// Performs a seek that forces invalidation of the buffer and internal
     /// position state.
     pub fn seek_invalidate(&mut self, pos: SeekFrom) -> super::Result<u64> {
-        self.pos = super::Seek::seek(&mut self.inner, pos)?;
-        Ok(self.pos)
+        let n = super::Seek::seek(&mut self.inner, pos)?;
+        self.pos = Some(n);
+        Ok(n)
     }
 }
 
 impl<T: super::Read> super::Read for BufReader<T> {
     fn read(&mut self, buf: &mut [u8]) -> super::Result<usize> {
         let n = self.inner.read(buf)?;
-        self.pos += n as u64;
+        if let Some(pos) = &mut self.pos {
+            *pos += n as u64;
+        }
         Ok(n)
     }
 
     fn read_vectored(&mut self, bufs: &mut [std::io::IoSliceMut<'_>]) -> super::Result<usize> {
         let n = self.inner.read_vectored(bufs)?;
-        self.pos += n as u64;
+        if let Some(pos) = &mut self.pos {
+            *pos += n as u64;
+        }
         Ok(n)
     }
 
     fn read_to_end(&mut self, buf: &mut Vec<u8>) -> super::Result<usize> {
         let n = self.inner.read_to_end(buf)?;
-        self.pos += n as u64;
+        if let Some(pos) = &mut self.pos {
+            *pos += n as u64;
+        }
         Ok(n)
     }
 
     fn read_to_string(&mut self, buf: &mut String) -> super::Result<usize> {
         let n = self.inner.read_to_string(buf)?;
-        self.pos += n as u64;
+        if let Some(pos) = &mut self.pos {
+            *pos += n as u64;
+        }
         Ok(n)
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> super::Result<()> {
         self.inner.read_exact(buf)?;
-        self.pos += buf.len() as u64;
+        if let Some(pos) = &mut self.pos {
+            *pos += buf.len() as u64;
+        }
         Ok(())
     }
 }
@@ -106,47 +131,65 @@ impl<T: super::Read> super::Read for BufReader<T> {
 impl<T: super::Seek> super::Seek for BufReader<T> {
     fn seek(&mut self, pos: SeekFrom) -> super::Result<u64> {
         match pos {
-            SeekFrom::Start(n) => {
-                if self.pos != n {
-                    let rel_n = if n >= self.pos {
-                        i64::try_from(n - self.pos)
-                    } else {
-                        i64::try_from(self.pos - n).map(|n| -n)
-                    };
-
-                    if let Ok(rel_n) = rel_n {
-                        self.pos = self.seek(SeekFrom::Current(rel_n))?;
-                    } else {
-                        self.pos = self.inner.seek(pos)?;
-                    }
+            SeekFrom::Start(n) => match self.pos {
+                None => {
+                    let n = self.inner.seek(pos)?;
+                    self.pos = Some(n);
+                    Ok(n)
                 }
-            }
-            SeekFrom::End(_) => {
-                self.pos = self.inner.seek(pos)?;
-            }
-            SeekFrom::Current(n) => {
-                if n != 0 {
-                    // https://github.com/rust-lang/rust/issues/87840
-                    let pos = if n >= 0 {
-                        self.pos.checked_add(n as u64)
+                Some(old) if old != n => {
+                    let rel_n = if n >= old {
+                        i64::try_from(n - old)
                     } else {
-                        self.pos.checked_sub(n.unsigned_abs())
+                        i64::try_from(old - n).map(|n| -n)
                     };
 
-                    if let Some(pos) = pos {
-                        self.inner.seek_relative(n)?;
-                        self.pos = pos;
+                    let n = if let Ok(rel_n) = rel_n {
+                        self.seek(SeekFrom::Current(rel_n))?
                     } else {
-                        return Err(super::Error::new(
-                            super::ErrorKind::InvalidInput,
-                            "invalid seek to a negative or overflowing position",
-                        ));
+                        self.inner.seek(pos)?
+                    };
+
+                    self.pos = Some(n);
+                    Ok(n)
+                }
+                Some(old) => Ok(old),
+            },
+            SeekFrom::End(_) => {
+                let n = self.inner.seek(pos)?;
+                self.pos = Some(n);
+                Ok(n)
+            }
+            SeekFrom::Current(rel_n) => {
+                match self.pos {
+                    None => {
+                        let n = self.inner.seek(pos)?;
+                        self.pos = Some(n);
+                        Ok(n)
                     }
+                    Some(old) if rel_n != 0 => {
+                        // https://github.com/rust-lang/rust/issues/87840
+                        let n = if rel_n >= 0 {
+                            old.checked_add(rel_n as u64)
+                        } else {
+                            old.checked_sub(rel_n.unsigned_abs())
+                        };
+
+                        if let Some(n) = n {
+                            self.inner.seek_relative(rel_n)?;
+                            self.pos = Some(n);
+                            Ok(n)
+                        } else {
+                            Err(super::Error::new(
+                                super::ErrorKind::InvalidInput,
+                                "invalid seek to a negative or overflowing position",
+                            ))
+                        }
+                    }
+                    Some(old) => Ok(old),
                 }
             }
         }
-
-        Ok(self.pos)
     }
 }
 
