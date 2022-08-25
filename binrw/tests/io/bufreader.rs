@@ -27,10 +27,23 @@ fn bufreader() {
         }
     }
 
-    let mut stream =
-        BufReader::with_capacity(10, Counter::new(Cursor::new(b"helloworld".to_vec())));
-    let mut buf = [0; 5];
+    let mut stream = Cursor::new(b"helloworld".to_vec());
+    // Give wrapped stream a non-zero position first to ensure it is adopted
+    // correctly by BufReader
+    assert_eq!(stream.seek(SeekFrom::Start(5)).unwrap(), 5);
+
+    let mut stream = BufReader::with_capacity(10, Counter::new(stream));
     assert_eq!(stream.capacity(), 10);
+
+    // (1) Ensure wrapped stream position was correctly adopted from the
+    // wrapped stream
+    // (2) Due to the lack of specialisation, the cached stream position is not
+    // retrieved until the first time seek is called, and since the underlying
+    // implementation relies on `std::io::BufReader`, the buffer will be
+    // invalidated too which will screw up some tests
+    assert_eq!(stream.seek(SeekFrom::Current(-5)).unwrap(), 0);
+
+    let mut buf = [0; 5];
 
     // Multiple reads
     stream.read_exact(&mut buf).unwrap();
