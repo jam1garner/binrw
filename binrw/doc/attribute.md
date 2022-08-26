@@ -82,7 +82,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | r   | [`default`](#ignore) | field | An alias for `ignore`.
 | r   | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
 | r   | [`err_context`](#backtrace) | field | Adds additional context to errors.
-| r   | [`if`](#conditional-values) | field | Reads data only if a condition is true.
+| rw  | [`if`](#conditional-values) | field | <span class="brw">Reads or writes</span><span class="br">Reads</span><span class="bw">Writes</span> data only if a condition is true.
 | rw  | [`ignore`](#ignore) | field | <span class="brw">For `BinRead`, uses the [`default`](core::default::Default) value for a field instead of reading data. For `BinWrite`, skips writing the field.</span><span class="br">Uses the [`default`](core::default::Default) value for a field instead of reading data.</span><span class="bw">Skips writing the field.</span>
 | rw  | [`import`](#arguments) | struct, non-unit enum, unit-like enum | Defines extra arguments for a struct or enum.
 | rw  | [`import_raw`](#arguments) | struct, non-unit enum, unit-like enum | Like `import`, but receives the arguments as a single variable.
@@ -858,22 +858,36 @@ assert_eq!(output.into_inner(), b"\0\0\0\x04\0\0\0\x01");
 ```
 </div>
 
-<div class="br">
-
 # Conditional values
 
-The `if` directive allows conditional parsing of a field, reading from data
-if the condition is true and using a computed value if the condition is
+The `if` directive allows conditional
+<span class="br">parsing</span><span class="bw">serialisation</span> of a field,
+<span class="br">reading</span><span class="bw">writing</span> data if the
+condition is true and optionally using a computed value if the condition is
 false:
 
+<div class="br">
+
 ```text
-#[br(if = $cond:expr)] or #[br(if($cond:expr))]
-#[br(if = $cond:expr, $alternate:expr)] or #[br(if($cond:expr, $alternate:expr))]
+#[br(if($cond:expr))]
+#[br(if($cond:expr, $alternate:expr))]
 ```
+</div>
+<div class="bw">
+
+```text
+#[bw(if($cond:expr))]
+#[bw(if($cond:expr, $alternate:expr))]
+```
+</div>
 
 If an alternate is provided, that value will be used when the condition is
-false; otherwise, the [`default`](core::default::Default) value for the type
-will be used.
+false; otherwise,
+<span class="brw">for reads, the [`default`](core::default::Default) value for
+the type will be used, and for writes, no data will be written.</span>
+<span class="br">the [`default`](core::default::Default) value for the type
+will be used.</span>
+<span class="bw">no data will be written.</span>
 
 The alternate expression is not evaluated unless the condition is false, so
 it is safe for it to contain expensive operations without impacting
@@ -882,9 +896,15 @@ performance.
 Any earlier field or [import](#arguments) can be referenced by the
 expression in the directive.
 
+<span class="bw">The [`map`](#map) directive can also be used to conditionally
+write a field by returning an [`Option`], where a [`None`] value skips
+writing.</span>
+
 ## Examples
 
-### Using an [`Option`] field with no alternate
+<div class="br">
+
+### Reading an [`Option`] field with no alternate
 
 ```
 # use binrw::{prelude::*, io::Cursor};
@@ -903,7 +923,7 @@ struct MyType {
 # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, None);
 ```
 
-### Using a scalar field with an explicit alternate
+### Reading a scalar field with an explicit alternate
 
 ```
 # use binrw::{prelude::*, io::Cursor};
@@ -920,6 +940,49 @@ struct MyType {
 
 # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().original_byte, 3);
 # assert_eq!(Cursor::new(b"\0\0\0\x01\x03").read_be::<MyType>().unwrap().other_byte, 42);
+```
+</div>
+<div class="bw">
+
+
+### Skipping a scalar field with no alternate
+
+```
+# use binrw::{prelude::*, io::Cursor};
+#[derive(BinWrite)]
+struct Test {
+    x: u8,
+    #[bw(if(*x > 1))]
+    y: u8,
+}
+
+let mut output = Cursor::new(vec![]);
+output.write_be(&Test { x: 1, y: 3 }).unwrap();
+assert_eq!(output.into_inner(), b"\x01");
+
+let mut output = Cursor::new(vec![]);
+output.write_be(&Test { x: 2, y: 3 }).unwrap();
+assert_eq!(output.into_inner(), b"\x02\x03");
+```
+
+### Writing a scalar field with an explicit alternate
+
+```
+# use binrw::{prelude::*, io::Cursor};
+#[derive(BinWrite)]
+struct Test {
+    x: u8,
+    #[bw(if(*x > 1, 0))]
+    y: u8,
+}
+
+let mut output = Cursor::new(vec![]);
+output.write_be(&Test { x: 1, y: 3 }).unwrap();
+assert_eq!(output.into_inner(), b"\x01\0");
+
+let mut output = Cursor::new(vec![]);
+output.write_be(&Test { x: 2, y: 3 }).unwrap();
+assert_eq!(output.into_inner(), b"\x02\x03");
 ```
 </div>
 

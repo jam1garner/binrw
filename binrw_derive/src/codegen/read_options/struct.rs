@@ -9,6 +9,7 @@ use crate::{
     },
     parser::{ErrContext, FieldMode, Input, Map, PassedArgs, Struct, StructField},
 };
+use alloc::borrow::Cow;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{spanned::Spanned, Ident};
@@ -511,7 +512,10 @@ impl<'field> FieldGenerator<'field> {
         if let Some(cond) = &self.field.if_cond {
             let condition = &cond.condition;
             let consequent = self.out;
-            let alternate = &cond.alternate;
+            let alternate = cond
+                .alternate
+                .as_ref()
+                .map_or_else(|| Cow::Owned(quote! { <_>::default() }), Cow::Borrowed);
             self.out = quote! {
                 if #condition {
                     #consequent

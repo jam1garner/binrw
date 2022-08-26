@@ -20,6 +20,7 @@ pub(crate) fn write_field(field: &StructField) -> TokenStream {
         .prefix_write_fn()
         .prefix_map_fn()
         .prefix_magic()
+        .wrap_condition()
         .prefix_assertions()
         .finish()
 }
@@ -162,6 +163,24 @@ impl<'a> StructFieldGenerator<'a> {
             let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#WRITER)?;
         };
 
+        let name = self
+            .field
+            .if_cond
+            .as_ref()
+            .and_then(|cond| {
+                cond.alternate.as_ref().map(|alternate| {
+                    let condition = &cond.condition;
+                    quote! {
+                        if #condition {
+                            #name
+                        } else {
+                            &#alternate
+                        }
+                    }
+                })
+            })
+            .unwrap_or_else(|| quote::ToTokens::to_token_stream(name));
+
         self.out = quote! {
             #initialize
 
@@ -259,6 +278,22 @@ impl<'a> StructFieldGenerator<'a> {
             #align_after
             #restore_position
         }
+    }
+
+    fn wrap_condition(mut self) -> Self {
+        if let Some(cond) = &self.field.if_cond {
+            if cond.alternate.is_none() {
+                let condition = &cond.condition;
+                let consequent = self.out;
+                self.out = quote! {
+                    if #condition {
+                        #consequent
+                    }
+                };
+            }
+        }
+
+        self
     }
 
     fn wrap_padding(mut self) -> Self {

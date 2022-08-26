@@ -32,7 +32,7 @@ attr_struct! {
         pub(crate) offset: Option<TokenStream>,
         #[from(RO:OffsetAfter)]
         pub(crate) offset_after: Option<SpannedValue<TokenStream>>,
-        #[from(RO:If)]
+        #[from(RW:If)]
         pub(crate) if_cond: Option<Condition>,
         #[from(RO:DerefNow, RO:PostProcessNow)]
         pub(crate) deref_now: Option<SpannedValue<()>>,

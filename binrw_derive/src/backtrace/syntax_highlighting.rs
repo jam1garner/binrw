@@ -211,7 +211,9 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         } = condition;
 
         visit!(condition);
-        visit!(alternate);
+        if let Some(alternate) = alternate {
+            visit!(alternate);
+        }
     }
 
     if let Some(magic) = field.magic.clone() {
