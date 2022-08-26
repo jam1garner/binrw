@@ -14,6 +14,9 @@ extern crate std;
 mod no_std;
 #[cfg(feature = "std")]
 pub use bufreader::BufReader;
+#[cfg(all(doc, not(feature = "std")))]
+#[doc(hidden)]
+pub struct BufReader;
 #[cfg(not(feature = "std"))]
 pub use no_std::*;
 pub use seek::NoSeek;
