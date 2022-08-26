@@ -166,22 +166,24 @@ impl<B: BinRead> BinRead for Vec<B> {
     ) -> BinResult<Self> {
         let mut list = Self::with_capacity(args.count);
 
-        if let Some(bytes) = <dyn Any>::downcast_mut::<Vec<u8>>(&mut list) {
-            let byte_count = reader
-                .take(args.count.try_into().map_err(not_enough_bytes)?)
-                .read_to_end(bytes)?;
+        vec_fast_int!(try (i8 i16 u16 i32 u32 i64 u64 i128 u128) using (list, reader, options, args) else {
+            if let Some(bytes) = <dyn Any>::downcast_mut::<Vec<u8>>(&mut list) {
+                let byte_count = reader
+                    .take(args.count.try_into().map_err(not_enough_bytes)?)
+                    .read_to_end(bytes)?;
 
-            if byte_count == args.count {
-                Ok(list)
+                if byte_count == args.count {
+                    Ok(list)
+                } else {
+                    Err(not_enough_bytes(()))
+                }
             } else {
-                Err(not_enough_bytes(()))
+                for _ in 0..args.count {
+                    list.push(B::read_options(reader, options, args.inner.clone())?);
+                }
+                Ok(list)
             }
-        } else {
-            for _ in 0..args.count {
-                list.push(B::read_options(reader, options, args.inner.clone())?);
-            }
-            Ok(list)
-        }
+        })
     }
 
     fn after_parse<R>(
@@ -200,6 +202,34 @@ impl<B: BinRead> BinRead for Vec<B> {
         Ok(())
     }
 }
+
+macro_rules! vec_fast_int {
+    (try ($($Ty:ty)+) using ($list:expr, $reader:expr, $options:expr, $args:expr) else { $($else:tt)* }) => {
+        $(if let Some(list) = <dyn Any>::downcast_mut::<Vec<$Ty>>(&mut $list) {
+            // In benchmarks, this resize decreases performance by
+            // 27–40% relative to using `unsafe` to write directly to
+            // uninitialised memory, but nobody ever got fired for buying IBM
+            list.resize($args.count, 0);
+            $reader.read_exact(&mut bytemuck::cast_slice_mut::<_, u8>(list.as_mut_slice()))?;
+            if
+                core::mem::size_of::<$Ty>() != 1
+                && (
+                    (cfg!(target_endian = "big") && $options.endian() == Endian::Little)
+                    || (cfg!(target_endian = "little") && $options.endian() == Endian::Big)
+                )
+            {
+                for value in list.iter_mut() {
+                    *value = value.swap_bytes();
+                }
+            }
+            Ok($list)
+        } else)* {
+            $($else)*
+        }
+    }
+}
+
+use vec_fast_int;
 
 impl<B: BinRead, const N: usize> BinRead for [B; N] {
     type Args = B::Args;
