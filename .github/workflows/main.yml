@@ -119,7 +119,7 @@ jobs:
       - name: Show coverage results
         run: >
           cargo llvm-cov --doctests
-          --ignore-filename-regex 'binrw/(tests|src/attribute)'
+          --ignore-filename-regex 'binrw/(tests|src/docs)'
           --no-run
       # https://github.com/actions/runner/issues/520
       - name: Determine whether codecov.io secret is available
@@ -128,7 +128,7 @@ jobs:
       - name: Generate coverage file
         run: >
           cargo llvm-cov --doctests
-          --ignore-filename-regex 'binrw/(tests|src/attribute)'
+          --ignore-filename-regex 'binrw/(tests|src/docs)'
           --no-run
           --lcov --output-path lcov.info
         if: steps.has_codecov.outputs.result != 0
