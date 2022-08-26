@@ -1,5 +1,4 @@
 use binrw::{io::Cursor, BinRead};
-use core::convert::TryInto;
 
 #[test]
 fn map_closure() {
@@ -168,7 +167,7 @@ fn try_map_field() {
     let error = Test::read(&mut Cursor::new(b"\x7f\0\0\0")).expect_err("accepted bad data");
     assert!(matches!(error, binrw::Error::Custom { pos: 0, .. }));
     error
-        .custom_err::<<i32 as ::core::convert::TryInto<i16>>::Error>()
+        .custom_err::<<i32 as TryInto<i16>>::Error>()
         .expect("wrong error type");
 }
 

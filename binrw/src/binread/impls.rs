@@ -3,7 +3,6 @@ use crate::{
     BinRead, BinResult, Endian, Error, ReadOptions,
 };
 use core::any::Any;
-use core::convert::TryInto;
 use core::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
     NonZeroU32, NonZeroU64, NonZeroU8,

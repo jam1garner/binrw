@@ -164,7 +164,7 @@ impl<'a> StructFieldGenerator<'a> {
             #WRITE_FUNCTION (
                 { #store_position &(#map_fn (#name) #map_try) },
                 #WRITER,
-                &#OPT#specify_endian,
+                &#OPT #specify_endian,
                 #args
             )?;
         };

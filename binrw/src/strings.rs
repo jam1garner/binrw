@@ -90,7 +90,7 @@ impl From<NullString> for Vec<u8> {
     }
 }
 
-impl core::convert::TryFrom<NullString> for String {
+impl TryFrom<NullString> for String {
     type Error = FromUtf8Error;
 
     fn try_from(value: NullString) -> Result<Self, Self::Error> {
@@ -212,7 +212,7 @@ impl From<String> for NullWideString {
     }
 }
 
-impl core::convert::TryFrom<NullWideString> for String {
+impl TryFrom<NullWideString> for String {
     type Error = FromUtf16Error;
 
     fn try_from(value: NullWideString) -> Result<Self, Self::Error> {

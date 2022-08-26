@@ -22,9 +22,7 @@ impl From<syn::Error> for TrySetError {
     }
 }
 
-impl<T: core::convert::TryInto<To, Error = E> + KeywordToken, E: Into<TrySetError>, To>
-    TrySet<Option<To>> for T
-{
+impl<T: TryInto<To, Error = E> + KeywordToken, E: Into<TrySetError>, To> TrySet<Option<To>> for T {
     fn try_set(self, to: &mut Option<To>) -> syn::Result<()> {
         if to.is_none() {
             *to = Some(self.try_into().map_err(|error| match error.into() {
@@ -41,7 +39,7 @@ impl<T: core::convert::TryInto<To, Error = E> + KeywordToken, E: Into<TrySetErro
     }
 }
 
-impl<T: core::convert::TryInto<To, Error = syn::Error> + KeywordToken, To> TrySet<Vec<To>> for T {
+impl<T: TryInto<To, Error = syn::Error> + KeywordToken, To> TrySet<Vec<To>> for T {
     fn try_set(self, to: &mut Vec<To>) -> syn::Result<()> {
         to.push(self.try_into()?);
         Ok(())

@@ -1479,7 +1479,6 @@ assert_eq!(output.into_inner(), b"\x01");
 
 ```
 # use binrw::{prelude::*, io::Cursor};
-# use std::convert::TryInto;
 #[derive(BinRead)]
 struct MyType {
     #[br(try_map = |x: i8| x.try_into())]
@@ -1494,7 +1493,6 @@ struct MyType {
 
 ```
 # use binrw::{prelude::*, io::Cursor};
-# use core::convert::TryFrom;
 #[derive(BinWrite)]
 struct MyType {
     #[bw(try_map = |x| { i8::try_from(*x) })]

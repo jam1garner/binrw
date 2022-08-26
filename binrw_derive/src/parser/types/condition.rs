@@ -1,5 +1,4 @@
 use crate::parser::attrs;
-use core::convert::TryFrom;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::spanned::Spanned;

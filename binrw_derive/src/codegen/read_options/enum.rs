@@ -107,7 +107,7 @@ fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
         });
 
         let body = quote! {
-            match #amp#READ_METHOD(#READER, #OPT, ())? {
+            match #amp #READ_METHOD(#READER, #OPT, ())? {
                 #(#matches,)*
                 _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS })
             }

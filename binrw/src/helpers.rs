@@ -4,10 +4,10 @@ use crate::{
     io::{self, Read, Seek},
     BinRead, BinResult, Error, ReadOptions,
 };
-use core::convert::TryInto;
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+use core::iter::repeat_with;
 
 /// Read items until a condition is met. The final item will be included.
 ///
@@ -33,7 +33,7 @@ where
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
-    Ret: core::iter::FromIterator<T>,
+    Ret: FromIterator<T>,
 {
     let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
         let mut value = T::read_options(reader, ro, args.clone())?;
@@ -70,12 +70,12 @@ where
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
     ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
-    Ret: core::iter::FromIterator<T>,
+    Ret: FromIterator<T>,
 {
     move |reader, ro, args| {
         let mut last_cond = true;
         let mut last_error = false;
-        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+        repeat_with(|| read(reader, ro, args.clone()))
             .take_while(|result| {
                 let cont = last_cond && !last_error; //keep the first error we get
                 if let Ok(val) = result {
@@ -113,7 +113,7 @@ where
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
-    Ret: core::iter::FromIterator<T>,
+    Ret: FromIterator<T>,
 {
     let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
         let mut value = T::read_options(reader, ro, args.clone())?;
@@ -150,11 +150,11 @@ where
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
     ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
-    Ret: core::iter::FromIterator<T>,
+    Ret: FromIterator<T>,
 {
     move |reader, ro, args| {
         let mut last_error = false;
-        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+        repeat_with(|| read(reader, ro, args.clone()))
             .take_while(|result| {
                 !last_error
                     && if let Ok(val) = result {
@@ -193,7 +193,7 @@ where
     T: BinRead<Args = Arg>,
     Reader: Read + Seek,
     Arg: Clone,
-    Ret: core::iter::FromIterator<T>,
+    Ret: FromIterator<T>,
 {
     let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
         let mut value = T::read_options(reader, ro, args.clone())?;
@@ -228,11 +228,11 @@ where
     Reader: Read + Seek,
     Arg: Clone,
     ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
-    Ret: core::iter::FromIterator<T>,
+    Ret: FromIterator<T>,
 {
     move |reader, ro, args| {
         let mut last_error = false;
-        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+        repeat_with(|| read(reader, ro, args.clone()))
             .take_while(|result| {
                 !last_error
                     && match result {
@@ -279,7 +279,7 @@ where
     T: BinRead<Args = Arg>,
     R: Read + Seek,
     Arg: Clone,
-    Ret: core::iter::FromIterator<T> + 'static,
+    Ret: FromIterator<T> + 'static,
 {
     move |reader, ro, args| {
         let mut container: Ret = core::iter::empty::<T>().collect();
@@ -329,10 +329,10 @@ where
     R: Read + Seek,
     Arg: Clone,
     ReadFn: Fn(&mut R, &ReadOptions, Arg) -> BinResult<T>,
-    Ret: core::iter::FromIterator<T> + 'static,
+    Ret: FromIterator<T> + 'static,
 {
     move |reader, ro, args| {
-        core::iter::repeat_with(|| read(reader, ro, args.clone()))
+        repeat_with(|| read(reader, ro, args.clone()))
             .take(n)
             .collect()
     }

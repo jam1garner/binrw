@@ -115,7 +115,6 @@ fn map_repr_struct_field() {
 #[test]
 fn try_map() {
     use binrw::prelude::*;
-    use std::convert::TryInto;
 
     #[derive(BinWrite)]
     struct MyType {

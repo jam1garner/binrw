@@ -1,5 +1,4 @@
 use crate::parser::{keywords, meta_types::MetaList};
-use core::convert::TryFrom;
 
 #[derive(Debug, Clone)]
 pub(crate) enum ErrContext {

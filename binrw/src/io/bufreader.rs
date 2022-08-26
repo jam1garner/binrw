@@ -1,7 +1,6 @@
 //! Wrapper type to add buffering to read streams.
 
 use super::SeekFrom;
-use core::convert::TryFrom;
 
 /// A wrapper to add buffering to a read stream.
 ///

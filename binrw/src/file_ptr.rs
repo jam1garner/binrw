@@ -225,7 +225,7 @@ macro_rules! impl_into_seek_from {
         $(
             impl IntoSeekFrom for $t {
                 fn into_seek_from(self) -> SeekFrom {
-                    SeekFrom::Current(core::convert::TryInto::try_into(self).unwrap())
+                    SeekFrom::Current(TryInto::try_into(self).unwrap())
                 }
             }
         )*

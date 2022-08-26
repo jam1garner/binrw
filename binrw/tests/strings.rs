@@ -1,7 +1,6 @@
 #[test]
 fn null_wide_strings() {
     use binrw::{io::Cursor, BinReaderExt, NullWideString};
-    use core::convert::TryFrom;
 
     assert_eq!(
         Cursor::new(b"w\0i\0d\0e\0 \0s\0t\0r\0i\0n\0g\0s\0\0\0")
@@ -58,7 +57,6 @@ fn null_wide_strings() {
 #[test]
 fn null_strings() {
     use binrw::{io::Cursor, BinReaderExt, NullString};
-    use core::convert::TryFrom;
 
     let mut null_separated_strings =
         Cursor::new(b"null terminated strings? in my system's language?\0no thanks\0");
