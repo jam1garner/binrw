@@ -128,6 +128,8 @@ impl<T: BinWrite + 'static> BinWrite for Vec<T> {
     ) -> BinResult<()> {
         if let Some(this) = <dyn Any>::downcast_ref::<Vec<u8>>(self) {
             writer.write_all(this)?;
+        } else if let Some(this) = <dyn Any>::downcast_ref::<Vec<i8>>(self) {
+            writer.write_all(bytemuck::cast_slice(this.as_slice()))?;
         } else {
             for item in self {
                 T::write_options(item, writer, options, args.clone())?;

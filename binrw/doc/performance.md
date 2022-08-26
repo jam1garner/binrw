@@ -46,5 +46,14 @@ types:
 | Type                 | Read | Write |
 |----------------------|------|-------|
 | `Vec<u8>`            | yes  | yes   |
+| `Vec<i8>`            | yes  | yes   |
+| `Vec<u16>`           | yes  | no    |
+| `Vec<i16>`           | yes  | no    |
+| `Vec<u32>`           | yes  | no    |
+| `Vec<i32>`           | yes  | no    |
+| `Vec<u64>`           | yes  | no    |
+| `Vec<i64>`           | yes  | no    |
+| `Vec<u128>`          | yes  | no    |
+| `Vec<i128>`          | yes  | no    |
 | `[u8; N]`            | no   | yes   |
 | `Box<[u8]>`          | no   | yes   |
