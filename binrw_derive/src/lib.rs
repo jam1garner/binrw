@@ -3,6 +3,8 @@
 #![cfg_attr(all(nightly, not(coverage)), feature(proc_macro_span))]
 #![cfg_attr(all(nightly, coverage), feature(no_coverage))]
 
+extern crate alloc;
+
 #[cfg(all(nightly, not(coverage)))]
 mod backtrace;
 mod binrw_attr;

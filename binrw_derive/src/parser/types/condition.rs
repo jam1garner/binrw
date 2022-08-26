@@ -1,12 +1,12 @@
 use crate::parser::attrs;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::ToTokens;
 use syn::spanned::Spanned;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Condition {
     pub(crate) condition: TokenStream,
-    pub(crate) alternate: TokenStream,
+    pub(crate) alternate: Option<TokenStream>,
 }
 
 impl TryFrom<attrs::If> for Condition {
@@ -24,9 +24,7 @@ impl TryFrom<attrs::If> for Condition {
             ));
         };
 
-        let alternate = args
-            .next()
-            .map_or_else(|| quote! { <_>::default() }, ToTokens::into_token_stream);
+        let alternate = args.next().map(ToTokens::into_token_stream);
 
         super::assert_all_args_consumed(args, value.ident.span())?;
 
