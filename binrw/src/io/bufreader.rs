@@ -11,11 +11,6 @@ use core::convert::TryFrom;
 ///
 /// # Limitations
 ///
-/// The first time any [`Seek`](super::Seek) method is called, the read buffer
-/// will be invalidated. This is an implementation detail caused by this wrapper
-/// itself being a wrapper around [`std::io::BufReader`]. It may be resolved
-/// in the future.
-///
 /// Reading or seeking the wrapped stream object directly will cause an
 /// inconsistency in the internal state of the `BufReader`. Calling
 /// [`BufReader::seek_invalidate`] will clear the read buffer and reset the
@@ -130,14 +125,11 @@ impl<T: super::Read> super::Read for BufReader<T> {
 
 impl<T: super::Seek> super::Seek for BufReader<T> {
     fn seek(&mut self, pos: SeekFrom) -> super::Result<u64> {
+        let old = self.stream_position()?;
+
         match pos {
-            SeekFrom::Start(n) => match self.pos {
-                None => {
-                    let n = self.inner.seek(pos)?;
-                    self.pos = Some(n);
-                    Ok(n)
-                }
-                Some(old) if old != n => {
+            SeekFrom::Start(n) => {
+                if old != n {
                     let rel_n = if n >= old {
                         i64::try_from(n - old)
                     } else {
@@ -152,44 +144,50 @@ impl<T: super::Seek> super::Seek for BufReader<T> {
 
                     self.pos = Some(n);
                     Ok(n)
+                } else {
+                    Ok(old)
                 }
-                Some(old) => Ok(old),
-            },
+            }
             SeekFrom::End(_) => {
                 let n = self.inner.seek(pos)?;
                 self.pos = Some(n);
                 Ok(n)
             }
             SeekFrom::Current(rel_n) => {
-                match self.pos {
-                    None => {
-                        let n = self.inner.seek(pos)?;
+                if rel_n != 0 {
+                    // https://github.com/rust-lang/rust/issues/87840
+                    let n = if rel_n >= 0 {
+                        old.checked_add(rel_n as u64)
+                    } else {
+                        old.checked_sub(rel_n.unsigned_abs())
+                    };
+
+                    if let Some(n) = n {
+                        self.inner.seek_relative(rel_n)?;
                         self.pos = Some(n);
                         Ok(n)
+                    } else {
+                        Err(super::Error::new(
+                            super::ErrorKind::InvalidInput,
+                            "invalid seek to a negative or overflowing position",
+                        ))
                     }
-                    Some(old) if rel_n != 0 => {
-                        // https://github.com/rust-lang/rust/issues/87840
-                        let n = if rel_n >= 0 {
-                            old.checked_add(rel_n as u64)
-                        } else {
-                            old.checked_sub(rel_n.unsigned_abs())
-                        };
-
-                        if let Some(n) = n {
-                            self.inner.seek_relative(rel_n)?;
-                            self.pos = Some(n);
-                            Ok(n)
-                        } else {
-                            Err(super::Error::new(
-                                super::ErrorKind::InvalidInput,
-                                "invalid seek to a negative or overflowing position",
-                            ))
-                        }
-                    }
-                    Some(old) => Ok(old),
+                } else {
+                    Ok(old)
                 }
             }
         }
+    }
+
+    fn stream_position(&mut self) -> super::Result<u64> {
+        Ok(match self.pos {
+            None => {
+                let pos = self.inner.stream_position()?;
+                self.pos = Some(pos);
+                pos
+            }
+            Some(pos) => pos,
+        })
     }
 }
 
