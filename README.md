@@ -7,24 +7,27 @@
 [![matrix: #binrw:matrix.org](https://img.shields.io/badge/style-%23binrw:matrix.org-blue.svg?style=flat&label=[m])](https://matrix.to/#/#binrw:matrix.org)
 
 binrw helps you write maintainable & easy-to-read declarative binary data
-parsers using ✨macro magic✨.
+readers and writers using ✨macro magic✨.
 
 ## Features
 
-* Generates efficient data parsers for structs and enums using `#[derive]`
-* Reads data from any source using standard `io::Read + io::Seek` streams
-* [Directives in attributes](https://docs.rs/binrw/latest/binrw/attribute)
+* Generates efficient data parsers and serialisers for structs and enums using
+  `#[derive]`
+* Reads and writes data from any source using standard `io::Read` and
+  `io::Write` streams
+* [Directives in attributes](https://docs.rs/binrw/latest/binrw/docs/attribute)
   handle common binary parsing tasks like matching magic numbers, byte ordering,
   padding & alignment, data validation, and more
 * Includes reusable types for common data structures like
   [null-terminated strings](https://docs.rs/binrw/latest/binrw/struct.NullString.html) and
   [data indirection using offsets](https://docs.rs/binrw/latest/binrw/struct.FilePtr.html)
 * Parses types from third-party crates using
-  [free functions](https://docs.rs/binrw/latest/binrw/attribute#custom-parsers)
-  or [value maps](https://docs.rs/binrw/latest/binrw/attribute#map)
+  [free functions](https://docs.rs/binrw/latest/binrw/docs/attribute#custom-parsers)
+  or [value maps](https://docs.rs/binrw/latest/binrw/docs/attribute#map)
 * Uses efficient in-memory representations (does not require `#[repr(C)]` or
   `#[repr(packed)]`)
-* Code in attributes is written as code, not as strings
+* Code in attributes is written as code, not as strings, for improved ergonomics
+  and first-class IDE support
 * Supports no_std
 
 ## Usage
