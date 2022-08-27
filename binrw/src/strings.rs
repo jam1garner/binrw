@@ -5,10 +5,7 @@ use crate::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, ReadOptions,
 };
-
-#[cfg(not(feature = "std"))]
 use alloc::{string::String, vec, vec::Vec};
-
 use core::fmt::{self, Write as _};
 
 /// A null-terminated 8-bit string.
@@ -115,14 +112,14 @@ impl core::ops::DerefMut for NullString {
 impl fmt::Debug for NullString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "NullString(\"")?;
-        display_utf8(&self.0, f, |input| input.escape_debug())?;
+        display_utf8(&self.0, f, str::escape_debug)?;
         write!(f, "\")")
     }
 }
 
 impl fmt::Display for NullString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        display_utf8(&self.0, f, |input| input.chars())
+        display_utf8(&self.0, f, str::chars)
     }
 }
 
@@ -243,7 +240,7 @@ impl fmt::Display for NullWideString {
 impl fmt::Debug for NullWideString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "NullWideString(\"")?;
-        display_utf16(&self.0, f, |input| input.escape_debug())?;
+        display_utf16(&self.0, f, char::escape_debug)?;
         write!(f, "\")")
     }
 }
@@ -277,7 +274,7 @@ fn display_utf8<'a, Transformer: Fn(&'a str) -> O, O: Iterator<Item = char> + 'a
                 f.write_char(char::REPLACEMENT_CHARACTER)?;
 
                 if let Some(invalid_sequence_length) = error.error_len() {
-                    input = &after_valid[invalid_sequence_length..]
+                    input = &after_valid[invalid_sequence_length..];
                 } else {
                     break;
                 }

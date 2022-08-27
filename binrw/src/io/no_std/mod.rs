@@ -1,5 +1,6 @@
-#[cfg(doc)]
-extern crate std;
+// Lint: This code is mostly taken from `std::io` which does not use the
+// pedantic lint group.
+#![allow(clippy::pedantic)]
 
 mod cursor;
 mod error;

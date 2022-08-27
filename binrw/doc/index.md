@@ -82,7 +82,7 @@ like buffering and compression are efficient and easy to implement.
 `BinRead` also includes an [extension trait](BinReaderExt) for reading types
 directly from input objects:
 
-```rust
+```
 use binrw::{BinReaderExt, io::Cursor};
 
 let mut reader = Cursor::new(b"\x00\x0A");

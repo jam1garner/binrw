@@ -1,5 +1,5 @@
 use super::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
-use crate::alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 use core::cmp;
 
 /// A `Cursor` wraps an in-memory buffer and provides it with a

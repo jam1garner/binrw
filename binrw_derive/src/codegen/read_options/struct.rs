@@ -1,14 +1,17 @@
 use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-use crate::parser::{ErrContext, FieldMode, Map, PassedArgs};
-use crate::parser::{Input, Struct, StructField};
+#[cfg(all(nightly, not(coverage)))]
+use crate::backtrace::BacktraceFrame;
+use crate::{
+    codegen::sanitization::{
+        make_ident, IdentStr, AFTER_PARSE, ARGS_MACRO, ARGS_TYPE_HINT, BACKTRACE_FRAME,
+        BINREAD_TRAIT, COERCE_FN, MAP_ARGS_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD,
+        SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+    },
+    parser::{ErrContext, FieldMode, Input, Map, PassedArgs, Struct, StructField},
+};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{spanned::Spanned, Ident};
-
-#[cfg(all(nightly, not(coverage)))]
-use crate::backtrace::BacktraceFrame;
 
 pub(super) fn generate_unit_struct(
     input: &Input,
@@ -451,7 +454,10 @@ impl<'field> FieldGenerator<'field> {
             Some(ErrContext::Format(format, exprs)) => {
                 quote_spanned!( self.field.ident.span() =>
                     .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::OwnedFull {
-                        message: ::binrw::alloc::format!(#format, #(#exprs),*),
+                        message: {
+                            extern crate alloc;
+                            alloc::format!(#format, #(#exprs),*)
+                        },
                         line: ::core::line!(),
                         file: ::core::file!(),
                         code: #code,

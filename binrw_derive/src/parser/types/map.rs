@@ -2,7 +2,6 @@ use crate::parser::{attrs, KeywordToken, TrySet};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
-#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug)]
 pub(crate) enum Map {
     None,

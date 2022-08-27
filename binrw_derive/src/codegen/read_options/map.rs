@@ -1,5 +1,4 @@
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
+use crate::codegen::sanitization::{ARGS, OPT, POS, READER, READ_METHOD};
 use crate::parser::Input;
 use proc_macro2::TokenStream;
 use quote::quote;

@@ -3,16 +3,18 @@ use super::{
     r#struct::{generate_unit_struct, StructGenerator},
     PreludeGenerator,
 };
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-use crate::parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
-
+use crate::{
+    codegen::sanitization::{
+        BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD, SEEK_FROM,
+        SEEK_TRAIT, TEMP, WITH_CONTEXT,
+    },
+    parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
+};
+use core::cmp::Ordering;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::Ident;
-
-use std::cmp::Ordering;
 use std::collections::HashMap;
+use syn::Ident;
 
 pub(super) fn generate_unit_enum(
     input: &Input,
@@ -53,9 +55,10 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
                 #BIN_ERROR::NoVariantMatch {
                     pos: #POS,
                 },
-                #BACKTRACE_FRAME::OwnedMessage(
-                    ::binrw::alloc::format!("Unexpected value for enum: {:?}", #TEMP)
-                )
+                #BACKTRACE_FRAME::OwnedMessage({
+                    extern crate alloc;
+                    alloc::format!("Unexpected value for enum: {:?}", #TEMP)
+                })
             ))
         }
     }

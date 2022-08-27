@@ -2,9 +2,13 @@ mod r#enum;
 mod map;
 mod r#struct;
 
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-use crate::parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map};
+use crate::{
+    codegen::sanitization::{
+        IdentStr, ARGS, ASSERT, ASSERT_ERROR_FN, ASSERT_MAGIC, BIN_ERROR, ENDIAN_ENUM, OPT, POS,
+        READER, SEEK_FROM, SEEK_TRAIT, TEMP,
+    },
+    parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map},
+};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::Ident;

@@ -1,19 +1,20 @@
-use std::fmt::{Display, Formatter};
-use std::{collections::HashMap, ops::Range};
-
-use owo_colors::styles::BoldDisplay;
-use owo_colors::XtermColors;
+use crate::parser::{
+    AssertionError, CondEndian, Condition, ErrContext, FieldMode, Map, PassedArgs, StructField,
+};
+use core::{
+    fmt::{Display, Formatter},
+    ops::Range,
+};
+use owo_colors::{styles::BoldDisplay, XtermColors};
 use proc_macro2::{Span, TokenTree};
 use quote::ToTokens;
+use std::collections::HashMap;
 use syn::{
     parse::Parse,
     punctuated::Punctuated,
     spanned::Spanned,
     visit::{self, visit_type, Visit},
-};
-
-use crate::parser::{
-    AssertionError, CondEndian, Condition, ErrContext, FieldMode, Map, PassedArgs, StructField,
+    Lit,
 };
 
 #[derive(Default)]
@@ -60,7 +61,7 @@ pub(crate) enum CondOwo<A, N> {
 }
 
 impl<A: Display, N: Display> Display for CondOwo<A, N> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             CondOwo::Applied(a) => a.fmt(f),
             CondOwo::NotApplied(n) => n.fmt(f),
@@ -128,7 +129,6 @@ pub(super) fn get_syntax_highlights(field: &StructField) -> SyntaxInfo {
     syntax_info
 }
 
-#[allow(clippy::range_plus_one)]
 fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
     let syntax_info = &mut visit.syntax_info;
     for attr in attrs {
@@ -152,6 +152,8 @@ fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
             .entry(start.line)
             .or_insert_with(LineSyntax::default);
 
+        // Lint: Makes code less clear.
+        #[allow(clippy::range_plus_one)]
         line.highlights
             .push((start.column..start.column + 1, Color::Keyword));
         line.highlights
@@ -289,9 +291,6 @@ impl<'ast> Visit<'ast> for Visitor {
 
         // syntax highlighting for multi-line spans isn't supported yet (sorry)
         if start.line == end.line {
-            #[allow(clippy::enum_glob_use)]
-            use syn::Lit::*;
-
             let lines = self
                 .syntax_info
                 .lines
@@ -301,10 +300,10 @@ impl<'ast> Visit<'ast> for Visitor {
             lines.highlights.push((
                 start.column..end.column,
                 match lit {
-                    Str(_) | ByteStr(_) => Color::String,
-                    Byte(_) | Char(_) => Color::Char,
-                    Int(_) | Float(_) | Bool(_) => Color::Number,
-                    Verbatim(_) => return,
+                    Lit::Str(_) | Lit::ByteStr(_) => Color::String,
+                    Lit::Byte(_) | Lit::Char(_) => Color::Char,
+                    Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) => Color::Number,
+                    Lit::Verbatim(_) => return,
                 },
             ));
         }

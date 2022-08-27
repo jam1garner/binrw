@@ -28,7 +28,7 @@ use crate::{
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// # use binrw::{prelude::*, io::Cursor, FilePtr};
 /// #
 /// #[derive(BinRead)]
@@ -158,6 +158,10 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     /// [`parse_with`](crate::docs::attribute#custom-parserswriters) directive that reads
     /// and then immediately finalizes a [`FilePtr`], returning the pointed-to
     /// value as the result.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     pub fn parse<R, Args>(reader: &mut R, options: &ReadOptions, args: Args) -> BinResult<T>
     where
         R: Read + Seek,
@@ -174,6 +178,10 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     /// [`parse_with`](crate::docs::attribute#custom-parserswriters) directive that reads and then
     /// immediately finalizes a [`FilePtr`] using the specified parser, returning the pointed-to
     /// value as the result.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     pub fn parse_with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<T>
     where
         R: Read + Seek,
@@ -190,6 +198,10 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, T> FilePtr<Ptr, T> {
     /// [`parse_with`](crate::docs::attribute#custom-parserswriters) directive that reads and then
     /// immediately finalizes a [`FilePtr`] using the specified parser, returning the [`FilePtr`]
     /// as the result.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     pub fn with<R, F, Args>(parser: F) -> impl Fn(&mut R, &ReadOptions, Args) -> BinResult<Self>
     where
         R: Read + Seek,
@@ -278,8 +290,9 @@ impl<Ptr: IntoSeekFrom, BR: BinRead> Deref for FilePtr<Ptr, BR> {
     }
 }
 
-/// ## Panics
-/// Will panic if the FilePtr has not been read yet using [`BinRead::after_parse`](BinRead::after_parse)
+/// # Panics
+/// Will panic if the `FilePtr` has not been read yet using
+/// [`BinRead::after_parse`](BinRead::after_parse)
 impl<Ptr: IntoSeekFrom, BR: BinRead> DerefMut for FilePtr<Ptr, BR> {
     fn deref_mut(&mut self) -> &mut BR {
         match self.value.as_mut() {
@@ -311,6 +324,6 @@ where
     BR: BinRead + PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.deref() == other.deref()
+        **self == **other
     }
 }

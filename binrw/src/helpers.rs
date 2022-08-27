@@ -4,8 +4,6 @@ use crate::{
     io::{self, Read, Seek},
     BinRead, BinResult, Error, ReadOptions,
 };
-
-#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::iter::repeat_with;
 
@@ -43,11 +41,11 @@ where
     until_with(cond, read)
 }
 
-/// Do the same as [until](binrw::helpers::until) with a custom parsing function for the inner type.
+/// Do the same as [`until`] with a custom parsing function for the inner type.
 ///
 /// # Examples
 ///
-/// This example shows how to read lists of two elements until a condition is met using [until_with](binrw::helpers::until_with) coupled with [count](binrw::helpers::count).
+/// This example shows how to read lists of two elements until a condition is met using [`until_with`] coupled with [`count`].
 /// ```
 /// # use binrw::{BinRead, helpers::{until, until_with, count}, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
@@ -77,13 +75,13 @@ where
         let mut last_error = false;
         repeat_with(|| read(reader, ro, args.clone()))
             .take_while(|result| {
-                let cont = last_cond && !last_error; //keep the first error we get
+                let take = last_cond && !last_error; //keep the first error we get
                 if let Ok(val) = result {
                     last_cond = !cond(val);
                 } else {
                     last_error = true;
                 }
-                cont
+                take
             })
             .collect()
     }
@@ -123,11 +121,11 @@ where
     until_exclusive_with(cond, read)
 }
 
-/// Do the same as [until_exclusive](binrw::helpers::until_exclusive) with a custom parsing function for the inner type.
+/// Do the same as [`until_exclusive`] with a custom parsing function for the inner type.
 ///
 /// # Examples
 ///
-/// This example shows how to read lists of two elements until a condition is met using [until_exclusive_with](binrw::helpers::until_exclusive_with) coupled with [count](binrw::helpers::count).
+/// This example shows how to read lists of two elements until a condition is met using [`until_exclusive_with`] coupled with [`count`].
 /// ```
 /// # use binrw::{BinRead, helpers::{until_exclusive, until_exclusive_with, count}, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
@@ -170,6 +168,10 @@ where
 
 /// Read items until the end of the file is hit.
 ///
+/// # Errors
+///
+/// If reading fails, an [`Error`](crate::Error) variant will be returned.
+///
 /// # Examples
 ///
 /// ```
@@ -203,11 +205,11 @@ where
     until_eof_with(read)(reader, ro, args)
 }
 
-/// Do the same as [until_eof](binrw::helpers::until_eof) with a custom parsing function for the inner type.
+/// Do the same as [`until_eof`] with a custom parsing function for the inner type.
 ///
 /// # Examples
 ///
-/// This example shows how to read lists of two elements until the end of file using [until_eof_with](binrw::helpers::until_eof_with) coupled with [count](binrw::helpers::count).
+/// This example shows how to read lists of two elements until the end of file using [`until_eof_with`] coupled with [`count`].
 /// ```
 /// # use binrw::{BinRead, helpers::{until_eof, until_eof_with, count}, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
@@ -302,11 +304,11 @@ where
     }
 }
 
-/// Do the same as [count](binrw::helpers::count) with a custom parsing function for the inner type.
+/// Do the same as [`count`] with a custom parsing function for the inner type.
 ///
 /// # Examples
 ///
-/// This example shows how to read `len` lists of two elements using [count_with](binrw::helpers::count_with) coupled with [count](binrw::helpers::count).
+/// This example shows how to read `len` lists of two elements using [`count_with`] coupled with [`count`].
 /// ```
 /// # use binrw::{BinRead, helpers::count, helpers::count_with, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
