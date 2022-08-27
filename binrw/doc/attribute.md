@@ -1035,7 +1035,7 @@ calling a function generator).
 ### Using a custom parser to generate a [`HashMap`](std::collections::HashMap)
 
 ```
-# use binrw::{prelude::*, io::*, ReadOptions};
+# use binrw::{prelude::*, io::{prelude::*, Cursor}, ReadOptions};
 # use std::collections::HashMap;
 fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
     -> BinResult<HashMap<u16, u16>>
@@ -1063,7 +1063,7 @@ struct MyType {
 ### Using a custom serialiser to write a [`BTreeMap`](std::collections::BTreeMap)
 
 ```
-# use binrw::{prelude::*, io::*, WriteOptions};
+# use binrw::{prelude::*, io::{prelude::*, Cursor}, WriteOptions};
 # use std::collections::BTreeMap;
 fn custom_writer<R: Write + Seek>(
     map: &BTreeMap<u16, u16>,
@@ -1414,13 +1414,13 @@ explicitly declare the type of the data to be read in its first parameter
 and return a value which matches the type of the field.
 When using `#[bw(map)]` on a field, the map function will receive
 an immutable reference to the field value and must return a type which
-implements [`BinWrite`](binrw::BinWrite).</span>
+implements [`BinWrite`](crate::BinWrite).</span>
 <span class="br">When using `map` on a field, the map function must
 explicitly declare the type of the data to be read in its first parameter
 and return a value which matches the type of the field.</span>
 <span class="bw">When using `map` on a field, the map function will receive
 an immutable reference to the field value and must return a type which
-implements [`BinWrite`](binrw::BinWrite).</span>
+implements [`BinWrite`](crate::BinWrite).</span>
 The map function can be a plain function, closure, or call expression which
 returns a plain function or closure.
 
@@ -1430,11 +1430,11 @@ return a [`Result<T, E>`](Result) instead.
 When using `map` or `try_map` on a struct or enum, the map function
 <span class="brw">must return `Self` or `Result<Self, E>` for `BinRead`, and
 will receive an immutable reference to the entire object
-and must return a type that implements [`BinWrite`](binrw::BinWrite) for
+and must return a type that implements [`BinWrite`](crate::BinWrite) for
 `BinWrite`.</span>
 <span class="br">must return `Self` or `Result<Self, E>`.</span>
 <span class="bw">will receive an immutable reference to the entire object
-and must return a type that implements [`BinWrite`](binrw::BinWrite).</span>
+and must return a type that implements [`BinWrite`](crate::BinWrite).</span>
 
 Any <span class="br">earlier</span> field or [import](#arguments) can be
 referenced by the expression in the directive.

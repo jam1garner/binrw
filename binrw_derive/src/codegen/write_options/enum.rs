@@ -1,11 +1,10 @@
-use crate::parser::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum};
+use super::{prelude::PreludeGenerator, r#struct::StructGenerator};
+use crate::{
+    codegen::sanitization::{OPT, WRITER, WRITE_METHOD},
+    parser::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
+};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-
-use super::{prelude::PreludeGenerator, r#struct::StructGenerator};
 
 pub(crate) fn generate_unit_enum(
     input: &Input,

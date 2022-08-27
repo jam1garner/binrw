@@ -1,16 +1,13 @@
 //! Functions and type definitions for handling errors.
 
-#[cfg(all(doc, not(feature = "std")))]
-extern crate std;
-use crate::io;
-#[cfg(not(feature = "std"))]
-use alloc::{boxed::Box, string::String, vec::Vec};
-use core::{any::Any, fmt};
-
-use crate::alloc::borrow::Cow;
-
 mod backtrace;
+
+use crate::{
+    alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec},
+    io,
+};
 pub use backtrace::*;
+use core::{any::Any, fmt};
 
 /// The `CustomError` trait describes types that are usable as custom errors
 /// in a [`BinResult`](crate::BinResult).
@@ -49,10 +46,12 @@ impl<T: fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
 /// An extension trait allowing for errors to be given additional frames of context
 pub trait ContextExt {
     /// Adds an additional frame of context to the backtrace
+    #[must_use]
     fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self;
 
     /// Adds an additional frame of context to the backtrace including a message, file name, and
     /// line number.
+    #[must_use]
     #[track_caller]
     fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self;
 }
@@ -62,6 +61,13 @@ pub trait ContextExt {
 // mode.
 impl dyn CustomError {
     /// Attempts to downcast a boxed error to a concrete type.
+    ///
+    /// # Errors
+    ///
+    /// If the downcast fails, `Self` will be returned.
+    // Lint: Does not panic; the unwrap will not fail due to the `is`-guard and
+    // must be expressed this way due to borrowck limitations
+    #[allow(clippy::missing_panics_doc)]
     pub fn downcast<T: CustomError + 'static>(self: Box<Self>) -> Result<Box<T>, Box<Self>> {
         if self.is::<T>() {
             Ok(self.as_box_any().downcast().unwrap())
@@ -176,6 +182,7 @@ pub enum Error {
 impl Error {
     /// Returns the source error. For a Backtrace this is the error that caused it, for every
     /// other error this returns self
+    #[must_use]
     pub fn root_cause(&self) -> &Self {
         match self {
             Self::Backtrace(backtrace) => &backtrace.error,
@@ -185,6 +192,7 @@ impl Error {
 
     /// Check if the [root cause][`Self::root_cause`] of this error is an [`Error::Io`] and an
     /// [`io::ErrorKind::UnexpectedEof`].
+    #[must_use]
     pub fn is_eof(&self) -> bool {
         if let Error::EnumErrors {
             pos: _,
@@ -202,6 +210,7 @@ impl Error {
 
     /// Returns a reference to the boxed error object if this `Error` is a
     /// custom error of type `T`, or `None` if it isn’t.
+    #[must_use]
     pub fn custom_err<T: CustomError + 'static>(&self) -> Option<&T> {
         if let Error::Custom { err, .. } = self {
             err.downcast_ref()

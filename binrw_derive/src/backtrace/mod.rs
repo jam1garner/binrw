@@ -1,15 +1,11 @@
-#![allow(clippy::non_ascii_literal)]
-use std::fmt::{self, Display, Formatter};
+mod syntax_highlighting;
 
+use crate::parser::StructField;
+use core::fmt::{self, Display, Formatter};
 use owo_colors::OwoColorize;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
-
 use syntax_highlighting::{conditional_bold, CondOwo, SyntaxInfo};
-
-use crate::parser::StructField;
-
-mod syntax_highlighting;
 
 pub(crate) struct BacktraceFrame {
     span: Span,
@@ -120,7 +116,7 @@ impl BacktraceFrame {
                 .iter()
                 .skip(1)
                 .map(|x| x.0.start)
-                .chain(std::iter::once(start_col + line.len()));
+                .chain(core::iter::once(start_col + line.len()));
 
             if let Some((first_range, _)) = line_highlights.highlights.get(0) {
                 let component = &line[..first_range.start - start_col];

@@ -1,8 +1,9 @@
 //! Type definitions for wrappers which parse interleaved data.
 
-use crate::io::{Read, Seek};
-use crate::{BinRead, BinResult, ReadOptions, VecArgs};
-#[cfg(not(feature = "std"))]
+use crate::{
+    io::{Read, Seek},
+    BinRead, BinResult, ReadOptions, VecArgs,
+};
 use alloc::vec::Vec;
 use core::fmt;
 
@@ -21,8 +22,8 @@ use core::fmt;
 ///
 /// # Examples
 ///
-/// ```rust
-/// # use binrw::{*, io::*};
+/// ```
+/// # use binrw::{prelude::*, io::Cursor};
 /// use binrw::punctuated::Punctuated;
 ///
 /// #[derive(BinRead)]
@@ -51,10 +52,14 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     ///
     /// Requires a count to be passed via `#[br(count)]`.
     ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    ///
     /// # Example
     ///
-    /// ```rust
-    /// # use binrw::{*, io::*};
+    /// ```
+    /// # use binrw::{prelude::*, io::Cursor};
     /// use binrw::punctuated::Punctuated;
     ///
     /// #[derive(BinRead)]
@@ -69,6 +74,8 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// # assert_eq!(*y.x, vec![3, 2, 1]);
     /// # assert_eq!(y.x.separators, vec![0, 1]);
     /// ```
+    // Lint: Non-consumed argument is required to match the API.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn separated<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
@@ -91,6 +98,12 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// a trailing `P`.
     ///
     /// Requires a count to be passed via `#[br(count)]`.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    // Lint: Non-consumed argument is required to match the API.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn separated_trailing<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
@@ -115,6 +128,7 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// memory and then discarding it.
     ///
     /// [`pad_after`]: crate::docs::attribute#padding-and-alignment
+    #[must_use]
     pub fn into_values(self) -> Vec<T> {
         self.data
     }

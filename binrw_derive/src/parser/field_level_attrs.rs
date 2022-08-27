@@ -174,7 +174,7 @@ impl StructField {
                     list.span(),
                     format!(
                         "({},{})",
-                        list.first().map_or_else(<_>::default, |t| t.to_string()),
+                        list.first().map_or_else(<_>::default, ToString::to_string),
                         if list.len() > 1 { " ..." } else { "" }
                     ),
                 ),

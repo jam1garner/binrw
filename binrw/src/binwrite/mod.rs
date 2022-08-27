@@ -1,19 +1,34 @@
+mod impls;
+
 use crate::{
     io::{Seek, Write},
     BinResult, Endian,
 };
 
-mod impls;
-
 /// A trait for writing a given type to a writer
 pub trait BinWrite {
-    /// The type of arguments needed to be supplied in order to write this type, usually a tuple.
+    /// The type used for the `args` parameter of [`write_with_args()`] and
+    /// [`write_options()`].
     ///
-    /// **Note:** For types that don't require any arguments, use the unit (`()`) type.
-    /// This will allow [`write_to`](BinWrite::write_to) to be used.
+    /// When the given type implements [`Default`], convenience functions like
+    /// [`write_to()`] are enabled. `BinWrite` implementations that don’t
+    /// receive any arguments should use the `()` type.
+    ///
+    /// When `BinWrite` is derived, the [`import`] and [`import_tuple`]
+    /// directives define this type.
+    ///
+    /// [`import`]: crate::docs::attribute#arguments
+    /// [`import_tuple`]: crate::docs::attribute#arguments
+    /// [`write_to()`]: Self::write_to
+    /// [`write_with_args()`]: Self::write_with_args
+    /// [`write_options()`]: Self::write_options
     type Args: Clone;
 
-    /// Write a type to a writer while assuming no arguments are needed.
+    /// Write `Self` to the writer using default arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_to<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
     where
         Self::Args: Default,
@@ -21,13 +36,21 @@ pub trait BinWrite {
         self.write_options(writer, &WriteOptions::default(), Self::Args::default())
     }
 
-    /// Write the type to a writer while providing the default [`WriteOptions`]
+    /// Write `Self` to the writer using the given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_with_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
         self.write_options(writer, &WriteOptions::default(), args)
     }
 
-    /// Write the type to a writer, given the options on how to write it and the type-specific
-    /// arguments
+    /// Write `Self` to the writer using the given [`WriteOptions`] and
+    /// arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
@@ -36,29 +59,42 @@ pub trait BinWrite {
     ) -> BinResult<()>;
 }
 
-/// Options for how data should be written
-///
-/// Functionally the purpose of WriteOptions is simple: maintaining context which is implicitly
-/// passed throughout all types being written.
-#[derive(Default, Clone)]
+/// Runtime options for
+/// [`BinWrite::write_options()`](crate::BinWrite::write_options).
+#[derive(Default, Clone, Copy)]
 pub struct WriteOptions {
+    /// The [byte order](crate::Endian) to use when writing data.
+    ///
+    /// Note that if a derived type uses one of the
+    /// [byte order directives](crate::docs::attribute#byte-order), this option
+    /// will be overridden by the directive.
     endian: Endian,
 }
 
 impl WriteOptions {
-    /// Create a new `WriteOptions`. Additional fields can be instantiated using `.with_{field}`.
+    /// Creates a new `WriteOptions` with the given [endianness](crate::Endian).
+    #[must_use]
     pub fn new(endian: Endian) -> Self {
         Self { endian }
     }
 
-    /// Retrieves the specified endian
+    /// The [byte order](crate::Endian) to use when writing data.
+    ///
+    /// Note that if a derived type uses one of the
+    /// [byte order directives](crate::docs::attribute#byte-order), this option
+    /// will be overridden by the directive.
+    #[must_use]
     pub fn endian(&self) -> Endian {
         self.endian
     }
 
-    /// Returns the same `WriteOptions` but with the endian set
+    /// Creates a copy of this `WriteOptions` using the given
+    /// [endianness](crate::Endian).
+    #[must_use]
+    // Lint: For symmetry with `ReadOptions`.
+    #[allow(clippy::unused_self)]
     pub fn with_endian(self, endian: Endian) -> Self {
-        WriteOptions { endian }
+        Self { endian }
     }
 }
 
@@ -66,7 +102,7 @@ impl WriteOptions {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use binrw::{binwrite, BinWriterExt, io::Cursor, Endian};
 ///
 /// #[binwrite]
@@ -79,7 +115,11 @@ impl WriteOptions {
 /// assert_eq!(&writer.into_inner()[..], &[1, 0xff, 0xff, 2, 0x34, 0x12][..]);
 /// ```
 pub trait BinWriterExt: Write + Seek + Sized {
-    /// Write `T` from the writer with the given byte order.
+    /// Write `T` to the reader with the given byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_type<T: BinWrite>(&mut self, value: &T, endian: Endian) -> BinResult<()>
     where
         T::Args: Default,
@@ -88,6 +128,10 @@ pub trait BinWriterExt: Write + Seek + Sized {
     }
 
     /// Write `T` from the writer assuming big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_be<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
         T::Args: Default,
@@ -96,6 +140,10 @@ pub trait BinWriterExt: Write + Seek + Sized {
     }
 
     /// Write `T` from the writer assuming little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_le<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
         T::Args: Default,
@@ -104,6 +152,10 @@ pub trait BinWriterExt: Write + Seek + Sized {
     }
 
     /// Write `T` from the writer assuming native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_ne<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
         T::Args: Default,
@@ -112,6 +164,10 @@ pub trait BinWriterExt: Write + Seek + Sized {
     }
 
     /// Write `T` from the writer with the given byte order and arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_type_args<T: BinWrite>(
         &mut self,
         value: &T,
@@ -127,18 +183,30 @@ pub trait BinWriterExt: Write + Seek + Sized {
 
     /// Write `T` from the writer, assuming big-endian byte order, using the
     /// given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_be_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
         self.write_type_args(value, Endian::Big, args)
     }
 
     /// Write `T` from the writer, assuming little-endian byte order, using the
     /// given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_le_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
         self.write_type_args(value, Endian::Little, args)
     }
 
     /// Write `T` from the writer, assuming native-endian byte order, using the
     /// given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_ne_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
         self.write_type_args(value, Endian::Native, args)
     }

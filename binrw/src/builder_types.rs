@@ -20,11 +20,13 @@ impl SatisfiedOrOptional for Optional {}
 
 #[doc(hidden)]
 #[cfg_attr(coverage_nightly, no_coverage)]
+#[must_use]
 pub fn passthrough_helper<T>(_a: PhantomData<T>) -> T {
     panic!("This is a type system hack and should never be called!");
 }
 
 #[doc(hidden)]
+#[must_use]
 pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
     <T as BinrwNamedArgs>::builder()
 }

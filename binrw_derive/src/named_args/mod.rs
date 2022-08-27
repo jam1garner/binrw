@@ -109,8 +109,7 @@ mod kw {
 #[test]
 fn derive_named_args_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
-    use std::fs;
-    let file = fs::File::open("../binrw/tests/builder.rs").unwrap();
+    let file = std::fs::File::open("../binrw/tests/builder.rs").unwrap();
     emulate_derive_expansion_fallible(file, "BinrwNamedArgs", |input| derive_from_attribute(input))
         .unwrap();
 }

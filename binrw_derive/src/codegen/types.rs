@@ -1,9 +1,7 @@
+use crate::codegen::sanitization::ENDIAN_ENUM;
+use crate::parser::Endian;
 use proc_macro2::TokenStream;
 use quote::quote;
-
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-use crate::parser::Endian;
 
 impl Endian {
     pub(crate) fn as_binrw_endian(self) -> TokenStream {

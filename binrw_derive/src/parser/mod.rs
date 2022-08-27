@@ -15,7 +15,7 @@ use meta_types::MetaAttrList;
 // TODO: Should export a processed type, not a meta type
 pub(crate) use meta_types::IdentTypeMaybeDefault;
 use proc_macro2::Span;
-pub(crate) use result::*;
+pub(crate) use result::ParseResult;
 use syn::token::Token;
 pub(crate) use top_level_attrs::{Enum, Input, Struct, UnitOnlyEnum};
 use try_set::TrySet;
@@ -140,10 +140,9 @@ trait KeywordToken {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use proc_macro2::TokenStream;
     use syn::DeriveInput;
-
-    use super::*;
 
     fn try_input(input: TokenStream) -> ParseResult<Input> {
         Input::from_input(

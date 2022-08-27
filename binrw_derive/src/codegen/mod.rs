@@ -1,8 +1,7 @@
-#[macro_use]
-pub(crate) mod sanitization;
 mod has_magic;
 mod imports;
 mod read_options;
+pub(crate) mod sanitization;
 pub(crate) mod typed_builder;
 mod types;
 mod write_options;
@@ -10,8 +9,10 @@ mod write_options;
 use crate::parser::{Input, ParseResult};
 use proc_macro2::TokenStream;
 use quote::quote;
-#[allow(clippy::wildcard_imports)]
-use sanitization::*;
+use sanitization::{
+    ARGS, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT, OPT, READER, READ_OPTIONS, READ_TRAIT,
+    SEEK_TRAIT, WRITER, WRITE_OPTIONS, WRITE_TRAIT,
+};
 
 pub(crate) fn generate_binread_impl(
     derive_input: &syn::DeriveInput,

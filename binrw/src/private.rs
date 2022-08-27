@@ -3,7 +3,6 @@ use crate::{
     io::{self, Seek, Write},
     BinRead, BinResult, Error, ReadOptions, WriteOptions,
 };
-#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String};
 
 pub enum AssertErrorFn<M, E> {
@@ -54,7 +53,7 @@ where
 
 pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
 where
-    B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + 'static,
+    B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + Clone + Copy + 'static,
     R: io::Read + io::Seek,
 {
     let pos = reader.stream_position()?;
@@ -157,19 +156,23 @@ where
 }
 
 pub fn write_zeroes<W: Write>(writer: &mut W, count: u64) -> BinResult<()> {
-    const BUF_SIZE: u64 = 0x20;
+    const BUF_SIZE: u16 = 0x20;
     const ZEROES: [u8; BUF_SIZE as usize] = [0u8; BUF_SIZE as usize];
 
-    if count <= BUF_SIZE {
+    if count <= BUF_SIZE.into() {
+        // Lint: `count` is guaranteed to be <= BUF_SIZE
+        #[allow(clippy::cast_possible_truncation)]
         writer.write_all(&ZEROES[..count as usize])?;
     } else {
-        let full_chunks = count / BUF_SIZE;
-        let remaining = count % BUF_SIZE;
+        let full_chunks = count / u64::from(BUF_SIZE);
+        let remaining = count % u64::from(BUF_SIZE);
 
         for _ in 0..full_chunks {
             writer.write_all(&ZEROES)?;
         }
 
+        // Lint: `remaining` is guaranteed to be < BUF_SIZE
+        #[allow(clippy::cast_possible_truncation)]
         writer.write_all(&ZEROES[..remaining as usize])?;
     }
 

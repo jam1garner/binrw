@@ -1,8 +1,5 @@
-use super::*;
-
-use crate::alloc::borrow::Cow;
-use crate::alloc::string::ToString;
-use crate::alloc::{format, vec};
+use super::{ContextExt, CustomError, Error};
+use alloc::{borrow::Cow, boxed::Box, format, string::String, string::ToString, vec, vec::Vec};
 use core::fmt;
 
 /// A backtrace containing a set of frames representing (in order from innermost to outmost code)
@@ -47,6 +44,7 @@ impl Backtrace {
     ///
     /// If the error itself is a `Backtrace`, the set of frames is appended to the existing
     /// set of frames. This ensures `Backtrace::error` is not itself a `Backtrace`.
+    #[must_use]
     pub fn new(error: Error, frames: Vec<BacktraceFrame>) -> Self {
         let mut frames = frames;
         match error {
@@ -70,10 +68,10 @@ impl Backtrace {
                 &format!(
                     "\x1b[1mError: {}\x1b[22m\n    {}\x1b[1m{}\x1b[22m",
                     FirstErrorFmt(&self.error),
-                    if !matches!(self.error.as_ref(), Error::EnumErrors { .. }) {
-                        "       "
-                    } else {
+                    if matches!(self.error.as_ref(), Error::EnumErrors { .. }) {
                         "..."
+                    } else {
+                        "       "
                     },
                     first_frame.message(),
                 ),
@@ -355,9 +353,7 @@ impl fmt::Display for FirstErrorFmt<'_> {
 
 impl fmt::Write for Indenter<'_, '_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        if !s.contains('\n') {
-            self.0.write_str(s)
-        } else {
+        if s.contains('\n') {
             let mut last_ended_in_newline = false;
             let mut is_first = true;
             for line in s.split_inclusive('\n') {
@@ -375,6 +371,8 @@ impl fmt::Write for Indenter<'_, '_> {
             } else {
                 Ok(())
             }
+        } else {
+            self.0.write_str(s)
         }
     }
 }

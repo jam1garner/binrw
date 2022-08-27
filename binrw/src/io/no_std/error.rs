@@ -77,6 +77,7 @@ pub enum ErrorKind {
 impl Error {
     /// Creates a new I/O error from a known kind of error as well as an
     /// arbitrary error payload.
+    #[must_use]
     pub fn new<A>(kind: ErrorKind, _: A) -> Self {
         Self {
             repr: Repr::Simple(kind),
@@ -84,6 +85,7 @@ impl Error {
     }
 
     /// Returns the corresponding [`ErrorKind`] for this error.
+    #[must_use]
     pub fn kind(&self) -> ErrorKind {
         match self.repr {
             Repr::Simple(kind) => kind,

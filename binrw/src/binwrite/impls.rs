@@ -1,16 +1,16 @@
-use core::any::Any;
-use core::marker::PhantomData;
-use core::num::{
-    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
-    NonZeroU32, NonZeroU64, NonZeroU8,
+use crate::{
+    io::{Seek, Write},
+    BinResult, BinWrite, Endian, WriteOptions,
 };
-
-use crate::alloc::boxed::Box;
-use crate::alloc::vec::Vec;
-use crate::io::{Seek, Write};
-use crate::{BinResult, BinWrite, Endian, WriteOptions};
-
-// ============================= nums =============================
+use alloc::{boxed::Box, vec::Vec};
+use core::{
+    any::Any,
+    marker::PhantomData,
+    num::{
+        NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
+        NonZeroU32, NonZeroU64, NonZeroU8,
+    },
+};
 
 macro_rules! binwrite_num_impl {
     ($($type_name:ty),*$(,)?) => {
@@ -75,10 +75,6 @@ binwrite_nonzero_num_impl!(
     NonZeroI128 => i128,
 );
 
-// =========================== end nums ===========================
-
-// =========================== array/vec ===========================
-
 impl<T: BinWrite + 'static, const N: usize> BinWrite for [T; N] {
     type Args = T::Args;
 
@@ -139,10 +135,6 @@ impl<T: BinWrite + 'static> BinWrite for Vec<T> {
         Ok(())
     }
 }
-
-// ========================= end array/vec =========================
-
-// ========================= std types =========================
 
 impl<T: BinWrite + ?Sized> BinWrite for &T {
     type Args = T::Args;
@@ -205,10 +197,6 @@ impl<T: BinWrite> BinWrite for PhantomData<T> {
     }
 }
 
-// ======================= end std types =======================
-
-// =========================== tuples ===========================
-
 impl BinWrite for () {
     type Args = ();
 
@@ -259,5 +247,3 @@ binwrite_tuple_impl!(
     b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21,
     b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32
 );
-
-// ========================= end tuples =========================

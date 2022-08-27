@@ -1,10 +1,10 @@
+use crate::{
+    codegen::sanitization::{BINRW_NAMED_ARGS, NEEDED, OPTIONAL, SATISFIED, SATISFIED_OR_OPTIONAL},
+    parser::IdentTypeMaybeDefault,
+};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{GenericArgument, GenericParam, Ident, Type, Visibility};
-
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-use crate::parser::IdentTypeMaybeDefault;
 
 pub(crate) enum BuilderFieldKind {
     Required,

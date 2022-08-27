@@ -1,9 +1,9 @@
+use crate::{
+    codegen::sanitization::{ARGS, OPT, WRITER, WRITE_METHOD},
+    parser::{CondEndian, Input, Magic},
+};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-use crate::parser::{CondEndian, Input, Magic};
 
 pub(crate) struct PreludeGenerator<'a> {
     out: TokenStream,

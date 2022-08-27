@@ -1,17 +1,16 @@
 //! Traits, helpers, and type definitions for core I/O functionality.
 //!
 //! By default, this module simply re-exports the parts of [`std::io`] that are
-//! used by binrw. In no_std environments, a compatible subset API is exposed
+//! used by binrw. In `no_std` environments, a compatible subset API is exposed
 //! instead.
 
 #[cfg(feature = "std")]
 mod bufreader;
-pub mod prelude;
-mod seek;
-#[cfg(all(doc, not(feature = "std")))]
-extern crate std;
 #[cfg(not(feature = "std"))]
 mod no_std;
+pub mod prelude;
+mod seek;
+
 #[cfg(feature = "std")]
 pub use bufreader::BufReader;
 #[cfg(all(doc, not(feature = "std")))]

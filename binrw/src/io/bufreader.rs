@@ -73,6 +73,10 @@ impl<T> BufReader<T> {
 impl<T: super::Seek> BufReader<T> {
     /// Performs a seek that forces invalidation of the buffer and internal
     /// position state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if seeking fails.
     pub fn seek_invalidate(&mut self, pos: SeekFrom) -> super::Result<u64> {
         let n = super::Seek::seek(&mut self.inner, pos)?;
         self.pos = Some(n);
@@ -128,7 +132,9 @@ impl<T: super::Seek> super::Seek for BufReader<T> {
 
         match pos {
             SeekFrom::Start(n) => {
-                if old != n {
+                if old == n {
+                    Ok(old)
+                } else {
                     let rel_n = if n >= old {
                         i64::try_from(n - old)
                     } else {
@@ -143,8 +149,6 @@ impl<T: super::Seek> super::Seek for BufReader<T> {
 
                     self.pos = Some(n);
                     Ok(n)
-                } else {
-                    Ok(old)
                 }
             }
             SeekFrom::End(_) => {
@@ -153,9 +157,13 @@ impl<T: super::Seek> super::Seek for BufReader<T> {
                 Ok(n)
             }
             SeekFrom::Current(rel_n) => {
-                if rel_n != 0 {
+                if rel_n == 0 {
+                    Ok(old)
+                } else {
                     // https://github.com/rust-lang/rust/issues/87840
                     let n = if rel_n >= 0 {
+                        // Lint: The sign is checked in precondition above
+                        #[allow(clippy::cast_sign_loss)]
                         old.checked_add(rel_n as u64)
                     } else {
                         old.checked_sub(rel_n.unsigned_abs())
@@ -171,8 +179,6 @@ impl<T: super::Seek> super::Seek for BufReader<T> {
                             "invalid seek to a negative or overflowing position",
                         ))
                     }
-                } else {
-                    Ok(old)
                 }
             }
         }
@@ -196,6 +202,6 @@ impl<T: super::Read> std::io::BufRead for BufReader<T> {
     }
 
     fn consume(&mut self, amt: usize) {
-        self.inner.consume(amt)
+        self.inner.consume(amt);
     }
 }

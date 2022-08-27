@@ -1,17 +1,15 @@
 use crate::{
     io::{self, Read, Seek, SeekFrom},
-    BinRead, BinResult, Endian, Error, ReadOptions,
+    BinRead, BinResult, BinrwNamedArgs, Endian, Error, ReadOptions,
 };
-use core::any::Any;
-use core::num::{
-    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
-    NonZeroU32, NonZeroU64, NonZeroU8,
-};
-
-use binrw_derive::BinrwNamedArgs;
-
-#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
+use core::{
+    any::Any,
+    num::{
+        NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
+        NonZeroU32, NonZeroU64, NonZeroU8,
+    },
+};
 
 macro_rules! binread_impl {
     ($($type_name:ty),*$(,)?) => {
@@ -94,7 +92,7 @@ binread_nonzero_impl! {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use binrw::{BinRead, io::Cursor};
 ///
 /// #[derive(BinRead, Debug, PartialEq)]
@@ -123,7 +121,7 @@ binread_nonzero_impl! {
 ///
 /// Inner types that don't require args take unit args.
 ///
-/// ```rust
+/// ```
 /// # use binrw::prelude::*;
 /// #[derive(BinRead)]
 /// struct Collection {

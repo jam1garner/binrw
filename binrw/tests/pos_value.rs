@@ -1,6 +1,5 @@
-#[cfg(not(feature = "std"))]
 extern crate alloc;
-#[cfg(not(feature = "std"))]
+
 use alloc::format;
 use binrw::{io::Cursor, BinRead, BinReaderExt, PosValue};
 

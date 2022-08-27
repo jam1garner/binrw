@@ -1,12 +1,16 @@
-use std::ops::Not;
-
+use crate::{
+    codegen::sanitization::{
+        make_ident, ARGS_MACRO, BEFORE_POS, BINWRITE_TRAIT, OPT, SAVED_POSITION, SEEK_FROM,
+        SEEK_TRAIT, WRITER, WRITE_FN_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT,
+        WRITE_FN_TYPE_HINT, WRITE_FUNCTION, WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT,
+        WRITE_METHOD, WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_WITH_ARGS_TYPE_HINT, WRITE_ZEROES,
+    },
+    parser::{CondEndian, FieldMode, Map, PassedArgs, StructField},
+};
+use core::ops::Not;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
-
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
-use crate::parser::{CondEndian, FieldMode, Map, PassedArgs, StructField};
 
 pub(crate) fn write_field(field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field)

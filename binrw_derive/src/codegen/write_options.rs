@@ -1,18 +1,18 @@
-use crate::parser::{Assert, AssertionError, Input, Map};
-use proc_macro2::TokenStream;
-use quote::quote;
-
-mod r#struct;
-use r#struct::generate_struct;
-
+mod r#enum;
 mod prelude;
+mod r#struct;
 mod struct_field;
 
-mod r#enum;
+use crate::{
+    codegen::sanitization::{
+        IdentStr, ASSERT, ASSERT_ERROR_FN, BIN_ERROR, OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD,
+    },
+    parser::{Assert, AssertionError, Input, Map},
+};
+use proc_macro2::TokenStream;
+use quote::quote;
 use r#enum::{generate_data_enum, generate_unit_enum};
-
-#[allow(clippy::wildcard_imports)]
-use crate::codegen::sanitization::*;
+use r#struct::generate_struct;
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);
