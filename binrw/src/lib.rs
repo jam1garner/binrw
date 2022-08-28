@@ -83,6 +83,7 @@ pub use binrw_derive::binwrite;
 /// try to access fields that are removed by `#[binrw]`.
 pub use binrw_derive::binrw;
 
+/// The derive macro for [`BinrwNamedArgs`].
 pub use binrw_derive::BinrwNamedArgs;
 
 /// A specialized [`Result`] type for binrw operations.

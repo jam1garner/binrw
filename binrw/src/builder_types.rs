@@ -31,11 +31,31 @@ pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
     <T as BinrwNamedArgs>::builder()
 }
 
-/// A macro for creating a binrw argument type
+/// A convenience macro for constructing
+/// [named arguments](crate::docs::attribute#named-arguments).
 ///
-/// This macro avoids taking an explicit type by inferring the type it should create.
-/// In general, the result should have an explicit type *immediately*.
-/// i.e. being passed to a function or let binding with specific type.
+/// This macro uses the [`builder()`](BinrwNamedArgs::builder) function of a
+/// [named arguments type](BinrwNamedArgs), and can only be used in positions
+/// where the type can be inferred by the compiler (i.e. as a function argument
+/// or an assignment to a variable with an explicit type).
+///
+/// # Examples
+///
+/// ```
+/// use binrw::BinRead;
+/// # use binrw::io::Cursor;
+///
+/// #[derive(BinRead)]
+/// #[br(import { a: i32, b: i32 })]
+/// struct Foo;
+///
+/// let mut reader = Cursor::new(b"");
+/// let a = 1;
+/// Foo::read_args(&mut reader, binrw::args! {
+///     a,
+///     b: { a * 2 },
+/// }).unwrap();
+/// ```
 #[macro_export]
 macro_rules! args {
     (@ifn { $value:expr } $name:ident) => { $value };
@@ -66,11 +86,12 @@ macro_rules! args {
     };
 }
 
-/// A trait indicating a struct can be constructured using a binrw named arguments builder.
+/// The `BinrwNamedArgs` trait enables named arguments to be constructed using a
+/// builder that is checked at compile time.
 pub trait BinrwNamedArgs {
-    /// The initial builder type from which this type can be constructed
+    /// The builder type for this type.
     type Builder;
 
-    /// A method for creating a new builder to construct this type from
+    /// Creates a new builder for this type.
     fn builder() -> Self::Builder;
 }
