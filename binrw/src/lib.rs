@@ -47,7 +47,7 @@ pub use {
     error::Error,
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
     has_magic::HasMagic,
-    helpers::{count, until, until_eof, until_exclusive},
+    helpers::*,
     pos_value::PosValue,
     strings::{NullString, NullWideString},
 };
