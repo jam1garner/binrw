@@ -1,10 +1,14 @@
-use crate::codegen::sanitization::{ARGS, OPT, POS, READER, READ_METHOD};
-use crate::parser::Input;
+use super::{get_map_err, PreludeGenerator};
+use crate::{
+    codegen::{
+        get_assertions,
+        sanitization::{ARGS, OPT, POS, READER, READ_METHOD},
+    },
+    parser::Input,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
-
-use super::{get_assertions, get_map_err, PreludeGenerator};
 
 pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> TokenStream {
     let prelude = PreludeGenerator::new(input)

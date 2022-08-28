@@ -4,10 +4,8 @@ mod r#struct;
 mod struct_field;
 
 use crate::{
-    codegen::sanitization::{
-        IdentStr, ASSERT, ASSERT_ERROR_FN, BIN_ERROR, OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD,
-    },
-    parser::{Assert, AssertionError, Input, Map},
+    codegen::sanitization::{IdentStr, BIN_ERROR, OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD},
+    parser::{Input, Map},
 };
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -57,32 +55,6 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
 
         Ok(())
     }
-}
-
-fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
-    assertions.iter().map(
-        |Assert {
-             condition,
-             consequent,
-         }| {
-            let error_fn = match &consequent {
-                Some(AssertionError::Message(message)) => {
-                    quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
-                }
-                Some(AssertionError::Error(error)) => {
-                    quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) }
-                }
-                None => {
-                    let condition = condition.to_string();
-                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
-                }
-            };
-
-            quote! {
-                #ASSERT(#condition, #POS, #error_fn)?;
-            }
-        },
-    )
 }
 
 fn get_map_err(pos: IdentStr) -> TokenStream {

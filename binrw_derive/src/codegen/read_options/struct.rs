@@ -1,13 +1,16 @@
-use super::{get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
+use super::{get_magic, PreludeGenerator, ReadOptionsGenerator};
 #[cfg(all(nightly, not(coverage)))]
 use crate::backtrace::BacktraceFrame;
 use crate::{
-    codegen::sanitization::{
-        make_ident, IdentStr, AFTER_PARSE, ARGS_MACRO, ARGS_TYPE_HINT, BACKTRACE_FRAME,
-        BINREAD_TRAIT, COERCE_FN, MAP_ARGS_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD,
-        SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+    codegen::{
+        get_assertions, get_passed_args,
+        sanitization::{
+            make_ident, IdentStr, AFTER_PARSE, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT,
+            COERCE_FN, MAP_ARGS_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD, SAVED_POSITION,
+            SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+        },
     },
-    parser::{ErrContext, FieldMode, Input, Map, PassedArgs, Struct, StructField},
+    parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
 };
 use alloc::borrow::Cow;
 use proc_macro2::TokenStream;
@@ -548,37 +551,6 @@ fn get_err_context(
 
     quote! {
         .map_err(|err| #WITH_CONTEXT(err, #backtrace))
-    }
-}
-
-fn get_passed_args(field: &StructField) -> Option<TokenStream> {
-    let args = &field.args;
-    match args {
-        PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
-            // quote-spanning changes the resolution behaviour such that clippy
-            // thinks `(#count) as usize` is part of the source code instead of
-            // generated code, so instead only set the span on the fields-part
-            // to try to get the error reporting benefits without the incorrect
-            // lints
-            let fields = quote_spanned! {fields.span()=> #(, #fields)* };
-
-            quote! {
-                #ARGS_MACRO! { count: ((#count) as usize) #fields }
-            }
-        } else {
-            quote_spanned! {fields.span()=>
-                #ARGS_MACRO! { #(#fields),* }
-            }
-        }),
-        PassedArgs::List(list) => Some(quote_spanned! {list.span()=> (#(#list,)*) }),
-        PassedArgs::Tuple(tuple) => {
-            let tuple = tuple.as_ref();
-            Some(quote_spanned! {tuple.span()=> #tuple })
-        }
-        PassedArgs::None => field
-            .count
-            .as_ref()
-            .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
 }
 

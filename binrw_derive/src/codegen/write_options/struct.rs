@@ -1,10 +1,11 @@
-use crate::parser::{Input, Struct};
+use super::{prelude::PreludeGenerator, struct_field::write_field};
+use crate::{
+    codegen::get_assertions,
+    parser::{Input, Struct},
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
-
-use super::prelude::PreludeGenerator;
-use super::struct_field::write_field;
 
 pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(Some(input), st, name)
@@ -47,7 +48,7 @@ impl<'input> StructGenerator<'input> {
     }
 
     fn prefix_assertions(mut self) -> Self {
-        let assertions = super::get_assertions(&self.st.assertions);
+        let assertions = get_assertions(&self.st.assertions);
 
         let out = self.out;
         self.out = quote! {

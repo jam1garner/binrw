@@ -2,19 +2,19 @@ mod r#enum;
 mod map;
 mod r#struct;
 
+use super::get_assertions;
 use crate::{
     codegen::sanitization::{
-        IdentStr, ARGS, ASSERT, ASSERT_ERROR_FN, ASSERT_MAGIC, BIN_ERROR, ENDIAN_ENUM, OPT, POS,
-        READER, SEEK_FROM, SEEK_TRAIT, TEMP,
+        IdentStr, ARGS, ASSERT_MAGIC, BIN_ERROR, ENDIAN_ENUM, OPT, POS, READER, SEEK_FROM,
+        SEEK_TRAIT, TEMP,
     },
-    parser::{Assert, AssertionError, CondEndian, Endian, Input, Magic, Map},
+    parser::{CondEndian, Endian, Input, Magic, Map},
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::Ident;
-
 use r#enum::{generate_data_enum, generate_unit_enum};
 use r#struct::{generate_struct, generate_unit_struct};
+use syn::Ident;
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);
@@ -128,32 +128,6 @@ impl Input {
             _ => either::Right(core::iter::empty()),
         }
     }
-}
-
-fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
-    assertions.iter().map(
-        |Assert {
-             condition,
-             consequent,
-         }| {
-            let error_fn = match &consequent {
-                Some(AssertionError::Message(message)) => {
-                    quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
-                }
-                Some(AssertionError::Error(error)) => {
-                    quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) }
-                }
-                None => {
-                    let condition = condition.to_string();
-                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
-                }
-            };
-
-            quote! {
-                #ASSERT(#condition, #POS, #error_fn)?;
-            }
-        },
-    )
 }
 
 fn get_magic(magic: &Magic, options_var: &impl ToTokens) -> Option<TokenStream> {

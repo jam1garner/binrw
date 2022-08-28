@@ -1,12 +1,14 @@
 use super::{
-    get_assertions,
     r#struct::{generate_unit_struct, StructGenerator},
     PreludeGenerator,
 };
 use crate::{
-    codegen::sanitization::{
-        BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD, SEEK_FROM,
-        SEEK_TRAIT, TEMP, WITH_CONTEXT,
+    codegen::{
+        get_assertions,
+        sanitization::{
+            BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD, SEEK_FROM,
+            SEEK_TRAIT, TEMP, WITH_CONTEXT,
+        },
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };

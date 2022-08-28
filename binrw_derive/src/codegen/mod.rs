@@ -6,13 +6,17 @@ pub(crate) mod typed_builder;
 mod types;
 mod write_options;
 
-use crate::parser::{Input, ParseResult};
+use crate::{
+    codegen::sanitization::{ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, POS},
+    parser::{Assert, AssertionError, Input, ParseResult, PassedArgs, StructField},
+};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, quote_spanned};
 use sanitization::{
     ARGS, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT, OPT, READER, READ_OPTIONS, READ_TRAIT,
     SEEK_TRAIT, WRITER, WRITE_OPTIONS, WRITE_TRAIT,
 };
+use syn::spanned::Spanned;
 
 pub(crate) fn generate_binread_impl(
     derive_input: &syn::DeriveInput,
@@ -99,5 +103,62 @@ pub(crate) fn generate_binwrite_impl(
         }
 
         #arg_type_declaration
+    }
+}
+
+fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
+    assertions.iter().map(
+        |Assert {
+             condition,
+             consequent,
+         }| {
+            let error_fn = match &consequent {
+                Some(AssertionError::Message(message)) => {
+                    quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
+                }
+                Some(AssertionError::Error(error)) => {
+                    quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) }
+                }
+                None => {
+                    let condition = condition.to_string();
+                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
+                }
+            };
+
+            quote! {
+                #ASSERT(#condition, #POS, #error_fn)?;
+            }
+        },
+    )
+}
+
+fn get_passed_args(field: &StructField) -> Option<TokenStream> {
+    let args = &field.args;
+    match args {
+        PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
+            // quote-spanning changes the resolution behaviour such that clippy
+            // thinks `(#count) as usize` is part of the source code instead of
+            // generated code, so instead only set the span on the fields-part
+            // to try to get the error reporting benefits without the incorrect
+            // lints
+            let fields = quote_spanned! {fields.span()=> #(, #fields)* };
+
+            quote! {
+                #ARGS_MACRO! { count: ((#count) as usize) #fields }
+            }
+        } else {
+            quote_spanned! {fields.span()=>
+                #ARGS_MACRO! { #(#fields),* }
+            }
+        }),
+        PassedArgs::List(list) => Some(quote_spanned! {list.span()=> (#(#list,)*) }),
+        PassedArgs::Tuple(tuple) => {
+            let tuple = tuple.as_ref();
+            Some(quote_spanned! {tuple.span()=> #tuple })
+        }
+        PassedArgs::None => field
+            .count
+            .as_ref()
+            .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
 }

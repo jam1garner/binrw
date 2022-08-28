@@ -1,12 +1,15 @@
 use crate::{
-    codegen::sanitization::{
-        make_ident, ARGS_MACRO, BEFORE_POS, BINWRITE_TRAIT, OPT, SAVED_POSITION, SEEK_FROM,
-        SEEK_TRAIT, WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
-        WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
-        WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
-        WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+    codegen::{
+        get_assertions, get_passed_args,
+        sanitization::{
+            make_ident, BEFORE_POS, BINWRITE_TRAIT, OPT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT,
+            WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
+            WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
+            WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
+            WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+        },
     },
-    parser::{CondEndian, FieldMode, Map, PassedArgs, StructField},
+    parser::{CondEndian, FieldMode, Map, StructField},
 };
 use core::ops::Not;
 use proc_macro2::TokenStream;
@@ -67,7 +70,7 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn prefix_assertions(mut self) -> Self {
-        let assertions = super::get_assertions(&self.field.assertions);
+        let assertions = get_assertions(&self.field.assertions);
 
         let out = self.out;
         self.out = quote! {
@@ -385,26 +388,5 @@ impl<'a> StructFieldGenerator<'a> {
 
     fn finish(self) -> TokenStream {
         self.out
-    }
-}
-
-fn get_passed_args(field: &StructField) -> Option<TokenStream> {
-    let args = &field.args;
-    match args {
-        PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
-            quote! {
-                #ARGS_MACRO! { count: ((#count) as usize) #(, #fields)* }
-            }
-        } else {
-            quote! {
-                #ARGS_MACRO! { #(#fields),* }
-            }
-        }),
-        PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
-        PassedArgs::Tuple(tuple) => Some(tuple.as_ref().clone()),
-        PassedArgs::None => field
-            .count
-            .as_ref()
-            .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
 }
