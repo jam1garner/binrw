@@ -71,6 +71,12 @@ fn non_zero() {
 }
 
 #[test]
+fn option() {
+    compare!(Some(1_i32), Endian::Big, b"\0\0\0\x01");
+    compare!(None::<i32>, b"");
+}
+
+#[test]
 fn phantom_data() {
     compare!(core::marker::PhantomData::<()>, b"");
 }
@@ -80,4 +86,11 @@ fn tuple() {
     compare!((1_u8, 2_u8), b"\x01\x02");
     compare!((1_u16, 2_u16), Endian::Big, b"\0\x01\0\x02");
     compare!((1_u16, 2_u16), Endian::Little, b"\x01\0\x02\0");
+}
+
+#[test]
+fn vec_i8() {
+    let mut output = binrw::io::Cursor::new(vec![]);
+    vec![-1_i8; 4].write_to(&mut output).unwrap();
+    assert_eq!(output.into_inner(), b"\xff\xff\xff\xff");
 }
