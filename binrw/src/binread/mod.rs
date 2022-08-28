@@ -10,8 +10,6 @@ pub use options::ReadOptions;
 
 /// The `BinRead` trait reads data from streams and converts it into objects.
 ///
-/// [`io`]: crate::io
-///
 /// This trait is usually derived, but can also be manually implemented by
 /// writing an appropriate [`Args`] type and [`read_options()`] function.
 ///
@@ -20,15 +18,15 @@ pub use options::ReadOptions;
 ///
 /// # Derivable
 ///
-/// This trait can be used with `#[derive]` or `#[derive_binread]`. Each field
-/// of a derived type must either implement `BinRead` or be annotated with an
+/// This trait can be used with `#[derive]` or `#[binread]`. Each field of a
+/// derived type must either implement `BinRead` or be annotated with an
 /// attribute containing a [`map`], [`try_map`], or [`parse_with`] directive.
 ///
 /// [`map`]: crate::docs::attribute#map
 /// [`parse_with`]: crate::docs::attribute#custom-parserswriters
 /// [`try_map`]: crate::docs::attribute#map
 ///
-/// Using `#[derive_binread]` instead of `#[derive]` is required when using
+/// Using `#[binread]` instead of `#[derive]` is required when using
 /// [temporary fields].
 ///
 /// [temporary fields]: crate::docs::attribute#temp

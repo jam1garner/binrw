@@ -1,35 +1,6 @@
+//! Types and macros for generating named arguments builders.
+
 use core::marker::PhantomData;
-
-#[doc(hidden)]
-pub struct Satisfied;
-
-#[doc(hidden)]
-pub struct Optional;
-
-#[doc(hidden)]
-pub struct Needed;
-
-// TODO: seal?
-/// Indicates that a requirement for a typed builder has been met, either by
-/// the user providing one, or by a default being given.
-#[doc(hidden)]
-pub trait SatisfiedOrOptional {}
-
-impl SatisfiedOrOptional for Satisfied {}
-impl SatisfiedOrOptional for Optional {}
-
-#[doc(hidden)]
-#[cfg_attr(coverage_nightly, no_coverage)]
-#[must_use]
-pub fn passthrough_helper<T>(_a: PhantomData<T>) -> T {
-    panic!("This is a type system hack and should never be called!");
-}
-
-#[doc(hidden)]
-#[must_use]
-pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
-    <T as BinrwNamedArgs>::builder()
-}
 
 /// A convenience macro for constructing
 /// [named arguments](crate::docs::attribute#named-arguments).
@@ -86,12 +57,44 @@ macro_rules! args {
     };
 }
 
-/// The `BinrwNamedArgs` trait enables named arguments to be constructed using a
-/// builder that is checked at compile time.
+/// The `BinrwNamedArgs` trait allows
+/// [named arguments](crate::docs::attribute#named-arguments) objects
+/// to be constructed using a compile-time builder.
 pub trait BinrwNamedArgs {
     /// The builder type for this type.
     type Builder;
 
     /// Creates a new builder for this type.
     fn builder() -> Self::Builder;
+}
+
+#[doc(hidden)]
+pub struct Satisfied;
+
+#[doc(hidden)]
+pub struct Optional;
+
+#[doc(hidden)]
+pub struct Needed;
+
+// TODO: seal?
+/// Indicates that a requirement for a typed builder has been met, either by
+/// the user providing one, or by a default being given.
+#[doc(hidden)]
+pub trait SatisfiedOrOptional {}
+
+impl SatisfiedOrOptional for Satisfied {}
+impl SatisfiedOrOptional for Optional {}
+
+#[doc(hidden)]
+#[cfg_attr(coverage_nightly, no_coverage)]
+#[must_use]
+pub fn passthrough_helper<T>(_a: PhantomData<T>) -> T {
+    panic!("This is a type system hack and should never be called!");
+}
+
+#[doc(hidden)]
+#[must_use]
+pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
+    <T as BinrwNamedArgs>::builder()
 }

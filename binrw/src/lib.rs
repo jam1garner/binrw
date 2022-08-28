@@ -8,11 +8,10 @@
 #![allow(clippy::module_name_repetitions)]
 
 extern crate alloc;
-// binrw_derive expects to be able to access items in binrw via
-// `::binrw::<whatever>`. Normally, this would fail in this crate
-// because binrw knows of no crate called "binrw".
-// This causes binrw to associate *itself* as binrw,
-// meaning it makes access via ::binrw work.
+// This extern crate declaration is required to use binrw_derive macros like
+// BinrwNamedArgs inside binrw because the generated code references a binrw
+// crate, but binrw is not a dependency of binrw so no crate with that name gets
+// automatically added by cargo to the extern prelude.
 extern crate self as binrw;
 #[cfg(all(doc, not(feature = "std")))]
 extern crate std;
@@ -59,24 +58,27 @@ pub use binrw_derive::BinRead;
 /// The attribute version of the derive macro for [`BinRead`]. Use this instead
 /// of `#[derive(BinRead)]` to enable [temporary variables](docs::attribute#temp).
 ///
-/// Note that `#[binread]` should be placed above other `#[derive(..)]` directives to avoid
-/// issues where other derived methods (e.g. from `#[derive(Debug)]`) try to access fields that are
-/// removed by `#[binread]`.
+/// Note that `#[binread]` should be placed above other `#[derive(..)]`
+/// directives to avoid issues where other derived methods (e.g.
+/// from `#[derive(Debug)]`) try to access fields that are removed by
+/// `#[binread]`.
 pub use binrw_derive::binread;
 
 /// The derive macro for [`BinWrite`].
 pub use binrw_derive::BinWrite;
 
 /// The attribute version of the derive macro for [`BinWrite`]. Use this instead
-/// of `#[derive(BinWrite)]` to enable [temporary variables](docs::attribute#temp).
+/// of `#[derive(BinWrite)]` to enable
+/// [temporary variables](docs::attribute#temp).
 ///
 /// Note that `#[binwrite]` should be placed above other `#[derive(..)]`
 /// directives to avoid issues where other derived methods (e.g. from
 /// `#[derive(Debug)]`) try to access fields that are removed by `#[binwrite]`.
 pub use binrw_derive::binwrite;
 
-/// The attribute version of the derive macro for both [`BinRead`] and [`BinWrite`]. Use
-/// instead of `#[derive(BinRead, BinWrite)]` to enable [temporary variables](docs::attribute#temp).
+/// The attribute version of the derive macro for both [`BinRead`] and
+/// [`BinWrite`]. Use this instead of `#[derive(BinRead, BinWrite)]` to enable
+/// [temporary variables](docs::attribute#temp).
 ///
 /// Note that `#[binrw]` should be placed above other `#[derive(..)]` directives
 /// to avoid issues where other derived methods (e.g. from `#[derive(Debug)]`)

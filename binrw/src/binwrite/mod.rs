@@ -5,7 +5,28 @@ use crate::{
     BinResult, Endian,
 };
 
-/// A trait for writing a given type to a writer
+/// The `BinWrite` trait serialises objects and writes them to streams.
+///
+/// This trait is usually derived, but can also be manually implemented by
+/// writing an appropriate [`Args`] type and [`write_options()`] function.
+///
+/// [`Args`]: Self::Args
+/// [`write_options()`]: Self::write_options
+///
+/// # Derivable
+///
+/// This trait can be used with `#[derive]` or `#[binwrite]`. Each field
+/// of a derived type must either implement `BinWrite` or be annotated with an
+/// attribute containing a [`map`], [`try_map`], or [`write_with`] directive.
+///
+/// [`map`]: crate::docs::attribute#map
+/// [`write_with`]: crate::docs::attribute#custom-parserswriters
+/// [`try_map`]: crate::docs::attribute#map
+///
+/// Using `#[binwrite]` instead of `#[derive]` is required when using
+/// [temporary fields].
+///
+/// [temporary fields]: crate::docs::attribute#temp
 pub trait BinWrite {
     /// The type used for the `args` parameter of [`write_with_args()`] and
     /// [`write_options()`].
