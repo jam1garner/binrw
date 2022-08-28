@@ -7,7 +7,11 @@ use crate::{
 use alloc::vec::Vec;
 use core::iter::repeat_with;
 
-/// Read items until a condition is met. The final item will be included.
+/// Creates a parser that reads items into a collection until a condition is
+/// met. The terminal item is added to the collection.
+///
+/// This helper can be used to read into any collection type that implements
+/// [`FromIterator`].
 ///
 /// # Examples
 ///
@@ -41,11 +45,19 @@ where
     until_with(cond, read)
 }
 
-/// Do the same as [`until`] with a custom parsing function for the inner type.
+/// Creates a parser that uses a given function to read items into a collection
+/// until a condition is met. The terminal item is added to the collection.
+///
+/// The given `read` function should return one item each time it is called.
+///
+/// This helper can be used to read into any collection type that implements
+/// [`FromIterator`].
 ///
 /// # Examples
 ///
-/// This example shows how to read lists of two elements until a condition is met using [`until_with`] coupled with [`count`].
+/// Reading a two-dimensional `VecDeque` by combining [`until_with`] and
+/// [`count`]:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::{until, until_with, count}, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
@@ -87,7 +99,11 @@ where
     }
 }
 
-/// Read items until a condition is met. The last item will *not* be included.
+/// Creates a parser that reads items into a collection until a condition is
+/// met. The terminal item is discarded.
+///
+/// This helper can be used to read into any collection type that implements
+/// [`FromIterator`].
 ///
 /// # Examples
 ///
@@ -121,11 +137,19 @@ where
     until_exclusive_with(cond, read)
 }
 
-/// Do the same as [`until_exclusive`] with a custom parsing function for the inner type.
+/// Creates a parser that uses a given function to read items into a collection
+/// until a condition is met. The terminal item is discarded.
+///
+/// The given `read` function should return one item each time it is called.
+///
+/// This helper can be used to read into any collection type that implements
+/// [`FromIterator`].
 ///
 /// # Examples
 ///
-/// This example shows how to read lists of two elements until a condition is met using [`until_exclusive_with`] coupled with [`count`].
+/// Reading a two-dimensional `VecDeque` by combining [`until_exclusive_with`]
+/// and [`count`]:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::{until_exclusive, until_exclusive_with, count}, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
@@ -166,11 +190,16 @@ where
     }
 }
 
-/// Read items until the end of the file is hit.
+/// Creates a parser that reads items into a collection until the end of the
+/// input stream.
+///
+/// This helper can be used to read into any collection type that implements
+/// [`FromIterator`].
 ///
 /// # Errors
 ///
-/// If reading fails, an [`Error`](crate::Error) variant will be returned.
+/// If reading fails for a reason other than reaching the end of the input, an
+/// [`Error`](crate::Error) variant will be returned.
 ///
 /// # Examples
 ///
@@ -205,11 +234,24 @@ where
     until_eof_with(read)(reader, ro, args)
 }
 
-/// Do the same as [`until_eof`] with a custom parsing function for the inner type.
+/// Creates a parser that uses a given function to read items into a collection
+/// until the end of the input stream.
+///
+/// The given `read` function should return one item each time it is called.
+///
+/// This helper can be used to read into any collection type that implements
+/// [`FromIterator`].
+///
+/// # Errors
+///
+/// If reading fails for a reason other than reaching the end of the input, an
+/// [`Error`](crate::Error) variant will be returned.
 ///
 /// # Examples
 ///
-/// This example shows how to read lists of two elements until the end of file using [`until_eof_with`] coupled with [`count`].
+/// Reading a two-dimensional `VecDeque` by combining [`until_eof_with`] and
+/// [`count`]:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::{until_eof, until_eof_with, count}, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
@@ -257,7 +299,11 @@ fn not_enough_bytes<T>(_: T) -> Error {
     ))
 }
 
-/// A helper similar to `#[br(count = N)]` which can be used with any collection.
+/// Creates a parser that reads N items into a collection.
+///
+/// This helper is similar to using `#[br(count = N)]` with [`Vec`], but is more
+/// generic so can be used to read into any collection type that implements
+/// [`FromIterator`].
 ///
 /// # Examples
 ///
@@ -304,11 +350,20 @@ where
     }
 }
 
-/// Do the same as [`count`] with a custom parsing function for the inner type.
+/// Creates a parser that uses a given function to read N items into a
+/// collection.
+///
+/// The given `read` function should return one item each time it is called.
+///
+/// This helper is similar to using `#[br(count = N)]` with [`Vec`], but is more
+/// generic so can be used to read into any collection type that implements
+/// [`FromIterator`].
 ///
 /// # Examples
 ///
-/// This example shows how to read `len` lists of two elements using [`count_with`] coupled with [`count`].
+/// Reading a two-dimensional `VecDeque` by combining [`count_with`] and
+/// [`count`]:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::count, helpers::count_with, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
