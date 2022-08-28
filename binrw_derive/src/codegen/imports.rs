@@ -1,11 +1,10 @@
-use crate::codegen::typed_builder::{Builder, BuilderField};
-use crate::parser::IdentTypeMaybeDefault;
-
+use crate::{
+    codegen::typed_builder::{Builder, BuilderField},
+    parser::{IdentTypeMaybeDefault, Imports},
+};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::Ident;
-
-use crate::parser::Imports;
 
 impl Imports {
     pub(crate) fn destructure(

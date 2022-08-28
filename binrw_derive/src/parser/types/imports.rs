@@ -3,7 +3,6 @@ use crate::parser::{
     meta_types::{Enclosure, IdentPatType, IdentTypeMaybeDefault},
     KeywordToken, TrySet,
 };
-
 use syn::{Ident, Type};
 
 #[derive(Debug, Clone)]
