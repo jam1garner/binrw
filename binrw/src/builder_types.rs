@@ -40,7 +40,7 @@ pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
 macro_rules! args {
     (@ifn { $value:expr } $name:ident) => { $value };
     (@ifn {} $name:ident) => { $name };
-    ($($name:ident $(: $value:expr)?),*) => {
+    ($($name:ident $(: $value:expr)?),* $(,)?) => {
         {
             // I'll use Ret to represent the type of the block
             // token representing the type of the block. we request that the compiler infer it.

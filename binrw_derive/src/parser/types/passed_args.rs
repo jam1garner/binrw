@@ -28,7 +28,10 @@ impl From<attrs::Args> for PassedArgs {
     fn from(args: attrs::Args) -> Self {
         match args.list {
             Enclosure::Brace { fields, .. } => Self::Named(SpannedValue::new(
-                fields.into_iter().map(Into::into).collect(),
+                fields
+                    .into_iter()
+                    .map(ToTokens::into_token_stream)
+                    .collect(),
                 args.ident.span(),
             )),
             Enclosure::Paren { fields, .. } => Self::List(SpannedValue::new(
