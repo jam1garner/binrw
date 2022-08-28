@@ -16,7 +16,7 @@ fn magic_round_trip() {
     let test: Test = Cursor::new(data).read_be().unwrap();
 
     let mut out = Cursor::new(Vec::new());
-    test.write_with_args(&mut out, ()).unwrap();
+    test.write_args(&mut out, ()).unwrap();
 
     assert_eq!(out.into_inner(), data);
 }
@@ -33,7 +33,7 @@ fn magic_one_way() {
     }
 
     let mut out = Cursor::new(Vec::new());
-    Test { x: 1, y: 5 }.write_to(&mut out).unwrap();
+    Test { x: 1, y: 5 }.write(&mut out).unwrap();
 
     let data = b"ABCD\x9A\xBC\0\0\0\x01\x05\0";
 

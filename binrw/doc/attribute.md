@@ -458,7 +458,7 @@ struct Test {
 }
 
 let object = Test { some_val: 1, some_smaller_val: 255 };
-let error = object.write_to(&mut Cursor::new(vec![]));
+let error = object.write(&mut Cursor::new(vec![]));
 assert!(error.is_err());
 let error = error.unwrap_err();
 let expected = "oops! 1 <= 255".to_string();
@@ -513,7 +513,7 @@ struct Test {
 }
 
 let object = Test { some_val: 1, some_smaller_val: 255 };
-let error = object.write_to(&mut Cursor::new(vec![]));
+let error = object.write(&mut Cursor::new(vec![]));
 assert!(error.is_err());
 let error = error.unwrap_err();
 assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
@@ -741,7 +741,7 @@ struct MyType (
 
 # let object = MyType(1, 1);
 # let mut output = Cursor::new(vec![]);
-# object.write_to(&mut output).unwrap();
+# object.write(&mut output).unwrap();
 # assert_eq!(output.into_inner(), b"\0\0\0\x01\x01\0\0\0");
 ```
 </div>
@@ -781,7 +781,7 @@ struct MyType {
 
 let object = MyType { val: 3, other_val: 1 };
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output)
+object.write(&mut output)
 # .unwrap();
 # assert_eq!(output.into_inner(), b"\x03\x01\x00");
 ```
@@ -853,7 +853,7 @@ struct MyType {
 let object = MyType { var: 4 };
 
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output).unwrap();
+object.write(&mut output).unwrap();
 assert_eq!(output.into_inner(), b"\0\0\0\x04\0\0\0\x01");
 ```
 </div>
@@ -1153,7 +1153,7 @@ let object = MyType {
 };
 
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output).unwrap();
+object.write(&mut output).unwrap();
 assert_eq!(output.into_inner(), b"\0\0\0\x01\0\x02\0\x03");
 ```
 </div>
@@ -1301,7 +1301,7 @@ struct Test {
 
 let object = Test { a: 1, b: 2, c: 3 };
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output).unwrap();
+object.write(&mut output).unwrap();
 assert_eq!(
     output.into_inner(),
     b"\x01\x03"
@@ -1365,7 +1365,7 @@ struct Test {
 
 let object = Test { val: 0 };
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output)
+object.write(&mut output)
 # .unwrap();
 # assert_eq!(output.into_inner(), b"TEST\0\0\0\0");
 ```
@@ -1398,7 +1398,7 @@ struct Version(u16);
 
 let object = Version(0);
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output)
+object.write(&mut output)
 # .unwrap();
 # assert_eq!(output.into_inner(), b"\x3f\x99\x99\x9a\0\0");
 ```
@@ -1437,7 +1437,7 @@ enum Command {
 
 let object = Command::Jump { loc: 0 };
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output)
+object.write(&mut output)
 # .unwrap();
 # assert_eq!(output.into_inner(), b"\x01\0\0\0\0");
 ```
@@ -1531,7 +1531,7 @@ struct MyType {
 
 let object = MyType { int_str: String::from("1") };
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output).unwrap();
+object.write(&mut output).unwrap();
 assert_eq!(output.into_inner(), b"\x01");
 ```
 </div>
@@ -2103,7 +2103,7 @@ let object = Executable {
     ]
 };
 let mut output = Cursor::new(vec![]);
-object.write_to(&mut output).unwrap();
+object.write(&mut output).unwrap();
 assert_eq!(
   output.into_inner(),
   b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e"

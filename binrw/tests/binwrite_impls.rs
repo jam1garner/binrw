@@ -11,7 +11,7 @@ macro_rules! compare {
 
     ($input:expr, $output:expr) => {
         let mut output = binrw::io::Cursor::new(vec![]);
-        $input.write_to(&mut output).unwrap();
+        $input.write(&mut output).unwrap();
         assert_eq!(output.into_inner(), $output);
     };
 }
@@ -96,6 +96,6 @@ fn tuple() {
 #[test]
 fn vec_i8() {
     let mut output = binrw::io::Cursor::new(vec![]);
-    vec![-1_i8; 4].write_to(&mut output).unwrap();
+    vec![-1_i8; 4].write(&mut output).unwrap();
     assert_eq!(output.into_inner(), b"\xff\xff\xff\xff");
 }

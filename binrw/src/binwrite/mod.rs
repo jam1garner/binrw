@@ -28,11 +28,11 @@ use crate::{
 ///
 /// [temporary fields]: crate::docs::attribute#temp
 pub trait BinWrite {
-    /// The type used for the `args` parameter of [`write_with_args()`] and
+    /// The type used for the `args` parameter of [`write_args()`] and
     /// [`write_options()`].
     ///
     /// When the given type implements [`Default`], convenience functions like
-    /// [`write_to()`] are enabled. `BinWrite` implementations that don’t
+    /// [`write()`] are enabled. `BinWrite` implementations that don’t
     /// receive any arguments should use the `()` type.
     ///
     /// When `BinWrite` is derived, the [`import`] and [`import_tuple`]
@@ -40,8 +40,8 @@ pub trait BinWrite {
     ///
     /// [`import`]: crate::docs::attribute#arguments
     /// [`import_tuple`]: crate::docs::attribute#arguments
-    /// [`write_to()`]: Self::write_to
-    /// [`write_with_args()`]: Self::write_with_args
+    /// [`write()`]: Self::write
+    /// [`write_args()`]: Self::write_args
     /// [`write_options()`]: Self::write_options
     type Args: Clone;
 
@@ -50,7 +50,7 @@ pub trait BinWrite {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
-    fn write_to<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
+    fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
     where
         Self::Args: Default,
     {
@@ -62,7 +62,7 @@ pub trait BinWrite {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
-    fn write_with_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+    fn write_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
         self.write_options(writer, &WriteOptions::default(), args)
     }
 

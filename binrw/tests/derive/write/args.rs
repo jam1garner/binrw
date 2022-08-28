@@ -24,7 +24,7 @@ fn pass_args() {
     Test {
         inner: TestInner {},
     }
-    .write_to(&mut x)
+    .write(&mut x)
     .unwrap();
 
     assert_eq!(x.into_inner(), b"\0\0\0\x01\x02");
