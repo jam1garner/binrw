@@ -48,14 +48,16 @@ impl<'a> Builder<'a> {
 
         let res_struct = if define_result {
             let docs = self.owner_name.map(|owner_name| {
+                let (impl_name, impl_fn) = if self.is_write {
+                    ("BinWrite", "write_options")
+                } else {
+                    ("BinRead", "read_options")
+                };
                 format!(
-                    "Named arguments for [`{}::{}`].",
+                    "Named arguments for the [`{0}::{1}`](::binrw::{0}::{1}) implementation of [`{2}`].",
+                    impl_name,
+                    impl_fn,
                     owner_name,
-                    if self.is_write {
-                        "write_options"
-                    } else {
-                        "read_options"
-                    }
                 )
             });
 
