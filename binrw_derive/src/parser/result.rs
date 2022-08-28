@@ -7,6 +7,7 @@ pub(crate) enum PartialResult<T, E> {
 
 impl<T, E> PartialResult<T, E> {
     #[cfg(test)]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     pub(crate) fn err(self) -> Option<E> {
         match self {
             PartialResult::Ok(_) => None,
@@ -35,6 +36,7 @@ impl<T, E> PartialResult<T, E> {
 
 impl<T, E: core::fmt::Debug> PartialResult<T, E> {
     #[cfg(test)]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     #[track_caller]
     pub(crate) fn unwrap(self) -> T {
         match self {

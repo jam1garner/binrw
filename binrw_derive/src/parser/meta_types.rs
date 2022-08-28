@@ -260,6 +260,7 @@ mod tests {
     macro_rules! try_parse {
         ($name:ident, $ty:ty, $tt:tt) => {
             #[test]
+            #[cfg_attr(coverage_nightly, no_coverage)]
             fn $name() {
                 syn::parse2::<$ty>(quote::quote! $tt).unwrap();
             }
@@ -269,6 +270,7 @@ mod tests {
     macro_rules! try_parse_fail {
         ($name:ident, $ty:ty, $tt:tt) => {
             #[test]
+            #[cfg_attr(coverage_nightly, no_coverage)]
             #[should_panic]
             fn $name() {
                 syn::parse2::<$ty>(quote::quote! $tt).unwrap();
@@ -289,6 +291,7 @@ mod tests {
     });
 
     #[test]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     fn meta_value_into_tokenstream() {
         let expected = quote::quote! { 0u8 };
         let value = syn::parse2::<MetaValueTest>(quote::quote! { test = #expected }).unwrap();
@@ -296,6 +299,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     fn meta_value_to_tokens() {
         let expected = quote::quote! { 0u8 };
         let value = syn::parse2::<MetaValueTest>(quote::quote! { test = #expected }).unwrap();
@@ -305,6 +309,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     fn meta_value_keyword_token() {
         use syn::spanned::Spanned;
         let keyword = quote::quote! { test };
@@ -326,6 +331,7 @@ mod tests {
     try_parse_fail!(meta_list_wrong_item_type, MetaListTest, { test_list(i32) });
 
     #[test]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     fn meta_list_keyword_token() {
         use syn::spanned::Spanned;
         let keyword = quote::quote! { test_list };
@@ -355,6 +361,7 @@ mod tests {
     });
 
     #[test]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     fn meta_attr_list_into_iter() {
         let expected = [
             Lit::new(proc_macro2::Literal::u8_suffixed(1)),
