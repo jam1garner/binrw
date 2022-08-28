@@ -55,9 +55,9 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
                 #BIN_ERROR::NoVariantMatch {
                     pos: #POS,
                 },
-                #BACKTRACE_FRAME::OwnedMessage({
+                #BACKTRACE_FRAME::Message({
                     extern crate alloc;
-                    alloc::format!("Unexpected value for enum: {:?}", #TEMP)
+                    alloc::format!("Unexpected value for enum: {:?}", #TEMP).into()
                 })
             ))
         }

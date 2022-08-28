@@ -431,76 +431,13 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
-    fn map_err_context(&self, name: Option<&Ident>, variant_name: Option<&str>) -> TokenStream {
-        #[cfg(all(nightly, not(coverage)))]
-        let code = {
-            let code = BacktraceFrame::from_field(self.field).to_string();
-            quote!(Some(#code))
-        };
-
-        #[cfg(any(not(nightly), coverage))]
-        let code = quote!(None);
-
-        match self.field.err_context.as_ref() {
-            Some(ErrContext::Format(message, exprs)) if exprs.is_empty() => {
-                quote_spanned!( self.field.ident.span() =>
-                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Full {
-                        message: #message,
-                        line: ::core::line!(),
-                        file: ::core::file!(),
-                        code: #code,
-                    }))
-                )
-            }
-            Some(ErrContext::Format(format, exprs)) => {
-                quote_spanned!( self.field.ident.span() =>
-                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::OwnedFull {
-                        message: {
-                            extern crate alloc;
-                            alloc::format!(#format, #(#exprs),*)
-                        },
-                        line: ::core::line!(),
-                        file: ::core::file!(),
-                        code: #code,
-                    }))
-                )
-            }
-            Some(ErrContext::Context(expr)) => {
-                quote!(
-                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Custom(Box::new(#expr) as _)))
-                )
-            }
-            None => {
-                let message = format!(
-                    "While parsing field '{}' in {}",
-                    self.field.ident,
-                    name.map_or_else(
-                        || variant_name
-                            .unwrap_or("[please report this error]")
-                            .to_string(),
-                        ToString::to_string
-                    )
-                );
-
-                quote_spanned!( self.field.ident.span() =>
-                    .map_err(|err| #WITH_CONTEXT(err, #BACKTRACE_FRAME::Full {
-                        message: #message,
-                        line: ::core::line!(),
-                        file: ::core::file!(),
-                        code: #code,
-                    }))
-                )
-            }
-        }
-    }
-
     fn try_conversion(mut self, name: Option<&Ident>, variant_name: Option<&str>) -> Self {
         if !self.field.generated_value() {
             let result = &self.out;
             self.out = if self.field.do_try.is_some() {
                 quote! { #result.unwrap_or(<_>::default()) }
             } else {
-                let map_err = self.map_err_context(name, variant_name);
+                let map_err = get_err_context(self.field, name, variant_name);
                 quote! { #result #map_err ? }
             };
         }
@@ -558,6 +495,60 @@ fn get_args_argument(args_var: &Option<Ident>) -> TokenStream {
         || quote! { <_>::default() },
         |args_var| quote! { #args_var.clone() },
     )
+}
+
+fn get_err_context(
+    field: &StructField,
+    name: Option<&Ident>,
+    variant_name: Option<&str>,
+) -> TokenStream {
+    let backtrace = if let Some(ErrContext::Context(expr)) = &field.err_context {
+        quote_spanned! {field.ident.span()=>
+            #BACKTRACE_FRAME::Custom(Box::new(#expr) as _)
+        }
+    } else {
+        #[cfg(all(nightly, not(coverage)))]
+        let code = {
+            let code = BacktraceFrame::from_field(field).to_string();
+            quote!(Some(#code))
+        };
+
+        #[cfg(any(not(nightly), coverage))]
+        let code = quote!(None);
+
+        let message = if let Some(ErrContext::Format(fmt, exprs)) = &field.err_context {
+            if exprs.is_empty() {
+                quote! { (#fmt) }
+            } else {
+                quote! {
+                    {
+                        extern crate alloc;
+                        alloc::format!(#fmt, #(#exprs),*)
+                    }
+                }
+            }
+        } else {
+            format!(
+                "While parsing field '{}' in {}",
+                field.ident,
+                name.map_or_else(|| variant_name.unwrap().into(), ToString::to_string)
+            )
+            .into_token_stream()
+        };
+
+        quote_spanned! {field.ident.span()=>
+            #BACKTRACE_FRAME::Full {
+                message: #message.into(),
+                line: ::core::line!(),
+                file: ::core::file!(),
+                code: #code,
+            }
+        }
+    };
+
+    quote! {
+        .map_err(|err| #WITH_CONTEXT(err, #backtrace))
+    }
 }
 
 fn get_passed_args(field: &StructField) -> Option<TokenStream> {

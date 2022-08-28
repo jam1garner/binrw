@@ -1,49 +1,29 @@
 use super::{ContextExt, CustomError, Error};
-use alloc::{borrow::Cow, boxed::Box, format, string::String, string::ToString, vec, vec::Vec};
-use core::fmt;
+use alloc::{borrow::Cow, boxed::Box, format, string::ToString, vec::Vec};
+use core::fmt::{self, Write};
 
-/// A backtrace containing a set of frames representing (in order from innermost to outmost code)
+/// An error backtrace.
 #[non_exhaustive]
 #[derive(Debug)]
 pub struct Backtrace {
-    /// The source error which caused this backtrace. This is guaranteed to not itself be a
-    /// backtrace.
+    /// The source error which caused this backtrace.
+    ///
+    /// This is guaranteed to not itself be a backtrace.
     pub error: Box<Error>,
 
-    /// The frames which lead to the given error
+    /// The frames which lead to the given error.
+    ///
+    /// The first frame is the innermost frame.
     pub frames: Vec<BacktraceFrame>,
 }
 
-impl fmt::Display for Backtrace {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
-            f,
-            "\n ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸\n"
-        )?;
-
-        self.fmt_no_bars(f)?;
-
-        #[cfg(any(not(nightly), coverage))]
-        writeln!(
-            f,
-            "\n ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
-        )?;
-
-        #[cfg(all(nightly, not(coverage)))]
-        writeln!(
-            f,
-            " ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
-        )?;
-
-        Ok(())
-    }
-}
-
 impl Backtrace {
-    /// Create a new backtrace from a source error and a set of frames
+    /// Creates a new backtrace from a source error and a set of frames.
     ///
-    /// If the error itself is a `Backtrace`, the set of frames is appended to the existing
-    /// set of frames. This ensures `Backtrace::error` is not itself a `Backtrace`.
+    /// If the source error is an [`Error::Backtrace`], the given frames are
+    /// appended to that object and it is unwrapped and used instead of creating
+    /// a new backtrace. This ensures that [`Backtrace::error`] is never a
+    /// `Backtrace` and avoids recursion.
     #[must_use]
     pub fn new(error: Error, frames: Vec<BacktraceFrame>) -> Self {
         let mut frames = frames;
@@ -88,168 +68,71 @@ impl Backtrace {
 }
 
 impl ContextExt for Backtrace {
-    /// Adds an additional frame of context to the backtrace
     fn with_context<Frame: Into<BacktraceFrame>>(mut self, frame: Frame) -> Self {
         self.frames.push(frame.into());
         self
     }
 
-    /// Adds an additional frame of context to the backtrace including a message, file name, and
-    /// line number.
     #[track_caller]
-    fn with_message(mut self, message: impl Into<Cow<'static, str>>) -> Self {
-        let message = message.into();
+    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self {
         let caller = core::panic::Location::caller();
-
-        match message {
-            Cow::Owned(message) => {
-                self.frames.push(BacktraceFrame::OwnedFull {
-                    code: None,
-                    message,
-                    file: caller.file(),
-                    line: caller.line(),
-                });
-            }
-            Cow::Borrowed(message) => {
-                self.frames.push(BacktraceFrame::Full {
-                    code: None,
-                    message,
-                    file: caller.file(),
-                    line: caller.line(),
-                });
-            }
-        }
-
-        self
+        self.with_context(BacktraceFrame::Full {
+            code: None,
+            message: message.into(),
+            file: caller.file(),
+            line: caller.line(),
+        })
     }
 }
 
-impl ContextExt for Error {
-    fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self {
-        match self {
-            Error::Backtrace(mut backtrace) => {
-                backtrace.frames.push(frame.into());
-                Error::Backtrace(backtrace)
-            }
-            error => Error::Backtrace(Backtrace::new(error, vec![frame.into()])),
-        }
-    }
+impl fmt::Display for Backtrace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "\n ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸\n"
+        )?;
 
-    #[track_caller]
-    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self {
-        match self {
-            Error::Backtrace(backtrace) => Error::Backtrace(backtrace.with_message(message)),
-            error => {
-                let message = message.into();
-                let caller = core::panic::Location::caller();
-                Error::Backtrace(Backtrace::new(
-                    error,
-                    vec![match message {
-                        Cow::Owned(message) => BacktraceFrame::OwnedFull {
-                            code: None,
-                            message,
-                            file: caller.file(),
-                            line: caller.line(),
-                        },
-                        Cow::Borrowed(message) => BacktraceFrame::Full {
-                            code: None,
-                            message,
-                            file: caller.file(),
-                            line: caller.line(),
-                        },
-                    }],
-                ))
-            }
-        }
+        self.fmt_no_bars(f)?;
+
+        #[cfg(any(not(nightly), coverage))]
+        writeln!(
+            f,
+            "\n ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
+        )?;
+
+        #[cfg(all(nightly, not(coverage)))]
+        writeln!(
+            f,
+            " ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
+        )?;
+
+        Ok(())
     }
 }
 
-impl<T> ContextExt for Result<T, Error> {
-    /// Adds an additional frame of context to the backtrace
-    fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self {
-        self.map_err(|err| err.with_context(frame))
-    }
-
-    /// Adds an additional frame of context to the backtrace including a message, file name, and
-    /// line number.
-    #[track_caller]
-    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self {
-        match self {
-            Err(err) => {
-                let caller = core::panic::Location::caller();
-                Err(match err {
-                    Error::Backtrace(backtrace) => {
-                        Error::Backtrace(backtrace.with_message(message))
-                    }
-                    error => {
-                        let message = message.into();
-                        Error::Backtrace(Backtrace::new(
-                            error,
-                            vec![match message {
-                                Cow::Owned(message) => BacktraceFrame::OwnedFull {
-                                    code: None,
-                                    message,
-                                    file: caller.file(),
-                                    line: caller.line(),
-                                },
-                                Cow::Borrowed(message) => BacktraceFrame::Full {
-                                    code: None,
-                                    message,
-                                    file: caller.file(),
-                                    line: caller.line(),
-                                },
-                            }],
-                        ))
-                    }
-                })
-            }
-            ok => ok,
-        }
-    }
-}
-
-/// A single frame in the backtrace
+/// A captured backtrace frame.
 #[derive(Debug)]
 pub enum BacktraceFrame {
-    /// A full backtrace including (optional) codeblocks, a message, a file name, and a line number
+    /// A standard frame.
     Full {
-        /// An optional code block to display only when full backtrace is enabled
+        /// The code at the location where the frame was generated.
         code: Option<&'static str>,
 
-        /// A message explaining the relevance of this current frame. This may be overriden
-        /// by the error itself when displaying the full backtrace.
-        message: &'static str,
+        /// The context message. This may be overridden by the error itself when
+        /// full backtraces are enabled.
+        message: Cow<'static, str>,
 
-        /// The name of the file this frame comes from
+        /// The origin filename.
         file: &'static str,
 
-        /// The line number this frame comes from
+        /// The origin line number.
         line: u32,
     },
 
-    /// A frame which only consists of a static string
-    Message(&'static str),
+    /// A message-only frame.
+    Message(Cow<'static, str>),
 
-    /// An owned message for use with runtime formatting
-    OwnedFull {
-        /// An optional code block to display only when full backtrace is enabled
-        code: Option<&'static str>,
-
-        /// A message explaining the relevance of this current frame. This may be overriden
-        /// by the error itself when displaying the full backtrace.
-        message: String,
-
-        /// The name of the file this frame comes from
-        file: &'static str,
-
-        /// The line number this frame comes from
-        line: u32,
-    },
-
-    /// An owned message for use with runtime formatting
-    OwnedMessage(String),
-
-    /// A custom error type which doesn't take a specific form
+    /// A user-specified custom error context.
     Custom(Box<dyn CustomError>),
 }
 
@@ -263,9 +146,6 @@ impl BacktraceFrame {
         match self {
             BacktraceFrame::Full {
                 code, file, line, ..
-            }
-            | BacktraceFrame::OwnedFull {
-                code, file, line, ..
             } => {
                 writeln!(
                     f,
@@ -277,9 +157,7 @@ impl BacktraceFrame {
                 }
                 Ok(())
             }
-            BacktraceFrame::Message(_)
-            | BacktraceFrame::OwnedMessage(_)
-            | BacktraceFrame::Custom(_) => {
+            BacktraceFrame::Message(_) | BacktraceFrame::Custom(_) => {
                 writeln!(f, " {}: \x1b[1m{}\x1b[22m", index, message)
             }
         }
@@ -291,12 +169,7 @@ impl BacktraceFrame {
 
     fn message(&self) -> Cow<'_, str> {
         match self {
-            BacktraceFrame::Full { message: msg, .. } | BacktraceFrame::Message(msg) => {
-                (*msg).into()
-            }
-            BacktraceFrame::OwnedFull { message: msg, .. } | BacktraceFrame::OwnedMessage(msg) => {
-                msg.into()
-            }
+            BacktraceFrame::Full { message: msg, .. } | BacktraceFrame::Message(msg) => msg.clone(),
             BacktraceFrame::Custom(context) => context.to_string().into(),
         }
     }
@@ -308,11 +181,7 @@ impl<T: CustomError + 'static> From<T> for BacktraceFrame {
     }
 }
 
-struct NoBars<'a>(&'a Error);
 struct FirstErrorFmt<'a>(&'a Error);
-struct Indenter<'a, 'b>(&'a mut fmt::Formatter<'b>);
-
-use fmt::Write;
 
 impl fmt::Display for FirstErrorFmt<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -351,7 +220,9 @@ impl fmt::Display for FirstErrorFmt<'_> {
     }
 }
 
-impl fmt::Write for Indenter<'_, '_> {
+struct Indenter<'a, 'b>(&'a mut fmt::Formatter<'b>);
+
+impl Write for Indenter<'_, '_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         if s.contains('\n') {
             let mut last_ended_in_newline = false;
@@ -376,6 +247,8 @@ impl fmt::Write for Indenter<'_, '_> {
         }
     }
 }
+
+struct NoBars<'a>(&'a Error);
 
 impl fmt::Display for NoBars<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -415,12 +288,12 @@ mod tests {
 
             if let [BacktraceFrame::Full {
                 code: None,
-                message: ERR1,
+                message: Cow::Borrowed(ERR1),
                 file: file!(),
                 line: l1,
             }, BacktraceFrame::Full {
                 code: None,
-                message: ERR2,
+                message: Cow::Borrowed(ERR2),
                 file: file!(),
                 line: l2,
             }, BacktraceFrame::Custom(last)] = &backtrace.frames[..]

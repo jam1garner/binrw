@@ -3,14 +3,93 @@
 mod backtrace;
 
 use crate::{
-    alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec},
-    io,
+    alloc::{borrow::Cow, boxed::Box, string::String, vec, vec::Vec},
+    io, BinResult,
 };
 pub use backtrace::*;
 use core::{any::Any, fmt};
 
+/// The `ContextExt` trait allows extra information to be added to errors.
+///
+/// This is used to add tracking information to errors that bubble up from an
+/// inner field.
+pub trait ContextExt {
+    /// Adds a new context frame to the error, consuming the original error.
+    #[must_use]
+    fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self;
+
+    /// Adds a new frame of context to the error with the given message,
+    /// consuming the original error.
+    ///
+    /// This also adds the file name and line number of the caller to the error.
+    #[must_use]
+    #[track_caller]
+    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self;
+}
+
+impl ContextExt for Error {
+    fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self {
+        match self {
+            Error::Backtrace(mut backtrace) => {
+                backtrace.frames.push(frame.into());
+                Error::Backtrace(backtrace)
+            }
+            error => Error::Backtrace(Backtrace::new(error, vec![frame.into()])),
+        }
+    }
+
+    #[track_caller]
+    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self {
+        match self {
+            Error::Backtrace(backtrace) => Error::Backtrace(backtrace.with_message(message)),
+            error => {
+                let caller = core::panic::Location::caller();
+                Error::Backtrace(Backtrace::new(
+                    error,
+                    vec![BacktraceFrame::Full {
+                        code: None,
+                        message: message.into(),
+                        file: caller.file(),
+                        line: caller.line(),
+                    }],
+                ))
+            }
+        }
+    }
+}
+
+impl<T> ContextExt for BinResult<T> {
+    fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self {
+        self.map_err(|err| err.with_context(frame))
+    }
+
+    #[track_caller]
+    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self {
+        match self {
+            Err(err) => {
+                let caller = core::panic::Location::caller();
+                Err(match err {
+                    Error::Backtrace(backtrace) => {
+                        Error::Backtrace(backtrace.with_message(message))
+                    }
+                    error => Error::Backtrace(Backtrace::new(
+                        error,
+                        vec![BacktraceFrame::Full {
+                            code: None,
+                            message: message.into(),
+                            file: caller.file(),
+                            line: caller.line(),
+                        }],
+                    )),
+                })
+            }
+            ok => ok,
+        }
+    }
+}
+
 /// The `CustomError` trait describes types that are usable as custom errors
-/// in a [`BinResult`](crate::BinResult).
+/// in a [`BinResult`].
 ///
 /// This trait is automatically implemented for any type which implements the
 /// same traits as [`std::error::Error`], so anything you would normally use as
@@ -41,19 +120,6 @@ impl<T: fmt::Display + fmt::Debug + Send + Sync + 'static> CustomError for T {
     fn as_box_any(self: Box<Self>) -> Box<dyn Any + Send + Sync> {
         self
     }
-}
-
-/// An extension trait allowing for errors to be given additional frames of context
-pub trait ContextExt {
-    /// Adds an additional frame of context to the backtrace
-    #[must_use]
-    fn with_context<Frame: Into<BacktraceFrame>>(self, frame: Frame) -> Self;
-
-    /// Adds an additional frame of context to the backtrace including a message, file name, and
-    /// line number.
-    #[must_use]
-    #[track_caller]
-    fn with_message(self, message: impl Into<Cow<'static, str>>) -> Self;
 }
 
 // The intent here is to allow any object which is compatible with
