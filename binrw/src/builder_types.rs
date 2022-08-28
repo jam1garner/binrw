@@ -35,23 +35,23 @@ macro_rules! args {
         {
             // I'll use Ret to represent the type of the block
             // token representing the type of the block. we request that the compiler infer it.
-            let __args_ty = ::core::marker::PhantomData::<_>;
+            let args_ty = ::core::marker::PhantomData::<_>;
             if false {
                 // this statement will never be run, but will be used for type resolution.
                 // since this helper is of PhantomData<T> -> T,
                 // and the compiler knows that the type Ret should be returned,
-                // it infers that __args_ty should be of type PhantomData<Ret>.
-                $crate::passthrough_helper(__args_ty)
+                // it infers that args_ty should be of type PhantomData<Ret>.
+                $crate::passthrough_helper(args_ty)
             } else {
                 // we now pass the PhantomData<Ret> to a helper of PhantomData<T> -> T::Builder
                 // to obtain a builder for the type of the block.
-                let __builder = $crate::builder_helper(__args_ty);
+                let builder = $crate::builder_helper(args_ty);
 
-                $(let __builder = __builder.$name($crate::args!(@ifn { $($value)? } $name));)*
+                $(let builder = builder.$name($crate::args!(@ifn { $($value)? } $name));)*
 
                 // since the builder returns the type that we used to obtain the builder,
                 // the type unifies across the if expression
-                __builder.finalize()
+                builder.finalize()
             }
         }
     };
