@@ -1,9 +1,10 @@
 use crate::{
     codegen::sanitization::{
         make_ident, ARGS_MACRO, BEFORE_POS, BINWRITE_TRAIT, OPT, SAVED_POSITION, SEEK_FROM,
-        SEEK_TRAIT, WRITER, WRITE_FN_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT,
-        WRITE_FN_TYPE_HINT, WRITE_FUNCTION, WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT,
-        WRITE_METHOD, WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_WITH_ARGS_TYPE_HINT, WRITE_ZEROES,
+        SEEK_TRAIT, WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
+        WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
+        WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
+        WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
     },
     parser::{CondEndian, FieldMode, Map, PassedArgs, StructField},
 };
@@ -350,7 +351,7 @@ impl<'a> StructFieldGenerator<'a> {
             FieldMode::Function(_) => {
                 let ty = &self.field.ty;
                 quote! {
-                    let #args = #WRITE_WITH_ARGS_TYPE_HINT::<#ty, W, _, _>(
+                    let #args = #WRITE_ARGS_TYPE_HINT::<#ty, W, _, _>(
                         #WRITE_FUNCTION, #args_val
                     );
                     #out

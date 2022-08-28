@@ -66,7 +66,7 @@ ident_str! {
     pub(crate) ARGS_TYPE_HINT = from_crate!(__private::parse_function_args_type_hint);
     pub(crate) MAP_ARGS_TYPE_HINT = from_crate!(__private::map_args_type_hint);
     pub(crate) WRITE_FN_TYPE_HINT = from_crate!(__private::write_fn_type_hint);
-    pub(crate) WRITE_WITH_ARGS_TYPE_HINT = from_crate!(__private::write_function_args_type_hint);
+    pub(crate) WRITE_ARGS_TYPE_HINT = from_crate!(__private::write_function_args_type_hint);
     pub(crate) WRITE_MAP_ARGS_TYPE_HINT = from_crate!(__private::write_map_args_type_hint);
     pub(crate) WRITE_TRY_MAP_ARGS_TYPE_HINT = from_crate!(__private::write_try_map_args_type_hint);
     pub(crate) WRITE_MAP_INPUT_TYPE_HINT = from_crate!(__private::write_map_fn_input_type_hint);

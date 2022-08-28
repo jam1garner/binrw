@@ -7,7 +7,7 @@ fn padding_big() {
     struct Test(#[bw(pad_size_to = 0x100)] Vec<u8>);
 
     let mut data = Cursor::new(Vec::new());
-    Test(vec![b'a'; 0x80]).write_to(&mut data).unwrap();
+    Test(vec![b'a'; 0x80]).write(&mut data).unwrap();
 
     let mut expected = vec![0; 0x100];
     expected[0..0x80].fill(b'a');

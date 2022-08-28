@@ -75,7 +75,7 @@ assert_eq!(point, Point(640, 480));
 
 // Write the point back to bytes
 let mut writer = Cursor::new(Vec::new());
-point.write_to(&mut writer).unwrap();
+point.write(&mut writer).unwrap();
 assert_eq!(writer.into_inner(), b"\x80\x02\xe0\x01");
 ```
 
