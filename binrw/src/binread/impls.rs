@@ -88,26 +88,35 @@ binread_nonzero_impl! {
     NonZeroI8, i8, NonZeroI16, i16, NonZeroI32, i32, NonZeroI64, i64, NonZeroI128, i128,
 }
 
-/// Arguments passed to the binread impl for Vec
+/// Named arguments for the [`BinRead::read_options()`] implementation of [`Vec`].
 ///
 /// # Examples
 ///
 /// ```
 /// use binrw::{BinRead, io::Cursor};
 ///
-/// #[derive(BinRead, Debug, PartialEq)]
+/// #[derive(BinRead)]
+/// # #[derive(Debug, PartialEq)]
+/// #[br(little)]
 /// struct Collection {
-///     count: u32,
-///     #[br(args { count: count as usize, inner: ElementBinReadArgs { count: 2 } })]
+///     count: u16,
+///     #[br(args {
+///         count: count.into(),
+///         inner: ElementBinReadArgs { count: 2 },
+///     })]
 ///     elements: Vec<Element>,
 /// }
 ///
-/// #[derive(BinRead, Debug, PartialEq)]
-/// #[br(import { count: u32 })]
-/// struct Element(#[br(args { count: count as usize, inner: () })] Vec<u8>);
+/// #[derive(BinRead)]
+/// # #[derive(Debug, PartialEq)]
+/// #[br(import { count: usize })]
+/// struct Element(#[br(args {
+///     count,
+///     inner: <_>::default(),
+/// })] Vec<u8>);
 ///
 /// assert_eq!(
-///     Collection::read(&mut Cursor::new(b"\x03\0\0\0\x04\0\x05\0\x06\0")).unwrap(),
+///     Collection::read(&mut Cursor::new(b"\x03\0\x04\0\x05\0\x06\0")).unwrap(),
 ///     Collection {
 ///         count: 3,
 ///         elements: vec![
@@ -119,38 +128,26 @@ binread_nonzero_impl! {
 /// )
 /// ```
 ///
-/// Inner types that don't require args take unit args.
+/// The `inner` field can be omitted completely if the inner type doesn’t
+/// require arguments, in which case a default value will be used:
 ///
 /// ```
 /// # use binrw::prelude::*;
 /// #[derive(BinRead)]
 /// struct Collection {
-///     count: u32,
-///     #[br(args { count: count as usize, inner: () })]
-///     elements: Vec<u32>,
-/// }
-/// ```
-///
-/// Unit args for the inner type can be omitted.
-/// The [count](crate::docs::attribute#count) attribute also assumes unit args for the inner type.
-///
-/// ```
-/// # use binrw::prelude::*;
-/// #[derive(BinRead)]
-/// struct Collection {
-///     count: u32,
-///     #[br(args { count: count as usize })]
+///     count: u16,
+///     #[br(args { count: count.into() })]
 ///     elements: Vec<u32>,
 /// }
 /// ```
 #[derive(BinrwNamedArgs, Clone)]
-pub struct VecArgs<B> {
+pub struct VecArgs<Inner> {
     /// The number of elements to read.
     pub count: usize,
 
-    /// Arguments to pass to the inner type
+    /// The [arguments](crate::BinRead::Args) for the inner type.
     #[named_args(try_optional)]
-    pub inner: B,
+    pub inner: Inner,
 }
 
 impl<B: BinRead> BinRead for Vec<B> {
