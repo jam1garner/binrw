@@ -121,23 +121,24 @@ fn unit_enum_magic_pre_assert() {
 #[test]
 fn unit_enum_pre_assert() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
-    #[br(import(one: bool))]
+    #[br(import(one: bool), repr(u8))]
     enum Test {
         #[br(pre_assert(false))]
-        Zero(u8),
+        Zero,
         #[br(pre_assert(one))]
         One,
         Two,
     }
 
     assert_eq!(
-        Test::read_args(&mut Cursor::new(b""), (true,)).unwrap(),
+        Test::read_args(&mut Cursor::new(b"\x01"), (true,)).unwrap(),
         Test::One
     );
     assert_eq!(
-        Test::read_args(&mut Cursor::new(b""), (false,)).unwrap(),
+        Test::read_args(&mut Cursor::new(b"\x02"), (false,)).unwrap(),
         Test::Two
     );
+    Test::read_args(&mut Cursor::new(b"\0"), (false,)).unwrap_err();
 }
 
 #[test]

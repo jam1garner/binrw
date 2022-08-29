@@ -41,8 +41,13 @@ pub(super) fn generate_unit_enum(
 fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
     let clauses = variants.iter().map(|variant| {
         let ident = &variant.ident;
+        let pre_assertions = variant
+            .pre_assertions
+            .iter()
+            .map(|assert| &assert.condition);
+
         quote! {
-            if #TEMP == Self::#ident as #repr {
+            if #TEMP == Self::#ident as #repr #(&& (#pre_assertions))* {
                 Ok(Self::#ident)
             }
         }
