@@ -5,7 +5,7 @@ use crate::{
     BinRead, BinResult, Error, ReadOptions,
 };
 use alloc::vec::Vec;
-use core::iter::repeat_with;
+use core::iter::from_fn;
 
 /// Creates a parser that reads items into a collection until a condition is
 /// met. The terminal item is added to the collection.
@@ -37,12 +37,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T>,
 {
-    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
-        let mut value = T::read_options(reader, ro, args.clone())?;
-        value.after_parse(reader, ro, args)?;
-        Ok(value)
-    };
-    until_with(cond, read)
+    until_with(cond, default_reader)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -83,19 +78,24 @@ where
     Ret: FromIterator<T>,
 {
     move |reader, ro, args| {
-        let mut last_cond = true;
-        let mut last_error = false;
-        repeat_with(|| read(reader, ro, args.clone()))
-            .take_while(|result| {
-                let take = last_cond && !last_error; //keep the first error we get
-                if let Ok(val) = result {
-                    last_cond = !cond(val);
-                } else {
-                    last_error = true;
+        let mut last = false;
+        from_fn(|| {
+            if last {
+                None
+            } else {
+                match read(reader, ro, args.clone()) {
+                    Ok(value) => {
+                        if cond(&value) {
+                            last = true;
+                        }
+                        Some(Ok(value))
+                    }
+                    err => Some(err),
                 }
-                take
-            })
-            .collect()
+            }
+        })
+        .fuse()
+        .collect()
     }
 }
 
@@ -129,12 +129,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T>,
 {
-    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
-        let mut value = T::read_options(reader, ro, args.clone())?;
-        value.after_parse(reader, ro, args)?;
-        Ok(value)
-    };
-    until_exclusive_with(cond, read)
+    until_exclusive_with(cond, default_reader)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -175,18 +170,18 @@ where
     Ret: FromIterator<T>,
 {
     move |reader, ro, args| {
-        let mut last_error = false;
-        repeat_with(|| read(reader, ro, args.clone()))
-            .take_while(|result| {
-                !last_error
-                    && if let Ok(val) = result {
-                        !cond(val)
-                    } else {
-                        last_error = true;
-                        true //keep the first error we get
-                    }
-            })
-            .collect()
+        from_fn(|| match read(reader, ro, args.clone()) {
+            Ok(value) => {
+                if cond(&value) {
+                    None
+                } else {
+                    Some(Ok(value))
+                }
+            }
+            err => Some(err),
+        })
+        .fuse()
+        .collect()
     }
 }
 
@@ -226,12 +221,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T>,
 {
-    let read = |reader: &mut Reader, ro: &ReadOptions, args: Arg| {
-        let mut value = T::read_options(reader, ro, args.clone())?;
-        value.after_parse(reader, ro, args)?;
-        Ok(value)
-    };
-    until_eof_with(read)(reader, ro, args)
+    until_eof_with(default_reader)(reader, ro, args)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -275,28 +265,14 @@ where
     Ret: FromIterator<T>,
 {
     move |reader, ro, args| {
-        let mut last_error = false;
-        repeat_with(|| read(reader, ro, args.clone()))
-            .take_while(|result| {
-                !last_error
-                    && match result {
-                        Ok(_) => true,
-                        Err(e) if e.is_eof() => false,
-                        Err(_) => {
-                            last_error = true;
-                            true //keep the first error we get
-                        }
-                    }
-            })
-            .collect()
+        from_fn(|| match read(reader, ro, args.clone()) {
+            ok @ Ok(_) => Some(ok),
+            Err(err) if err.is_eof() => None,
+            err => Some(err),
+        })
+        .fuse()
+        .collect()
     }
-}
-
-fn not_enough_bytes<T>(_: T) -> Error {
-    Error::Io(io::Error::new(
-        io::ErrorKind::UnexpectedEof,
-        "not enough bytes in reader",
-    ))
 }
 
 /// Creates a parser that reads N items into a collection.
@@ -329,25 +305,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T> + 'static,
 {
-    move |reader, ro, args| {
-        let mut container: Ret = core::iter::empty::<T>().collect();
-        if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
-            bytes.reserve(n);
-            let byte_count = reader
-                .take(n.try_into().map_err(not_enough_bytes)?)
-                .read_to_end(bytes)?;
-            (byte_count == n)
-                .then_some(container)
-                .ok_or_else(|| not_enough_bytes(()))
-        } else {
-            let read = |reader: &mut R, ro: &ReadOptions, args: Arg| {
-                let mut value = T::read_options(reader, ro, args.clone())?;
-                value.after_parse(reader, ro, args)?;
-                Ok(value)
-            };
-            count_with(n, read)(reader, ro, args)
-        }
-    }
+    count_with(n, default_reader)
 }
 
 /// Creates a parser that uses a given function to read N items into a
@@ -389,8 +347,75 @@ where
     Ret: FromIterator<T> + 'static,
 {
     move |reader, ro, args| {
-        repeat_with(|| read(reader, ro, args.clone()))
-            .take(n)
-            .collect()
+        let mut container = core::iter::empty::<T>().collect::<Ret>();
+
+        vec_fast_int!(try (i8 i16 u16 i32 u32 i64 u64 i128 u128) using (container, reader, ro.endian(), n) else {
+            // This extra branch for `Vec<u8>` makes it faster than
+            // `vec_fast_int`, but *only* because `vec_fast_int` is not allowed
+            // to use unsafe code to eliminate the unnecessary zero-fill.
+            // Otherwise, performance would be identical and it could be
+            // deleted.
+            if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
+                bytes.reserve_exact(n);
+                let byte_count = reader
+                    .take(n.try_into().map_err(not_enough_bytes)?)
+                    .read_to_end(bytes)?;
+
+                if byte_count == n {
+                    Ok(container)
+                } else {
+                    Err(not_enough_bytes(()))
+                }
+            } else {
+                core::iter::repeat_with(|| read(reader, ro, args.clone()))
+                .take(n)
+                .collect()
+            }
+        })
     }
 }
+
+fn default_reader<R: Read + Seek, Arg: Clone, T: BinRead<Args = Arg>>(
+    reader: &mut R,
+    options: &ReadOptions,
+    args: T::Args,
+) -> BinResult<T> {
+    let mut value = T::read_options(reader, options, args.clone())?;
+    value.after_parse(reader, options, args)?;
+    Ok(value)
+}
+
+fn not_enough_bytes<T>(_: T) -> Error {
+    Error::Io(io::Error::new(
+        io::ErrorKind::UnexpectedEof,
+        "not enough bytes in reader",
+    ))
+}
+
+macro_rules! vec_fast_int {
+    (try ($($Ty:ty)+) using ($list:expr, $reader:expr, $endian:expr, $count:expr) else { $($else:tt)* }) => {
+        $(if let Some(list) = <dyn core::any::Any>::downcast_mut::<Vec<$Ty>>(&mut $list) {
+            // In benchmarks, this resize decreases performance by
+            // 27–40% relative to using `unsafe` to write directly to
+            // uninitialised memory, but nobody ever got fired for buying IBM
+            list.resize($count, 0);
+            $reader.read_exact(&mut bytemuck::cast_slice_mut::<_, u8>(list.as_mut_slice()))?;
+            if
+                core::mem::size_of::<$Ty>() != 1
+                && (
+                    (cfg!(target_endian = "big") && $endian == crate::Endian::Little)
+                    || (cfg!(target_endian = "little") && $endian == crate::Endian::Big)
+                )
+            {
+                for value in list.iter_mut() {
+                    *value = value.swap_bytes();
+                }
+            }
+            Ok($list)
+        } else)* {
+            $($else)*
+        }
+    }
+}
+
+use vec_fast_int;
