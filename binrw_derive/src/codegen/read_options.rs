@@ -5,10 +5,9 @@ mod r#struct;
 use super::get_assertions;
 use crate::{
     codegen::sanitization::{
-        IdentStr, ARGS, ASSERT_MAGIC, BIN_ERROR, ENDIAN_ENUM, OPT, POS, READER, SEEK_FROM,
-        SEEK_TRAIT, TEMP,
+        IdentStr, ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT, TEMP,
     },
-    parser::{CondEndian, Endian, Input, Magic, Map},
+    parser::{CondEndian, Input, Magic, Map},
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
@@ -27,11 +26,14 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
         },
         Map::Try(map) => map::generate_try_map(input, name, map),
         Map::Map(map) => map::generate_map(input, name, map),
-        Map::Repr(ty) => map::generate_try_map(
-            input,
-            name,
-            &quote! { <#ty as core::convert::TryInto<_>>::try_into },
-        ),
+        Map::Repr(ty) => match input {
+            Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
+            _ => map::generate_try_map(
+                input,
+                name,
+                &quote! { <#ty as core::convert::TryInto<_>>::try_into },
+            ),
+        },
     };
 
     quote! {
@@ -166,20 +168,9 @@ impl ReadOptionsGenerator {
     fn endian(mut self, endian: &CondEndian) -> Self {
         let endian = match endian {
             CondEndian::Inherited => return self,
-            CondEndian::Fixed(Endian::Big) => quote! { #ENDIAN_ENUM::Big },
-            CondEndian::Fixed(Endian::Little) => quote! { #ENDIAN_ENUM::Little },
+            CondEndian::Fixed(endian) => endian.to_token_stream(),
             CondEndian::Cond(endian, condition) => {
-                let (true_cond, false_cond) = match endian {
-                    Endian::Big => (
-                        quote! { #ENDIAN_ENUM::Big },
-                        quote! { #ENDIAN_ENUM::Little },
-                    ),
-                    Endian::Little => (
-                        quote! { #ENDIAN_ENUM::Little },
-                        quote! { #ENDIAN_ENUM::Big },
-                    ),
-                };
-
+                let (true_cond, false_cond) = (endian, endian.flipped());
                 quote! {
                     if (#condition) {
                         #true_cond

@@ -173,7 +173,7 @@ fn unit_enum_rewind_on_eof() {
 
     let mut data = Cursor::new(b"\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read(&mut data).expect_err("accepted bad data");
+    Test::read_le(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 

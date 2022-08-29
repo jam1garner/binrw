@@ -21,11 +21,11 @@ fn enum_assert() {
     }
 
     assert_eq!(
-        Test::read(&mut Cursor::new(b"\xff\xff\x01")).unwrap(),
+        Test::read_le(&mut Cursor::new(b"\xff\xff\x01")).unwrap(),
         Test::B { a: -1, b: 1 }
     );
-    Test::read(&mut Cursor::new(b"\xff\xff\0")).expect_err("accepted bad data");
-    Test::read(&mut Cursor::new(b"\0\0\x01")).expect_err("accepted bad data");
+    Test::read_le(&mut Cursor::new(b"\xff\xff\0")).expect_err("accepted bad data");
+    Test::read_le(&mut Cursor::new(b"\0\0\x01")).expect_err("accepted bad data");
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn enum_calc_temp_field() {
         },
     }
 
-    let result = Test::read(&mut Cursor::new(b"\0\x04")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\0\x04")).unwrap();
     // This also indirectly checks that `temp` is actually working since
     // compilation would fail if it weren’t due to the missing `a` property
     assert_eq!(result, Test::Zero { b: 4 });
@@ -209,7 +209,7 @@ fn enum_rewind_on_assert() {
 
     let mut data = Cursor::new(b"\0\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read(&mut data).expect_err("accepted bad data");
+    Test::read_le(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 
@@ -227,7 +227,7 @@ fn enum_rewind_on_eof() {
 
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read(&mut data).expect_err("accepted bad data");
+    Test::read_le(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 
@@ -242,7 +242,7 @@ fn enum_rewind_on_variant_assert() {
 
     let mut data = Cursor::new(b"\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read(&mut data).expect_err("accepted bad data");
+    Test::read_le(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 

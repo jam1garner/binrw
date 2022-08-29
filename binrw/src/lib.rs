@@ -26,10 +26,9 @@ pub mod docs;
 pub mod endian;
 pub mod error;
 pub mod file_ptr;
-#[doc(hidden)]
-pub mod has_magic;
 pub mod helpers;
 pub mod io;
+pub mod meta;
 #[doc(hidden)]
 pub mod pos_value;
 pub mod punctuated;
@@ -46,7 +45,6 @@ pub use {
     endian::Endian,
     error::Error,
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
-    has_magic::HasMagic,
     helpers::{count, until, until_eof, until_exclusive},
     pos_value::PosValue,
     strings::{NullString, NullWideString},

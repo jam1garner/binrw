@@ -66,7 +66,7 @@ use binrw::{
 
 #[binrw]
 # #[derive(Debug, PartialEq)]
-#[br(little)]
+#[brw(little)]
 struct Point(i16, i16);
 
 // Read a point from bytes
@@ -151,11 +151,11 @@ using the `#[br]`, `#[bw]`, and `#[brw]` attributes:
 # use binrw::{prelude::*, io::Cursor, NullString};
 #
 #[derive(BinRead)]
-#[br(magic = b"DOG", assert(name.len() != 0))]
+#[br(big, magic = b"DOG", assert(name.len() != 0))]
 struct Dog {
     bone_pile_count: u8,
 
-    #[br(big, count = bone_pile_count)]
+    #[br(count = bone_pile_count)]
     bone_piles: Vec<u16>,
 
     #[br(align_before = 0xA)]

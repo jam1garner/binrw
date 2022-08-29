@@ -376,14 +376,12 @@ fn specify_endian(endian: &CondEndian) -> Option<TokenStream> {
     match endian {
         CondEndian::Inherited => None,
         CondEndian::Fixed(endian) => Some({
-            let endian = endian.as_binrw_endian();
             quote! {
                 .clone().with_endian(#endian)
             }
         }),
         CondEndian::Cond(endian, cond) => Some({
-            let else_endian = endian.flipped().as_binrw_endian();
-            let endian = endian.as_binrw_endian();
+            let else_endian = endian.flipped();
             quote! {
                 .clone().with_endian(if #cond { #endian } else { #else_endian })
             }

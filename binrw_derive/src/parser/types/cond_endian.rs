@@ -1,11 +1,32 @@
-use crate::parser::{attrs, KeywordToken, TrySet};
+use crate::{
+    codegen::sanitization::ENDIAN_ENUM,
+    parser::{attrs, KeywordToken, TrySet},
+};
 use proc_macro2::TokenStream;
-use quote::ToTokens;
+use quote::{quote, ToTokens, TokenStreamExt};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Endian {
     Big,
     Little,
+}
+
+impl Endian {
+    pub(crate) fn flipped(self) -> Self {
+        match self {
+            Self::Big => Self::Little,
+            Self::Little => Self::Big,
+        }
+    }
+}
+
+impl ToTokens for Endian {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Endian::Big => tokens.append_all(quote! { #ENDIAN_ENUM::Big }),
+            Endian::Little => tokens.append_all(quote! { #ENDIAN_ENUM::Little }),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

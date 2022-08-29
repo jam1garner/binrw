@@ -50,11 +50,39 @@ pub trait BinWrite {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
+    where
+        Self: crate::meta::WriteEndian,
+        Self::Args: Default,
+    {
+        self.write_args(writer, Self::Args::default())
+    }
+
+    /// Write `Self` to the writer assuming big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_be<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
     where
         Self::Args: Default,
     {
-        self.write_options(writer, &WriteOptions::default(), Self::Args::default())
+        self.write_be_args(writer, Self::Args::default())
+    }
+
+    /// Write `Self` to the writer assuming little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_le<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
+    where
+        Self::Args: Default,
+    {
+        self.write_le_args(writer, Self::Args::default())
     }
 
     /// Write `Self` to the writer using the given arguments.
@@ -62,8 +90,34 @@ pub trait BinWrite {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
-    fn write_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+    #[inline]
+    fn write_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()>
+    where
+        Self: crate::meta::WriteEndian,
+    {
         self.write_options(writer, &WriteOptions::default(), args)
+    }
+
+    /// Write `Self` to the writer, assuming big-endian byte order, using the
+    /// given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_be_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+        self.write_options(writer, &WriteOptions::new(Endian::Big), args)
+    }
+
+    /// Write `Self` to the writer, assuming little-endian byte order, using the
+    /// given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_le_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+        self.write_options(writer, &WriteOptions::new(Endian::Little), args)
     }
 
     /// Write `Self` to the writer using the given [`WriteOptions`] and

@@ -1,7 +1,7 @@
 use super::{
     attr_struct,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
+    EnumVariant, FromInput, ParseResult, StructField, TrySet, UnitEnumField,
 };
 use crate::Options;
 use proc_macro2::TokenStream;
@@ -110,6 +110,15 @@ impl Input {
             Input::Struct(s) | Input::UnitStruct(s) => &s.imports,
             Input::Enum(e) => &e.imports,
             Input::UnitOnlyEnum(e) => &e.imports,
+        }
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        match self {
+            Input::Struct(s) => s.fields.is_empty() && s.magic.is_none(),
+            Input::UnitStruct(_) => true,
+            Input::Enum(e) => e.variants.is_empty() && e.magic.is_none(),
+            Input::UnitOnlyEnum(_) => false,
         }
     }
 
@@ -323,14 +332,12 @@ attr_struct! {
     pub(crate) struct UnitOnlyEnum {
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(RW:Map, RW:TryMap)]
+        #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
         #[from(RW:Import, RW:ImportRaw)]
         pub(crate) imports: Imports,
-        #[from(RW:Repr)]
-        pub(crate) repr: Option<SpannedValue<TokenStream>>,
         pub(crate) fields: Vec<UnitEnumField>,
         pub(crate) is_magic_enum: bool,
     }
@@ -346,7 +353,7 @@ impl<const WRITE: bool> FromInput<UnitEnumAttr<WRITE>> for UnitOnlyEnum {
     type Field = UnitEnumField;
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
-        if let (Some(repr), Some(magic)) = (self.repr.as_ref(), field.magic.as_ref()) {
+        if let (Some(repr), Some(magic)) = (self.map.as_repr(), field.magic.as_ref()) {
             let magic_span = magic.span();
             let span = magic_span.join(repr.span()).unwrap_or(magic_span);
             Err(syn::Error::new(
@@ -361,7 +368,7 @@ impl<const WRITE: bool> FromInput<UnitEnumAttr<WRITE>> for UnitOnlyEnum {
     }
 
     fn validate(&self, options: Options) -> syn::Result<()> {
-        if self.repr.is_some() || self.is_magic_enum() {
+        if self.map.as_repr().is_some() || self.is_magic_enum() {
             Ok(())
         } else if options.write {
             Err(syn::Error::new(proc_macro2::Span::call_site(), "BinWrite on unit-like enums requires either `#[bw(repr = ...)]` on the enum or `#[bw(magic = ...)]` on at least one variant"))
