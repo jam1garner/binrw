@@ -56,6 +56,7 @@ fn clone_args() {
             _vec: vec![],
             _tuple: (ArgsNeedClone, ArgsNeedClone),
         },
+        Endian::Big,
         b""
     );
 }
@@ -78,7 +79,7 @@ fn non_zero() {
 #[test]
 fn option() {
     compare!(Some(1_i32), Endian::Big, b"\0\0\0\x01");
-    compare!(None::<i32>, b"");
+    compare!(None::<i32>, Endian::Big, b"");
 }
 
 #[test]

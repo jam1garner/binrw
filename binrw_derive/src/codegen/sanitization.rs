@@ -79,7 +79,11 @@ ident_str! {
     pub(crate) OPTIONAL = from_crate!(Optional);
     pub(crate) BINRW_NAMED_ARGS = from_crate!(BinrwNamedArgs);
     pub(crate) ARGS_MACRO = from_crate!(args);
-    pub(crate) HAS_MAGIC = from_crate!(HasMagic);
+    pub(crate) META_ENDIAN_KIND = from_crate!(meta::EndianKind);
+    pub(crate) READ_ENDIAN = from_crate!(meta::ReadEndian);
+    pub(crate) READ_MAGIC = from_crate!(meta::ReadMagic);
+    pub(crate) WRITE_ENDIAN = from_crate!(meta::WriteEndian);
+    pub(crate) WRITE_MAGIC = from_crate!(meta::WriteMagic);
     pub(crate) WITH_CONTEXT = from_crate!(error::ContextExt::with_context);
     pub(crate) BACKTRACE_FRAME = from_crate!(error::BacktraceFrame);
     pub(crate) TEMP = "__binrw_temp";

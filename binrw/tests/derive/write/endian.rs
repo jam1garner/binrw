@@ -1,5 +1,4 @@
-use binrw::BinWrite;
-use binrw::{io::Cursor, Endian, WriteOptions};
+use binrw::{io::Cursor, BinWrite};
 
 #[derive(BinWrite)]
 struct TestEndian {
@@ -25,10 +24,10 @@ fn write_endian() {
         z: 3,
         not_z: 3,
     }
-    .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+    .write_be(&mut x)
     .unwrap();
 
-    assert_eq!(&x.into_inner()[..], &[0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0]);
+    assert_eq!(x.into_inner(), [0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0]);
 }
 
 #[test]

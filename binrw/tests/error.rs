@@ -119,10 +119,10 @@ fn enum_is_eol() {
         B(u16),
     }
 
-    assert!(!Test::read(&mut Cursor::new(b"\0\0"))
+    assert!(!Test::read_le(&mut Cursor::new(b"\0\0"))
         .expect_err("accepted bad data")
         .is_eof());
-    assert!(Test::read(&mut Cursor::new(b"\0"))
+    assert!(Test::read_le(&mut Cursor::new(b"\0"))
         .expect_err("accepted bad data")
         .is_eof());
 }

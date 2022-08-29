@@ -1,14 +1,49 @@
-use binrw::BinRead;
+use binrw::{io::Cursor, BinRead};
 
 #[test]
 fn boxed() {
     assert_eq!(
-        Box::<u8>::read(&mut binrw::io::Cursor::new(b"\x03")).unwrap(),
+        Box::<u8>::read(&mut Cursor::new(b"\x03")).unwrap(),
         Box::new(3_u8)
     );
-    assert!(Box::<u16>::read(&mut binrw::io::Cursor::new(b"\x03"))
+    assert!(Box::<(u8, u8)>::read(&mut Cursor::new(b"\x03"))
         .unwrap_err()
         .is_eof());
+}
+
+#[test]
+fn convenience_endian() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    struct Test(u16);
+
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(import(mul: u16))]
+    struct TestArgs(#[br(map = |val: u16| mul * val)] u16);
+
+    assert_eq!(Test::read_be(&mut Cursor::new(b"\0\x01")).unwrap(), Test(1));
+    assert_eq!(Test::read_le(&mut Cursor::new(b"\x01\0")).unwrap(), Test(1));
+    #[cfg(target_endian = "big")]
+    assert_eq!(Test::read_ne(&mut Cursor::new(b"\0\x01")).unwrap(), Test(1));
+    #[cfg(target_endian = "little")]
+    assert_eq!(Test::read_ne(&mut Cursor::new(b"\x01\0")).unwrap(), Test(1));
+    assert_eq!(
+        TestArgs::read_be_args(&mut Cursor::new(b"\0\x02"), (3,)).unwrap(),
+        TestArgs(6)
+    );
+    assert_eq!(
+        TestArgs::read_le_args(&mut Cursor::new(b"\x02\0"), (3,)).unwrap(),
+        TestArgs(6)
+    );
+    #[cfg(target_endian = "big")]
+    assert_eq!(
+        TestArgs::read_ne_args(&mut Cursor::new(b"\0\x02"), (3,)).unwrap(),
+        TestArgs(6)
+    );
+    #[cfg(target_endian = "little")]
+    assert_eq!(
+        TestArgs::read_ne_args(&mut Cursor::new(b"\x02\0"), (3,)).unwrap(),
+        TestArgs(6)
+    );
 }
 
 // This is a compile-time regression test to ensure library types allow
@@ -37,31 +72,30 @@ fn clone_args() {
         _tuple: (ArgsNeedClone, ArgsNeedClone),
     }
 
-    TestCloneArray::read(&mut binrw::io::Cursor::new(b"")).unwrap();
+    TestCloneArray::read_le(&mut Cursor::new(b"")).unwrap();
 }
 
 #[test]
 fn non_zero() {
     assert!(matches!(
-        core::num::NonZeroU8::read(&mut binrw::io::Cursor::new(b"\0"))
-            .expect_err("accepted bad data"),
+        core::num::NonZeroU8::read(&mut Cursor::new(b"\0")).expect_err("accepted bad data"),
         binrw::Error::Io(..)
     ));
     assert_eq!(
-        core::num::NonZeroU8::read(&mut binrw::io::Cursor::new(b"\x01")).unwrap(),
+        core::num::NonZeroU8::read(&mut Cursor::new(b"\x01")).unwrap(),
         core::num::NonZeroU8::new(1).unwrap()
     );
 }
 
 #[test]
 fn phantom_data() {
-    core::marker::PhantomData::<()>::read(&mut binrw::io::Cursor::new(b"")).unwrap();
+    core::marker::PhantomData::<()>::read(&mut Cursor::new(b"")).unwrap();
 }
 
 #[test]
 fn tuple() {
     assert_eq!(
-        <(u8, u8)>::read(&mut binrw::io::Cursor::new(b"\x01\x02")).unwrap(),
+        <(u8, u8)>::read(&mut Cursor::new(b"\x01\x02")).unwrap(),
         (1, 2)
     );
 }
@@ -70,7 +104,7 @@ fn tuple() {
 fn vec_u8() {
     assert!(matches!(
         Vec::<u8>::read_args(
-            &mut binrw::io::Cursor::new(b""),
+            &mut Cursor::new(b""),
             binrw::VecArgs::builder().count(10).finalize()
         )
         .expect_err("accepted bad data"),

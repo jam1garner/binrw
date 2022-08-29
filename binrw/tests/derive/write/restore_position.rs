@@ -17,7 +17,7 @@ fn restore_position_writing() {
             x: 0xffff_ffff,
             y: 0,
         }
-        .write(&mut x)
+        .write_le(&mut x)
         .unwrap();
     }
     assert_eq!(x, b"\0\xff\xff\xff");

@@ -55,15 +55,13 @@ impl<'a> PreludeGenerator<'a> {
         let set_endian = match endian {
             CondEndian::Inherited => None,
             CondEndian::Fixed(endian) => Some({
-                let endian = endian.as_binrw_endian();
                 quote! {
                     let #OPT = #OPT.clone().with_endian(#endian);
                     let #OPT = &#OPT;
                 }
             }),
             CondEndian::Cond(endian, cond) => Some({
-                let else_endian = endian.flipped().as_binrw_endian();
-                let endian = endian.as_binrw_endian();
+                let else_endian = endian.flipped();
                 quote! {
                     let #OPT = #OPT.clone().with_endian(if #cond { #endian } else { #else_endian });
                     let #OPT = &#OPT;

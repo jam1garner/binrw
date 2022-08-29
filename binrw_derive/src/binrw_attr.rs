@@ -1,5 +1,5 @@
 use crate::{
-    codegen::{generate_binread_impl, generate_binwrite_impl},
+    codegen::generate_impl,
     combine_error,
     parser::{Enum, EnumVariant, FieldMode, Input, ParseResult, Struct, StructField},
     Options,
@@ -29,8 +29,8 @@ pub(crate) fn derive_from_attribute(mut derive_input: DeriveInput) -> proc_macro
         binwrite_input = ParseResult::Partial(binwrite_input.unwrap_tuple().0, error);
     }
 
-    let generated_read_impl = generate_binread_impl(&derive_input, &binread_input);
-    let generated_write_impl = generate_binwrite_impl(&derive_input, &binwrite_input);
+    let generated_read_impl = generate_impl::<false>(&derive_input, &binread_input);
+    let generated_write_impl = generate_impl::<true>(&derive_input, &binwrite_input);
 
     // Since temporary fields must be synchronised between binread and binwrite,
     // the same cleaning mechanism can be used as-if there was only one input

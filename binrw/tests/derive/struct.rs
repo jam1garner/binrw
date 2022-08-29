@@ -70,8 +70,8 @@ fn assert() {
         a: u8,
     }
 
-    Test::read(&mut Cursor::new("\x01")).unwrap();
-    let error = Test::read(&mut Cursor::new("\0")).expect_err("accepted bad data");
+    Test::read_le(&mut Cursor::new("\x01")).unwrap();
+    let error = Test::read_le(&mut Cursor::new("\0")).expect_err("accepted bad data");
     match error {
         binrw::Error::AssertFail { pos, message } => {
             assert_eq!(pos, 0);
@@ -98,8 +98,8 @@ fn assert_custom_err() {
         a: u8,
     }
 
-    Test::read(&mut Cursor::new("\x01")).unwrap();
-    let error = Test::read(&mut Cursor::new("\x02")).expect_err("accepted bad data");
+    Test::read_le(&mut Cursor::new("\x01")).unwrap();
+    let error = Test::read_le(&mut Cursor::new("\x02")).expect_err("accepted bad data");
     assert_eq!(format!("{}", error), "oops! at 0x0");
     let error = error.custom_err::<Oops>().expect("bad error type");
     assert_eq!(error.0, 2);
@@ -114,8 +114,8 @@ fn assert_formatted() {
         a: u8,
     }
 
-    Test::read(&mut Cursor::new("\x01")).unwrap();
-    let error = Test::read(&mut Cursor::new("\0")).expect_err("accepted bad data");
+    Test::read_le(&mut Cursor::new("\x01")).unwrap();
+    let error = Test::read_le(&mut Cursor::new("\0")).expect_err("accepted bad data");
     match error {
         binrw::Error::AssertFail { pos, message } => {
             assert_eq!(pos, 0);
@@ -188,7 +188,7 @@ fn move_temp_field() {
     }
 
     assert_eq!(
-        Foo::read(&mut Cursor::new(b"hello\0goodbyte\0")).unwrap(),
+        Foo::read_le(&mut Cursor::new(b"hello\0goodbyte\0")).unwrap(),
         Foo {
             bar: binrw::NullString::from("hello"),
         }
@@ -203,7 +203,7 @@ fn empty_imports() {
         a: u8,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\x01")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\x01")).unwrap();
     assert_eq!(result, Test { a: 1 });
 }
 
@@ -215,7 +215,7 @@ fn empty_named_imports() {
         a: u8,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\x01")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\x01")).unwrap();
     assert_eq!(result, Test { a: 1 });
 }
 
@@ -227,7 +227,7 @@ fn all_default_imports() {
         a: u8,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\x01")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\x01")).unwrap();
     assert_eq!(result, Test { a: 1 });
 }
 
@@ -240,14 +240,14 @@ fn if_alternate() {
         a: u8,
     }
 
-    let result = Test::read_args(
+    let result = Test::read_le_args(
         &mut Cursor::new(b"\x01"),
         <Test as BinRead>::Args::builder().try_read(true).finalize(),
     )
     .unwrap();
     assert_eq!(result.a, 1);
     let result =
-        Test::read_args(&mut Cursor::new(b"\x01"), binrw::args! { try_read: false }).unwrap();
+        Test::read_le_args(&mut Cursor::new(b"\x01"), binrw::args! { try_read: false }).unwrap();
     assert_eq!(result.a, 10);
 }
 
@@ -303,14 +303,14 @@ fn magic_field() {
         d: u8,
     }
 
-    Test::read(&mut Cursor::new(b"ABBB")).expect_err("accepted bad data");
-    let result = Test::read(&mut Cursor::new(b"ABCD")).unwrap();
+    Test::read_le(&mut Cursor::new(b"ABBB")).expect_err("accepted bad data");
+    let result = Test::read_le(&mut Cursor::new(b"ABCD")).unwrap();
     assert_eq!(result, Test { b: b'B', d: b'D' });
 }
 
 #[test]
 fn magic_const() {
-    use binrw::HasMagic;
+    use binrw::meta::ReadMagic;
     #[derive(BinRead, Debug)]
     #[br(magic = b'a')]
     struct Test;
@@ -337,7 +337,7 @@ fn named_args_trailing_commas() {
     struct Item(#[br(args { count, })] Vec<u8>);
 
     assert_eq!(
-        Test::read(&mut Cursor::new(b"\x03\x04\0\x05\0\x06\0")).unwrap(),
+        Test::read_le(&mut Cursor::new(b"\x03\x04\0\x05\0\x06\0")).unwrap(),
         Test {
             count: 3,
             items: vec![Item(vec![4, 0]), Item(vec![5, 0]), Item(vec![6, 0])]
@@ -354,7 +354,7 @@ fn pad_after_before() {
         b: u8,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\0\x01\0\x02")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\0\x01\0\x02")).unwrap();
     assert_eq!(result, Test { a: 1, b: 2 });
 }
 
@@ -367,7 +367,7 @@ fn pad_size_to() {
         b: u8,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\0\x01\0\x02")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\0\x01\0\x02")).unwrap();
     assert_eq!(result, Test { a: 1, b: 2 });
 }
 
@@ -406,7 +406,7 @@ fn parse_with_default_args() {
         inner_tuple: InnerImportTuple,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\x02\x04")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\x02\x04")).unwrap();
     assert_eq!(
         result,
         Test {
@@ -439,7 +439,7 @@ fn args_same_name() {
         y: Test,
     }
 
-    let result = Test2::read(&mut Cursor::new(b"")).unwrap();
+    let result = Test2::read_le(&mut Cursor::new(b"")).unwrap();
     assert_eq!(result.y.z, 3);
 }
 
@@ -458,7 +458,7 @@ fn import_tuple() {
         a: u8,
     }
 
-    let result = Test::read(&mut Cursor::new(b"")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"")).unwrap();
     assert_eq!(result.a.a, 3);
 }
 
@@ -472,7 +472,7 @@ fn offset_after() {
         b: u8,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\x01\x03\xff\xff\x04")).unwrap();
+    let result = Test::read_le(&mut Cursor::new(b"\x01\x03\xff\xff\x04")).unwrap();
     assert_eq!(*result.a, 4);
 }
 
@@ -484,7 +484,7 @@ fn raw_ident() {
         r#type: u32,
     }
 
-    Test::read(&mut Cursor::new(vec![0x00, 0x00, 0x00, 0x00])).unwrap();
+    Test::read_le(&mut Cursor::new(vec![0x00, 0x00, 0x00, 0x00])).unwrap();
 }
 
 #[test]
@@ -499,7 +499,7 @@ fn rewind_on_assert() {
 
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read(&mut data).expect_err("accepted bad data");
+    Test::read_le(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 
@@ -515,7 +515,7 @@ fn rewind_on_eof() {
 
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read(&mut data).expect_err("accepted bad data");
+    Test::read_le(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 
@@ -533,7 +533,7 @@ fn rewind_on_field_assert() {
 
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read(&mut data).expect_err("accepted bad data");
+    Test::read_le(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
 }
 
@@ -557,7 +557,7 @@ fn tuple() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     struct Test(#[br(big)] u16, #[br(little)] u16);
 
-    let result = Test::read(&mut Cursor::new("\0\x01\x02\0")).unwrap();
+    let result = Test::read_le(&mut Cursor::new("\0\x01\x02\0")).unwrap();
     assert_eq!(result, Test(1, 2));
 }
 

@@ -12,7 +12,7 @@ mod codegen;
 mod named_args;
 mod parser;
 
-use codegen::{generate_binread_impl, generate_binwrite_impl};
+use codegen::generate_impl;
 use parser::{Input, ParseResult};
 use proc_macro::TokenStream;
 use quote::quote;
@@ -222,9 +222,9 @@ fn parse(
 ) -> (ParseResult<Input>, proc_macro2::TokenStream) {
     let binrw_input = Input::from_input(derive_input, options);
     let generated_impl = if options.write {
-        generate_binwrite_impl(derive_input, &binrw_input)
+        generate_impl::<true>(derive_input, &binrw_input)
     } else {
-        generate_binread_impl(derive_input, &binrw_input)
+        generate_impl::<false>(derive_input, &binrw_input)
     };
     (binrw_input, generated_impl)
 }

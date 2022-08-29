@@ -458,7 +458,7 @@ struct Test {
 }
 
 let object = Test { some_val: 1, some_smaller_val: 255 };
-let error = object.write(&mut Cursor::new(vec![]));
+let error = object.write_le(&mut Cursor::new(vec![]));
 assert!(error.is_err());
 let error = error.unwrap_err();
 let expected = "oops! 1 <= 255".to_string();
@@ -513,7 +513,7 @@ struct Test {
 }
 
 let object = Test { some_val: 1, some_smaller_val: 255 };
-let error = object.write(&mut Cursor::new(vec![]));
+let error = object.write_le(&mut Cursor::new(vec![]));
 assert!(error.is_err());
 let error = error.unwrap_err();
 assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
@@ -1203,7 +1203,7 @@ enum Test {
     C { #[br(assert(c != 1))] c: u8 },
 }
 
-let error = Test::read(&mut Cursor::new(b"\x01")).unwrap_err();
+let error = Test::read_le(&mut Cursor::new(b"\x01")).unwrap_err();
 if let binrw::Error::EnumErrors { pos, variant_errors } = error {
     assert_eq!(pos, 0);
     assert!(matches!(variant_errors[0], ("A", binrw::Error::BadMagic { .. })));
@@ -1235,7 +1235,7 @@ enum Test {
     C { #[br(assert(c != 1))] c: u8 },
 }
 
-let error = Test::read(&mut Cursor::new(b"\x01")).unwrap_err();
+let error = Test::read_le(&mut Cursor::new(b"\x01")).unwrap_err();
 if let binrw::Error::NoVariantMatch { pos } = error {
     assert_eq!(pos, 0);
 }
@@ -1282,7 +1282,7 @@ struct Test {
 }
 
 assert_eq!(
-    Test::read(&mut Cursor::new(b"")).unwrap(),
+    Test::read_le(&mut Cursor::new(b"")).unwrap(),
     Test { path: None }
 );
 ```
@@ -1301,7 +1301,7 @@ struct Test {
 
 let object = Test { a: 1, b: 2, c: 3 };
 let mut output = Cursor::new(vec![]);
-object.write(&mut output).unwrap();
+object.write_le(&mut output).unwrap();
 assert_eq!(
     output.into_inner(),
     b"\x01\x03"
@@ -1348,7 +1348,7 @@ struct Test {
 }
 
 # assert_eq!(
-Test::read(&mut Cursor::new(b"TEST\0\0\0\0"))
+Test::read_le(&mut Cursor::new(b"TEST\0\0\0\0"))
 # .unwrap(), Test { val: 0 });
 ```
 </div>
@@ -1365,7 +1365,7 @@ struct Test {
 
 let object = Test { val: 0 };
 let mut output = Cursor::new(vec![]);
-object.write(&mut output)
+object.write_le(&mut output)
 # .unwrap();
 # assert_eq!(output.into_inner(), b"TEST\0\0\0\0");
 ```
@@ -1419,7 +1419,7 @@ enum Command {
 }
 
 # assert_eq!(
-Command::read(&mut Cursor::new(b"\x01\0\0\0\0"))
+Command::read_le(&mut Cursor::new(b"\x01\0\0\0\0"))
 # .unwrap(), Command::Jump { loc: 0 });
 ```
 </div>
@@ -1437,7 +1437,7 @@ enum Command {
 
 let object = Command::Jump { loc: 0 };
 let mut output = Cursor::new(vec![]);
-object.write(&mut output)
+object.write_le(&mut output)
 # .unwrap();
 # assert_eq!(output.into_inner(), b"\x01\0\0\0\0");
 ```
@@ -1531,7 +1531,7 @@ struct MyType {
 
 let object = MyType { int_str: String::from("1") };
 let mut output = Cursor::new(vec![]);
-object.write(&mut output).unwrap();
+object.write_le(&mut output).unwrap();
 assert_eq!(output.into_inner(), b"\x01");
 ```
 </div>
@@ -1671,9 +1671,11 @@ used.
 
 ```
 # use binrw::{prelude::*, io::Cursor, FilePtr};
-#[derive(BinRead, Debug, PartialEq)]
+#[derive(BinRead)]
+# #[derive(Debug, PartialEq)]
+#[br(little)]
 struct OffsetTest {
-    #[br(little, offset = 4)]
+    #[br(offset = 4)]
     test: FilePtr<u8, u16>
 }
 
@@ -2089,6 +2091,7 @@ struct Relocation {
 
 #[derive(BinWrite)]
 # #[derive(Debug, PartialEq)]
+#[bw(big)]
 struct Executable {
     #[bw(restore_position)]
     code: Vec<u8>,
@@ -2145,10 +2148,11 @@ use an [alignment directive](#padding-and-alignment) instead.
 ```
 # use binrw::{BinRead, io::Cursor, binread};
 #[binread]
-#[derive(Debug, PartialEq)]
+# #[derive(Debug, PartialEq)]
+#[br(big)]
 struct Test {
     // Since `Vec` stores its own length, this field is redundant
-    #[br(temp, big)]
+    #[br(temp)]
     len: u32,
 
     #[br(count = len)]

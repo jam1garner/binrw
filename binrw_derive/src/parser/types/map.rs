@@ -11,6 +11,13 @@ pub(crate) enum Map {
 }
 
 impl Map {
+    pub(crate) fn as_repr(&self) -> Option<&TokenStream> {
+        match self {
+            Map::Repr(r) => Some(r),
+            _ => None,
+        }
+    }
+
     pub(crate) fn is_some(&self) -> bool {
         !matches!(self, Self::None)
     }

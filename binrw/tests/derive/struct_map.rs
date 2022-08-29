@@ -67,7 +67,7 @@ fn map_repr_enum_variant() {
         }
     }
 
-    let result = Test::read(&mut Cursor::new("\x01")).unwrap();
+    let result = Test::read_le(&mut Cursor::new("\x01")).unwrap();
     assert_eq!(result, Test::SubTest(SubTest(1)));
 }
 
