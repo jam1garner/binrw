@@ -13,15 +13,10 @@ fn endian_bom() {
     assert!(Endian::from_utf16_bom_bytes([0xfa, 0xff]).is_err());
     assert_eq!(Endian::Little.into_utf16_bom_bytes(), [0xff, 0xfe]);
     assert_eq!(Endian::Big.into_utf16_bom_bytes(), [0xfe, 0xff]);
-    #[cfg(target_endian = "little")]
-    assert_eq!(Endian::Native.into_utf16_bom_bytes(), [0xff, 0xfe]);
-    #[cfg(target_endian = "big")]
-    assert_eq!(Endian::Native.into_utf16_bom_bytes(), [0xfe, 0xff]);
 }
 
 #[test]
 fn endian_to_string() {
     assert_eq!(Endian::Big.to_string(), "Big");
     assert_eq!(Endian::Little.to_string(), "Little");
-    assert_eq!(Endian::Native.to_string(), "Native");
 }

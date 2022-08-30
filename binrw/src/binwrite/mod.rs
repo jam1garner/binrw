@@ -235,7 +235,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     where
         T::Args: Default,
     {
-        self.write_type(value, Endian::Native)
+        self.write_type(value, Endian::NATIVE)
     }
 
     /// Write `T` from the writer with the given byte order and arguments.
@@ -283,7 +283,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_ne_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
-        self.write_type_args(value, Endian::Native, args)
+        self.write_type_args(value, Endian::NATIVE, args)
     }
 }
 
