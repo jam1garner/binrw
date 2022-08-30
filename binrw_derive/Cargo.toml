@@ -1,6 +1,6 @@
 [package]
 name = "binrw_derive"
-version = "0.9.0"
+version = "0.10.0-rc.0"
 authors = [
     "jam1garner <jam@jam1.re>",
     "Colin Snover <github.com@zetafleet.com>",
