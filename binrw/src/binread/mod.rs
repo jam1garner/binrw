@@ -147,7 +147,7 @@ pub trait BinRead: Sized + 'static {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
     fn read_ne_args<R: Read + Seek>(reader: &mut R, args: Self::Args) -> BinResult<Self> {
-        Self::read_options(reader, &ReadOptions::new(Endian::Native), args)
+        Self::read_options(reader, &ReadOptions::new(Endian::NATIVE), args)
     }
 
     /// Read `Self` from the reader using the given [`ReadOptions`] and
@@ -243,7 +243,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
     where
         T::Args: Default,
     {
-        self.read_type(Endian::Native)
+        self.read_type(Endian::NATIVE)
     }
 
     /// Read `T` from the reader with the given byte order and arguments.
@@ -290,7 +290,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
     fn read_ne_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
-        self.read_type_args(Endian::Native, args)
+        self.read_type_args(Endian::NATIVE, args)
     }
 }
 

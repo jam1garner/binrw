@@ -29,13 +29,6 @@ macro_rules! binread_impl {
                         Endian::Little => {
                             <$type_name>::from_le_bytes(val)
                         }
-                        Endian::Native => {
-                            if cfg!(target_endian = "little") {
-                                <$type_name>::from_le_bytes(val)
-                            } else {
-                                <$type_name>::from_be_bytes(val)
-                            }
-                        }
                     })
                 }
             }

@@ -19,7 +19,8 @@ fn read_endian() {
 
     assert_eq!(Big::ENDIAN.endian(), Some(Endian::Big));
     assert_eq!(Little::ENDIAN.endian(), Some(Endian::Little));
-    assert_eq!(u8::ENDIAN.endian(), Some(Endian::Native));
+    assert_eq!(u8::ENDIAN, EndianKind::None);
+    assert_eq!(u8::ENDIAN.endian(), None);
     assert_eq!(Runtime::ENDIAN, EndianKind::Runtime);
     assert_eq!(Runtime::ENDIAN.endian(), None);
     assert_eq!(<(u8, Big)>::ENDIAN, EndianKind::Mixed);
@@ -47,7 +48,8 @@ fn write_endian() {
 
     assert_eq!(Big::ENDIAN.endian(), Some(Endian::Big));
     assert_eq!(Little::ENDIAN.endian(), Some(Endian::Little));
-    assert_eq!(u8::ENDIAN.endian(), Some(Endian::Native));
+    assert_eq!(u8::ENDIAN, EndianKind::None);
+    assert_eq!(u8::ENDIAN.endian(), None);
     assert_eq!(Runtime::ENDIAN, EndianKind::Runtime);
     assert_eq!(Runtime::ENDIAN.endian(), None);
     assert_eq!(<(u8, Big)>::ENDIAN, EndianKind::Mixed);

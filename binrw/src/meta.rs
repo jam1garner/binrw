@@ -65,9 +65,8 @@ impl EndianKind {
     #[must_use]
     pub fn endian(self) -> Option<Endian> {
         match self {
-            EndianKind::None => Some(crate::Endian::Native),
+            EndianKind::None | EndianKind::Runtime | EndianKind::Mixed => None,
             EndianKind::Endian(endian) => Some(endian),
-            EndianKind::Runtime | EndianKind::Mixed => None,
         }
     }
 }

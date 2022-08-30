@@ -27,7 +27,6 @@ macro_rules! binwrite_num_impl {
                     writer.write_all(&match options.endian() {
                         Endian::Big => self.to_be_bytes(),
                         Endian::Little => self.to_le_bytes(),
-                        Endian::Native => self.to_ne_bytes(),
                     }).map_err(Into::into)
                 }
             }
@@ -54,7 +53,6 @@ macro_rules! binwrite_nonzero_num_impl {
                     writer.write_all(&match options.endian() {
                         Endian::Big => num.to_be_bytes(),
                         Endian::Little => num.to_le_bytes(),
-                        Endian::Native => num.to_ne_bytes(),
                     }).map_err(Into::into)
                 }
             }
