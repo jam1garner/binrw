@@ -1,0 +1,21 @@
+error[E0277]: the trait bound `NoDefault: Default` is not satisfied
+  --> tests/ui/args_missing.rs:12:8
+   |
+12 |     a: Foo,
+   |        ^^^ the trait `Default` is not implemented for `NoDefault`
+   |
+   = help: the following other types implement trait `Default`:
+             ()
+             (A, Z, Y, X, W, V, U, T)
+             (B, A, Z, Y, X, W, V, U, T)
+             (C, B, A, Z, Y, X, W, V, U, T)
+             (D, C, B, A, Z, Y, X, W, V, U, T)
+             (E, D, C, B, A, Z, Y, X, W, V, U, T)
+             (T,)
+             (U, T)
+           and 5 others
+   = note: required for `(NoDefault,)` to implement `Default`
+help: consider annotating `NoDefault` with `#[derive(Default)]`
+   |
+4  | #[derive(Default)]
+   |

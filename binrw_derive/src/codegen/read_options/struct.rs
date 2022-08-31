@@ -172,7 +172,7 @@ impl<'field> AfterParseCallGenerator<'field> {
         let options_var = options_var.as_ref().expect(
             "called `AfterParseCallGenerator::call_after_parse` but no `options_var` was generated",
         );
-        let args_arg = get_args_argument(args_var);
+        let args_arg = get_args_argument(self.field, args_var);
         self.out = quote! {
             #after_parse_fn(#value, #READER, #options_var, #args_arg)?;
         };
@@ -419,7 +419,7 @@ impl<'field> FieldGenerator<'field> {
             FieldMode::Default => quote! { <_>::default() },
             FieldMode::Calc(calc) => quote! { #calc },
             FieldMode::Normal | FieldMode::Function(_) => {
-                let args_arg = get_args_argument(&self.args_var);
+                let args_arg = get_args_argument(self.field, &self.args_var);
                 let options_var = &self.options_var;
 
                 quote! {
@@ -490,10 +490,10 @@ impl<'field> FieldGenerator<'field> {
     }
 }
 
-fn get_args_argument(args_var: &Option<Ident>) -> TokenStream {
+fn get_args_argument(field: &StructField, args_var: &Option<Ident>) -> TokenStream {
     args_var.as_ref().map_or_else(
-        || quote! { <_>::default() },
-        |args_var| quote! { #args_var.clone() },
+        || quote_spanned! {field.ty.span()=> <_>::default() },
+        |args_var| quote_spanned! {field.ty.span()=> #args_var.clone() },
     )
 }
 
