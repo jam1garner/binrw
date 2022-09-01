@@ -75,6 +75,7 @@ impl BacktraceFrame {
             start_col,
             line,
         }: Line,
+        max_digits: usize,
         f: &mut Formatter<'_>,
     ) -> fmt::Result {
         let should_highlight = line_num == self.highlight_line;
@@ -86,9 +87,10 @@ impl BacktraceFrame {
         };
         write!(
             f,
-            "   {} {}  ",
+            "   {:2$} {}  ",
             conditional_bold(&line_num, should_highlight),
-            bar
+            bar,
+            max_digits
         )?;
 
         if line.trim().starts_with("//") {
@@ -159,14 +161,16 @@ impl BacktraceFrame {
 
 impl Display for BacktraceFrame {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        // it's one allocation, we'll live
-        let max_digits = self.span.end().line.to_string().len();
+        let max_digits = core::iter::successors(Some(self.span.end().line), |n| {
+            Some(n / 10).filter(|n| *n != 0)
+        })
+        .count();
 
         let bars = "─".repeat(max_digits);
 
         writeln!(f, "  ┄{}─╮", bars)?;
         for line in self.iter_lines() {
-            self.write_line(line, f)?;
+            self.write_line(line, max_digits, f)?;
         }
         writeln!(f, "  ┄{}─╯", bars)?;
 
