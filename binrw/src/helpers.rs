@@ -395,11 +395,32 @@ fn not_enough_bytes<T>(_: T) -> Error {
 macro_rules! vec_fast_int {
     (try ($($Ty:ty)+) using ($list:expr, $reader:expr, $endian:expr, $count:expr) else { $($else:tt)* }) => {
         $(if let Some(list) = <dyn core::any::Any>::downcast_mut::<Vec<$Ty>>(&mut $list) {
-            // In benchmarks, this resize decreases performance by
-            // 27–40% relative to using `unsafe` to write directly to
-            // uninitialised memory, but nobody ever got fired for buying IBM
-            list.resize($count, 0);
-            $reader.read_exact(&mut bytemuck::cast_slice_mut::<_, u8>(list.as_mut_slice()))?;
+            let mut start = 0;
+            let mut remaining = $count;
+            // Allocating and reading from the source in chunks is done to keep
+            // a bad `count` from causing huge memory allocations that are
+            // doomed to fail
+            while remaining != 0 {
+                // Using a similar strategy as std `default_read_to_end` to
+                // leverage the memory growth strategy of the underlying Vec
+                // implementation (in std this will be exponential) using a
+                // minimum byte allocation
+                const GROWTH: usize = 32 / core::mem::size_of::<$Ty>();
+                list.reserve(remaining.min(GROWTH.max(1)));
+
+                let items_to_read = remaining.min(list.capacity() - start);
+                let end = start + items_to_read;
+
+                // In benchmarks, this resize decreases performance by 27–40%
+                // relative to using `unsafe` to write directly to uninitialised
+                // memory, but nobody ever got fired for buying IBM
+                list.resize(end, 0);
+                $reader.read_exact(&mut bytemuck::cast_slice_mut::<_, u8>(&mut list[start..end]))?;
+
+                remaining -= items_to_read;
+                start += items_to_read;
+            }
+
             if
                 core::mem::size_of::<$Ty>() != 1
                 && (
