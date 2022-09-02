@@ -19,15 +19,14 @@ impl Default for Imports {
     }
 }
 
-fn imports_from_attr(list: &Enclosure<IdentPatType, IdentTypeMaybeDefault>) -> Imports {
+fn imports_from_attr(list: Enclosure<IdentPatType, IdentTypeMaybeDefault>) -> Imports {
     match list {
         Enclosure::Paren { fields, .. } => {
             if fields.is_empty() {
                 Imports::None
             } else {
                 let (idents, tys) = fields
-                    .iter()
-                    .cloned()
+                    .into_iter()
                     .map(|field| (field.ident, field.ty))
                     .unzip();
                 Imports::List(idents, tys)
@@ -37,7 +36,7 @@ fn imports_from_attr(list: &Enclosure<IdentPatType, IdentTypeMaybeDefault>) -> I
             if fields.is_empty() {
                 Imports::None
             } else {
-                Imports::Named(fields.iter().cloned().collect())
+                Imports::Named(fields.into_iter().collect())
             }
         }
     }
@@ -45,7 +44,7 @@ fn imports_from_attr(list: &Enclosure<IdentPatType, IdentTypeMaybeDefault>) -> I
 
 impl From<attrs::Import> for Imports {
     fn from(value: attrs::Import) -> Self {
-        imports_from_attr(&value.list)
+        imports_from_attr(value.list)
     }
 }
 

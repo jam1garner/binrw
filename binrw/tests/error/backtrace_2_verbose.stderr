@@ -1,0 +1,13 @@
+
+ ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸
+
+ 0: [1m[1mError: failed to fill whole buffer[22m
+           [1mlen = 6[22m[22m
+     at binrw/tests/error/backtrace_2.rs:10
+ 1: [1mWhile parsing the innerest most struct[22m
+     at binrw/tests/error/backtrace_2.rs:17
+ 2: [1mWhile parsing field '_middle' in OutermostStruct[22m
+     at binrw/tests/error/backtrace_2.rs:23
+
+ ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸
+

@@ -26,5 +26,6 @@ rustversion = "1.0"
 trybuild = "1.0"
 
 [features]
-default = ["std"]
+default = ["std", "verbose-backtrace"]
 std = []
+verbose-backtrace = ["binrw_derive/verbose-backtrace"]

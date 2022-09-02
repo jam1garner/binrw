@@ -2,6 +2,15 @@ use super::{ContextExt, CustomError, Error};
 use alloc::{borrow::Cow, boxed::Box, format, string::ToString, vec::Vec};
 use core::fmt::{self, Write};
 
+#[cfg(feature = "verbose-backtrace")]
+const BOLD_OPEN: &str = "\x1b[1m";
+#[cfg(feature = "verbose-backtrace")]
+const BOLD_CLOSE: &str = "\x1b[22m";
+#[cfg(not(feature = "verbose-backtrace"))]
+const BOLD_OPEN: &str = "";
+#[cfg(not(feature = "verbose-backtrace"))]
+const BOLD_CLOSE: &str = "";
+
 /// An error backtrace.
 #[non_exhaustive]
 #[derive(Debug)]
@@ -46,7 +55,7 @@ impl Backtrace {
             first_frame.display_with_message(
                 f,
                 &format!(
-                    "\x1b[1mError: {}\x1b[22m\n    {}\x1b[1m{}\x1b[22m",
+                    "{BOLD_OPEN}Error: {}{BOLD_CLOSE}\n    {}{BOLD_OPEN}{}{BOLD_CLOSE}",
                     FirstErrorFmt(&self.error),
                     if matches!(self.error.as_ref(), Error::EnumErrors { .. }) {
                         "..."
@@ -87,24 +96,21 @@ impl ContextExt for Backtrace {
 
 impl fmt::Display for Backtrace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
-            f,
-            "\n ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸\n"
-        )?;
+        if cfg!(feature = "verbose-backtrace") {
+            writeln!(
+                f,
+                "\n ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸\n"
+            )?;
+        }
 
         self.fmt_no_bars(f)?;
 
-        #[cfg(any(not(nightly), coverage))]
-        writeln!(
-            f,
-            "\n ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
-        )?;
-
-        #[cfg(all(nightly, not(coverage)))]
-        writeln!(
-            f,
-            " ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
-        )?;
+        if cfg!(feature = "verbose-backtrace") {
+            writeln!(
+                f,
+                "\n ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸\n"
+            )?;
+        }
 
         Ok(())
     }
@@ -149,16 +155,15 @@ impl BacktraceFrame {
             } => {
                 writeln!(
                     f,
-                    " {}: \x1b[1m{}\x1b[22m\n     at {}:{}",
-                    index, message, file, line
+                    " {index}: {BOLD_OPEN}{message}{BOLD_CLOSE}\n     at {file}:{line}",
                 )?;
                 if let Some(code) = code {
-                    writeln!(f, "{}", code.trim_end())?;
+                    write!(f, "{}", code)?;
                 }
                 Ok(())
             }
             BacktraceFrame::Message(_) | BacktraceFrame::Custom(_) => {
-                writeln!(f, " {}: \x1b[1m{}\x1b[22m", index, message)
+                writeln!(f, " {index}: {BOLD_OPEN}{message}{BOLD_CLOSE}")
             }
         }
     }
@@ -190,10 +195,13 @@ impl fmt::Display for FirstErrorFmt<'_> {
                 pos,
                 variant_errors,
             } => {
-                writeln!(f, "no variants matched at {:#x?}...\x1b[22m", pos)?;
+                writeln!(f, "no variants matched at {pos:#x?}...{BOLD_CLOSE}")?;
 
-                let len = variant_errors.len();
                 for (i, (name, err)) in variant_errors.iter().enumerate() {
+                    if i != 0 {
+                        writeln!(f)?;
+                    }
+
                     writeln!(
                         f,
                         "   ╭───────────────────────┄ {} ┄────────────────────┄",
@@ -207,10 +215,6 @@ impl fmt::Display for FirstErrorFmt<'_> {
                         "\n   ╰─────────────────────────{}──────────────────────┄",
                         "─".repeat(name.len())
                     )?;
-
-                    if i != len - 1 {
-                        writeln!(f)?;
-                    }
                 }
 
                 Ok(())
@@ -224,26 +228,20 @@ struct Indenter<'a, 'b>(&'a mut fmt::Formatter<'b>);
 
 impl Write for Indenter<'_, '_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        if s.contains('\n') {
-            let mut last_ended_in_newline = false;
-            let mut is_first = true;
-            for line in s.split_inclusive('\n') {
-                if !is_first {
-                    self.0.write_str("   ┆")?;
-                }
+        let mut is_first = true;
+        for line in s.split_inclusive('\n') {
+            if is_first {
                 is_first = false;
-                self.0.write_str(line)?;
-
-                last_ended_in_newline = line.ends_with('\n');
-            }
-
-            if last_ended_in_newline {
-                self.0.write_str("   ┆")
             } else {
-                Ok(())
+                self.0.write_str("   ┆")?;
             }
+            self.0.write_str(line)?;
+        }
+
+        if s.ends_with('\n') {
+            self.0.write_str("   ┆")
         } else {
-            self.0.write_str(s)
+            Ok(())
         }
     }
 }

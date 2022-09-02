@@ -1,5 +1,5 @@
 use super::{get_magic, PreludeGenerator, ReadOptionsGenerator};
-#[cfg(all(nightly, not(coverage)))]
+#[cfg(feature = "verbose-backtrace")]
 use crate::backtrace::BacktraceFrame;
 use crate::{
     codegen::{
@@ -530,13 +530,16 @@ fn get_err_context(
             #BACKTRACE_FRAME::Custom(Box::new(#expr) as _)
         }
     } else {
-        #[cfg(all(nightly, not(coverage)))]
+        #[cfg(feature = "verbose-backtrace")]
         let code = {
             let code = BacktraceFrame::from_field(field).to_string();
-            quote!(Some(#code))
+            if code.is_empty() {
+                quote! { None }
+            } else {
+                quote! { Some(#code) }
+            }
         };
-
-        #[cfg(any(not(nightly), coverage))]
+        #[cfg(not(feature = "verbose-backtrace"))]
         let code = quote!(None);
 
         let message = if let Some(ErrContext::Format(fmt, exprs)) = &field.err_context {

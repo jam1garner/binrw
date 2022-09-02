@@ -1,3 +1,5 @@
+extern crate alloc;
+
 #[path = "error/backtrace.rs"]
 mod backtrace;
 #[path = "error/backtrace_2.rs"]
@@ -136,10 +138,9 @@ fn not_custom_error() {
     assert!(err.custom_err::<i32>().is_none());
 }
 
-#[rustversion::nightly]
-#[cfg(all(feature = "std", not(coverage)))]
 #[test]
 fn show_backtrace() {
+    use alloc::borrow::Cow;
     use binrw::{io::Cursor, BinReaderExt};
 
     let mut x = Cursor::new(b"\x06\0\0\0");
@@ -150,13 +151,28 @@ fn show_backtrace() {
             .unwrap_err()
     );
     println!("{}", err);
-    assert_eq!(err, include_str!("./error/backtrace.stderr"));
+    assert_eq!(
+        err,
+        if cfg!(feature = "verbose-backtrace") {
+            Cow::Borrowed(if rustversion::cfg!(nightly) {
+                include_str!("./error/backtrace_verbose_nightly.stderr")
+            } else {
+                include_str!("./error/backtrace_verbose.stderr")
+            })
+        } else {
+            let bt = include_str!("./error/backtrace.stderr");
+            if cfg!(feature = "std") {
+                Cow::Borrowed(bt)
+            } else {
+                Cow::Owned(bt.replace("failed to fill whole buffer", "Simple(UnexpectedEof)"))
+            }
+        }
+    );
 }
 
-#[rustversion::nightly]
-#[cfg(all(feature = "std", not(coverage)))]
 #[test]
 fn show_backtrace_2() {
+    use alloc::borrow::Cow;
     use binrw::{io::Cursor, BinReaderExt};
 
     let mut x = Cursor::new(b"\x06\0\0\0");
@@ -167,5 +183,21 @@ fn show_backtrace_2() {
             .unwrap_err()
     );
     println!("{}", err);
-    assert_eq!(err, include_str!("./error/backtrace_2.stderr"));
+    assert_eq!(
+        err,
+        if cfg!(feature = "verbose-backtrace") {
+            Cow::Borrowed(if rustversion::cfg!(nightly) {
+                include_str!("./error/backtrace_2_verbose_nightly.stderr")
+            } else {
+                include_str!("./error/backtrace_2_verbose.stderr")
+            })
+        } else {
+            let bt = include_str!("./error/backtrace_2.stderr");
+            if cfg!(feature = "std") {
+                Cow::Borrowed(bt)
+            } else {
+                Cow::Owned(bt.replace("failed to fill whole buffer", "Simple(UnexpectedEof)"))
+            }
+        }
+    );
 }

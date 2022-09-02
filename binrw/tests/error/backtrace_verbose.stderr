@@ -1,0 +1,27 @@
+
+ ╺━━━━━━━━━━━━━━━━━━━━┅ Backtrace ┅━━━━━━━━━━━━━━━━━━━━╸
+
+ 0: [1m[1mError: no variants matched at 0x0...[22m
+   ╭───────────────────────┄ OnlyOption ┄────────────────────┄
+   ┆
+   ┆ 0: [1m[1mError: failed to fill whole buffer[22m
+   ┆           [1mWhile parsing field '_items' in InnerMostStruct[22m[22m
+   ┆     at binrw/tests/error/backtrace.rs:9
+   ┆ 1: [1mWhile parsing field 'inner' in MiddleEnum::OnlyOption[22m
+   ┆     at binrw/tests/error/backtrace.rs:18
+   ┆
+   ╰─────────────────────────────────────────────────────────┄
+   ╭───────────────────────┄ OtherOption ┄────────────────────┄
+   ┆
+   ┆ 0: [1m[1mError: failed to fill whole buffer[22m
+   ┆           [1mWhile parsing field 'self_1' in MiddleEnum::OtherOption[22m[22m
+   ┆     at binrw/tests/error/backtrace.rs:13
+   ┆
+   ╰──────────────────────────────────────────────────────────┄[22m
+    ...[1mWhile parsing field '_middle' in MiddleStruct[22m[22m
+     at binrw/tests/error/backtrace.rs:27
+ 1: [1mWhile parsing field '_middle' in OutermostStruct[22m
+     at binrw/tests/error/backtrace.rs:33
+
+ ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸
+
