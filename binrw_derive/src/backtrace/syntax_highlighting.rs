@@ -152,12 +152,10 @@ fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
             .entry(start.line)
             .or_insert_with(LineSyntax::default);
 
-        // Lint: Makes code less clear.
-        #[allow(clippy::range_plus_one)]
         line.highlights
-            .push((start.column..start.column + 1, Color::Keyword));
+            .push((start.column..start.column.saturating_add(1), Color::Keyword));
         line.highlights
-            .push((end.column - 1..end.column, Color::Keyword));
+            .push((end.column.saturating_sub(1)..end.column, Color::Keyword));
 
         // #[path(...)]
         //       ^   ^

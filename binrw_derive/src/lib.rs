@@ -1,11 +1,11 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
-#![cfg_attr(all(nightly, not(coverage)), feature(proc_macro_span))]
-#![cfg_attr(all(nightly, coverage), feature(no_coverage))]
+#![cfg_attr(nightly, feature(proc_macro_span))]
+#![cfg_attr(coverage_nightly, feature(no_coverage))]
 
 extern crate alloc;
 
-#[cfg(all(nightly, not(coverage)))]
+#[cfg(feature = "verbose-backtrace")]
 mod backtrace;
 mod binrw_attr;
 mod codegen;

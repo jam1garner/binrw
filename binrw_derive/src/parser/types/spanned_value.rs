@@ -12,7 +12,7 @@ impl<T> SpannedValue<T> {
         Self { value, span }
     }
 
-    #[cfg(all(nightly, not(coverage)))] // Not actually nightly, but only used by nightly mod syntax_highlighting
+    #[cfg(feature = "verbose-backtrace")]
     pub(crate) fn into_value(self) -> T {
         self.value
     }

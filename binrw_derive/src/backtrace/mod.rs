@@ -29,7 +29,16 @@ impl BacktraceFrame {
     }
 
     fn iter_lines(&self) -> impl Iterator<Item = Line> + '_ {
-        if let Some(text) = self.span.unwrap().source_text() {
+        // Calling `unwrap` will cause a panic during code coverage analysis
+        // since in that case proc_macro is being emulated so there is no
+        // underlying Span; this code therefore must only run when the
+        // proc_macro condition is set
+        #[cfg(all(feature = "verbose-backtrace", nightly, proc_macro))]
+        let source_text = self.span.unwrap().source_text();
+        #[cfg(not(all(feature = "verbose-backtrace", nightly, proc_macro)))]
+        let source_text = None::<String>;
+
+        if let Some(text) = source_text {
             let start_col = self.span.start().column - 1;
             let mut min_whitespace = start_col;
             for line in text.lines().skip(1) {
@@ -41,30 +50,32 @@ impl BacktraceFrame {
                 }
             }
 
-            (self.span.start().line..)
-                .zip(text.lines().enumerate().map(|(i, line)| {
-                    let line = if i == 0 {
-                        let spaces_to_add = start_col - min_whitespace;
-                        if spaces_to_add == 0 {
-                            line.to_owned()
+            either::Left(
+                (self.span.start().line..)
+                    .zip(text.lines().enumerate().map(|(i, line)| {
+                        let line = if i == 0 {
+                            let spaces_to_add = start_col - min_whitespace;
+                            if spaces_to_add == 0 {
+                                line.to_owned()
+                            } else {
+                                format!("{}{}", " ".repeat(spaces_to_add), line)
+                            }
                         } else {
-                            format!("{}{}", " ".repeat(spaces_to_add), line)
-                        }
-                    } else {
-                        line[min_whitespace..].to_owned()
-                    };
+                            line[min_whitespace..].to_owned()
+                        };
 
-                    (min_whitespace + 1, line)
-                }))
-                .map(|(line_num, (start_col, line))| Line {
-                    line_num,
-                    start_col,
-                    line,
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
+                        (min_whitespace + 1, line)
+                    }))
+                    .map(|(line_num, (start_col, line))| Line {
+                        line_num,
+                        start_col,
+                        line,
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter(),
+            )
         } else {
-            Vec::new().into_iter()
+            either::Right(core::iter::empty())
         }
     }
 
@@ -101,7 +112,7 @@ impl BacktraceFrame {
             let line_len = line.len() + start_col;
 
             // syntax highlighting on this line
-            let highlights = line_highlights.highlights.iter().collect::<Vec<_>>();
+            let highlights = &line_highlights.highlights;
             let highlights = highlights
                 .iter()
                 .enumerate()
@@ -110,9 +121,7 @@ impl BacktraceFrame {
                 })
                 .map(|(_, (range, color))| {
                     (range.start.min(line_len)..range.end.min(line_len), color)
-                })
-                .collect::<Vec<_>>()
-                .into_iter();
+                });
             let highlights_next_start = line_highlights
                 .highlights
                 .iter()
@@ -161,18 +170,20 @@ impl BacktraceFrame {
 
 impl Display for BacktraceFrame {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let max_digits = core::iter::successors(Some(self.span.end().line), |n| {
-            Some(n / 10).filter(|n| *n != 0)
-        })
-        .count();
+        let line = self.span.end().line;
 
-        let bars = "─".repeat(max_digits);
+        if line != 0 {
+            let max_digits =
+                core::iter::successors(Some(line), |n| Some(n / 10).filter(|n| *n != 0)).count();
 
-        writeln!(f, "  ┄{}─╮", bars)?;
-        for line in self.iter_lines() {
-            self.write_line(line, max_digits, f)?;
+            let bars = "─".repeat(max_digits);
+
+            writeln!(f, "  ┄{}─╮", bars)?;
+            for line in self.iter_lines() {
+                self.write_line(line, max_digits, f)?;
+            }
+            writeln!(f, "  ┄{}─╯", bars)?;
         }
-        writeln!(f, "  ┄{}─╯", bars)?;
 
         Ok(())
     }

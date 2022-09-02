@@ -52,7 +52,7 @@ impl Inner {
         &self.1
     }
 
-    #[cfg(all(nightly, not(coverage)))] // Not actually nightly, but only used by nightly mod syntax_highlighting
+    #[cfg(feature = "verbose-backtrace")]
     pub(crate) fn into_match_value(self) -> TokenStream {
         self.1
     }
