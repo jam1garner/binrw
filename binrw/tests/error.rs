@@ -142,10 +142,10 @@ fn not_custom_error() {
 fn show_backtrace() {
     use binrw::{io::Cursor, BinReaderExt};
 
-    let mut x = Cursor::new(b"\0\0\0\x06");
+    let mut x = Cursor::new(b"\x06\0\0\0");
     let err = format!(
         "{}",
-        x.read_be::<backtrace::OutermostStruct>()
+        x.read_le::<backtrace::OutermostStruct>()
             .map(|_| ())
             .unwrap_err()
     );
@@ -159,10 +159,10 @@ fn show_backtrace() {
 fn show_backtrace_2() {
     use binrw::{io::Cursor, BinReaderExt};
 
-    let mut x = Cursor::new(b"\0\0\0\x06");
+    let mut x = Cursor::new(b"\x06\0\0\0");
     let err = format!(
         "{}",
-        x.read_be::<backtrace_2::OutermostStruct>()
+        x.read_le::<backtrace_2::OutermostStruct>()
             .map(|_| ())
             .unwrap_err()
     );
