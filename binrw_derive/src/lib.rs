@@ -229,7 +229,6 @@ fn parse(
     (binrw_input, generated_impl)
 }
 
-#[cfg(test)]
 #[cfg(coverage)]
 #[cfg_attr(coverage_nightly, no_coverage)]
 #[test]
@@ -269,7 +268,6 @@ fn derive_code_coverage_for_tool() {
     assert!(run_success)
 }
 
-#[cfg(test)]
 #[cfg(coverage)]
 #[cfg_attr(coverage_nightly, no_coverage)]
 #[test]

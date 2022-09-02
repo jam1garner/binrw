@@ -103,7 +103,6 @@ mod kw {
     syn::custom_keyword!(try_optional);
 }
 
-#[cfg(test)]
 #[cfg(coverage)]
 #[cfg_attr(coverage_nightly, no_coverage)]
 #[test]
