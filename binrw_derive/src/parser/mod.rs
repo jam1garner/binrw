@@ -44,8 +44,8 @@ trait FromAttrs<Attr: syn::parse::Parse> {
             })
             .flat_map(
                 |attr| match syn::parse2::<MetaAttrList<Attr>>(attr.tokens.clone()) {
-                    Ok(list) => list.into_iter().map(Ok).collect::<Vec<_>>().into_iter(),
-                    Err(err) => core::iter::once(Err(err)).collect::<Vec<_>>().into_iter(),
+                    Ok(list) => either::Left(list.into_iter().map(Ok)),
+                    Err(err) => either::Right(core::iter::once(Err(err))),
                 },
             );
 

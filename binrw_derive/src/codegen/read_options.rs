@@ -119,13 +119,13 @@ impl<'input> PreludeGenerator<'input> {
 impl Input {
     pub(crate) fn field_asserts(&self) -> impl Iterator<Item = TokenStream> + '_ {
         match self {
-            Input::Struct(input) => input
-                .fields
-                .iter()
-                .flat_map(|field| get_assertions(&field.assertions))
-                .collect::<Vec<_>>()
-                .into_iter(),
-            _ => vec![].into_iter(),
+            Input::Struct(input) => either::Left(
+                input
+                    .fields
+                    .iter()
+                    .flat_map(|field| get_assertions(&field.assertions)),
+            ),
+            _ => either::Right(core::iter::empty()),
         }
     }
 }

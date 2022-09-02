@@ -42,7 +42,7 @@ impl<'a> Builder<'a> {
         let initial_generics = self.generate_initial_generics();
         let setters = self.generate_setters(&user_generic_args);
         let satisfied = &SATISFIED_OR_OPTIONAL;
-        let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
+        let field_names = self.fields.iter().map(|field| &field.name);
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
         let optional_finalizers = self.optional_finalizers();
 
@@ -80,16 +80,16 @@ impl<'a> Builder<'a> {
         quote!(
             #res_struct
 
-            impl< #( #user_bounds ),* > #name < #( #user_generic_args ),* >  {
+            impl< #( #user_bounds ),* > #name < #user_generic_args >  {
                 /// An inherent method version of [`BinrwNamedArgs`](::binrw::BinrwNamedArgs),
                 /// designed for use with [`binrw::args!`](::binrw::args).
-                #vis fn builder() -> #builder_name < #( #user_generic_args, )* #( #initial_generics ),* > {
+                #vis fn builder() -> #builder_name < #user_generic_args #initial_generics > {
                     #initial
                 }
             }
 
-            impl< #( #user_bounds ),* > #BINRW_NAMED_ARGS for #name < #( #user_generic_args ),* > {
-                type Builder = #builder_name < #( #user_generic_args, )* #( #initial_generics ),* >;
+            impl< #( #user_bounds ),* > #BINRW_NAMED_ARGS for #name < #user_generic_args > {
+                type Builder = #builder_name < #user_generic_args #initial_generics >;
 
                 fn builder() -> Self::Builder {
                     Self::builder()
@@ -100,12 +100,12 @@ impl<'a> Builder<'a> {
 
             /// A builder for constructing the given type using [`binrw::args!`](::binrw::args).
             #[allow(non_camel_case_types)]
-            #vis struct #builder_name <#(#user_bounds,)* #( #generics ),* > {
+            #vis struct #builder_name <#( #user_bounds, )* #( #generics ),* > {
                 #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
             }
 
-            #( #optional_finalizers )*
+            #optional_finalizers
 
             #[allow(non_camel_case_types)]
             impl<
@@ -114,48 +114,41 @@ impl<'a> Builder<'a> {
             >
                 #builder_name
                 <
-                    #(#user_generic_args,)*
+                    #user_generic_args
                     #( #generics ),*
                 >
             {
                 /// A method to finalize the struct after all builder required fields have been
                 /// fulfilled.
-                #vis fn finalize(self) -> #name < #(#user_generic_args),* > {
+                #vis fn finalize(self) -> #name < #user_generic_args > {
                     let #builder_name {
-                        #(
-                            #field_names,
-                        )*
+                        #( #field_names, )*
                         ..
                     } = self;
 
                     #name {
-                        #(
-                            #field_names #possible_unwrap,
-                        )*
+                        #( #possible_unwrap, )*
                     }
                 }
             }
         )
     }
 
-    fn user_generic_args(&self) -> Vec<GenericArgument> {
-        self.generics
-            .iter()
-            .map(|generic| match generic {
-                GenericParam::Type(ty) => GenericArgument::Type(Type::Path(syn::TypePath {
-                    qself: None,
-                    path: ty.ident.clone().into(),
-                })),
-                GenericParam::Const(cnst) => {
-                    GenericArgument::Const(syn::Expr::Path(syn::ExprPath {
-                        attrs: Vec::new(),
-                        qself: None,
-                        path: cnst.ident.clone().into(),
-                    }))
-                }
-                GenericParam::Lifetime(lt) => GenericArgument::Lifetime(lt.lifetime.clone()),
-            })
-            .collect()
+    fn user_generic_args(&self) -> TokenStream {
+        let args = self.generics.iter().map(|generic| match generic {
+            GenericParam::Type(ty) => GenericArgument::Type(Type::Path(syn::TypePath {
+                qself: None,
+                path: ty.ident.clone().into(),
+            })),
+            GenericParam::Const(cnst) => GenericArgument::Const(syn::Expr::Path(syn::ExprPath {
+                attrs: Vec::new(),
+                qself: None,
+                path: cnst.ident.clone().into(),
+            })),
+            GenericParam::Lifetime(lt) => GenericArgument::Lifetime(lt.lifetime.clone()),
+        });
+
+        quote! { #(#args,)* }
     }
 
     fn generate_builder_fields(&self) -> TokenStream {
@@ -187,16 +180,14 @@ impl<'a> Builder<'a> {
         )
     }
 
-    fn generate_initial_generics(&self) -> Vec<TokenStream> {
-        self.fields
-            .iter()
-            .map(BuilderField::initial_generic)
-            .collect()
+    fn generate_initial_generics(&self) -> TokenStream {
+        let generics = self.fields.iter().map(BuilderField::initial_generic);
+        quote! { #(#generics,)* }
     }
 
     fn generate_setters<'builder>(
         &'builder self,
-        user_generic_args: &'builder [GenericArgument],
+        user_generic_args: &'builder TokenStream,
     ) -> impl Iterator<Item = TokenStream> + 'builder {
         let builder_name = self.builder_name;
         let user_bounds = self.generics;
@@ -205,23 +196,35 @@ impl<'a> Builder<'a> {
             let vis = self.vis;
 
             // The current field is not generic
-            let mut generic_params = generics.clone();
-            generic_params.remove(i);
+            let generic_params = generics
+                .iter()
+                .enumerate()
+                .filter_map(|(n, p)| (n != i).then_some(p));
 
             // The generics required for the builder should be generic for all parameters
             // except the current field, which is set to its initial state
-            let mut required_generics: Vec<_> = generics
-                .into_iter()
-                .map(ToTokens::into_token_stream)
-                .collect();
-            required_generics[i] = field.initial_generic();
+            let required_generics = generics.iter().enumerate().map(|(n, t)| {
+                if n == i {
+                    field.initial_generic()
+                } else {
+                    t.to_token_stream()
+                }
+            });
 
             // the resulting generics should be the same as before, but with the type for
             // the current field being marked as satisfied.
-            let mut resulting_generics = required_generics.clone();
-            resulting_generics[i] = quote!( #SATISFIED );
+            let resulting_generics = generics.iter().enumerate().map(|(n, t)| {
+                if n == i {
+                    SATISFIED.to_token_stream()
+                } else {
+                    t.to_token_stream()
+                }
+            });
 
-            let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
+            let field_names = {
+                let names = self.fields.iter().map(|field| &field.name);
+                quote! { #( #names, )* }
+            };
             let field_name = &field.name;
             let ty = &field.ty;
 
@@ -235,27 +238,23 @@ impl<'a> Builder<'a> {
                 impl<
                     #( #user_bounds, )*
                     #( #generic_params ),*
-                > #builder_name < #( #user_generic_args, )* #( #required_generics ),* > {
+                > #builder_name < #user_generic_args #( #required_generics ),* > {
                     /// A method to allow this field to be set using the [`binrw::args`]
                     /// macro.
                     ///
                     /// [`binrw::args`]: ::binrw::args
                     #vis fn #field_name(
                         self, val: #ty
-                    ) -> #builder_name < #( #user_generic_args, )* #( #resulting_generics ),* > {
+                    ) -> #builder_name < #user_generic_args #( #resulting_generics ),* > {
                         let #builder_name {
-                            #(
-                                #field_names,
-                            )*
+                            #field_names
                             ..
                         } = self;
 
                         let #field_name = #field_result;
 
                         #builder_name {
-                            #(
-                                #field_names,
-                            )*
+                            #field_names
                             __bind_generics: ::core::marker::PhantomData
                         }
                     }
@@ -270,13 +269,13 @@ impl<'a> Builder<'a> {
             .all(|field| matches!(field.kind, BuilderFieldKind::Optional { .. }))
     }
 
-    fn optional_finalizers(&self) -> Vec<TokenStream> {
+    fn optional_finalizers(&self) -> TokenStream {
         if !self
             .fields
             .iter()
             .any(|field| matches!(field.kind, BuilderFieldKind::TryOptional))
         {
-            return vec![];
+            return <_>::default();
         }
         let builder_name = self.builder_name;
         let name = self.result_name;
@@ -284,72 +283,69 @@ impl<'a> Builder<'a> {
         let vis = self.vis;
         let user_generic_args = self.user_generic_args();
         let generics = self.generate_generics();
-        let field_names: Vec<_> = self.fields.iter().map(|field| &field.name).collect();
-        let possible_unwrap: Vec<_> = self
-            .fields
-            .iter()
-            .map(BuilderField::possible_unwrap_or_default)
-            .collect();
+        let field_names = {
+            let names = self.fields.iter().map(|field| &field.name);
+            quote! { #(#names,)* }
+        };
+        let possible_unwrap = {
+            let unwraps = self
+                .fields
+                .iter()
+                .map(BuilderField::possible_unwrap_or_default);
+            quote! { #(#unwraps,)* }
+        };
 
-        self.fields
-            .iter()
-            .enumerate()
-            .filter_map(|(i, field)| {
-                if let BuilderFieldKind::TryOptional = field.kind {
-                    let current_field_ty = &field.ty;
-                    let satisfied_generics = generics.iter().enumerate().map(|(n, generic)| {
-                        let generic = generic.clone();
-                        if i == n {
-                            quote!(#NEEDED)
-                        } else {
-                            quote!(#generic)
-                        }
-                    });
-                    let filtered_generics = generics.iter().enumerate().map(|(n, generic)| {
-                        let generic = generic.clone();
-                        if i == n {
-                            None
-                        } else {
-                            Some(quote!(#generic : #SATISFIED_OR_OPTIONAL))
-                        }
-                    });
-                    Some(quote! {
-                        #[allow(non_camel_case_types)]
-                        impl<
-                            #( #user_bounds, )*
-                            #( #filtered_generics ),*
+        let fields = self.fields.iter().enumerate().filter_map(|(i, field)| {
+            if let BuilderFieldKind::TryOptional = field.kind {
+                let current_field_ty = &field.ty;
+                let satisfied_generics = generics.iter().enumerate().map(|(n, generic)| {
+                    if i == n {
+                        quote!(#NEEDED)
+                    } else {
+                        quote!(#generic)
+                    }
+                });
+                let filtered_generics = generics.iter().enumerate().map(|(n, generic)| {
+                    if i == n {
+                        None
+                    } else {
+                        Some(quote!(#generic : #SATISFIED_OR_OPTIONAL))
+                    }
+                });
+                Some(quote! {
+                    #[allow(non_camel_case_types)]
+                    impl<
+                        #( #user_bounds, )*
+                        #( #filtered_generics ),*
+                    >
+                        #builder_name
+                        <
+                            #user_generic_args
+                            #( #satisfied_generics ),*
                         >
-                            #builder_name
-                            <
-                                #(#user_generic_args,)*
-                                #( #satisfied_generics ),*
-                            >
-                        where
-                            #current_field_ty: Default,
-                        {
-                            /// A method to finalize the struct after all builder required fields have been
-                            /// fulfilled.
-                            #vis fn finalize(self) -> #name < #(#user_generic_args),* > {
-                                let #builder_name {
-                                    #(
-                                        #field_names,
-                                    )*
-                                    ..
-                                } = self;
+                    where
+                        #current_field_ty: Default,
+                    {
+                        /// A method to finalize the struct after all builder required fields have been
+                        /// fulfilled.
+                        #vis fn finalize(self) -> #name < #user_generic_args > {
+                            let #builder_name {
+                                #field_names
+                                ..
+                            } = self;
 
-                                #name {
-                                    #(
-                                        #field_names #possible_unwrap,
-                                    )*
-                                }
+                            #name {
+                                #possible_unwrap
                             }
                         }
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect()
+                    }
+                })
+            } else {
+                None
+            }
+        });
+
+        quote! { #(#fields)* }
     }
 }
 
@@ -420,18 +416,18 @@ impl BuilderField {
         let name = &self.name;
         match self.kind {
             BuilderFieldKind::Required | BuilderFieldKind::TryOptional => {
-                quote!( : #name.unwrap() )
+                quote! { #name: #name.unwrap() }
             }
-            BuilderFieldKind::Optional { .. } => quote!(),
+            BuilderFieldKind::Optional { .. } => quote! { #name },
         }
     }
 
     fn possible_unwrap_or_default(&self) -> TokenStream {
         let name = &self.name;
         match self.kind {
-            BuilderFieldKind::Required => quote!( : #name.unwrap() ),
-            BuilderFieldKind::Optional { .. } => quote!(),
-            BuilderFieldKind::TryOptional => quote!( : #name.unwrap_or_default() ),
+            BuilderFieldKind::Required => quote!( #name: #name.unwrap() ),
+            BuilderFieldKind::Optional { .. } => quote! { #name },
+            BuilderFieldKind::TryOptional => quote! { #name: #name.unwrap_or_default() },
         }
     }
 }

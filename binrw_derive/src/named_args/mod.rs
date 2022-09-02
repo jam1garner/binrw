@@ -33,36 +33,26 @@ pub(super) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStr
             .fields
             .iter()
             .map(|field| {
-                let attrs: Vec<NamedArgAttr> = field
-                    .attrs
-                    .iter()
-                    .filter_map(|attr| {
-                        let is_named_args = attr
-                            .path
-                            .get_ident()
-                            .map_or(false, |ident| ident == "named_args");
-                        if is_named_args {
-                            attr.parse_args().ok()
-                        } else {
-                            None
+                let attrs = field.attrs.iter().filter_map(|attr| {
+                    attr.path
+                        .get_ident()
+                        .filter(|ident| *ident == "named_args")
+                        .map(|_| attr.parse_args::<NamedArgAttr>())
+                });
+
+                let mut kind = BuilderFieldKind::Required;
+                for attr in attrs {
+                    match attr? {
+                        NamedArgAttr::Default(default) => {
+                            kind = BuilderFieldKind::Optional { default }
                         }
-                    })
-                    .collect();
-                let kind = if attrs
-                    .iter()
-                    .any(|attr| matches!(attr, NamedArgAttr::TryOptional))
-                {
-                    BuilderFieldKind::TryOptional
-                } else if let Some(NamedArgAttr::Default(default)) = attrs
-                    .iter()
-                    .find(|attr| matches!(attr, NamedArgAttr::Default(_)))
-                {
-                    BuilderFieldKind::Optional {
-                        default: default.clone(),
+                        NamedArgAttr::TryOptional => {
+                            kind = BuilderFieldKind::TryOptional;
+                            break;
+                        }
                     }
-                } else {
-                    BuilderFieldKind::Required
-                };
+                }
+
                 Ok(BuilderField {
                     kind,
                     name: match field.ident.as_ref() {
