@@ -1,6 +1,6 @@
-# binread_derive
+# binrw_derive
 
-## Quick start for adding a new directive to `BinRead`
+## Quick start for adding a new directive to binrw
 
 In all cases, look to existing directives to follow established code and test
 conventions.
@@ -22,10 +22,10 @@ conventions.
    `FromInput::validate` (if it can only be validated after the entire struct
    has been parsed).
 6. Use the new fields to emit code in the appropriate places in
-   `codegen::read_options`.
-7. Add new integration tests in the `binread` crate’s `tests` directory.
+   `codegen::read_options` and `codegen::write_options`.
+7. Add new integration tests in the `binrw` crate’s `tests` directory.
 8. If the new directive generates new errors (e.g. from validation), add unit
    tests to validate those code paths in `parser::tests` (in `mod.rs`) and add
-   identical trybuild tests to the `binread` crate’s `tests/ui` directory. (A
+   identical trybuild tests to the `binrw` crate’s `tests/ui` directory. (A
    nightly compiler is required to run the trybuild tests; see the comment in
-   `binread::tests::ui` for more detail.)
+   `binrw::tests::ui` for more detail.)
