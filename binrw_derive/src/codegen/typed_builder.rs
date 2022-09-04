@@ -32,7 +32,10 @@ impl<'a> Builder<'a> {
     pub(crate) fn generate(&self, define_result: bool) -> TokenStream {
         let builder_name = self.builder_name;
         let name = self.result_name;
-        let user_bounds = self.generics;
+        let user_bounds = {
+            let generics = self.generics;
+            quote! { #( #generics, )* }
+        };
         let vis = self.vis;
         let user_generic_args = self.user_generic_args();
         let fields = self.generate_result_fields();
@@ -41,10 +44,16 @@ impl<'a> Builder<'a> {
         let generics = self.generate_generics();
         let initial_generics = self.generate_initial_generics();
         let setters = self.generate_setters(&user_generic_args);
-        let satisfied = &SATISFIED_OR_OPTIONAL;
+        let satisfied = {
+            let satisfied = SATISFIED_OR_OPTIONAL;
+            quote! {
+                #( #generics : #satisfied ),*
+            }
+        };
         let field_names = self.fields.iter().map(|field| &field.name);
         let possible_unwrap = self.fields.iter().map(BuilderField::possible_unwrap);
         let optional_finalizers = self.optional_finalizers();
+        let generics = quote! { #( #generics ),* };
 
         let res_struct = if define_result {
             let docs = self.owner_name.map(|owner_name| {
@@ -69,7 +78,7 @@ impl<'a> Builder<'a> {
             Some(quote!(
                 #derives
                 #[doc = #docs]
-                #vis struct #name < #( #user_bounds ),* > {
+                #vis struct #name < #user_bounds > {
                     #fields
                 }
             ))
@@ -77,18 +86,21 @@ impl<'a> Builder<'a> {
             None
         };
 
+        let builder_docs = format!(
+            "A builder for [`{name}`] objects. Compatible with [`binrw::args!`](::binrw::args)."
+        );
+
         quote!(
             #res_struct
 
-            impl< #( #user_bounds ),* > #name < #user_generic_args >  {
-                /// An inherent method version of [`BinrwNamedArgs`](::binrw::BinrwNamedArgs),
-                /// designed for use with [`binrw::args!`](::binrw::args).
+            impl< #user_bounds > #name < #user_generic_args >  {
+                /// Creates a new builder for this type.
                 #vis fn builder() -> #builder_name < #user_generic_args #initial_generics > {
                     #initial
                 }
             }
 
-            impl< #( #user_bounds ),* > #BINRW_NAMED_ARGS for #name < #user_generic_args > {
+            impl< #user_bounds > #BINRW_NAMED_ARGS for #name < #user_generic_args > {
                 type Builder = #builder_name < #user_generic_args #initial_generics >;
 
                 fn builder() -> Self::Builder {
@@ -98,28 +110,27 @@ impl<'a> Builder<'a> {
 
             #( #setters )*
 
-            /// A builder for constructing the given type using [`binrw::args!`](::binrw::args).
+            #[doc = #builder_docs]
             #[allow(non_camel_case_types)]
-            #vis struct #builder_name <#( #user_bounds, )* #( #generics ),* > {
+            #vis struct #builder_name <#user_bounds #generics > {
                 #builder_fields
-                __bind_generics: ::core::marker::PhantomData<( #( #generics ),* )>
+                __bind_generics: ::core::marker::PhantomData<( #generics )>
             }
 
             #optional_finalizers
 
             #[allow(non_camel_case_types)]
             impl<
-                #( #user_bounds, )*
-                #( #generics : #satisfied ),*
+                #user_bounds
+                #satisfied
             >
                 #builder_name
                 <
                     #user_generic_args
-                    #( #generics ),*
+                    #generics
                 >
             {
-                /// A method to finalize the struct after all builder required fields have been
-                /// fulfilled.
+                /// Builds the object.
                 #vis fn finalize(self) -> #name < #user_generic_args > {
                     let #builder_name {
                         #( #field_names, )*
@@ -227,6 +238,7 @@ impl<'a> Builder<'a> {
             };
             let field_name = &field.name;
             let ty = &field.ty;
+            let docs = format!("Sets `{field_name}` to the given value.");
 
             let field_result = match field.kind {
                 BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(Some(val)),
@@ -239,10 +251,7 @@ impl<'a> Builder<'a> {
                     #( #user_bounds, )*
                     #( #generic_params ),*
                 > #builder_name < #user_generic_args #( #required_generics ),* > {
-                    /// A method to allow this field to be set using the [`binrw::args`]
-                    /// macro.
-                    ///
-                    /// [`binrw::args`]: ::binrw::args
+                    #[doc = #docs]
                     #vis fn #field_name(
                         self, val: #ty
                     ) -> #builder_name < #user_generic_args #( #resulting_generics ),* > {
@@ -326,8 +335,7 @@ impl<'a> Builder<'a> {
                     where
                         #current_field_ty: Default,
                     {
-                        /// A method to finalize the struct after all builder required fields have been
-                        /// fulfilled.
+                        /// Builds the object.
                         #vis fn finalize(self) -> #name < #user_generic_args > {
                             let #builder_name {
                                 #field_names
