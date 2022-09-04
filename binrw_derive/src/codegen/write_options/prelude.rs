@@ -1,5 +1,8 @@
 use crate::{
-    codegen::sanitization::{ARGS, OPT, WRITER, WRITE_METHOD},
+    codegen::{
+        imports::destructure,
+        sanitization::{ARGS, OPT, WRITER, WRITE_METHOD},
+    },
     parser::{CondEndian, Input, Magic},
 };
 use proc_macro2::{Ident, TokenStream};
@@ -19,7 +22,7 @@ impl<'a> PreludeGenerator<'a> {
     pub(crate) fn prefix_imports(mut self) -> Self {
         if let Some(imports) = self
             .input
-            .and_then(|input| input.imports().destructure(self.name, true))
+            .and_then(|input| destructure(input.imports(), self.name, true))
         {
             let out = self.out;
             self.out = quote! {

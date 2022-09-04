@@ -22,9 +22,12 @@ pub(crate) fn generate_impl<const WRITE: bool>(
     binrw_input: &ParseResult<Input>,
 ) -> TokenStream {
     let (arg_type, arg_type_declaration) = match binrw_input {
-        ParseResult::Ok(binrw_input) | ParseResult::Partial(binrw_input, _) => binrw_input
-            .imports()
-            .args_type(&derive_input.ident, &derive_input.vis, WRITE),
+        ParseResult::Ok(binrw_input) | ParseResult::Partial(binrw_input, _) => imports::args_type(
+            binrw_input.imports(),
+            &derive_input.ident,
+            &derive_input.vis,
+            WRITE,
+        ),
         ParseResult::Err(_) => (quote! { () }, None),
     };
 

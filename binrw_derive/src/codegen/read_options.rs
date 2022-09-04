@@ -4,8 +4,11 @@ mod r#struct;
 
 use super::get_assertions;
 use crate::{
-    codegen::sanitization::{
-        ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT, TEMP,
+    codegen::{
+        imports::destructure,
+        sanitization::{
+            ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT, TEMP,
+        },
     },
     parser::{CondEndian, Input, Magic, Map},
     util::IdentStr,
@@ -66,7 +69,7 @@ impl<'input> PreludeGenerator<'input> {
     }
 
     fn add_imports(mut self, name: Option<&Ident>) -> Self {
-        if let Some(imports) = self.input.imports().destructure(name, false) {
+        if let Some(imports) = destructure(self.input.imports(), name, false) {
             let head = self.out;
             self.out = quote! {
                 #head
@@ -116,20 +119,6 @@ impl<'input> PreludeGenerator<'input> {
         };
 
         self
-    }
-}
-
-impl Input {
-    pub(crate) fn field_asserts(&self) -> impl Iterator<Item = TokenStream> + '_ {
-        match self {
-            Input::Struct(input) => either::Left(
-                input
-                    .fields
-                    .iter()
-                    .flat_map(|field| get_assertions(&field.assertions)),
-            ),
-            _ => either::Right(core::iter::empty()),
-        }
     }
 }
 

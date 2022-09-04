@@ -18,9 +18,7 @@ pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStrea
         .finish();
 
     let destructure_ref = destructure_ref(input);
-    let assertions = input
-        .field_asserts()
-        .chain(get_assertions(input.assertions()));
+    let assertions = field_asserts(input).chain(get_assertions(input.assertions()));
 
     // TODO: replace args with top-level arguments and only
     // use `()` as a default
@@ -56,9 +54,7 @@ pub(crate) fn generate_try_map(
         .finish();
 
     let destructure_ref = destructure_ref(input);
-    let assertions = input
-        .field_asserts()
-        .chain(get_assertions(input.assertions()));
+    let assertions = field_asserts(input).chain(get_assertions(input.assertions()));
 
     // TODO: replace args with top-level arguments and only
     // use `()` as a default
@@ -99,5 +95,17 @@ fn destructure_ref(input: &Input) -> Option<TokenStream> {
         }
 
         _ => None,
+    }
+}
+
+fn field_asserts(input: &Input) -> impl Iterator<Item = TokenStream> + '_ {
+    match input {
+        Input::Struct(input) => either::Left(
+            input
+                .fields
+                .iter()
+                .flat_map(|field| get_assertions(&field.assertions)),
+        ),
+        _ => either::Right(core::iter::empty()),
     }
 }

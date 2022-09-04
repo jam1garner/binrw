@@ -6,59 +6,57 @@ use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::Ident;
 
-impl Imports {
-    pub(crate) fn destructure(
-        &self,
-        type_name: Option<&Ident>,
-        is_write: bool,
-    ) -> Option<TokenStream> {
-        match self {
-            Imports::None => None,
-            Imports::List(idents, _) => {
-                if idents.is_empty() {
-                    None
-                } else {
-                    let idents = idents.iter();
-                    Some(quote! {
-                        (#(mut #idents,)*)
-                    })
-                }
-            }
-            Imports::Raw(ident, _) => Some(quote! {
-                mut #ident
-            }),
-            Imports::Named(args) => type_name.map(|type_name| {
-                let args_ty_name = arg_type_name(type_name, is_write);
-                let idents = args.iter().map(|x| &x.ident);
+pub(crate) fn args_type(
+    imports: &Imports,
+    type_name: &Ident,
+    ty_vis: &syn::Visibility,
+    is_write: bool,
+) -> (TokenStream, Option<TokenStream>) {
+    match imports {
+        Imports::None => (quote! { () }, None),
+        Imports::List(_, types) => {
+            let types = types.iter();
+            (
                 quote! {
-                    #args_ty_name {
-                        #(#idents),*
-                    }
-                }
-            }),
+                    (#(#types,)*)
+                },
+                None,
+            )
         }
+        Imports::Raw(_, ty) => (ty.to_token_stream(), None),
+        Imports::Named(args) => generate_named_arg_type(type_name, ty_vis, args, is_write),
     }
+}
 
-    pub(crate) fn args_type(
-        &self,
-        type_name: &Ident,
-        ty_vis: &syn::Visibility,
-        is_write: bool,
-    ) -> (TokenStream, Option<TokenStream>) {
-        match self {
-            Imports::None => (quote! { () }, None),
-            Imports::List(_, types) => {
-                let types = types.iter();
-                (
-                    quote! {
-                        (#(#types,)*)
-                    },
-                    None,
-                )
+pub(crate) fn destructure(
+    imports: &Imports,
+    type_name: Option<&Ident>,
+    is_write: bool,
+) -> Option<TokenStream> {
+    match imports {
+        Imports::None => None,
+        Imports::List(idents, _) => {
+            if idents.is_empty() {
+                None
+            } else {
+                let idents = idents.iter();
+                Some(quote! {
+                    (#(mut #idents,)*)
+                })
             }
-            Imports::Raw(_, ty) => (ty.to_token_stream(), None),
-            Imports::Named(args) => generate_named_arg_type(type_name, ty_vis, args, is_write),
         }
+        Imports::Raw(ident, _) => Some(quote! {
+            mut #ident
+        }),
+        Imports::Named(args) => type_name.map(|type_name| {
+            let args_ty_name = arg_type_name(type_name, is_write);
+            let idents = args.iter().map(|x| &x.ident);
+            quote! {
+                #args_ty_name {
+                    #(#idents),*
+                }
+            }
+        }),
     }
 }
 
