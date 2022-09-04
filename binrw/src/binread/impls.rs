@@ -131,7 +131,7 @@ binread_nonzero_impl! {
 /// }
 /// ```
 #[derive(BinrwNamedArgs, Clone)]
-pub struct VecArgs<Inner> {
+pub struct VecArgs<Inner: Clone> {
     /// The number of elements to read.
     pub count: usize,
 
