@@ -1,28 +1,27 @@
-mod imports;
 mod meta;
-pub(crate) mod named_args;
 mod read_options;
 pub(crate) mod sanitization;
 mod write_options;
 
 use crate::{
-    parser::{Assert, AssertionError, Input, ParseResult, PassedArgs, StructField},
+    named_args::{arg_type_name, derive_from_imports},
+    parser::{Assert, AssertionError, Imports, Input, ParseResult, PassedArgs, StructField},
     util::quote_spanned_any,
 };
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
+use quote::{quote, quote_spanned, ToTokens};
 use sanitization::{
     ARGS, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT, OPT, POS,
     READER, READ_OPTIONS, READ_TRAIT, SEEK_TRAIT, WRITER, WRITE_OPTIONS, WRITE_TRAIT,
 };
-use syn::{spanned::Spanned, DeriveInput};
+use syn::{spanned::Spanned, DeriveInput, Ident};
 
 pub(crate) fn generate_impl<const WRITE: bool>(
     derive_input: &DeriveInput,
     binrw_input: &ParseResult<Input>,
 ) -> TokenStream {
     let (arg_type, arg_type_declaration) = match binrw_input {
-        ParseResult::Ok(binrw_input) | ParseResult::Partial(binrw_input, _) => imports::args_type(
+        ParseResult::Ok(binrw_input) | ParseResult::Partial(binrw_input, _) => generate_imports(
             binrw_input.imports(),
             &derive_input.ident,
             &derive_input.vis,
@@ -44,6 +43,24 @@ pub(crate) fn generate_impl<const WRITE: bool>(
         #trait_impl
         #meta_impls
         #arg_type_declaration
+    }
+}
+
+fn generate_imports(
+    imports: &Imports,
+    type_name: &Ident,
+    ty_vis: &syn::Visibility,
+    is_write: bool,
+) -> (TokenStream, Option<TokenStream>) {
+    match imports {
+        Imports::None => (quote! { () }, None),
+        Imports::List(_, types) => (quote! { (#(#types,)*) }, None),
+        Imports::Raw(_, ty) => (ty.to_token_stream(), None),
+        Imports::Named(args) => {
+            let name = arg_type_name(type_name, is_write);
+            let defs = derive_from_imports(type_name, is_write, &name, ty_vis, args.iter());
+            (name.into_token_stream(), Some(defs))
+        }
     }
 }
 
@@ -134,6 +151,38 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
             }
         },
     )
+}
+
+fn get_destructured_imports(
+    imports: &Imports,
+    type_name: Option<&Ident>,
+    is_write: bool,
+) -> Option<TokenStream> {
+    match imports {
+        Imports::None => None,
+        Imports::List(idents, _) => {
+            if idents.is_empty() {
+                None
+            } else {
+                let idents = idents.iter();
+                Some(quote! {
+                    (#(mut #idents,)*)
+                })
+            }
+        }
+        Imports::Raw(ident, _) => Some(quote! {
+            mut #ident
+        }),
+        Imports::Named(args) => type_name.map(|type_name| {
+            let args_ty_name = arg_type_name(type_name, is_write);
+            let idents = args.iter().map(|x| &x.ident);
+            quote! {
+                #args_ty_name {
+                    #(#idents),*
+                }
+            }
+        }),
+    }
 }
 
 fn get_passed_args(field: &StructField) -> Option<TokenStream> {

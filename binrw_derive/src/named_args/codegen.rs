@@ -6,30 +6,18 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{GenericArgument, GenericParam, Ident, Type, Visibility};
 
-pub(crate) enum BuilderFieldKind {
-    Required,
-    TryOptional,
-    Optional { default: Box<syn::Expr> },
-}
-
-pub(crate) struct BuilderField {
-    pub(crate) name: Ident,
-    pub(crate) ty: Type,
-    pub(crate) kind: BuilderFieldKind,
-}
-
-pub(crate) struct Builder<'a> {
-    pub(crate) owner_name: Option<&'a Ident>,
-    pub(crate) builder_name: &'a Ident,
-    pub(crate) result_name: &'a Ident,
-    pub(crate) fields: &'a [BuilderField],
-    pub(crate) generics: &'a [GenericParam],
-    pub(crate) vis: &'a Visibility,
-    pub(crate) is_write: bool,
+pub(super) struct Builder<'a> {
+    pub(super) owner_name: Option<&'a Ident>,
+    pub(super) builder_name: &'a Ident,
+    pub(super) result_name: &'a Ident,
+    pub(super) fields: &'a [BuilderField],
+    pub(super) generics: &'a [GenericParam],
+    pub(super) vis: &'a Visibility,
+    pub(super) is_write: bool,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn generate(&self, define_result: bool) -> TokenStream {
+    pub(super) fn generate(&self, define_result: bool) -> TokenStream {
         let builder_name = self.builder_name;
         let name = self.result_name;
         let user_bounds = {
@@ -93,7 +81,7 @@ impl<'a> Builder<'a> {
         quote!(
             #res_struct
 
-            impl< #user_bounds > #name < #user_generic_args >  {
+            impl< #user_bounds > #name < #user_generic_args > {
                 /// Creates a new builder for this type.
                 #vis fn builder() -> #builder_name < #user_generic_args #initial_generics > {
                     #initial
@@ -112,7 +100,7 @@ impl<'a> Builder<'a> {
 
             #[doc = #builder_docs]
             #[allow(non_camel_case_types)]
-            #vis struct #builder_name <#user_bounds #generics > {
+            #vis struct #builder_name < #user_bounds #generics > {
                 #builder_fields
                 __bind_generics: ::core::marker::PhantomData<( #generics )>
             }
@@ -304,8 +292,8 @@ impl<'a> Builder<'a> {
             quote! { #(#unwraps,)* }
         };
 
-        let fields = self.fields.iter().enumerate().filter_map(|(i, field)| {
-            if let BuilderFieldKind::TryOptional = field.kind {
+        let finalizers = self.fields.iter().enumerate().filter_map(|(i, field)| {
+            matches!(field.kind, BuilderFieldKind::TryOptional).then(|| {
                 let current_field_ty = &field.ty;
                 let satisfied_generics = generics.iter().enumerate().map(|(n, generic)| {
                     if i == n {
@@ -314,14 +302,15 @@ impl<'a> Builder<'a> {
                         quote!(#generic)
                     }
                 });
-                let filtered_generics = generics.iter().enumerate().map(|(n, generic)| {
+                let filtered_generics = generics.iter().enumerate().filter_map(|(n, generic)| {
                     if i == n {
                         None
                     } else {
                         Some(quote!(#generic : #SATISFIED_OR_OPTIONAL))
                     }
                 });
-                Some(quote! {
+
+                quote! {
                     #[allow(non_camel_case_types)]
                     impl<
                         #( #user_bounds, )*
@@ -347,33 +336,18 @@ impl<'a> Builder<'a> {
                             }
                         }
                     }
-                })
-            } else {
-                None
-            }
+                }
+            })
         });
 
-        quote! { #(#fields)* }
+        quote! { #(#finalizers)* }
     }
 }
 
-impl From<&IdentTypeMaybeDefault> for BuilderField {
-    fn from(import: &IdentTypeMaybeDefault) -> Self {
-        let name = import.ident.clone();
-        let ty = import.ty.clone();
-
-        // if no default is provided, mark as required
-        let kind = import
-            .default
-            .as_ref()
-            .map_or(BuilderFieldKind::Required, |default| {
-                BuilderFieldKind::Optional {
-                    default: default.clone(),
-                }
-            });
-
-        BuilderField { name, ty, kind }
-    }
+pub(super) struct BuilderField {
+    pub(super) name: Ident,
+    pub(super) ty: Type,
+    pub(super) kind: BuilderFieldKind,
 }
 
 impl BuilderField {
@@ -438,4 +412,29 @@ impl BuilderField {
             BuilderFieldKind::TryOptional => quote! { #name: #name.unwrap_or_default() },
         }
     }
+}
+
+impl From<&IdentTypeMaybeDefault> for BuilderField {
+    fn from(import: &IdentTypeMaybeDefault) -> Self {
+        let name = import.ident.clone();
+        let ty = import.ty.clone();
+
+        // if no default is provided, mark as required
+        let kind = import
+            .default
+            .as_ref()
+            .map_or(BuilderFieldKind::Required, |default| {
+                BuilderFieldKind::Optional {
+                    default: default.clone(),
+                }
+            });
+
+        BuilderField { name, ty, kind }
+    }
+}
+
+pub(super) enum BuilderFieldKind {
+    Required,
+    TryOptional,
+    Optional { default: Box<syn::Expr> },
 }

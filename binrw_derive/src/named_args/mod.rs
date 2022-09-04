@@ -1,33 +1,24 @@
-use crate::codegen::named_args::{Builder, BuilderField, BuilderFieldKind};
+mod codegen;
+
+use crate::parser::IdentTypeMaybeDefault;
+use codegen::{Builder, BuilderField, BuilderFieldKind};
+use proc_macro2::{Span, TokenStream};
+use quote::format_ident;
 use syn::{
     parse::{Parse, ParseStream},
     spanned::Spanned,
-    DeriveInput, Expr, Token,
+    DeriveInput, Expr, Ident, Token, Visibility,
 };
 
-pub(crate) enum NamedArgAttr {
-    Default(Box<Expr>),
-    TryOptional,
-}
-
-impl Parse for NamedArgAttr {
-    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let lookahead = input.lookahead1();
-
-        if lookahead.peek(kw::try_optional) {
-            input.parse::<kw::try_optional>()?;
-            Ok(NamedArgAttr::TryOptional)
-        } else if lookahead.peek(kw::default) {
-            input.parse::<kw::default>()?;
-            input.parse::<Token![=]>()?;
-            Ok(NamedArgAttr::Default(Box::new(input.parse()?)))
-        } else {
-            Err(lookahead.error())
-        }
+pub(crate) fn arg_type_name(ty_name: &Ident, is_write: bool) -> Ident {
+    if is_write {
+        format_ident!("{}BinWriteArgs", ty_name, span = Span::mixed_site())
+    } else {
+        format_ident!("{}BinReadArgs", ty_name, span = Span::mixed_site())
     }
 }
 
-pub(super) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStream {
+pub(crate) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStream {
     let fields = match match input.data {
         syn::Data::Struct(s) => s
             .fields
@@ -68,13 +59,11 @@ pub(super) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStr
                 })
             })
             .collect::<Result<Vec<_>, syn::Error>>(),
-        _ => return syn::Error::new(input.span(), "only structs are supported").to_compile_error(),
+        _ => Err(syn::Error::new(input.span(), "only structs are supported")),
     } {
         Ok(fields) => fields,
         Err(err) => return err.into_compile_error(),
     };
-
-    let generics: Vec<_> = input.generics.params.iter().cloned().collect();
 
     Builder {
         owner_name: None,
@@ -82,10 +71,57 @@ pub(super) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStr
         result_name: &input.ident,
         builder_name: &quote::format_ident!("{}Builder", input.ident),
         fields: &fields,
-        generics: &generics,
+        generics: &input.generics.params.iter().cloned().collect::<Vec<_>>(),
         vis: &input.vis,
     }
     .generate(false)
+}
+
+pub(crate) fn derive_from_imports<'a>(
+    ty_name: &Ident,
+    is_write: bool,
+    result_name: &Ident,
+    vis: &Visibility,
+    args: impl Iterator<Item = &'a IdentTypeMaybeDefault>,
+) -> TokenStream {
+    let builder_name = &if is_write {
+        format_ident!("{}BinWriteArgBuilder", ty_name, span = Span::mixed_site())
+    } else {
+        format_ident!("{}BinReadArgBuilder", ty_name, span = Span::mixed_site())
+    };
+
+    Builder {
+        owner_name: Some(ty_name),
+        is_write,
+        builder_name,
+        result_name,
+        fields: &args.map(Into::into).collect::<Vec<_>>(),
+        generics: &[],
+        vis,
+    }
+    .generate(true)
+}
+
+enum NamedArgAttr {
+    Default(Box<Expr>),
+    TryOptional,
+}
+
+impl Parse for NamedArgAttr {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let lookahead = input.lookahead1();
+
+        if lookahead.peek(kw::try_optional) {
+            input.parse::<kw::try_optional>()?;
+            Ok(NamedArgAttr::TryOptional)
+        } else if lookahead.peek(kw::default) {
+            input.parse::<kw::default>()?;
+            input.parse::<Token![=]>()?;
+            Ok(NamedArgAttr::Default(Box::new(input.parse()?)))
+        } else {
+            Err(lookahead.error())
+        }
+    }
 }
 
 mod kw {

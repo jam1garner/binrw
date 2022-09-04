@@ -2,13 +2,10 @@ mod r#enum;
 mod map;
 mod r#struct;
 
-use super::get_assertions;
+use super::{get_assertions, get_destructured_imports};
 use crate::{
-    codegen::{
-        imports::destructure,
-        sanitization::{
-            ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT, TEMP,
-        },
+    codegen::sanitization::{
+        ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT, TEMP,
     },
     parser::{CondEndian, Input, Magic, Map},
     util::IdentStr,
@@ -69,7 +66,7 @@ impl<'input> PreludeGenerator<'input> {
     }
 
     fn add_imports(mut self, name: Option<&Ident>) -> Self {
-        if let Some(imports) = destructure(self.input.imports(), name, false) {
+        if let Some(imports) = get_destructured_imports(self.input.imports(), name, false) {
             let head = self.out;
             self.out = quote! {
                 #head

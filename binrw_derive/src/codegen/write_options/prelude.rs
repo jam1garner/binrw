@@ -1,6 +1,6 @@
 use crate::{
     codegen::{
-        imports::destructure,
+        get_destructured_imports,
         sanitization::{ARGS, OPT, WRITER, WRITE_METHOD},
     },
     parser::{CondEndian, Input, Magic},
@@ -22,7 +22,7 @@ impl<'a> PreludeGenerator<'a> {
     pub(crate) fn prefix_imports(mut self) -> Self {
         if let Some(imports) = self
             .input
-            .and_then(|input| destructure(input.imports(), self.name, true))
+            .and_then(|input| get_destructured_imports(input.imports(), self.name, true))
         {
             let out = self.out;
             self.out = quote! {
