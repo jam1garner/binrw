@@ -1,6 +1,6 @@
 use crate::{
     io::{self, Read, Seek, SeekFrom},
-    BinRead, BinResult, BinrwNamedArgs, Endian, Error, ReadOptions,
+    BinRead, BinResult, Endian, Error, NamedArgs, ReadOptions,
 };
 use alloc::{boxed::Box, vec::Vec};
 use core::num::{
@@ -123,7 +123,7 @@ binread_nonzero_impl! {
 ///     elements: Vec<u32>,
 /// }
 /// ```
-#[derive(BinrwNamedArgs, Clone)]
+#[derive(NamedArgs, Clone)]
 pub struct VecArgs<Inner: Clone> {
     /// The number of elements to read.
     pub count: usize,

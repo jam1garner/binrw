@@ -1,5 +1,5 @@
 use crate::{
-    codegen::sanitization::{BINRW_NAMED_ARGS, NEEDED, OPTIONAL, SATISFIED, SATISFIED_OR_OPTIONAL},
+    codegen::sanitization::{NAMED_ARGS, NEEDED, OPTIONAL, SATISFIED, SATISFIED_OR_OPTIONAL},
     parser::IdentTypeMaybeDefault,
 };
 use proc_macro2::TokenStream;
@@ -100,7 +100,7 @@ impl<'a> Builder<'a> {
                 }
             }
 
-            impl< #user_bounds > #BINRW_NAMED_ARGS for #name < #user_generic_args > {
+            impl< #user_bounds > #NAMED_ARGS for #name < #user_generic_args > {
                 type Builder = #builder_name < #user_generic_args #initial_generics >;
 
                 fn builder() -> Self::Builder {

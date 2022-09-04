@@ -10,8 +10,8 @@
 
 extern crate alloc;
 // This extern crate declaration is required to use binrw_derive macros like
-// BinrwNamedArgs inside binrw because the generated code references a binrw
-// crate, but binrw is not a dependency of binrw so no crate with that name gets
+// NamedArgs inside binrw because the generated code references a binrw crate,
+// but binrw is not a dependency of binrw so no crate with that name gets
 // automatically added by cargo to the extern prelude.
 extern crate self as binrw;
 #[cfg(all(doc, not(feature = "std")))]
@@ -22,7 +22,6 @@ extern crate std;
 pub mod __private;
 mod binread;
 mod binwrite;
-mod builder_types;
 pub mod docs;
 pub mod endian;
 pub mod error;
@@ -30,6 +29,7 @@ pub mod file_ptr;
 pub mod helpers;
 pub mod io;
 pub mod meta;
+mod named_args;
 #[doc(hidden)]
 pub mod pos_value;
 pub mod punctuated;
@@ -42,11 +42,11 @@ use alloc::vec::Vec;
 pub use {
     binread::*,
     binwrite::*,
-    builder_types::*,
     endian::Endian,
     error::Error,
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
     helpers::{count, until, until_eof, until_exclusive},
+    named_args::*,
     pos_value::PosValue,
     strings::{NullString, NullWideString},
 };
@@ -84,8 +84,8 @@ pub use binrw_derive::binwrite;
 /// try to access fields that are removed by `#[binrw]`.
 pub use binrw_derive::binrw;
 
-/// The derive macro for [`BinrwNamedArgs`].
-pub use binrw_derive::BinrwNamedArgs;
+/// The derive macro for [`NamedArgs`].
+pub use binrw_derive::NamedArgs;
 
 /// A specialized [`Result`] type for binrw operations.
 pub type BinResult<T> = core::result::Result<T, Error>;

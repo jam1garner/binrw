@@ -60,7 +60,7 @@ ident_str! {
     pub(crate) SATISFIED = from_crate!(Satisfied);
     pub(crate) NEEDED = from_crate!(Needed);
     pub(crate) OPTIONAL = from_crate!(Optional);
-    pub(crate) BINRW_NAMED_ARGS = from_crate!(BinrwNamedArgs);
+    pub(crate) NAMED_ARGS = from_crate!(NamedArgs);
     pub(crate) ARGS_MACRO = from_crate!(args);
     pub(crate) META_ENDIAN_KIND = from_crate!(meta::EndianKind);
     pub(crate) READ_ENDIAN = from_crate!(meta::ReadEndian);

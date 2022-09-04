@@ -1,9 +1,9 @@
-use binrw::BinrwNamedArgs;
+use binrw::NamedArgs;
 
 #[derive(Eq, PartialEq, Debug)]
 struct NotClone;
 
-#[derive(BinrwNamedArgs)]
+#[derive(NamedArgs)]
 struct Test<T: Clone> {
     blah: u32,
     not_copy: String,

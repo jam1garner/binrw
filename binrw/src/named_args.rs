@@ -5,8 +5,8 @@ use core::marker::PhantomData;
 /// A convenience macro for constructing
 /// [named arguments](crate::docs::attribute#named-arguments).
 ///
-/// This macro uses the [`builder()`](BinrwNamedArgs::builder) function of a
-/// [named arguments type](BinrwNamedArgs), and can only be used in positions
+/// This macro uses the [`builder()`](NamedArgs::builder) function of a
+/// [named arguments type](NamedArgs), and can only be used in positions
 /// where the type can be inferred by the compiler (i.e. as a function argument
 /// or an assignment to a variable with an explicit type).
 ///
@@ -57,10 +57,10 @@ macro_rules! args {
     };
 }
 
-/// The `BinrwNamedArgs` trait allows
+/// The `NamedArgs` trait allows
 /// [named arguments](crate::docs::attribute#named-arguments) objects
 /// to be constructed using a compile-time builder.
-pub trait BinrwNamedArgs {
+pub trait NamedArgs {
     /// The builder type for this type.
     type Builder;
 
@@ -95,6 +95,6 @@ pub fn passthrough_helper<T>(_a: PhantomData<T>) -> T {
 
 #[doc(hidden)]
 #[must_use]
-pub fn builder_helper<T: BinrwNamedArgs>(_: PhantomData<T>) -> T::Builder {
-    <T as BinrwNamedArgs>::builder()
+pub fn builder_helper<T: NamedArgs>(_: PhantomData<T>) -> T::Builder {
+    <T as NamedArgs>::builder()
 }

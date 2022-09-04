@@ -1,5 +1,5 @@
 use crate::{
-    codegen::typed_builder::{Builder, BuilderField},
+    codegen::named_args::{Builder, BuilderField},
     parser::{IdentTypeMaybeDefault, Imports},
 };
 use proc_macro2::{Span, TokenStream};

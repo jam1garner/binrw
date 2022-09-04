@@ -28,7 +28,7 @@ error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::Ve
 13 | struct Baz(#[br(args { inner: () })] Vec<u8>);
    |                 ^^^^ method cannot be called on `binrw::binread::impls::VecArgsBuilder<(), Needed, Satisfied>` due to unsatisfied trait bounds
    |
-  ::: src/builder_types.rs
+  ::: src/named_args.rs
    |
    | pub struct Needed;
    | ----------------- doesn't satisfy `Needed: SatisfiedOrOptional`
@@ -43,7 +43,7 @@ error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::Ve
 22 | struct Qux(#[br(count = 1)] Vec<Inner>);
    |                             ^^^^^^^^^^ method cannot be called on `binrw::binread::impls::VecArgsBuilder<(NoDefault,), Satisfied, Needed>` due to unsatisfied trait bounds
    |
-  ::: src/builder_types.rs
+  ::: src/named_args.rs
    |
    | pub struct Needed;
    | ----------------- doesn't satisfy `Needed: SatisfiedOrOptional`
