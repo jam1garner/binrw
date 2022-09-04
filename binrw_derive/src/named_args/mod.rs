@@ -1,4 +1,4 @@
-use crate::codegen::typed_builder::{Builder, BuilderField, BuilderFieldKind};
+use crate::codegen::named_args::{Builder, BuilderField, BuilderFieldKind};
 use syn::{
     parse::{Parse, ParseStream},
     spanned::Spanned,
@@ -98,7 +98,7 @@ mod kw {
 #[test]
 fn derive_named_args_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
-    let file = std::fs::File::open("../binrw/tests/builder.rs").unwrap();
-    emulate_derive_expansion_fallible(file, "BinrwNamedArgs", |input| derive_from_attribute(input))
+    let file = std::fs::File::open("../binrw/tests/named_args.rs").unwrap();
+    emulate_derive_expansion_fallible(file, "NamedArgs", |input| derive_from_attribute(input))
         .unwrap();
 }

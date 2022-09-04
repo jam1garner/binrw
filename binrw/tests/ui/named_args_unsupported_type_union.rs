@@ -1,6 +1,6 @@
-use binrw::BinrwNamedArgs;
+use binrw::NamedArgs;
 
-#[derive(BinrwNamedArgs)]
+#[derive(NamedArgs)]
 union Foo {
     a: i32,
 }
