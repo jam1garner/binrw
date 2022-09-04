@@ -7,7 +7,7 @@ use crate::{
         sanitization::{
             make_ident, IdentStr, AFTER_PARSE, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT,
             COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD,
-            SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+            REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
         },
     },
     parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
@@ -515,8 +515,8 @@ impl<'field> FieldGenerator<'field> {
 
 fn get_args_argument(field: &StructField, args_var: &Option<Ident>) -> TokenStream {
     args_var.as_ref().map_or_else(
-        || quote_spanned! {field.ty.span()=> <_>::default() },
-        |args_var| quote_spanned! {field.ty.span()=> #args_var.clone() },
+        || quote_spanned! {field.ty.span()=> <_ as #REQUIRED_ARG_TRAIT>::args() },
+        |args_var| quote! { #args_var.clone() },
     )
 }
 

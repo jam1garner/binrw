@@ -1,6 +1,6 @@
 use super::SpannedValue;
 use crate::parser::{attrs, meta_types::Enclosure, KeywordToken, TrySet};
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use syn::spanned::Spanned;
 
@@ -15,6 +15,14 @@ pub(crate) enum PassedArgs {
 impl PassedArgs {
     pub(crate) fn is_some(&self) -> bool {
         !matches!(self, Self::None)
+    }
+
+    pub(crate) fn span(&self) -> Option<Span> {
+        match self {
+            PassedArgs::None => None,
+            PassedArgs::Tuple(s) => Some(s.span()),
+            PassedArgs::List(s) | PassedArgs::Named(s) => Some(s.span()),
+        }
     }
 }
 

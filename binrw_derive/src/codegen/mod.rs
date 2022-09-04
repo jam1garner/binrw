@@ -9,8 +9,8 @@ use crate::{
     codegen::sanitization::{ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, POS},
     parser::{Assert, AssertionError, Input, ParseResult, PassedArgs, StructField},
 };
-use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use sanitization::{
     ARGS, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT, OPT, READER, READ_OPTIONS, READ_TRAIT,
     SEEK_TRAIT, WRITER, WRITE_OPTIONS, WRITE_TRAIT,
@@ -132,29 +132,35 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
     let args = &field.args;
     match args {
         PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
-            // quote-spanning changes the resolution behaviour such that clippy
-            // thinks `(#count) as usize` is part of the source code instead of
-            // generated code, so instead only set the span on the fields-part
-            // to try to get the error reporting benefits without the incorrect
-            // lints
-            let fields = quote_spanned! {fields.span()=> #(, #fields)* };
-
             quote! {
-                #ARGS_MACRO! { count: ((#count) as usize) #fields }
+                #ARGS_MACRO! { count: ((#count) as usize) #(, #fields)* }
             }
         } else {
-            quote_spanned! {fields.span()=>
+            quote! {
                 #ARGS_MACRO! { #(#fields),* }
             }
         }),
-        PassedArgs::List(list) => Some(quote_spanned! {list.span()=> (#(#list,)*) }),
+        PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
         PassedArgs::Tuple(tuple) => {
             let tuple = tuple.as_ref();
-            Some(quote_spanned! {tuple.span()=> #tuple })
+            Some(quote! { #tuple })
         }
         PassedArgs::None => field
             .count
             .as_ref()
             .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
+    .map(|ts| fixup_span(ts, args.span().unwrap_or_else(|| field.ty.span())))
+}
+
+// For an unknown reason, this seems to be the least invasive way to associate
+// the arguments correctly with the args token; quote_spanned does not get it
+// done and neither does only resetting the span on only the generated tokens
+fn fixup_span(ts: TokenStream, span: Span) -> TokenStream {
+    ts.into_iter()
+        .map(|mut tt| {
+            tt.set_span(span);
+            tt
+        })
+        .collect::<TokenStream>()
 }

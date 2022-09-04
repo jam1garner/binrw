@@ -5,6 +5,28 @@ use crate::{
 };
 use alloc::{boxed::Box, string::String};
 
+// This is some nonsense to improve the diagnostic output for types that require
+// arguments so that the emitted output is clearer about this fact. Because this
+// is implemented for any `Default`, and used as the constraint for shorthand
+// functions, it should result in any invalid shorthand call to emit
+// `Self::Args: Required` which is hopefully a clear enough hint.
+pub trait Required: MissingArgsDirective {
+    fn args() -> Self;
+}
+
+impl<T: Default> Required for T {
+    fn args() -> Self {
+        <Self as Default>::default()
+    }
+}
+
+// This extra trait exists only to give a stronger hint in compiler errors about
+// what to do. Without it, the compiler will point to the `Default` bound, which
+// is misleading about what the programmer must do to fulfil the requirement of
+// the type they are trying to use.
+pub trait MissingArgsDirective {}
+impl<T: Default> MissingArgsDirective for T {}
+
 pub enum AssertErrorFn<M, E> {
     Message(M),
     Error(E),
