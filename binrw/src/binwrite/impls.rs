@@ -213,24 +213,24 @@ impl BinWrite for () {
 macro_rules! binwrite_tuple_impl {
     ($type1:ident $(, $types:ident)*) => {
         #[allow(non_camel_case_types)]
-        impl<
-            $type1: BinWrite<Args=()>, $($types: BinWrite<Args=()>),*
+        impl<Args: Clone,
+            $type1: BinWrite<Args=Args>, $($types: BinWrite<Args=Args>),*
         > BinWrite for ($type1, $($types),*) {
-            type Args = ();
+            type Args = Args;
 
             fn write_options<W: Write + Seek>(
                 &self,
                 writer: &mut W,
                 options: &WriteOptions,
-                _: Self::Args,
+                args: Self::Args,
             ) -> BinResult<()> {
                 let ($type1, $(
                     $types
                 ),*) = self;
 
-                $type1.write_options(writer, options, ())?;
+                $type1.write_options(writer, options, args.clone())?;
                 $(
-                    $types.write_options(writer, options, ())?;
+                    $types.write_options(writer, options, args.clone())?;
                 )*
 
                 Ok(())

@@ -31,6 +31,10 @@ fn clone_args() {
         // Test for `Vec<T>::Args`
         #[br(count = 4, args { inner: (OnlyCloneable,) })]
         _vec: Vec<ArgsNeedClone>,
+
+        // Test for `(T, T)::Args`
+        #[br(args(OnlyCloneable))]
+        _tuple: (ArgsNeedClone, ArgsNeedClone),
     }
 
     TestCloneArray::read(&mut binrw::io::Cursor::new(b"")).unwrap();

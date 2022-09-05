@@ -194,26 +194,26 @@ impl<B: BinRead, const N: usize> BinRead for [B; N] {
 macro_rules! binread_tuple_impl {
     ($type1:ident $(, $types:ident)*) => {
         #[allow(non_camel_case_types)]
-        impl<$type1: BinRead<Args=()>, $($types: BinRead<Args=()>),*> BinRead for ($type1, $($types),*) {
-            type Args = ();
+        impl<Args: Clone, $type1: BinRead<Args=Args>, $($types: BinRead<Args=Args>),*> BinRead for ($type1, $($types),*) {
+            type Args = Args;
 
-            fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
+            fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
                 Ok((
-                    BinRead::read_options(reader, options, ())?,
+                    BinRead::read_options(reader, options, args.clone())?,
                     $(
-                        <$types>::read_options(reader, options, ())?
+                        <$types>::read_options(reader, options, args.clone())?
                     ),*
                 ))
             }
 
-            fn after_parse<R: Read + Seek>(&mut self, reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<()> {
+            fn after_parse<R: Read + Seek>(&mut self, reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<()> {
                 let ($type1, $(
                     $types
                 ),*) = self;
 
-                $type1.after_parse(reader, options, ())?;
+                $type1.after_parse(reader, options, args.clone())?;
                 $(
-                    $types.after_parse(reader, options, ())?;
+                    $types.after_parse(reader, options, args.clone())?;
                 )*
 
                 Ok(())

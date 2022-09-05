@@ -44,12 +44,17 @@ fn clone_args() {
         // Test for `Vec<T>::Args`
         #[bw(args(OnlyCloneable))]
         _vec: Vec<ArgsNeedClone>,
+
+        // Test for `(T, T)::Args`
+        #[bw(args(OnlyCloneable))]
+        _tuple: (ArgsNeedClone, ArgsNeedClone),
     }
 
     compare!(
         TestCloneArray {
             _array: [ArgsNeedClone, ArgsNeedClone],
-            _vec: vec![]
+            _vec: vec![],
+            _tuple: (ArgsNeedClone, ArgsNeedClone),
         },
         b""
     );
