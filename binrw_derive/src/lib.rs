@@ -34,15 +34,8 @@ pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 #[cfg_attr(coverage_nightly, no_coverage)]
-pub fn binread(_: TokenStream, input: TokenStream) -> TokenStream {
-    derive_from_input(
-        parse_macro_input!(input as DeriveInput),
-        Options {
-            derive: false,
-            write: false,
-        },
-    )
-    .into()
+pub fn binread(attr: TokenStream, input: TokenStream) -> TokenStream {
+    derive_from_attribute(&attr, input, false)
 }
 
 #[proc_macro_derive(BinWrite, attributes(bw, brw))]
@@ -60,21 +53,18 @@ pub fn derive_binwrite_trait(input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 #[cfg_attr(coverage_nightly, no_coverage)]
-pub fn binwrite(_: TokenStream, input: TokenStream) -> TokenStream {
-    derive_from_input(
-        parse_macro_input!(input as DeriveInput),
-        Options {
-            derive: false,
-            write: true,
-        },
-    )
-    .into()
+pub fn binwrite(attr: TokenStream, input: TokenStream) -> TokenStream {
+    derive_from_attribute(&attr, input, true)
 }
 
 #[proc_macro_attribute]
 #[cfg_attr(coverage_nightly, no_coverage)]
-pub fn binrw(_: TokenStream, input: TokenStream) -> TokenStream {
-    binrw_attr::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
+pub fn binrw(attr: TokenStream, input: TokenStream) -> TokenStream {
+    if attr.to_string() == "ignore" {
+        input
+    } else {
+        binrw_attr::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
+    }
 }
 
 #[proc_macro_derive(BinrwNamedArgs, attributes(named_args))]
@@ -153,22 +143,46 @@ fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
 }
 
 #[cfg_attr(coverage_nightly, no_coverage)]
+fn derive_from_attribute(attr: &TokenStream, input: TokenStream, write: bool) -> TokenStream {
+    if attr.to_string() == "ignore" {
+        return input;
+    }
+
+    let mut derive_input = parse_macro_input!(input as DeriveInput);
+
+    let mut mixed_rw = false;
+    let opposite_attr = if write { "binread" } else { "binwrite" };
+    for attr in &mut derive_input.attrs {
+        if let Some(seg) = attr.path.segments.last() {
+            let ident = &seg.ident;
+            if ident == "binrw" || ident == "binread" || ident == "binwrite" {
+                attr.tokens = quote! { (ignore) };
+
+                if ident == "binrw" || ident == opposite_attr {
+                    mixed_rw = true;
+                }
+            }
+        }
+    }
+
+    if mixed_rw {
+        binrw_attr::derive_from_attribute(derive_input)
+    } else {
+        derive_from_input(
+            derive_input,
+            Options {
+                derive: false,
+                write,
+            },
+        )
+    }
+    .into()
+}
+
+#[cfg_attr(coverage_nightly, no_coverage)]
 fn derive_from_input(mut derive_input: DeriveInput, options: Options) -> proc_macro2::TokenStream {
     let (binrw_input, generated_impl) = parse(&derive_input, options);
     let binrw_input = binrw_input.ok();
-
-    // only clean fields if binwrite isn't going to be applied after
-    if has_attr(
-        &derive_input,
-        if options.write { "binread" } else { "binwrite" },
-    ) {
-        return quote! {
-            compile_error!("cannot combine `#[binread]` and `#[binwrite]`; use `#[binrw]` instead");
-
-            #derive_input
-            #generated_impl
-        };
-    }
 
     if options.derive {
         generated_impl
@@ -197,16 +211,6 @@ fn derive_from_input(mut derive_input: DeriveInput, options: Options) -> proc_ma
             #generated_impl
         )
     }
-}
-
-// TODO: make this work for `#[binrw::binwrite]` somehow?
-#[cfg_attr(coverage_nightly, no_coverage)]
-fn has_attr(input: &DeriveInput, attr_name: &str) -> bool {
-    input.attrs.iter().any(|attr| {
-        attr.path
-            .get_ident()
-            .map_or(false, |ident| ident == attr_name)
-    })
 }
 
 fn is_binread_attr(attr: &syn::Attribute) -> bool {

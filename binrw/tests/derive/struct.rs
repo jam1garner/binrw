@@ -463,6 +463,28 @@ fn import_tuple() {
 }
 
 #[test]
+fn mixed_attrs() {
+    #[binread]
+    #[binrw::binwrite]
+    #[brw(big)]
+    struct Foo {
+        a: Bar,
+    }
+
+    #[binrw::binwrite]
+    #[binread]
+    struct Bar {
+        a: u8,
+    }
+
+    let test = Foo::read(&mut Cursor::new(b"\x2a")).unwrap();
+    assert_eq!(test.a.a, 42);
+    let mut output = Cursor::new(vec![]);
+    binrw::BinWrite::write(&test, &mut output).unwrap();
+    assert_eq!(output.into_inner(), b"\x2a");
+}
+
+#[test]
 fn offset_after() {
     #[allow(dead_code)]
     #[derive(BinRead, Debug)]
