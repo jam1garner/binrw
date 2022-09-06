@@ -16,7 +16,7 @@ fn all_the_things() {
     struct Test {
         extra_entry_count: u32,
 
-        #[br(count = extra_entry_count + 1, args { inner: args! { extra_val: 0x69 } })]
+        #[br(count = extra_entry_count + 1, args { inner: args! { inner: args! { extra_val: 0x69 } } })]
         entries: Vec<FilePtr<u32, TestEntry>>,
 
         #[br(default)]

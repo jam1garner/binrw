@@ -194,16 +194,4 @@ impl ReadOptionsGenerator {
             }
         }
     }
-
-    fn offset(mut self, offset: &Option<TokenStream>) -> Self {
-        if let Some(offset) = &offset {
-            let head = self.out;
-            self.out = quote! {
-                #head
-                let #TEMP = #TEMP.with_offset(#offset);
-            };
-        }
-
-        self
-    }
 }

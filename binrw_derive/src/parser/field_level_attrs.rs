@@ -98,6 +98,17 @@ impl StructField {
         !self.generated_value() || self.magic.is_some()
     }
 
+    /// Returns true if the field requires arguments.
+    pub(crate) fn needs_args(&self) -> bool {
+        self.args.is_some() || self.count.is_some() || self.offset.is_some()
+    }
+
+    /// Returns true if the field is using shorthand directives that are
+    /// converted into named arguments.
+    pub(crate) fn has_named_arg_directives(&self) -> bool {
+        self.count.is_some() || self.offset.is_some() || self.offset_after.is_some()
+    }
+
     /// Returns true if the only field-level attributes are asserts
     pub(crate) fn has_no_attrs(&self) -> bool {
         macro_rules! all_fields_none {
@@ -177,7 +188,9 @@ impl StructField {
             );
         }
 
-        if self.count.is_some() && !matches!(self.args, PassedArgs::None | PassedArgs::Named(..)) {
+        if self.has_named_arg_directives()
+            && !matches!(self.args, PassedArgs::None | PassedArgs::Named(..))
+        {
             let (span, repr) = match &self.args {
                 PassedArgs::Named(_) | PassedArgs::None => unreachable!(),
                 PassedArgs::List(list) => (
@@ -191,10 +204,18 @@ impl StructField {
                 PassedArgs::Tuple(raw) => (raw.span(), raw.to_string()),
             };
 
-            combine_error(&mut all_errors, syn::Error::new(
-                span,
-                format!("`count` can only be used with named args; did you mean `args {{ inner: {} }}`?", repr)
-            ));
+            for (used, name) in [
+                (self.count.is_some(), "count"),
+                (self.offset.is_some(), "offset"),
+                (self.offset_after.is_some(), "offset_after"),
+            ] {
+                if used {
+                    combine_error(&mut all_errors, syn::Error::new(
+                        span,
+                        format!("`{}` can only be used with named args; did you mean `args {{ inner: {} }}`?", name, repr)
+                    ));
+                }
+            }
         }
 
         if let Some(error) = all_errors {
