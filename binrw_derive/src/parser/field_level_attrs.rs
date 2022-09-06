@@ -80,6 +80,8 @@ impl StructField {
         matches!(self.read_mode, FieldMode::Calc(_) | FieldMode::Default)
     }
 
+    /// Returns true if the field is handled as a temporary variable instead of
+    /// an actual field.
     pub(crate) fn is_temp(&self, for_write: bool) -> bool {
         (for_write && matches!(self.read_mode, FieldMode::Calc(_))) || self.temp.is_some()
     }
@@ -129,6 +131,12 @@ impl StructField {
             )
     }
 
+    /// Forces the field to be treated as a temporary variable even if it was
+    /// not explicitly specified by a directive.
+    ///
+    /// This is used to ensure that, when combining read and write on a single
+    /// type, a field specified as temporary on one side is treated as a
+    /// temporary on both sides.
     pub(crate) fn force_temp(&mut self) {
         self.temp = Some(());
     }
