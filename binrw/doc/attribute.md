@@ -1711,7 +1711,7 @@ The `offset` and `offset_after` directives are shorthands for passing
 When manually implementing
 [`BinRead::read_options`](crate::BinRead::read_options) or a
 [custom parser function](#custom-parserswriters), the offset is accessible
-from [`ReadOptions::offset`](crate::ReadOptions::offset).
+from a named argument named `offset`.
 
 For `offset`, any earlier field or [import](#arguments) can be referenced by
 the expression in the directive.

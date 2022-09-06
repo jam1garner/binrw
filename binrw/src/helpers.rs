@@ -465,6 +465,8 @@ where
     move |reader, options, _| it.map(|arg| read(reader, options, arg)).collect()
 }
 
+// Lint: Non-consumed argument is required to match the API.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn default_reader<R: Read + Seek, Arg: Clone, T: BinRead<Args = Arg>>(
     reader: &mut R,
     options: &ReadOptions,
