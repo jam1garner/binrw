@@ -1,4 +1,4 @@
-use binrw::{binwrite, io::Cursor, BinWrite, Endian, WriteOptions};
+use binrw::{binwrite, io::Cursor, BinWrite, Endian};
 
 #[test]
 fn calc_simple_write() {
@@ -16,7 +16,7 @@ fn calc_simple_write() {
     let mut x = Cursor::new(Vec::new());
 
     Test { x: 1 }
-        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .write_options(&mut x, Endian::Big, ())
         .unwrap();
 
     assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 3]);
@@ -39,7 +39,7 @@ fn calc_visibility() {
     let mut x = Cursor::new(Vec::new());
 
     Test { x: 1 }
-        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .write_options(&mut x, Endian::Big, ())
         .unwrap();
 
     assert_eq!(x.into_inner(), [1, 0, 2, 0, 3]);

@@ -1,7 +1,7 @@
 use crate::{
     error::CustomError,
     io::{Read, Seek, Write},
-    BinRead, BinResult, BinWrite, Error, ReadOptions, WriteOptions,
+    BinRead, BinResult, BinWrite, Endian, Error,
 };
 use alloc::{boxed::Box, string::String};
 
@@ -72,13 +72,13 @@ where
     f
 }
 
-pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
+pub fn magic<R, B>(reader: &mut R, expected: B, endian: Endian) -> BinResult<()>
 where
     B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + Clone + Copy + 'static,
     R: Read + Seek,
 {
     let pos = reader.stream_position()?;
-    let val = B::read_options(reader, options, ())?;
+    let val = B::read_options(reader, endian, ())?;
     if val == expected {
         Ok(())
     } else {
@@ -93,7 +93,7 @@ pub fn parse_fn_type_hint<Ret, ParseFn, R, Args>(f: ParseFn) -> ParseFn
 where
     Args: Clone,
     R: Read + Seek,
-    ParseFn: FnOnce(&mut R, &ReadOptions, Args) -> BinResult<Ret>,
+    ParseFn: FnOnce(&mut R, Endian, Args) -> BinResult<Ret>,
 {
     f
 }
@@ -101,7 +101,7 @@ where
 pub fn parse_function_args_type_hint<R, Res, Args, F>(_: F, a: Args) -> Args
 where
     R: Read + Seek,
-    F: FnOnce(&mut R, &ReadOptions, Args) -> BinResult<Res>,
+    F: FnOnce(&mut R, Endian, Args) -> BinResult<Res>,
 {
     a
 }
@@ -109,7 +109,7 @@ where
 pub fn write_function_args_type_hint<T, W, Args, F>(_: F, a: Args) -> Args
 where
     W: Write + Seek,
-    F: FnOnce(&T, &mut W, &WriteOptions, Args) -> BinResult<()>,
+    F: FnOnce(&T, &mut W, Endian, Args) -> BinResult<()>,
 {
     a
 }
@@ -126,7 +126,7 @@ pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
 where
     Args: Clone,
     Writer: Write + Seek,
-    WriterFn: FnOnce(&T, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
+    WriterFn: FnOnce(&T, &mut Writer, Endian, Args) -> BinResult<()>,
 {
     x
 }
@@ -166,7 +166,7 @@ where
     MapFn: FnOnce(Input) -> Output,
     Args: Clone,
     Writer: Write + Seek,
-    WriteFn: Fn(&Output, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
+    WriteFn: Fn(&Output, &mut Writer, Endian, Args) -> BinResult<()>,
 {
     func
 }
@@ -180,7 +180,7 @@ where
     MapFn: FnOnce(Input) -> Result<Output, Error>,
     Args: Clone,
     Writer: Write + Seek,
-    WriteFn: Fn(&Output, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
+    WriteFn: Fn(&Output, &mut Writer, Endian, Args) -> BinResult<()>,
 {
     func
 }

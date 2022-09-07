@@ -2,7 +2,7 @@
 
 use crate::{
     io::{self, Read, Seek},
-    BinRead, BinResult, Error, ReadOptions,
+    BinRead, BinResult, Endian, Error,
 };
 use alloc::vec::Vec;
 use core::iter::from_fn;
@@ -29,7 +29,7 @@ use core::iter::from_fn;
 /// ```
 pub fn until<Reader, T, CondFn, Arg, Ret>(
     cond: CondFn,
-) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
     Reader: Read + Seek,
@@ -69,21 +69,21 @@ where
 pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
     cond: CondFn,
     read: ReadFn,
-) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
-    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
     Ret: FromIterator<T>,
 {
-    move |reader, ro, args| {
+    move |reader, endian, args| {
         let mut last = false;
         from_fn(|| {
             if last {
                 None
             } else {
-                match read(reader, ro, args.clone()) {
+                match read(reader, endian, args.clone()) {
                     Ok(value) => {
                         if cond(&value) {
                             last = true;
@@ -121,7 +121,7 @@ where
 /// ```
 pub fn until_exclusive<Reader, T, CondFn, Arg, Ret>(
     cond: CondFn,
-) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
     Reader: Read + Seek,
@@ -161,16 +161,16 @@ where
 pub fn until_exclusive_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
     cond: CondFn,
     read: ReadFn,
-) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
-    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
     Ret: FromIterator<T>,
 {
-    move |reader, ro, args| {
-        from_fn(|| match read(reader, ro, args.clone()) {
+    move |reader, endian, args| {
+        from_fn(|| match read(reader, endian, args.clone()) {
             Ok(value) => {
                 if cond(&value) {
                     None
@@ -212,7 +212,7 @@ where
 /// ```
 pub fn until_eof<Reader, T, Arg, Ret>(
     reader: &mut Reader,
-    ro: &ReadOptions,
+    endian: Endian,
     args: Arg,
 ) -> BinResult<Ret>
 where
@@ -221,7 +221,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T>,
 {
-    until_eof_with(default_reader)(reader, ro, args)
+    until_eof_with(default_reader)(reader, endian, args)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -257,15 +257,15 @@ where
 /// ```
 pub fn until_eof_with<Reader, T, Arg, ReadFn, Ret>(
     read: ReadFn,
-) -> impl Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<Ret>
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
     Reader: Read + Seek,
     Arg: Clone,
-    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
     Ret: FromIterator<T>,
 {
-    move |reader, ro, args| {
-        from_fn(|| match read(reader, ro, args.clone()) {
+    move |reader, endian, args| {
+        from_fn(|| match read(reader, endian, args.clone()) {
             ok @ Ok(_) => Some(ok),
             Err(err) if err.is_eof() => None,
             err => Some(err),
@@ -309,9 +309,7 @@ where
 /// # let mut x = Cursor::new(b"\0\x02\0\x01\0\x02\x03\x04\x05");
 /// # let x = Object::read(&mut x).unwrap();
 /// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
-pub fn args_iter<R, T, Arg, Ret, It>(
-    it: It,
-) -> impl FnOnce(&mut R, &ReadOptions, ()) -> BinResult<Ret>
+pub fn args_iter<R, T, Arg, Ret, It>(it: It) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
     R: Read + Seek,
@@ -361,14 +359,14 @@ where
 pub fn args_iter_with<Reader, T, Arg, Ret, It, ReadFn>(
     it: It,
     read: ReadFn,
-) -> impl FnOnce(&mut Reader, &ReadOptions, ()) -> BinResult<Ret>
+) -> impl FnOnce(&mut Reader, Endian, ()) -> BinResult<Ret>
 where
     T: BinRead,
     Reader: Read + Seek,
     Arg: Clone,
     Ret: FromIterator<T>,
     It: IntoIterator<Item = Arg>,
-    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
 {
     move |reader, options, _| {
         it.into_iter()
@@ -400,7 +398,7 @@ where
 /// # let x: CountBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3]);
 /// ```
-pub fn count<R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
+pub fn count<R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, Endian, Arg) -> BinResult<Ret>
 where
     T: BinRead<Args = Arg>,
     R: Read + Seek,
@@ -441,17 +439,17 @@ where
 pub fn count_with<R, T, Arg, ReadFn, Ret>(
     n: usize,
     read: ReadFn,
-) -> impl Fn(&mut R, &ReadOptions, Arg) -> BinResult<Ret>
+) -> impl Fn(&mut R, Endian, Arg) -> BinResult<Ret>
 where
     R: Read + Seek,
     Arg: Clone,
-    ReadFn: Fn(&mut R, &ReadOptions, Arg) -> BinResult<T>,
+    ReadFn: Fn(&mut R, Endian, Arg) -> BinResult<T>,
     Ret: FromIterator<T> + 'static,
 {
-    move |reader, ro, args| {
+    move |reader, endian, args| {
         let mut container = core::iter::empty::<T>().collect::<Ret>();
 
-        vec_fast_int!(try (i8 i16 u16 i32 u32 i64 u64 i128 u128) using (container, reader, ro.endian(), n) else {
+        vec_fast_int!(try (i8 i16 u16 i32 u32 i64 u64 i128 u128) using (container, reader, endian, n) else {
             // This extra branch for `Vec<u8>` makes it faster than
             // `vec_fast_int`, but *only* because `vec_fast_int` is not allowed
             // to use unsafe code to eliminate the unnecessary zero-fill.
@@ -469,7 +467,7 @@ where
                     Err(not_enough_bytes(()))
                 }
             } else {
-                core::iter::repeat_with(|| read(reader, ro, args.clone()))
+                core::iter::repeat_with(|| read(reader, endian, args.clone()))
                 .take(n)
                 .collect()
             }
@@ -481,11 +479,11 @@ where
 #[allow(clippy::trivially_copy_pass_by_ref)]
 fn default_reader<R: Read + Seek, Arg: Clone, T: BinRead<Args = Arg>>(
     reader: &mut R,
-    options: &ReadOptions,
+    endian: Endian,
     args: T::Args,
 ) -> BinResult<T> {
-    let mut value = T::read_options(reader, options, args.clone())?;
-    value.after_parse(reader, options, args)?;
+    let mut value = T::read_options(reader, endian, args.clone())?;
+    value.after_parse(reader, endian, args)?;
     Ok(value)
 }
 

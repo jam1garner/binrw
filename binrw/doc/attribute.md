@@ -644,13 +644,9 @@ within an object is:
 1. A directive on a field
 2. A directive on an enum variant
 3. A directive on the struct or enum
-4. <span class="br">The [`endian`](crate::ReadOptions::endian) property of the
-   [`ReadOptions`](crate::ReadOptions) object passed to
-   [`BinRead::read_options`](crate::BinRead::read_options) by the caller</span>
-   <span class="bw">The [`endian`](crate::WriteOptions::endian) property of the
-   [`WriteOptions`](crate::WriteOptions) object passed to
-   [`BinWrite::write_options`](crate::BinWrite::write_options) by the caller</span>
-5. The host machine’s native byte order
+4. The `endian` parameter of the <span class="br">
+   [`BinRead::read_options`](crate::BinRead::read_options)</span><span class="bw">
+   [`BinWrite::write_options`](crate::BinWrite::write_options)</span> call
 
 However, if a byte order directive is added to a struct or enum, that byte
 order will *always* be used, even if the object is embedded in another
@@ -659,7 +655,7 @@ object or explicitly called with a different byte order:
 <div class="br">
 
 ```
-# use binrw::{Endian, ReadOptions, prelude::*, io::Cursor};
+# use binrw::{Endian, prelude::*, io::Cursor};
 #[derive(BinRead)]
 # #[derive(Debug, PartialEq)]
 #[br(little)] // ← this *forces* the struct to be little-endian
@@ -672,16 +668,16 @@ struct Parent {
     child: Child,
 };
 
-let mut options = ReadOptions::new(Endian::Big /* ← this will be ignored */);
+let endian = Endian::Big; /* ← this will be ignored */
 # assert_eq!(
-Parent::read_options(&mut Cursor::new(b"\x01\0\0\0"), &options, ())
+Parent::read_options(&mut Cursor::new(b"\x01\0\0\0"), endian, ())
 # .unwrap(), Parent { child: Child(1) });
 ```
 </div>
 <div class="bw">
 
 ```
-# use binrw::{Endian, WriteOptions, prelude::*, io::Cursor};
+# use binrw::{Endian, prelude::*, io::Cursor};
 #[derive(BinWrite)]
 # #[derive(Debug, PartialEq)]
 #[bw(little)] // ← this *forces* the struct to be little-endian
@@ -696,9 +692,9 @@ struct Parent {
 
 let object = Parent { child: Child(1) };
 
-let mut options = WriteOptions::new(Endian::Big /* ← this will be ignored */);
+let endian = Endian::Big; /* ← this will be ignored */
 let mut output = Cursor::new(vec![]);
-object.write_options(&mut output, &options, ())
+object.write_options(&mut output, endian, ())
 # .unwrap();
 # assert_eq!(output.into_inner(), b"\x01\0\0\0");
 ```
@@ -707,8 +703,7 @@ object.write_options(&mut output, &options, ())
 When manually implementing
 <span class="br">[`BinRead::read_options`](crate::BinRead::read_options)</span><span class="bw">[`BinWrite::write_options`](crate::BinWrite::write_options)</span> or a
 [custom <span class="br">parser</span><span class="bw">writer</span> function](#custom-parserswriters),
-the byte order is accessible from
-<span class="br">[`ReadOptions::endian`](crate::ReadOptions::endian)</span><span class="bw">[`WriteOptions::endian`](crate::WriteOptions::endian)</span>.
+the byte order is accessible from the `endian` parameter.
 
 ## Examples
 
@@ -1099,15 +1094,15 @@ calling a function generator).
 ### Using a custom parser to generate a [`HashMap`](std::collections::HashMap)
 
 ```
-# use binrw::{prelude::*, io::{prelude::*, Cursor}, ReadOptions};
+# use binrw::{prelude::*, io::{prelude::*, Cursor}, Endian};
 # use std::collections::HashMap;
-fn custom_parser<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ())
+fn custom_parser<R: Read + Seek>(reader: &mut R, endian: Endian, _: ())
     -> BinResult<HashMap<u16, u16>>
 {
     let mut map = HashMap::new();
     map.insert(
-        <_>::read_options(reader, ro, ())?,
-        <_>::read_options(reader, ro, ())?,
+        <_>::read_options(reader, endian, ())?,
+        <_>::read_options(reader, endian, ())?,
     );
     Ok(map)
 }
@@ -1127,17 +1122,17 @@ struct MyType {
 ### Using a custom serialiser to write a [`BTreeMap`](std::collections::BTreeMap)
 
 ```
-# use binrw::{prelude::*, io::{prelude::*, Cursor}, WriteOptions};
+# use binrw::{prelude::*, io::{prelude::*, Cursor}, Endian};
 # use std::collections::BTreeMap;
 fn custom_writer<R: Write + Seek>(
     map: &BTreeMap<u16, u16>,
     writer: &mut R,
-    wo: &WriteOptions,
+    endian: Endian,
     _: ()
 ) -> BinResult<()> {
     for (key, val) in map.iter() {
-        key.write_options(writer, wo, ())?;
-        val.write_options(writer, wo, ())?;
+        key.write_options(writer, endian, ())?;
+        val.write_options(writer, endian, ())?;
     }
     Ok(())
 }

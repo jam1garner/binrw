@@ -1,5 +1,4 @@
 mod impls;
-mod options;
 
 use crate::{
     io::{Read, Seek},
@@ -8,7 +7,6 @@ use crate::{
     meta::ReadEndian,
 };
 pub use impls::VecArgs;
-pub use options::ReadOptions;
 
 /// The `BinRead` trait reads data from streams and converts it into objects.
 ///
@@ -115,7 +113,7 @@ pub trait BinRead: Sized + 'static {
     where
         Self: ReadEndian,
     {
-        Self::read_options(reader, &ReadOptions::new(Endian::Little), args)
+        Self::read_options(reader, Endian::Little, args)
     }
 
     /// Read `Self` from the reader, assuming big-endian byte order, using the
@@ -126,7 +124,7 @@ pub trait BinRead: Sized + 'static {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
     fn read_be_args<R: Read + Seek>(reader: &mut R, args: Self::Args) -> BinResult<Self> {
-        Self::read_options(reader, &ReadOptions::new(Endian::Big), args)
+        Self::read_options(reader, Endian::Big, args)
     }
 
     /// Read `Self` from the reader, assuming little-endian byte order, using
@@ -137,7 +135,7 @@ pub trait BinRead: Sized + 'static {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
     fn read_le_args<R: Read + Seek>(reader: &mut R, args: Self::Args) -> BinResult<Self> {
-        Self::read_options(reader, &ReadOptions::new(Endian::Little), args)
+        Self::read_options(reader, Endian::Little, args)
     }
 
     /// Read `T` from the reader, assuming native-endian byte order, using the
@@ -148,10 +146,10 @@ pub trait BinRead: Sized + 'static {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
     fn read_ne_args<R: Read + Seek>(reader: &mut R, args: Self::Args) -> BinResult<Self> {
-        Self::read_options(reader, &ReadOptions::new(Endian::NATIVE), args)
+        Self::read_options(reader, Endian::NATIVE, args)
     }
 
-    /// Read `Self` from the reader using the given [`ReadOptions`] and
+    /// Read `Self` from the reader using the given [`Endian`] and
     /// arguments.
     ///
     /// # Errors
@@ -159,7 +157,7 @@ pub trait BinRead: Sized + 'static {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<Self>;
 
@@ -173,7 +171,7 @@ pub trait BinRead: Sized + 'static {
     fn after_parse<R: Read + Seek>(
         &mut self,
         _: &mut R,
-        _: &ReadOptions,
+        _: Endian,
         _: Self::Args,
     ) -> BinResult<()> {
         Ok(())
@@ -253,10 +251,8 @@ pub trait BinReaderExt: Read + Seek + Sized {
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     fn read_type_args<T: BinRead>(&mut self, endian: Endian, args: T::Args) -> BinResult<T> {
-        let options = ReadOptions::new(endian);
-
-        let mut res = T::read_options(self, &options, args.clone())?;
-        res.after_parse(self, &options, args)?;
+        let mut res = T::read_options(self, endian, args.clone())?;
+        res.after_parse(self, endian, args)?;
 
         Ok(res)
     }

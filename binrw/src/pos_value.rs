@@ -1,6 +1,6 @@
 use crate::{
     io::{Read, Seek},
-    BinRead, BinResult, ReadOptions,
+    BinRead, BinResult, Endian,
 };
 use core::fmt;
 
@@ -34,24 +34,24 @@ impl<T: BinRead> BinRead for PosValue<T> {
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: T::Args,
     ) -> BinResult<Self> {
         let pos = reader.stream_position()?;
 
         Ok(PosValue {
             pos,
-            val: T::read_options(reader, options, args)?,
+            val: T::read_options(reader, endian, args)?,
         })
     }
 
     fn after_parse<R: Read + Seek>(
         &mut self,
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
-        self.val.after_parse(reader, options, args)
+        self.val.after_parse(reader, endian, args)
     }
 }
 

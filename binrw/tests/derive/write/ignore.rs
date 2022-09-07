@@ -1,4 +1,4 @@
-use binrw::{binwrite, io::Cursor, BinWrite, Endian, WriteOptions};
+use binrw::{binwrite, io::Cursor, BinWrite, Endian};
 
 #[test]
 fn ignore_is_not_written() {
@@ -11,7 +11,7 @@ fn ignore_is_not_written() {
     let mut x = Cursor::new(Vec::new());
 
     Test { x: 1 }
-        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .write_options(&mut x, Endian::Big, ())
         .unwrap();
 
     // Since it's bw(ignore), nothing is written here.

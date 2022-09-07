@@ -1,4 +1,4 @@
-use binrw::{io::Cursor, BinWrite, Endian, WriteOptions};
+use binrw::{io::Cursor, BinWrite, Endian};
 
 #[test]
 fn custom_writer() {
@@ -13,7 +13,7 @@ fn custom_writer() {
     fn custom_writer<W: binrw::io::Write + binrw::io::Seek>(
         _this: &u16,
         writer: &mut W,
-        _opts: &WriteOptions,
+        _: Endian,
         _: (),
     ) -> binrw::BinResult<()> {
         writer.write_all(b"abcd")?;
@@ -23,7 +23,7 @@ fn custom_writer() {
     let mut x = Cursor::new(Vec::new());
 
     Test { x: 1, y: 2 }
-        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .write_options(&mut x, Endian::Big, ())
         .unwrap();
 
     assert_eq!(x.into_inner(), b"\x01abcd");

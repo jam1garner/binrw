@@ -1,6 +1,6 @@
 use crate::{
     io::{Seek, Write},
-    BinResult, BinWrite, Endian, WriteOptions,
+    BinResult, BinWrite, Endian,
 };
 use alloc::{boxed::Box, vec::Vec};
 use core::{
@@ -21,10 +21,10 @@ macro_rules! binwrite_num_impl {
                 fn write_options<W: Write + Seek>(
                     &self,
                     writer: &mut W,
-                    options: &WriteOptions,
+                    endian: Endian,
                     _: Self::Args,
                 ) -> BinResult<()> {
-                    writer.write_all(&match options.endian() {
+                    writer.write_all(&match endian {
                         Endian::Big => self.to_be_bytes(),
                         Endian::Little => self.to_le_bytes(),
                     }).map_err(Into::into)
@@ -45,12 +45,12 @@ macro_rules! binwrite_nonzero_num_impl {
                 fn write_options<W: Write + Seek>(
                     &self,
                     writer: &mut W,
-                    options: &WriteOptions,
+                    endian: Endian,
                     _: Self::Args,
                 ) -> BinResult<()> {
                     let num = <$type_name>::from(*self);
 
-                    writer.write_all(&match options.endian() {
+                    writer.write_all(&match endian {
                         Endian::Big => num.to_be_bytes(),
                         Endian::Little => num.to_le_bytes(),
                     }).map_err(Into::into)
@@ -79,14 +79,14 @@ impl<T: BinWrite + 'static, const N: usize> BinWrite for [T; N] {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
         if let Some(this) = <dyn Any>::downcast_ref::<[u8; N]>(self) {
             writer.write_all(&this[..])?;
         } else {
             for item in self {
-                T::write_options(item, writer, options, args.clone())?;
+                T::write_options(item, writer, endian, args.clone())?;
             }
         }
 
@@ -100,11 +100,11 @@ impl<T: BinWrite> BinWrite for [T] {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
         for item in self {
-            T::write_options(item, writer, options, args.clone())?;
+            T::write_options(item, writer, endian, args.clone())?;
         }
 
         Ok(())
@@ -117,7 +117,7 @@ impl<T: BinWrite + 'static> BinWrite for Vec<T> {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
         if let Some(this) = <dyn Any>::downcast_ref::<Vec<u8>>(self) {
@@ -126,7 +126,7 @@ impl<T: BinWrite + 'static> BinWrite for Vec<T> {
             writer.write_all(bytemuck::cast_slice(this.as_slice()))?;
         } else {
             for item in self {
-                T::write_options(item, writer, options, args.clone())?;
+                T::write_options(item, writer, endian, args.clone())?;
             }
         }
 
@@ -140,10 +140,10 @@ impl<T: BinWrite + ?Sized> BinWrite for &T {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
-        (**self).write_options(writer, options, args)
+        (**self).write_options(writer, endian, args)
     }
 }
 
@@ -153,13 +153,13 @@ impl<T: BinWrite + ?Sized + 'static> BinWrite for Box<T> {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
         if let Some(this) = <dyn Any>::downcast_ref::<Box<[u8]>>(self) {
             writer.write_all(this)?;
         } else {
-            (**self).write_options(writer, options, args)?;
+            (**self).write_options(writer, endian, args)?;
         }
 
         Ok(())
@@ -172,11 +172,11 @@ impl<T: BinWrite> BinWrite for Option<T> {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
         match self {
-            Some(inner) => inner.write_options(writer, options, args),
+            Some(inner) => inner.write_options(writer, endian, args),
             None => Ok(()),
         }
     }
@@ -185,12 +185,7 @@ impl<T: BinWrite> BinWrite for Option<T> {
 impl<T: BinWrite> BinWrite for PhantomData<T> {
     type Args = T::Args;
 
-    fn write_options<W: Write + Seek>(
-        &self,
-        _: &mut W,
-        _: &WriteOptions,
-        _: Self::Args,
-    ) -> BinResult<()> {
+    fn write_options<W: Write + Seek>(&self, _: &mut W, _: Endian, _: Self::Args) -> BinResult<()> {
         Ok(())
     }
 }
@@ -198,12 +193,7 @@ impl<T: BinWrite> BinWrite for PhantomData<T> {
 impl BinWrite for () {
     type Args = ();
 
-    fn write_options<W: Write + Seek>(
-        &self,
-        _: &mut W,
-        _: &WriteOptions,
-        _: Self::Args,
-    ) -> BinResult<()> {
+    fn write_options<W: Write + Seek>(&self, _: &mut W, _: Endian, _: Self::Args) -> BinResult<()> {
         Ok(())
     }
 }
@@ -219,16 +209,16 @@ macro_rules! binwrite_tuple_impl {
             fn write_options<W: Write + Seek>(
                 &self,
                 writer: &mut W,
-                options: &WriteOptions,
+                endian: Endian,
                 args: Self::Args,
             ) -> BinResult<()> {
                 let ($type1, $(
                     $types
                 ),*) = self;
 
-                $type1.write_options(writer, options, args.clone())?;
+                $type1.write_options(writer, endian, args.clone())?;
                 $(
-                    $types.write_options(writer, options, args.clone())?;
+                    $types.write_options(writer, endian, args.clone())?;
                 )*
 
                 Ok(())

@@ -96,7 +96,7 @@ pub trait BinWrite {
     where
         Self: crate::meta::WriteEndian,
     {
-        self.write_options(writer, &WriteOptions::new(Endian::Little), args)
+        self.write_options(writer, Endian::Little, args)
     }
 
     /// Write `Self` to the writer, assuming big-endian byte order, using the
@@ -107,7 +107,7 @@ pub trait BinWrite {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
     fn write_be_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
-        self.write_options(writer, &WriteOptions::new(Endian::Big), args)
+        self.write_options(writer, Endian::Big, args)
     }
 
     /// Write `Self` to the writer, assuming little-endian byte order, using the
@@ -118,10 +118,10 @@ pub trait BinWrite {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
     fn write_le_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
-        self.write_options(writer, &WriteOptions::new(Endian::Little), args)
+        self.write_options(writer, Endian::Little, args)
     }
 
-    /// Write `Self` to the writer using the given [`WriteOptions`] and
+    /// Write `Self` to the writer using the given [`Endian`] and
     /// arguments.
     ///
     /// # Errors
@@ -130,48 +130,9 @@ pub trait BinWrite {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()>;
-}
-
-/// Runtime options for
-/// [`BinWrite::write_options()`](crate::BinWrite::write_options).
-#[derive(Clone, Copy)]
-pub struct WriteOptions {
-    /// The [byte order](crate::Endian) to use when writing data.
-    ///
-    /// Note that if a derived type uses one of the
-    /// [byte order directives](crate::docs::attribute#byte-order), this option
-    /// will be overridden by the directive.
-    endian: Endian,
-}
-
-impl WriteOptions {
-    /// Creates a new `WriteOptions` with the given [endianness](crate::Endian).
-    #[must_use]
-    pub fn new(endian: Endian) -> Self {
-        Self { endian }
-    }
-
-    /// The [byte order](crate::Endian) to use when writing data.
-    ///
-    /// Note that if a derived type uses one of the
-    /// [byte order directives](crate::docs::attribute#byte-order), this option
-    /// will be overridden by the directive.
-    #[must_use]
-    pub fn endian(&self) -> Endian {
-        self.endian
-    }
-
-    /// Creates a copy of this `WriteOptions` using the given
-    /// [endianness](crate::Endian).
-    #[must_use]
-    // Lint: For symmetry with `ReadOptions`.
-    #[allow(clippy::unused_self)]
-    pub fn with_endian(self, endian: Endian) -> Self {
-        Self { endian }
-    }
 }
 
 /// Extension methods for writing [`BinWrite`] objects directly to a writer.
@@ -250,9 +211,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         endian: Endian,
         args: T::Args,
     ) -> BinResult<()> {
-        let options = WriteOptions::new(endian);
-
-        T::write_options(value, self, &options, args)?;
+        T::write_options(value, self, endian, args)?;
 
         Ok(())
     }

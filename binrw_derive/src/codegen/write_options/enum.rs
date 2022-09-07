@@ -69,7 +69,7 @@ impl<'a> EnumGenerator<'a> {
                             #WRITE_METHOD (
                                 &#magic,
                                 #WRITER,
-                                &#OPT,
+                                #OPT,
                                 ()
                             )?;
                         }
@@ -124,7 +124,7 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
                 #(#branches),*
             } as #repr),
             #WRITER,
-            &#OPT,
+            #OPT,
             (),
         )?;
     }
@@ -140,7 +140,7 @@ fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
                 #WRITE_METHOD (
                     &#magic,
                     #WRITER,
-                    &#OPT,
+                    #OPT,
                     (),
                 )?;
             }

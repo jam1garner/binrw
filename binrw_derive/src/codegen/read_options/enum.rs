@@ -23,7 +23,7 @@ pub(super) fn generate_unit_enum(
 ) -> TokenStream {
     let prelude = PreludeGenerator::new(input)
         .add_imports(name)
-        .add_options()
+        .add_endian()
         .add_magic_pre_assertion()
         .finish();
 
@@ -177,7 +177,7 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
 
     let prelude = PreludeGenerator::new(input)
         .add_imports(name)
-        .add_options()
+        .add_endian()
         .add_magic_pre_assertion()
         .reset_position_after_magic()
         .finish();

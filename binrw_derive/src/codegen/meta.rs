@@ -1,7 +1,7 @@
 use super::sanitization::{READ_ENDIAN, READ_MAGIC, WRITE_ENDIAN, WRITE_MAGIC};
 use crate::{
     codegen::sanitization::META_ENDIAN_KIND,
-    parser::{Input, Map},
+    parser::{CondEndian, Input, Map},
 };
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -28,7 +28,7 @@ pub(crate) fn generate<const WRITE: bool>(
     let endian_meta = if WRITE { WRITE_ENDIAN } else { READ_ENDIAN };
 
     let endian = match input.endian() {
-        crate::parser::CondEndian::Inherited => match input.map() {
+        CondEndian::Inherited => match input.map() {
             Map::None => input.is_empty().then(|| {
                 quote! {
                     #META_ENDIAN_KIND::None
@@ -41,10 +41,10 @@ pub(crate) fn generate<const WRITE: bool>(
                 quote! { <(#repr) as #endian_meta>::ENDIAN }
             }),
         },
-        crate::parser::CondEndian::Fixed(endian) => Some(quote! {
+        CondEndian::Fixed(endian) => Some(quote! {
             #META_ENDIAN_KIND::Endian(#endian)
         }),
-        crate::parser::CondEndian::Cond(..) => Some(quote! {
+        CondEndian::Cond(..) => Some(quote! {
             #META_ENDIAN_KIND::Runtime
         }),
     }

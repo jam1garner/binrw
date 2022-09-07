@@ -2,7 +2,7 @@
 
 use crate::{
     io::{Read, Seek},
-    BinRead, BinResult, ReadOptions, VecArgs,
+    BinRead, BinResult, Endian, VecArgs,
 };
 use alloc::vec::Vec;
 use core::fmt;
@@ -78,16 +78,16 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     #[allow(clippy::needless_pass_by_value)]
     pub fn separated<R: Read + Seek>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: VecArgs<T::Args>,
     ) -> BinResult<Self> {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count.max(1) - 1);
 
         for i in 0..args.count {
-            data.push(T::read_options(reader, options, args.inner.clone())?);
+            data.push(T::read_options(reader, endian, args.inner.clone())?);
             if i + 1 != args.count {
-                separators.push(P::read_options(reader, options, ())?);
+                separators.push(P::read_options(reader, endian, ())?);
             }
         }
 
@@ -106,15 +106,15 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     #[allow(clippy::needless_pass_by_value)]
     pub fn separated_trailing<R: Read + Seek>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: VecArgs<T::Args>,
     ) -> BinResult<Self> {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count);
 
         for _ in 0..args.count {
-            data.push(T::read_options(reader, options, args.inner.clone())?);
-            separators.push(P::read_options(reader, options, ())?);
+            data.push(T::read_options(reader, endian, args.inner.clone())?);
+            separators.push(P::read_options(reader, endian, ())?);
         }
 
         Ok(Self { data, separators })

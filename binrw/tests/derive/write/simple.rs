@@ -1,4 +1,4 @@
-use binrw::{io::Cursor, Endian, WriteOptions};
+use binrw::{io::Cursor, Endian};
 use binrw::{BinRead, BinWrite, BinWriterExt};
 
 #[derive(BinWrite)]
@@ -13,7 +13,7 @@ fn simple_write() {
     let mut x = Cursor::new(Vec::new());
 
     Test { x: 1, y: 2, z: 3 }
-        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .write_options(&mut x, Endian::Big, ())
         .unwrap();
 
     assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 3]);
@@ -79,10 +79,8 @@ fn round_trip_2() {
     let mut x = Cursor::new(Vec::new());
     let mut y = Cursor::new(Vec::new());
 
-    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
-    conj.write_options(&mut y, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
+    test.write_options(&mut x, Endian::Big, ()).unwrap();
+    conj.write_options(&mut y, Endian::Big, ()).unwrap();
 
     assert_eq!(x.into_inner() == bytes, y.into_inner() == bytes_conj);
 }
