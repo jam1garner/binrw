@@ -60,7 +60,11 @@ pub trait BinRead: Sized + 'static {
         Self: ReadEndian,
         Self::Args: Default,
     {
-        Self::read_options(reader, &ReadOptions::default(), Self::Args::default())
+        Self::read_options(
+            reader,
+            &ReadOptions::new(Endian::Little),
+            Self::Args::default(),
+        )
     }
 
     /// Read `Self` from the reader using default arguments and assuming
@@ -114,7 +118,7 @@ pub trait BinRead: Sized + 'static {
     where
         Self: ReadEndian,
     {
-        Self::read_options(reader, &ReadOptions::default(), args)
+        Self::read_options(reader, &ReadOptions::new(Endian::Little), args)
     }
 
     /// Read `Self` from the reader, assuming big-endian byte order, using the

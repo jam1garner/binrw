@@ -60,11 +60,5 @@ impl core::fmt::Display for Endian {
     }
 }
 
-impl Default for Endian {
-    fn default() -> Endian {
-        Endian::Little
-    }
-}
-
 const BOM: u16 = 0xFEFF;
 const REVERSE_BOM: u16 = 0xFFFE;
