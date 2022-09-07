@@ -3,9 +3,7 @@ use binrw::{BinWrite, Endian};
 macro_rules! compare {
     ($input:expr, $endian:expr, $output:expr) => {
         let mut output = binrw::io::Cursor::new(vec![]);
-        $input
-            .write_options(&mut output, &binrw::WriteOptions::new($endian), ())
-            .unwrap();
+        $input.write_options(&mut output, $endian, ()).unwrap();
         assert_eq!(output.into_inner(), $output);
     };
 

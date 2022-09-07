@@ -1,4 +1,4 @@
-use binrw::{binrw, io::Cursor, BinWrite, Endian, WriteOptions};
+use binrw::{binrw, io::Cursor, BinWrite, Endian};
 
 #[test]
 fn binread_temp_applies() {
@@ -22,7 +22,7 @@ fn binread_temp_applies() {
     Test {
         inner: TestInner {},
     }
-    .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+    .write_options(&mut x, Endian::Big, ())
     .unwrap();
 
     assert_eq!(x.into_inner(), [0, 0, 0, 1]);

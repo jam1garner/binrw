@@ -1,5 +1,5 @@
 use binrw::io::Cursor;
-use binrw::{BinRead, BinReaderExt, BinWrite, Endian, WriteOptions};
+use binrw::{BinRead, BinReaderExt, BinWrite, Endian};
 
 #[test]
 fn enum_round_trip() {
@@ -30,8 +30,7 @@ fn enum_round_trip() {
 
     let mut x = Cursor::new(Vec::new());
 
-    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
+    test.write_options(&mut x, Endian::Big, ()).unwrap();
 
     assert_eq!(x.into_inner(), data);
 }
@@ -65,7 +64,7 @@ fn enum_one_way() {
             y: 0xFF,
         },
     ]
-    .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+    .write_options(&mut x, Endian::Big, ())
     .unwrap();
 
     assert_eq!(

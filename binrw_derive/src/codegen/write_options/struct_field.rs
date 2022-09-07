@@ -1,15 +1,14 @@
 use crate::{
     codegen::{
-        get_assertions, get_passed_args,
+        get_assertions, get_endian, get_passed_args,
         sanitization::{
-            make_ident, BEFORE_POS, BINWRITE_TRAIT, OPT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT,
-            WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
-            WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
-            WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
-            WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+            make_ident, BEFORE_POS, BINWRITE_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, WRITER,
+            WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT,
+            WRITE_FN_TYPE_HINT, WRITE_FUNCTION, WRITE_MAP_ARGS_TYPE_HINT,
+            WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD, WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
         },
     },
-    parser::{CondEndian, FieldMode, Map, StructField},
+    parser::{FieldMode, Map, StructField},
 };
 use core::ops::Not;
 use proc_macro2::TokenStream;
@@ -108,7 +107,7 @@ impl<'a> StructFieldGenerator<'a> {
     fn write_field(mut self) -> Self {
         let name = &self.field.ident;
         let args = args_ident(name);
-        let options = specify_endian(&self.field.endian);
+        let endian = get_endian(&self.field.endian);
 
         let initialize = match &self.field.read_mode {
             FieldMode::Calc(expr) => Some({
@@ -156,7 +155,7 @@ impl<'a> StructFieldGenerator<'a> {
             #WRITE_FUNCTION (
                 { #store_position &(#map_fn (#name) #map_try) },
                 #WRITER,
-                &#OPT #options,
+                #endian,
                 #args
             )?;
         };
@@ -249,13 +248,13 @@ impl<'a> StructFieldGenerator<'a> {
     fn prefix_magic(mut self) -> Self {
         if let Some(magic) = &self.field.magic {
             let magic = magic.match_value();
-            let specify_endian = specify_endian(&self.field.endian);
+            let endian = get_endian(&self.field.endian);
             let out = self.out;
             self.out = quote! {
                 #WRITE_METHOD (
                     &#magic,
                     #WRITER,
-                    &#OPT #specify_endian,
+                    #endian,
                     ()
                 )?;
 
@@ -369,22 +368,5 @@ fn pad_before(field: &StructField) -> TokenStream {
         #pad_before
         #align_before
         #pad_size_to_before
-    }
-}
-
-fn specify_endian(endian: &CondEndian) -> Option<TokenStream> {
-    match endian {
-        CondEndian::Inherited => None,
-        CondEndian::Fixed(endian) => Some({
-            quote! {
-                .clone().with_endian(#endian)
-            }
-        }),
-        CondEndian::Cond(endian, cond) => Some({
-            let else_endian = endian.flipped();
-            quote! {
-                .clone().with_endian(if #cond { #endian } else { #else_endian })
-            }
-        }),
     }
 }

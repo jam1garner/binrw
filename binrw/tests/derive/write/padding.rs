@@ -1,5 +1,5 @@
 use binrw::io::Cursor;
-use binrw::{BinRead, BinReaderExt, BinWrite, Endian, WriteOptions};
+use binrw::{BinRead, BinReaderExt, BinWrite, Endian};
 
 #[test]
 fn padding_big() {
@@ -37,8 +37,7 @@ fn padding_round_trip() {
 
     let mut x = Cursor::new(Vec::new());
 
-    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
+    test.write_options(&mut x, Endian::Big, ()).unwrap();
 
     assert_eq!(x.into_inner(), data);
 }
@@ -70,7 +69,7 @@ fn padding_one_way() {
         y: 2,
         z: 0xabcdef,
     }
-    .write_options(&mut x, &WriteOptions::new(Endian::Little), ())
+    .write_options(&mut x, Endian::Little, ())
     .unwrap();
 
     assert_eq!(x.into_inner(), data);

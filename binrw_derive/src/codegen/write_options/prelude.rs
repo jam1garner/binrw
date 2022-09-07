@@ -1,6 +1,6 @@
 use crate::{
     codegen::{
-        get_destructured_imports,
+        get_destructured_imports, get_endian,
         sanitization::{ARGS, OPT, WRITER, WRITE_METHOD},
     },
     parser::{CondEndian, Input, Magic},
@@ -42,7 +42,7 @@ impl<'a> PreludeGenerator<'a> {
                 #WRITE_METHOD (
                     &#magic,
                     #WRITER,
-                    &#OPT,
+                    #OPT,
                     ()
                 )?;
 
@@ -54,26 +54,10 @@ impl<'a> PreludeGenerator<'a> {
     }
 
     pub(crate) fn prefix_endian(mut self, endian: &CondEndian) -> Self {
+        let endian = get_endian(endian);
         let out = self.out;
-        let set_endian = match endian {
-            CondEndian::Inherited => None,
-            CondEndian::Fixed(endian) => Some({
-                quote! {
-                    let #OPT = #OPT.clone().with_endian(#endian);
-                    let #OPT = &#OPT;
-                }
-            }),
-            CondEndian::Cond(endian, cond) => Some({
-                let else_endian = endian.flipped();
-                quote! {
-                    let #OPT = #OPT.clone().with_endian(if #cond { #endian } else { #else_endian });
-                    let #OPT = &#OPT;
-                }
-            }),
-        };
-
         self.out = quote! {
-            #set_endian
+            let #OPT = #endian;
             #out
         };
 

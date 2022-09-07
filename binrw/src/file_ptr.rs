@@ -1,18 +1,17 @@
 //! Type definitions for wrappers which represent a layer of indirection within
 //! a file.
 
+use crate::NamedArgs;
+use crate::{
+    io::{Read, Seek, SeekFrom},
+    BinRead, BinResult, Endian,
+};
 use core::fmt;
 use core::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
     NonZeroU32, NonZeroU64, NonZeroU8,
 };
 use core::ops::{Deref, DerefMut};
-
-use crate::NamedArgs;
-use crate::{
-    io::{Read, Seek, SeekFrom},
-    BinRead, BinResult, ReadOptions,
-};
 
 /// A type alias for [`FilePtr`] with 8-bit offsets.
 pub type FilePtr8<T> = FilePtr<u8, T>;
@@ -87,11 +86,11 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value: BinRead> BinRead for FilePtr
     /// [`after_parse()`](Self::after_parse) is called.
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         _: Self::Args,
     ) -> BinResult<Self> {
         Ok(FilePtr {
-            ptr: Ptr::read_options(reader, options, ())?,
+            ptr: Ptr::read_options(reader, endian, ())?,
             value: None,
         })
     }
@@ -100,64 +99,66 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value: BinRead> BinRead for FilePtr
     fn after_parse<R>(
         &mut self,
         reader: &mut R,
-        ro: &ReadOptions,
+        endian: Endian,
         args: FilePtrArgs<Value::Args>,
     ) -> BinResult<()>
     where
         R: Read + Seek,
     {
-        self.after_parse_with_parser(Value::read_options, Value::after_parse, reader, ro, args)
+        self.after_parse_with_parser(
+            Value::read_options,
+            Value::after_parse,
+            reader,
+            endian,
+            args,
+        )
     }
 }
 
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
-    // Lint: Non-consumed argument is required to match the API.
-    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn read_with_parser<R, Parser, AfterParse, Args>(
         parser: Parser,
         after_parse: AfterParse,
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: FilePtrArgs<Args>,
     ) -> BinResult<Self>
     where
         R: Read + Seek,
         Args: Clone,
-        Parser: Fn(&mut R, &ReadOptions, Args) -> BinResult<Value>,
-        AfterParse: Fn(&mut Value, &mut R, &ReadOptions, Args) -> BinResult<()>,
+        Parser: Fn(&mut R, Endian, Args) -> BinResult<Value>,
+        AfterParse: Fn(&mut Value, &mut R, Endian, Args) -> BinResult<()>,
     {
         let mut file_ptr = Self {
-            ptr: Ptr::read_options(reader, options, ())?,
+            ptr: Ptr::read_options(reader, endian, ())?,
             value: None,
         };
-        file_ptr.after_parse_with_parser(parser, after_parse, reader, options, args)?;
+        file_ptr.after_parse_with_parser(parser, after_parse, reader, endian, args)?;
         Ok(file_ptr)
     }
 
-    // Lint: Non-consumed argument is required to match the API.
-    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn after_parse_with_parser<R, Parser, AfterParse, Args>(
         &mut self,
         parser: Parser,
         after_parse: AfterParse,
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: FilePtrArgs<Args>,
     ) -> BinResult<()>
     where
         R: Read + Seek,
         Args: Clone,
-        Parser: Fn(&mut R, &ReadOptions, Args) -> BinResult<Value>,
-        AfterParse: Fn(&mut Value, &mut R, &ReadOptions, Args) -> BinResult<()>,
+        Parser: Fn(&mut R, Endian, Args) -> BinResult<Value>,
+        AfterParse: Fn(&mut Value, &mut R, Endian, Args) -> BinResult<()>,
     {
         let relative_to = args.offset;
         let before = reader.stream_position()?;
         reader.seek(SeekFrom::Start(relative_to))?;
         reader.seek(self.ptr.into_seek_from())?;
 
-        let mut inner: Value = parser(reader, options, args.inner.clone())?;
+        let mut inner: Value = parser(reader, endian, args.inner.clone())?;
 
-        after_parse(&mut inner, reader, options, args.inner)?;
+        after_parse(&mut inner, reader, endian, args.inner)?;
         reader.seek(SeekFrom::Start(before))?;
 
         self.value = Some(inner);
@@ -174,7 +175,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     pub fn parse<R, Args>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         args: FilePtrArgs<Args>,
     ) -> BinResult<Value>
     where
@@ -186,7 +187,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
             Value::read_options,
             Value::after_parse,
             reader,
-            options,
+            endian,
             args,
         )?
         .into_inner())
@@ -202,15 +203,15 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     pub fn parse_with<R, F, Args>(
         parser: F,
-    ) -> impl Fn(&mut R, &ReadOptions, FilePtrArgs<Args>) -> BinResult<Value>
+    ) -> impl Fn(&mut R, Endian, FilePtrArgs<Args>) -> BinResult<Value>
     where
         R: Read + Seek,
         Args: Clone,
-        F: Fn(&mut R, &ReadOptions, Args) -> BinResult<Value>,
+        F: Fn(&mut R, Endian, Args) -> BinResult<Value>,
     {
-        move |reader, ro, args| {
-            let after_parse = |_: &mut Value, _: &mut R, _: &ReadOptions, _: Args| Ok(());
-            Ok(Self::read_with_parser(&parser, after_parse, reader, ro, args)?.into_inner())
+        move |reader, endian, args| {
+            let after_parse = |_: &mut Value, _: &mut R, _: Endian, _: Args| Ok(());
+            Ok(Self::read_with_parser(&parser, after_parse, reader, endian, args)?.into_inner())
         }
     }
 
@@ -224,15 +225,15 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     pub fn with<R, F, Args>(
         parser: F,
-    ) -> impl Fn(&mut R, &ReadOptions, FilePtrArgs<Args>) -> BinResult<Self>
+    ) -> impl Fn(&mut R, Endian, FilePtrArgs<Args>) -> BinResult<Self>
     where
         R: Read + Seek,
         Args: Clone,
-        F: Fn(&mut R, &ReadOptions, Args) -> BinResult<Value>,
+        F: Fn(&mut R, Endian, Args) -> BinResult<Value>,
     {
-        move |reader, ro, args| {
-            let after_parse = |_: &mut Value, _: &mut R, _: &ReadOptions, _: Args| Ok(());
-            Self::read_with_parser(&parser, after_parse, reader, ro, args)
+        move |reader, endian, args| {
+            let after_parse = |_: &mut Value, _: &mut R, _: Endian, _: Args| Ok(());
+            Self::read_with_parser(&parser, after_parse, reader, endian, args)
         }
     }
 

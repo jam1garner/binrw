@@ -5,14 +5,16 @@ mod write_options;
 
 use crate::{
     named_args::{arg_type_name, derive_from_imports},
-    parser::{Assert, AssertionError, Imports, Input, ParseResult, PassedArgs, StructField},
+    parser::{
+        Assert, AssertionError, CondEndian, Imports, Input, ParseResult, PassedArgs, StructField,
+    },
     util::quote_spanned_any,
 };
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use sanitization::{
-    ARGS, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT, OPT, POS,
-    READER, READ_OPTIONS, READ_TRAIT, SEEK_TRAIT, WRITER, WRITE_OPTIONS, WRITE_TRAIT,
+    ARGS, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT,
+    ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, WRITER, WRITE_TRAIT,
 };
 use syn::{spanned::Spanned, DeriveInput, Ident};
 
@@ -76,7 +78,7 @@ fn generate_trait_impl<const WRITE: bool>(
                 fn write_options<W: #WRITE_TRAIT + #SEEK_TRAIT>(
                     &self,
                     #WRITER: &mut W,
-                    #OPT: &#WRITE_OPTIONS,
+                    #OPT: #ENDIAN_ENUM,
                     #ARGS: Self::Args
                 ) -> #BIN_RESULT<()>
             },
@@ -86,7 +88,7 @@ fn generate_trait_impl<const WRITE: bool>(
             BINREAD_TRAIT,
             quote! {
                 fn read_options<R: #READ_TRAIT + #SEEK_TRAIT>
-                    (#READER: &mut R, #OPT: &#READ_OPTIONS, #ARGS: Self::Args)
+                    (#READER: &mut R, #OPT: #ENDIAN_ENUM, #ARGS: Self::Args)
                     -> #BIN_RESULT<Self>
             },
         )
@@ -182,6 +184,23 @@ fn get_destructured_imports(
                 }
             }
         }),
+    }
+}
+
+fn get_endian(endian: &CondEndian) -> TokenStream {
+    match endian {
+        CondEndian::Inherited => OPT.to_token_stream(),
+        CondEndian::Fixed(endian) => endian.to_token_stream(),
+        CondEndian::Cond(endian, condition) => {
+            let (true_cond, false_cond) = (endian, endian.flipped());
+            quote! {
+                if (#condition) {
+                    #true_cond
+                } else {
+                    #false_cond
+                }
+            }
+        }
     }
 }
 

@@ -13,7 +13,7 @@ use syn::Ident;
 pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> TokenStream {
     let prelude = PreludeGenerator::new(input)
         .add_imports(name)
-        .add_options()
+        .add_endian()
         .add_magic_pre_assertion()
         .finish();
 
@@ -49,7 +49,7 @@ pub(crate) fn generate_try_map(
     let map_err = get_map_err(POS);
     let prelude = PreludeGenerator::new(input)
         .add_imports(name)
-        .add_options()
+        .add_endian()
         .add_magic_pre_assertion()
         .finish();
 

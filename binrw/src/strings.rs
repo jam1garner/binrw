@@ -3,7 +3,7 @@
 use crate::{
     alloc::string::{FromUtf16Error, FromUtf8Error},
     io::{Read, Seek, Write},
-    BinRead, BinResult, BinWrite, ReadOptions,
+    BinRead, BinResult, BinWrite, Endian,
 };
 use alloc::{string::String, vec, vec::Vec};
 use core::fmt::{self, Write as _};
@@ -38,13 +38,13 @@ impl BinRead for NullString {
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         _: Self::Args,
     ) -> BinResult<Self> {
         let mut values = vec![];
 
         loop {
-            let val = <u8>::read_options(reader, options, ())?;
+            let val = <u8>::read_options(reader, endian, ())?;
             if val == 0 {
                 return Ok(Self(values));
             }
@@ -59,11 +59,11 @@ impl BinWrite for NullString {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &crate::WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
-        self.0.write_options(writer, options, args)?;
-        0u8.write_options(writer, options, args)?;
+        self.0.write_options(writer, endian, args)?;
+        0u8.write_options(writer, endian, args)?;
 
         Ok(())
     }
@@ -160,13 +160,13 @@ impl BinRead for NullWideString {
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        options: &ReadOptions,
+        endian: Endian,
         _: Self::Args,
     ) -> BinResult<Self> {
         let mut values = vec![];
 
         loop {
-            let val = <u16>::read_options(reader, options, ())?;
+            let val = <u16>::read_options(reader, endian, ())?;
             if val == 0 {
                 return Ok(Self(values));
             }
@@ -181,11 +181,11 @@ impl BinWrite for NullWideString {
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &crate::WriteOptions,
+        endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
-        self.0.write_options(writer, options, args)?;
-        0u16.write_options(writer, options, args)?;
+        self.0.write_options(writer, endian, args)?;
+        0u16.write_options(writer, endian, args)?;
 
         Ok(())
     }

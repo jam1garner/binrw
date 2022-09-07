@@ -93,14 +93,14 @@ impl StructField {
         !matches!(self.read_mode, FieldMode::Default)
     }
 
-    /// Returns true if the field needs `ReadOptions` to be parsed.
-    pub(crate) fn needs_options(&self) -> bool {
-        !self.generated_value() || self.magic.is_some()
-    }
-
     /// Returns true if the field requires arguments.
     pub(crate) fn needs_args(&self) -> bool {
         self.args.is_some() || self.count.is_some() || self.offset.is_some()
+    }
+
+    /// Returns true if the field overrides endianness.
+    pub(crate) fn needs_endian(&self) -> bool {
+        !matches!(self.endian, CondEndian::Inherited)
     }
 
     /// Returns true if the field is using shorthand directives that are

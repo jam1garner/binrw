@@ -1,4 +1,4 @@
-use binrw::{binrw, io::Cursor, BinRead, BinWrite, Endian, WriteOptions};
+use binrw::{binrw, io::Cursor, BinRead, BinWrite, Endian};
 
 #[test]
 fn binwrite_temp_applies() {
@@ -48,9 +48,7 @@ fn binwrite_temp_with_ignore() {
 
     let mut x = Cursor::new(Vec::new());
 
-    result
-        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
+    result.write_options(&mut x, Endian::Big, ()).unwrap();
 
     // Since it's bw(ignore), the length isn't written here
     assert_eq!(x.into_inner(), b"ABCDE");

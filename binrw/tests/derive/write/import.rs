@@ -1,5 +1,4 @@
-use binrw::binrw;
-use binrw::BinWrite;
+use binrw::{binrw, BinWrite};
 
 #[test]
 fn correct_args_type_set() {

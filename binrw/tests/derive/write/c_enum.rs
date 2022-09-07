@@ -1,5 +1,5 @@
 use binrw::io::Cursor;
-use binrw::{BinRead, BinReaderExt, BinWrite, Endian, WriteOptions};
+use binrw::{BinRead, BinReaderExt, BinWrite, Endian};
 
 #[test]
 fn write_enum() {
@@ -15,7 +15,7 @@ fn write_enum() {
     let mut x = Cursor::new(Vec::new());
 
     vec![Test::A, Test::B, Test::C, Test::D]
-        .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
+        .write_options(&mut x, Endian::Big, ())
         .unwrap();
 
     assert_eq!(
@@ -42,8 +42,7 @@ fn round_trip_unit_enum() {
 
     let mut x = Cursor::new(Vec::new());
 
-    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
+    test.write_options(&mut x, Endian::Big, ()).unwrap();
 
     assert_eq!(x.into_inner(), data);
 }
@@ -70,8 +69,7 @@ fn magic_enum_round_trip() {
 
     let mut x = Cursor::new(Vec::new());
 
-    test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
-        .unwrap();
+    test.write_options(&mut x, Endian::Big, ()).unwrap();
 
     assert_eq!(x.into_inner(), data);
 }
