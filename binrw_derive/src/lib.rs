@@ -18,7 +18,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
-#[proc_macro_derive(BinRead, attributes(binread, br, brw))]
+#[proc_macro_derive(BinRead, attributes(br, brw))]
 #[cfg_attr(coverage_nightly, no_coverage)]
 pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
     derive_from_input(
@@ -44,7 +44,7 @@ pub fn binread(_: TokenStream, input: TokenStream) -> TokenStream {
     .into()
 }
 
-#[proc_macro_derive(BinWrite, attributes(binwrite, bw, brw))]
+#[proc_macro_derive(BinWrite, attributes(bw, brw))]
 #[cfg_attr(coverage_nightly, no_coverage)]
 pub fn derive_binwrite_trait(input: TokenStream) -> TokenStream {
     derive_from_input(
