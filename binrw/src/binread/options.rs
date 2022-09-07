@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 /// Runtime options for
 /// [`BinRead::read_options()`](crate::BinRead::read_options).
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct ReadOptions {
     /// The [byte order](crate::Endian) to use when reading data.
     ///
@@ -24,7 +24,7 @@ impl ReadOptions {
     pub fn new(endian: Endian) -> Self {
         Self {
             endian,
-            ..Default::default()
+            offset: <_>::default(),
         }
     }
 

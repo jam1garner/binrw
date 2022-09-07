@@ -95,7 +95,7 @@ pub trait BinWrite {
     where
         Self: crate::meta::WriteEndian,
     {
-        self.write_options(writer, &WriteOptions::default(), args)
+        self.write_options(writer, &WriteOptions::new(Endian::Little), args)
     }
 
     /// Write `Self` to the writer, assuming big-endian byte order, using the
@@ -136,7 +136,7 @@ pub trait BinWrite {
 
 /// Runtime options for
 /// [`BinWrite::write_options()`](crate::BinWrite::write_options).
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct WriteOptions {
     /// The [byte order](crate::Endian) to use when writing data.
     ///

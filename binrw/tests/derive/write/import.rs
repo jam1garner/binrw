@@ -10,7 +10,7 @@ fn correct_args_type_set() {
     let mut x = binrw::io::Cursor::new(Vec::new());
 
     Test {}
-        .write_options(&mut x, &Default::default(), binrw::args! { _x: 3, _y: 2 })
+        .write_le_args(&mut x, binrw::args! { _x: 3, _y: 2 })
         .unwrap();
 }
 
@@ -27,6 +27,6 @@ fn usable_args() {
     let mut x = binrw::io::Cursor::new(Vec::new());
 
     Test {}
-        .write_options(&mut x, &Default::default(), binrw::args! { x: 3, _y: 2 })
+        .write_le_args(&mut x, binrw::args! { x: 3, _y: 2 })
         .unwrap();
 }
