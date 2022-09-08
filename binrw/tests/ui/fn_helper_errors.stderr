@@ -1,0 +1,79 @@
+error: unexpected end of input, expected identifier
+ --> tests/ui/fn_helper_errors.rs:3:1
+  |
+3 | #[parser(reader:)]
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `parser` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected `:`
+ --> tests/ui/fn_helper_errors.rs:8:17
+  |
+8 | #[parser(reader = invalid)]
+  |                 ^
+
+error: expected `reader` or `endian`
+  --> tests/ui/fn_helper_errors.rs:13:10
+   |
+13 | #[parser(invalid)]
+   |          ^^^^^^^
+
+error: expected `writer` or `endian`
+  --> tests/ui/fn_helper_errors.rs:18:10
+   |
+18 | #[writer(invalid)]
+   |          ^^^^^^^
+
+error: conflicting `reader` keyword
+  --> tests/ui/fn_helper_errors.rs:23:18
+   |
+23 | #[parser(reader, reader)]
+   |                  ^^^^^^
+
+error: conflicting `writer` keyword
+  --> tests/ui/fn_helper_errors.rs:28:18
+   |
+28 | #[writer(writer, writer)]
+   |                  ^^^^^^
+
+error: conflicting `endian` keyword
+  --> tests/ui/fn_helper_errors.rs:33:18
+   |
+33 | #[parser(endian, endian)]
+   |                  ^^^^^^
+
+error: invalid `self` in free function
+  --> tests/ui/fn_helper_errors.rs:41:31
+   |
+41 |     fn fn_helper_invalid_self(&self) -> BinResult<()> {
+   |                               ^^^^^
+
+error: missing required value parameter
+  --> tests/ui/fn_helper_errors.rs:47:4
+   |
+47 | fn fn_helper_missing_object() -> BinResult<()> {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: missing raw arguments parameter
+  --> tests/ui/fn_helper_errors.rs:52:34
+   |
+52 | fn fn_helper_missing_args_reader(...) -> BinResult<()> {
+   |                                  ^^^
+
+error: unexpected extra parameter after raw arguments
+  --> tests/ui/fn_helper_errors.rs:57:42
+   |
+57 | fn fn_helper_extra_args_reader(arg0: (), arg1: (), ...) -> BinResult<()> {
+   |                                          ^^^^^^^^
+
+error: unexpected extra parameter after raw arguments
+  --> tests/ui/fn_helper_errors.rs:62:53
+   |
+62 | fn fn_helper_extra_args_writer(arg0: &(), arg1: (), arg2: (), ...) -> BinResult<()> {
+   |                                                     ^^^^^^^^
+
+error: missing raw arguments parameter
+  --> tests/ui/fn_helper_errors.rs:67:44
+   |
+67 | fn fn_helper_missing_args_writer(obj: &(), ...) -> BinResult<()> {
+   |                                            ^^^

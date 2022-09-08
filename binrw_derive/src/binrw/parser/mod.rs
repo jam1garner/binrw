@@ -2,7 +2,6 @@ mod attrs;
 mod field_level_attrs;
 mod keywords;
 mod macros;
-mod result;
 mod top_level_attrs;
 mod try_set;
 mod types;
@@ -14,10 +13,11 @@ use crate::{
 };
 pub(crate) use field_level_attrs::{EnumVariant, StructField, UnitEnumField};
 use macros::attr_struct;
-pub(crate) use result::ParseResult;
 pub(crate) use top_level_attrs::{Enum, Input, Struct, UnitOnlyEnum};
 use try_set::TrySet;
 pub(crate) use types::*;
+
+pub(crate) type ParseResult<T> = crate::result::PartialResult<T, syn::Error>;
 
 trait FromAttrs<Attr: syn::parse::Parse> {
     fn try_from_attrs(attrs: &[syn::Attribute], options: Options) -> ParseResult<Self>

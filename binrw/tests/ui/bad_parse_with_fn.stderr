@@ -1,49 +1,49 @@
 error[E0425]: cannot find value `missing` in this scope
-  --> tests/ui/bad_parse_with_fn.rs:17:23
+  --> tests/ui/bad_parse_with_fn.rs:18:23
    |
-17 |     #[br(parse_with = missing)]
+18 |     #[br(parse_with = missing)]
    |                       ^^^^^^^ not found in this scope
 
 error[E0277]: expected a `FnOnce<(&mut _, binrw::Endian, _)>` closure, found `{integer}`
- --> tests/ui/bad_parse_with_fn.rs:9:23
-  |
-9 |     #[br(parse_with = 56)]
-  |                       ^^ expected an `FnOnce<(&mut _, binrw::Endian, _)>` closure, found `{integer}`
-  |
-  = help: the trait `for<'a> FnOnce<(&'a mut _, binrw::Endian, _)>` is not implemented for `{integer}`
+  --> tests/ui/bad_parse_with_fn.rs:10:23
+   |
+10 |     #[br(parse_with = 56)]
+   |                       ^^ expected an `FnOnce<(&mut _, binrw::Endian, _)>` closure, found `{integer}`
+   |
+   = help: the trait `for<'a> FnOnce<(&'a mut _, binrw::Endian, _)>` is not implemented for `{integer}`
 note: required by a bound in `parse_fn_type_hint`
- --> src/private.rs
-  |
-  |     ParseFn: FnOnce(&mut R, Endian, Args) -> BinResult<Ret>,
-  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `parse_fn_type_hint`
+  --> src/private.rs
+   |
+   |     ParseFn: FnOnce(&mut R, Endian, Args) -> BinResult<Ret>,
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `parse_fn_type_hint`
 
 error[E0618]: expected function, found `{integer}`
- --> tests/ui/bad_parse_with_fn.rs:9:23
-  |
-9 |     #[br(parse_with = 56)]
-  |                       ^^ call expression requires function
+  --> tests/ui/bad_parse_with_fn.rs:10:23
+   |
+10 |     #[br(parse_with = 56)]
+   |                       ^^ call expression requires function
 
 error[E0308]: mismatched types
-  --> tests/ui/bad_parse_with_fn.rs:11:35
+  --> tests/ui/bad_parse_with_fn.rs:12:35
    |
-11 |     #[br(parse_with = |_, _, _| { true })]
+12 |     #[br(parse_with = |_, _, _| { true })]
    |                                   ^^^^ expected enum `Result`, found `bool`
    |
    = note: expected enum `Result<_, binrw::Error>`
               found type `bool`
 help: try wrapping the expression in `Ok`
    |
-11 |     #[br(parse_with = |_, _, _| { Ok(true) })]
+12 |     #[br(parse_with = |_, _, _| { Ok(true) })]
    |                                   +++    +
 
 error[E0308]: mismatched types
-  --> tests/ui/bad_parse_with_fn.rs:13:23
+  --> tests/ui/bad_parse_with_fn.rs:14:23
    |
-13 |     #[br(parse_with = |_, _, _| { Ok(true) })]
+14 |     #[br(parse_with = |_, _, _| { Ok(true) })]
    |                       ^^^^^^^^^^^^^^^^^^^^^^ expected `i32`, found `bool`
 
 error[E0308]: mismatched types
-  --> tests/ui/bad_parse_with_fn.rs:15:23
+  --> tests/ui/bad_parse_with_fn.rs:16:23
    |
-15 |     #[br(parse_with = wrong)]
+16 |     #[br(parse_with = wrong)]
    |                       ^^^^^ expected `i32`, found `bool`

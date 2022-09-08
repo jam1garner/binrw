@@ -475,13 +475,8 @@ where
     }
 }
 
-// Lint: Non-consumed argument is required to match the API.
-#[allow(clippy::trivially_copy_pass_by_ref)]
-fn default_reader<R: Read + Seek, Arg: Clone, T: BinRead<Args = Arg>>(
-    reader: &mut R,
-    endian: Endian,
-    args: T::Args,
-) -> BinResult<T> {
+#[binrw::parser(reader, endian)]
+fn default_reader<Arg: Clone, T: BinRead<Args = Arg>>(args: T::Args, ...) -> BinResult<T> {
     let mut value = T::read_options(reader, endian, args.clone())?;
     value.after_parse(reader, endian, args)?;
     Ok(value)

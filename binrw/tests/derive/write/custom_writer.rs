@@ -10,12 +10,8 @@ fn custom_writer() {
         y: u16,
     }
 
-    fn custom_writer<W: binrw::io::Write + binrw::io::Seek>(
-        _this: &u16,
-        writer: &mut W,
-        _: Endian,
-        _: (),
-    ) -> binrw::BinResult<()> {
+    #[binrw::writer(writer)]
+    fn custom_writer(_this: &u16) -> binrw::BinResult<()> {
         writer.write_all(b"abcd")?;
         Ok(())
     }
