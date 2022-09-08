@@ -1067,6 +1067,9 @@ a type, or to parse types which have no `BinRead` implementation at all:
 #[br(parse_with = $parse_fn:expr)] or #[br(parse_with($parse_fn:expr))]
 ```
 
+Use the [`#[parser]`](crate::parser) attribute macro to create compatible
+functions.
+
 Any earlier field or [import](#arguments) can be referenced by the
 expression in the directive (for example, to construct a parser function at
 runtime by calling a function generator).
@@ -1082,6 +1085,9 @@ implementation at all:
 #[bw(write_with = $write_fn:expr)] or #[bw(write_with($write_fn:expr))]
 ```
 
+Use the [`#[writer]`](crate::writer) attribute macro to create compatible
+functions.
+
 Any field or [import](#arguments) can be referenced by the expression in the
 directive (for example, to construct a serialisation function at runtime by
 calling a function generator).
@@ -1096,9 +1102,8 @@ calling a function generator).
 ```
 # use binrw::{prelude::*, io::{prelude::*, Cursor}, Endian};
 # use std::collections::HashMap;
-fn custom_parser<R: Read + Seek>(reader: &mut R, endian: Endian, _: ())
-    -> BinResult<HashMap<u16, u16>>
-{
+#[binrw::parser(reader, endian)]
+fn custom_parser() -> BinResult<HashMap<u16, u16>> {
     let mut map = HashMap::new();
     map.insert(
         <_>::read_options(reader, endian, ())?,
@@ -1124,11 +1129,9 @@ struct MyType {
 ```
 # use binrw::{prelude::*, io::{prelude::*, Cursor}, Endian};
 # use std::collections::BTreeMap;
-fn custom_writer<R: Write + Seek>(
+#[binrw::writer(writer, endian)]
+fn custom_writer(
     map: &BTreeMap<u16, u16>,
-    writer: &mut R,
-    endian: Endian,
-    _: ()
 ) -> BinResult<()> {
     for (key, val) in map.iter() {
         key.write_options(writer, endian, ())?;

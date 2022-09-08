@@ -6,8 +6,10 @@
 extern crate alloc;
 
 mod binrw;
+mod fn_helper;
 mod meta_types;
 mod named_args;
+mod result;
 pub(crate) mod util;
 
 use proc_macro::TokenStream;
@@ -65,6 +67,18 @@ pub fn binwrite(attr: TokenStream, input: TokenStream) -> TokenStream {
 #[cfg_attr(coverage_nightly, no_coverage)]
 pub fn named_args_derive(input: TokenStream) -> TokenStream {
     named_args::derive_from_input(parse_macro_input!(input as DeriveInput)).into()
+}
+
+#[proc_macro_attribute]
+#[cfg_attr(coverage_nightly, no_coverage)]
+pub fn parser(attr: TokenStream, input: TokenStream) -> TokenStream {
+    fn_helper::derive_from_attribute::<false>(attr, input)
+}
+
+#[proc_macro_attribute]
+#[cfg_attr(coverage_nightly, no_coverage)]
+pub fn writer(attr: TokenStream, input: TokenStream) -> TokenStream {
+    fn_helper::derive_from_attribute::<true>(attr, input)
 }
 
 fn combine_error(all_errors: &mut Option<syn::Error>, new_error: syn::Error) {

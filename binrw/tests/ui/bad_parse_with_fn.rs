@@ -1,6 +1,7 @@
 use binrw::{BinRead, BinResult};
 
-fn wrong<R: binrw::io::Read + binrw::io::Seek>(_: R, _: binrw::Endian, _: ()) -> BinResult<bool> {
+#[binrw::parser]
+fn wrong() -> BinResult<bool> {
     Ok(true)
 }
 

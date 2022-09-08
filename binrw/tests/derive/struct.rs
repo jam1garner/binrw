@@ -1,7 +1,7 @@
 use binrw::{
     args, binread,
-    io::{Cursor, Read, Seek, SeekFrom},
-    BinRead, BinResult, Endian, FilePtr, NullString,
+    io::{Cursor, Seek, SeekFrom},
+    BinRead, BinResult, FilePtr, NullString,
 };
 
 #[test]
@@ -26,11 +26,8 @@ fn all_the_things() {
         calc_test: u32,
     }
 
-    fn read_offsets<R: Read + Seek>(
-        reader: &mut R,
-        endian: Endian,
-        _: (),
-    ) -> BinResult<(u16, u16)> {
+    #[binrw::parser(reader, endian)]
+    fn read_offsets() -> BinResult<(u16, u16)> {
         Ok((
             u16::read_options(reader, endian, ())?,
             u16::read_options(reader, endian, ())?,

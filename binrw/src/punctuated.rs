@@ -1,9 +1,6 @@
 //! Type definitions for wrappers which parse interleaved data.
 
-use crate::{
-    io::{Read, Seek},
-    BinRead, BinResult, Endian, VecArgs,
-};
+use crate::{BinRead, BinResult, VecArgs};
 use alloc::vec::Vec;
 use core::fmt;
 
@@ -74,13 +71,8 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// # assert_eq!(*y.x, vec![3, 2, 1]);
     /// # assert_eq!(y.x.separators, vec![0, 1]);
     /// ```
-    // Lint: Non-consumed argument is required to match the API.
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn separated<R: Read + Seek>(
-        reader: &mut R,
-        endian: Endian,
-        args: VecArgs<T::Args>,
-    ) -> BinResult<Self> {
+    #[crate::parser(reader, endian)]
+    pub fn separated(args: VecArgs<T::Args>, ...) -> BinResult<Self> {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count.max(1) - 1);
 
@@ -102,13 +94,8 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// # Errors
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
-    // Lint: Non-consumed argument is required to match the API.
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn separated_trailing<R: Read + Seek>(
-        reader: &mut R,
-        endian: Endian,
-        args: VecArgs<T::Args>,
-    ) -> BinResult<Self> {
+    #[crate::parser(reader, endian)]
+    pub fn separated_trailing(args: VecArgs<T::Args>, ...) -> BinResult<Self> {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count);
 

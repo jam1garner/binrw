@@ -173,13 +173,9 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
     /// # Errors
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
-    pub fn parse<R, Args>(
-        reader: &mut R,
-        endian: Endian,
-        args: FilePtrArgs<Args>,
-    ) -> BinResult<Value>
+    #[binrw::parser(reader, endian)]
+    pub fn parse<Args>(args: FilePtrArgs<Args>, ...) -> BinResult<Value>
     where
-        R: Read + Seek,
         Args: Clone,
         Value: BinRead<Args = Args>,
     {
