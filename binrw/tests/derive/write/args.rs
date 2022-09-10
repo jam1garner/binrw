@@ -27,5 +27,5 @@ fn pass_args() {
     .write_to(&mut x)
     .unwrap();
 
-    assert_eq!(&x.into_inner()[..], b"\0\0\0\x01\x02");
+    assert_eq!(x.into_inner(), b"\0\0\0\x01\x02");
 }

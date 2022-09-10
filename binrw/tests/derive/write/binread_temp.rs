@@ -25,5 +25,5 @@ fn binread_temp_applies() {
     .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
     .unwrap();
 
-    assert_eq!(&x.into_inner()[..], &[0, 0, 0, 1]);
+    assert_eq!(x.into_inner(), [0, 0, 0, 1]);
 }

@@ -15,5 +15,5 @@ fn ignore_is_not_written() {
         .unwrap();
 
     // Since it's bw(ignore), nothing is written here.
-    assert_eq!(&x.into_inner()[..], b"");
+    assert_eq!(x.into_inner(), b"");
 }

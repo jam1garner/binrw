@@ -19,8 +19,8 @@ fn write_enum() {
         .unwrap();
 
     assert_eq!(
-        &x.into_inner()[..],
-        &[0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5]
+        x.into_inner(),
+        [0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5]
     );
 }
 
@@ -45,7 +45,7 @@ fn round_trip_unit_enum() {
     test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(&x.into_inner()[..], data);
+    assert_eq!(x.into_inner(), data);
 }
 
 #[test]
@@ -73,5 +73,5 @@ fn magic_enum_round_trip() {
     test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(&x.into_inner()[..], data);
+    assert_eq!(x.into_inner(), data);
 }

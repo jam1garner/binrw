@@ -20,5 +20,5 @@ fn restore_position_writing() {
         .write_to(&mut x)
         .unwrap();
     }
-    assert_eq!(&x[..], b"\0\xff\xff\xff");
+    assert_eq!(x, b"\0\xff\xff\xff");
 }

@@ -64,8 +64,5 @@ fn top_level_endian() {
     .write_to(&mut x)
     .unwrap();
 
-    assert_eq!(
-        &x.into_inner()[..],
-        &[1, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 4][..]
-    );
+    assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 4]);
 }

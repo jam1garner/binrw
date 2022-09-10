@@ -25,7 +25,7 @@ fn map_field() {
     .write_to(&mut x)
     .unwrap();
 
-    assert_eq!(&x.into_inner()[..], b"\0\0\0\0\0\0\0\x03test\xff");
+    assert_eq!(x.into_inner(), b"\0\0\0\0\0\0\0\x03test\xff");
 }
 
 #[test]

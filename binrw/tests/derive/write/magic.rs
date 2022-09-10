@@ -11,14 +11,14 @@ fn magic_round_trip() {
         y: u16,
     }
 
-    let data = &[0x78, 0x56, 0x34, 0x12, 0x9A, 0xBC, 0, 0, 0, 1, 0x3, 0][..];
+    let data = [0x78, 0x56, 0x34, 0x12, 0x9A, 0xBC, 0, 0, 0, 1, 0x3, 0];
 
     let test: Test = Cursor::new(data).read_be().unwrap();
 
     let mut out = Cursor::new(Vec::new());
     test.write_with_args(&mut out, ()).unwrap();
 
-    assert_eq!(&out.into_inner()[..], data);
+    assert_eq!(out.into_inner(), data);
 }
 
 #[test]
@@ -37,5 +37,5 @@ fn magic_one_way() {
 
     let data = b"ABCD\x9A\xBC\0\0\0\x01\x05\0";
 
-    assert_eq!(&out.into_inner()[..], data);
+    assert_eq!(out.into_inner(), data);
 }

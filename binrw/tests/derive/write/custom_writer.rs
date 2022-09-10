@@ -26,5 +26,5 @@ fn custom_writer() {
         .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(&x.into_inner()[..], b"\x01abcd");
+    assert_eq!(x.into_inner(), b"\x01abcd");
 }

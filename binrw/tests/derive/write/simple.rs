@@ -16,7 +16,7 @@ fn simple_write() {
         .write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(&x.into_inner()[..], &[1, 0, 2, 0, 0, 0, 3]);
+    assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 3]);
 }
 
 use binrw::BinReaderExt;
@@ -63,7 +63,7 @@ fn round_trip() {
 
     x.write_be(&test).unwrap();
 
-    assert_eq!(&x.into_inner()[..], bytes);
+    assert_eq!(x.into_inner(), bytes);
 }
 
 #[test]
@@ -84,8 +84,5 @@ fn round_trip_2() {
     conj.write_options(&mut y, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(
-        &x.into_inner()[..] == bytes,
-        bytes_conj == &y.into_inner()[..]
-    );
+    assert_eq!(x.into_inner() == bytes, y.into_inner() == bytes_conj);
 }

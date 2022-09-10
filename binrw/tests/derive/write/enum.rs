@@ -33,7 +33,7 @@ fn enum_round_trip() {
     test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(&x.into_inner()[..], data);
+    assert_eq!(x.into_inner(), data);
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn enum_one_way() {
     .unwrap();
 
     assert_eq!(
-        &x.into_inner()[..],
+        x.into_inner(),
         b"BBB\xBB\xAA\0\0\0\x02CCCAAA\x03\x02\x01\0\xFF"
     );
 }

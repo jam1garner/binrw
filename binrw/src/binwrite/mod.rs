@@ -133,7 +133,7 @@ impl WriteOptions {
 /// writer.write_be(&MyStruct(1, 0xffff, 2)).unwrap();
 /// writer.write_type(&0x1234_u16, Endian::Little).unwrap();
 ///
-/// assert_eq!(&writer.into_inner()[..], &[1, 0xff, 0xff, 2, 0x34, 0x12][..]);
+/// assert_eq!(writer.into_inner(), [1, 0xff, 0xff, 2, 0x34, 0x12]);
 /// ```
 pub trait BinWriterExt: Write + Seek + Sized {
     /// Write `T` to the reader with the given byte order.

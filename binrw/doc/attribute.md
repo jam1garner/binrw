@@ -1564,7 +1564,7 @@ struct MyType {
 
 let mut writer = Cursor::new(Vec::new());
 writer.write_be(&MyType { value: 3 });
-assert_eq!(&writer.into_inner()[..], b"\x03")
+assert_eq!(writer.into_inner(), b"\x03")
 ```
 </div>
 
@@ -2157,7 +2157,7 @@ struct Test {
 
 assert_eq!(
     Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap(),
-    Test { data: Vec::from(&b"ABCDE"[..]) }
+    Test { data: b"ABCDE".to_vec() }
 );
 ```
 </div>

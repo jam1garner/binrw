@@ -40,7 +40,7 @@ fn padding_round_trip() {
     test.write_options(&mut x, &WriteOptions::new(Endian::Big), ())
         .unwrap();
 
-    assert_eq!(&x.into_inner()[..], data);
+    assert_eq!(x.into_inner(), data);
 }
 
 #[test]
@@ -73,5 +73,5 @@ fn padding_one_way() {
     .write_options(&mut x, &WriteOptions::new(Endian::Little), ())
     .unwrap();
 
-    assert_eq!(&x.into_inner()[..], data);
+    assert_eq!(x.into_inner(), data);
 }

@@ -29,5 +29,5 @@ fn round_trip_top_level_map() {
     let mut x = Cursor::new(Vec::new());
     test.write_to(&mut x).unwrap();
 
-    assert_eq!(&x.into_inner()[..], data);
+    assert_eq!(x.into_inner(), data);
 }

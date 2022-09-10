@@ -7,7 +7,7 @@ fn map_args() {
     #[br(map = |x: u64| Self(x + offset))]
     struct PlusOffset(u64);
 
-    let mut data = Cursor::new(&[0u8; 8][..]);
+    let mut data = Cursor::new([0u8; 8]);
 
     let PlusOffset(x) = data.read_be_args((20,)).unwrap();
 

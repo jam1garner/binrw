@@ -144,7 +144,7 @@ fn calc_temp_field() {
     assert_eq!(
         result,
         Test {
-            vec: Vec::from(&b"ABCDE"[..])
+            vec: b"ABCDE".to_vec()
         }
     );
 }

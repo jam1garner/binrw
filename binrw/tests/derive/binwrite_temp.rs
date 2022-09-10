@@ -19,7 +19,7 @@ fn binwrite_temp_applies() {
     assert_eq!(
         result,
         Test {
-            vec: Vec::from(&b"ABCDE"[..])
+            vec: b"ABCDE".to_vec()
         }
     );
 }
@@ -42,7 +42,7 @@ fn binwrite_temp_with_ignore() {
     assert_eq!(
         result,
         Test {
-            vec: Vec::from(&b"ABCDE"[..])
+            vec: b"ABCDE".to_vec()
         }
     );
 
@@ -53,5 +53,5 @@ fn binwrite_temp_with_ignore() {
         .unwrap();
 
     // Since it's bw(ignore), the length isn't written here
-    assert_eq!(&x.into_inner()[..], b"ABCDE");
+    assert_eq!(x.into_inner(), b"ABCDE");
 }
