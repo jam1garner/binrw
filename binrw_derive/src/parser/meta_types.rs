@@ -251,11 +251,13 @@ mod tests {
     mod kw {
         syn::custom_keyword!(test);
         syn::custom_keyword!(test_list);
+        syn::custom_keyword!(test_enclosed_list);
     }
 
     type MetaValueTest = MetaValue<kw::test, Lit>;
     type MetaListTest = MetaList<kw::test_list, Lit>;
     type MetaAttrListTest = MetaAttrList<Lit>;
+    type MetaEnclosedListTest = MetaEnclosedList<kw::test_enclosed_list, Lit, Lit>;
 
     macro_rules! try_parse {
         ($name:ident, $ty:ty, $tt:tt) => {
@@ -329,6 +331,27 @@ mod tests {
     });
     try_parse_fail!(meta_list_wrong_keyword, MetaListTest, { wrong });
     try_parse_fail!(meta_list_wrong_item_type, MetaListTest, { test_list(i32) });
+
+    try_parse!(meta_enclosed_list_paren, MetaEnclosedListTest, {
+        test_enclosed_list(3u8, 3u8)
+    });
+    try_parse!(meta_enclosed_list_paren_empty, MetaEnclosedListTest, {
+        test_enclosed_list()
+    });
+    try_parse!(meta_enclosed_list_brace, MetaEnclosedListTest, { test_enclosed_list { 3u8, 3u8 } });
+    try_parse!(meta_enclosed_list_brace_empty, MetaEnclosedListTest, {
+        test_enclosed_list {}
+    });
+    try_parse_fail!(meta_enclosed_list_wrong_keyword, MetaEnclosedListTest, {
+        wrong
+    });
+    try_parse_fail!(meta_enclosed_list_wrong_delimiter, MetaEnclosedListTest, {
+        test_enclosed_list = (3u8, 3u8)
+    });
+    try_parse_fail!(meta_enclosed_list_wrong_bracket_kind, MetaEnclosedListTest, { test_enclosed_list [] });
+    try_parse_fail!(meta_enclosed_list_wrong_item_type, MetaEnclosedListTest, {
+        test_enclosed_list(i32)
+    });
 
     #[test]
     #[cfg_attr(coverage_nightly, no_coverage)]
