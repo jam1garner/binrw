@@ -19,6 +19,7 @@ pub(crate) fn arg_type_name(ty_name: &Ident, is_write: bool) -> Ident {
 }
 
 pub(crate) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStream {
+    let mut has_try_optional = false;
     let fields = match match input.data {
         syn::Data::Struct(s) => s
             .fields
@@ -37,7 +38,14 @@ pub(crate) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStr
                         NamedArgAttr::Default(default) => {
                             kind = BuilderFieldKind::Optional { default }
                         }
-                        NamedArgAttr::TryOptional => {
+                        NamedArgAttr::TryOptional(span) => {
+                            if has_try_optional {
+                                return Err(syn::Error::new(
+                                    span,
+                                    "cannot have more than one `try_optional` per struct",
+                                ));
+                            }
+                            has_try_optional = true;
                             kind = BuilderFieldKind::TryOptional;
                             break;
                         }
@@ -104,7 +112,7 @@ pub(crate) fn derive_from_imports<'a>(
 
 enum NamedArgAttr {
     Default(Box<Expr>),
-    TryOptional,
+    TryOptional(Span),
 }
 
 impl Parse for NamedArgAttr {
@@ -112,8 +120,9 @@ impl Parse for NamedArgAttr {
         let lookahead = input.lookahead1();
 
         if lookahead.peek(kw::try_optional) {
-            input.parse::<kw::try_optional>()?;
-            Ok(NamedArgAttr::TryOptional)
+            Ok(NamedArgAttr::TryOptional(
+                input.parse::<kw::try_optional>()?.span(),
+            ))
         } else if lookahead.peek(kw::default) {
             input.parse::<kw::default>()?;
             input.parse::<Token![=]>()?;
