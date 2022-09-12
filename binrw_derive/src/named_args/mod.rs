@@ -18,12 +18,42 @@ pub(crate) fn arg_type_name(ty_name: &Ident, is_write: bool) -> Ident {
     }
 }
 
-pub(crate) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStream {
-    let mut has_try_optional = false;
-    let fields = match match input.data {
-        syn::Data::Struct(s) => s
+pub(crate) fn derive_from_imports<'a>(
+    ty_name: &Ident,
+    is_write: bool,
+    result_name: &Ident,
+    vis: &Visibility,
+    args: impl Iterator<Item = &'a IdentTypeMaybeDefault>,
+) -> TokenStream {
+    let builder_name = &if is_write {
+        format_ident!("{}BinWriteArgBuilder", ty_name, span = Span::mixed_site())
+    } else {
+        format_ident!("{}BinReadArgBuilder", ty_name, span = Span::mixed_site())
+    };
+
+    Builder {
+        owner_name: Some(ty_name),
+        is_write,
+        builder_name,
+        result_name,
+        fields: &args.map(Into::into).collect::<Vec<_>>(),
+        generics: &[],
+        vis,
+    }
+    .generate(true)
+}
+
+#[cfg_attr(coverage_nightly, no_coverage)]
+pub(crate) fn derive_from_input(input: DeriveInput) -> TokenStream {
+    from_input(input).unwrap_or_else(syn::Error::into_compile_error)
+}
+
+fn from_input(input: DeriveInput) -> syn::Result<TokenStream> {
+    if let syn::Data::Struct(s) = input.data {
+        let mut has_try_optional = false;
+        let fields = s
             .fields
-            .iter()
+            .into_iter()
             .map(|field| {
                 let attrs = field.attrs.iter().filter_map(|attr| {
                     attr.path
@@ -54,60 +84,33 @@ pub(crate) fn derive_from_attribute(input: DeriveInput) -> proc_macro2::TokenStr
 
                 Ok(BuilderField {
                     kind,
-                    name: match field.ident.as_ref() {
-                        Some(ident) => ident.clone(),
+                    name: match field.ident {
+                        Some(ident) => ident,
                         None => {
                             return Err(syn::Error::new(
                                 field.span(),
-                                "must not be a tuple-style field",
+                                "tuple structs are not supported",
                             ))
                         }
                     },
                     ty: field.ty.clone(),
                 })
             })
-            .collect::<Result<Vec<_>, syn::Error>>(),
-        _ => Err(syn::Error::new(input.span(), "only structs are supported")),
-    } {
-        Ok(fields) => fields,
-        Err(err) => return err.into_compile_error(),
-    };
+            .collect::<Result<Vec<_>, syn::Error>>()?;
 
-    Builder {
-        owner_name: None,
-        is_write: false,
-        result_name: &input.ident,
-        builder_name: &quote::format_ident!("{}Builder", input.ident),
-        fields: &fields,
-        generics: &input.generics.params.iter().cloned().collect::<Vec<_>>(),
-        vis: &input.vis,
-    }
-    .generate(false)
-}
-
-pub(crate) fn derive_from_imports<'a>(
-    ty_name: &Ident,
-    is_write: bool,
-    result_name: &Ident,
-    vis: &Visibility,
-    args: impl Iterator<Item = &'a IdentTypeMaybeDefault>,
-) -> TokenStream {
-    let builder_name = &if is_write {
-        format_ident!("{}BinWriteArgBuilder", ty_name, span = Span::mixed_site())
+        Ok(Builder {
+            owner_name: None,
+            is_write: false,
+            result_name: &input.ident,
+            builder_name: &quote::format_ident!("{}Builder", input.ident),
+            fields: &fields,
+            generics: &input.generics.params.iter().cloned().collect::<Vec<_>>(),
+            vis: &input.vis,
+        }
+        .generate(false))
     } else {
-        format_ident!("{}BinReadArgBuilder", ty_name, span = Span::mixed_site())
-    };
-
-    Builder {
-        owner_name: Some(ty_name),
-        is_write,
-        builder_name,
-        result_name,
-        fields: &args.map(Into::into).collect::<Vec<_>>(),
-        generics: &[],
-        vis,
+        Err(syn::Error::new(input.span(), "only structs are supported"))
     }
-    .generate(true)
 }
 
 enum NamedArgAttr {
@@ -144,6 +147,83 @@ mod kw {
 fn derive_named_args_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
     let file = std::fs::File::open("../binrw/tests/named_args.rs").unwrap();
-    emulate_derive_expansion_fallible(file, "NamedArgs", |input| derive_from_attribute(input))
-        .unwrap();
+    emulate_derive_expansion_fallible(file, "NamedArgs", |input| derive_from_input(input)).unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg_attr(coverage_nightly, no_coverage)]
+    fn try_input(input: TokenStream) {
+        from_input(syn::parse2::<DeriveInput>(input).unwrap()).unwrap();
+    }
+
+    macro_rules! try_error (
+        ($name:ident: $message:literal $tt:tt) => {
+            #[test]
+            #[cfg_attr(coverage_nightly, no_coverage)]
+            #[should_panic(expected = $message)]
+            fn $name() {
+                try_input(quote::quote! $tt);
+            }
+        };
+        ($name:ident $tt:tt) => {
+            #[test]
+            #[cfg_attr(coverage_nightly, no_coverage)]
+            #[should_panic]
+            fn $name() {
+                try_input(quote::quote! $tt);
+            }
+        };
+    );
+
+    try_error!(invalid_attr_name: "expected `try_optional` or `default`" {
+        struct Foo<A> {
+            #[named_args(invalid)]
+            a: A,
+        }
+    });
+
+    try_error!(invalid_attr_syntax: "unexpected token" {
+        struct Foo<A> {
+            #[named_args(try_optional, invalid)]
+            a: A,
+        }
+    });
+
+    try_error!(invalid_enum: "only structs" {
+        enum Foo {}
+    });
+
+    try_error!(invalid_tuple: "tuple structs are not supported" {
+        struct Foo<A>(A);
+    });
+
+    try_error!(invalid_union: "only structs" {
+        union Foo {}
+    });
+
+    try_error!(missing_default_eq_value: "expected `=`" {
+        struct Foo<A> {
+            #[named_args(default)]
+            a: A,
+        }
+    });
+
+    try_error!(missing_default_value: "expected expression" {
+        struct Foo<A> {
+            #[named_args(default = )]
+            a: A,
+        }
+    });
+
+    try_error!(multiple_try_optional: "more than one `try_optional`" {
+        struct Foo<A, B> {
+            #[named_args(try_optional)]
+            a: A,
+            #[named_args(try_optional)]
+            b: B,
+        }
+    });
 }

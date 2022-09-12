@@ -70,7 +70,7 @@ pub fn binrw(attr: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_derive(NamedArgs, attributes(named_args))]
 #[cfg_attr(coverage_nightly, no_coverage)]
 pub fn derive_named_args_trait(input: TokenStream) -> TokenStream {
-    named_args::derive_from_attribute(parse_macro_input!(input as DeriveInput)).into()
+    named_args::derive_from_input(parse_macro_input!(input as DeriveInput)).into()
 }
 
 /// Input handling options.

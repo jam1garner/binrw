@@ -1,5 +1,5 @@
-error: must not be a tuple-style field
- --> $DIR/named_args_unsupported_tuple_struct.rs:4:14
+error: tuple structs are not supported
+ --> tests/ui/named_args_unsupported_tuple_struct.rs:4:14
   |
 4 | struct Tuple(u32, String);
   |              ^^^
