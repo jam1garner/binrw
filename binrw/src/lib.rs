@@ -51,40 +51,94 @@ pub use {
     strings::{NullString, NullWideString},
 };
 
-/// The derive macro for [`BinRead`].
+/// Derive macro generating an impl of the trait [`BinRead`].
+///
+/// See the [directives glossary](docs::attribute) for usage details.
 pub use binrw_derive::BinRead;
 
-/// The attribute version of the derive macro for [`BinRead`]. Use this instead
-/// of `#[derive(BinRead)]` to enable [temporary variables](docs::attribute#temp).
+/// Attribute macro used to generate an impl of the trait [`BinRead`] with
+/// support for [temporary variables](docs::attribute#temp).
 ///
-/// Note that `#[binread]` should be placed above other `#[derive(..)]`
-/// directives to avoid issues where other derived methods (e.g.
-/// from `#[derive(Debug)]`) try to access fields that are removed by
-/// `#[binread]`.
+/// When using temporary variables, this attribute **must** be placed above
+/// other attributes that generate code (e.g. `#[derive(Debug)]`) to ensure that
+/// the deleted temporary fields aren’t visible to those macros.
+///
+/// See the [directives glossary](docs::attribute) for usage details.
 pub use binrw_derive::binread;
 
-/// The derive macro for [`BinWrite`].
+/// Derive macro generating an impl of the trait [`BinWrite`].
+///
+/// See the [directives glossary](docs::attribute) for usage details.
 pub use binrw_derive::BinWrite;
 
-/// The attribute version of the derive macro for [`BinWrite`]. Use this instead
-/// of `#[derive(BinWrite)]` to enable
-/// [temporary variables](docs::attribute#temp).
+/// Attribute macro used to generate an impl of the trait [`BinWrite`] with
+/// support for [temporary variables](docs::attribute#temp).
 ///
-/// Note that `#[binwrite]` should be placed above other `#[derive(..)]`
-/// directives to avoid issues where other derived methods (e.g. from
-/// `#[derive(Debug)]`) try to access fields that are removed by `#[binwrite]`.
+/// When using temporary variables, this attribute **must** be placed above
+/// other attributes that generate code (e.g. `#[derive(Debug)]`) to ensure that
+/// the deleted temporary fields aren’t visible to those macros.
+///
+/// See the [directives glossary](docs::attribute) for usage details.
 pub use binrw_derive::binwrite;
 
-/// The attribute version of the derive macro for both [`BinRead`] and
-/// [`BinWrite`]. Use this instead of `#[derive(BinRead, BinWrite)]` to enable
+/// Attribute macro used to generate an impl of both [`BinRead`] and
+/// [`BinWrite`] traits with support for
 /// [temporary variables](docs::attribute#temp).
 ///
-/// Note that `#[binrw]` should be placed above other `#[derive(..)]` directives
-/// to avoid issues where other derived methods (e.g. from `#[derive(Debug)]`)
-/// try to access fields that are removed by `#[binrw]`.
+/// When using temporary variables, this attribute **must** be placed above
+/// other attributes that generate code (e.g. `#[derive(Debug)]`) to ensure that
+/// the deleted temporary fields aren’t visible to those macros.
+///
+/// See the [directives glossary](docs::attribute) for usage details.
 pub use binrw_derive::binrw;
 
-/// The derive macro for [`NamedArgs`].
+/// Derive macro generating an impl of the trait [`NamedArgs`].
+///
+/// The use cases for this macro are:
+///
+/// 1. When manually implementing [`BinRead`] or [`BinWrite`] on a type where
+///    named arguments are desired.
+/// 2. When creating a
+///    [custom parser or writer](docs::attribute#custom-parserswriters)
+///    where named arguments are desired.
+/// 3. When a named arguments type should be shared by several different types
+///    (e.g. by using [`import_raw`](docs::attribute#raw-arguments) on
+///    derived types, and by assigning the type to [`BinRead::Args`] or
+///    [`BinWrite::Args`] in manual implementations).
+///
+/// # Field options
+///
+/// * `#[named_args(default = $expr)]`: Sets the default value for a field.
+///
+/// # Examples
+///
+/// ```
+/// use binrw::{args, binread, BinRead, NamedArgs};
+/// #[derive(Clone, NamedArgs)]
+/// struct GlobalArgs<Inner> {
+///     #[named_args(default = 1)]
+///     version: i16,
+///     inner: Inner,
+/// }
+///
+/// #[binread]
+/// #[br(import_raw(args: GlobalArgs<T::Args>))]
+/// struct Container<T: BinRead> {
+///     #[br(temp, if(args.version > 1, 16))]
+///     count: u16,
+///     #[br(args {
+///         count: count.into(),
+///         inner: args.inner
+///     })]
+///     items: Vec<T>,
+/// }
+///
+/// # let mut input = binrw::io::Cursor::new(b"\x02\0\x42\0\x69\0");
+/// # assert_eq!(
+/// #     Container::<u16>::read_le_args(&mut input, args! { version: 2, inner: () }).unwrap().items,
+/// #     vec![0x42, 0x69]
+/// # );
+/// ```
 pub use binrw_derive::NamedArgs;
 
 /// A specialized [`Result`] type for binrw operations.

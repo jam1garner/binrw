@@ -59,7 +59,11 @@ macro_rules! args {
 
 /// The `NamedArgs` trait allows
 /// [named arguments](crate::docs::attribute#named-arguments) objects
-/// to be constructed using a compile-time builder.
+/// to be constructed using a builder that checks for correctness at compile
+/// time.
+///
+/// See [`#[derive(NamedArgs)]`](derive@crate::NamedArgs) for information on deriving
+/// custom named arguments types.
 pub trait NamedArgs {
     /// The builder type for this type.
     type Builder;
