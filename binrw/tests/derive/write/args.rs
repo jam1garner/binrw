@@ -1,5 +1,4 @@
-use binrw::io::Cursor;
-use binrw::{binwrite, BinWrite};
+use binrw::{binwrite, io::Cursor, BinWrite};
 
 #[test]
 fn pass_args() {

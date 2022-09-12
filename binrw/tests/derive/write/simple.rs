@@ -1,5 +1,4 @@
-use binrw::{io::Cursor, Endian};
-use binrw::{BinRead, BinWrite, BinWriterExt};
+use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt, Endian};
 
 #[derive(BinWrite)]
 struct Test {

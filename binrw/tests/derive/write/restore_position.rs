@@ -1,5 +1,4 @@
-use binrw::io::Cursor;
-use binrw::BinWrite;
+use binrw::{io::Cursor, BinWrite};
 
 #[test]
 fn restore_position_writing() {

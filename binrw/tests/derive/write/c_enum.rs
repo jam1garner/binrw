@@ -1,5 +1,4 @@
-use binrw::io::Cursor;
-use binrw::{BinRead, BinReaderExt, BinWrite, Endian};
+use binrw::{io::Cursor, BinRead, BinReaderExt, BinWrite, Endian};
 
 #[test]
 fn write_enum() {
