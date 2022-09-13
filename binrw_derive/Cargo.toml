@@ -11,6 +11,7 @@ edition = "2021"
 description = "Derive macro for binrw"
 repository = "https://github.com/jam1garner/binrw"
 license = "MIT"
+homepage = "https://binrw.rs"
 
 [lib]
 proc-macro = true
