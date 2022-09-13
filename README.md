@@ -1,5 +1,6 @@
 # binrw
 
+[![crates](https://img.shields.io/crates/v/binrw.svg)](https://crates.io/crates/binrw)
 [![tests](https://github.com/jam1garner/binrw/actions/workflows/main.yml/badge.svg)](https://github.com/jam1garner/binrw/actions/workflows/main.yml)
 [![docs.rs](https://docs.rs/binrw/badge.svg)](https://docs.rs/binrw)
 [![codecov](https://codecov.io/gh/jam1garner/binrw/branch/master/graph/badge.svg?token=UREOWI2KAY)](https://codecov.io/gh/jam1garner/binrw) 
