@@ -13,6 +13,7 @@ license = "MIT"
 description = "A Rust crate for helping read structs from binary data using ✨macro magic✨"
 readme = "../README.md"
 documentation = "https://docs.rs/binrw"
+homepage = "https://binrw.rs"
 
 [dependencies]
 array-init = "2.0"
