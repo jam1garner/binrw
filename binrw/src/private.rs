@@ -1,7 +1,7 @@
 use crate::{
     error::CustomError,
-    io::{self, Seek, Write},
-    BinRead, BinResult, Error, ReadOptions, WriteOptions,
+    io::{Read, Seek, Write},
+    BinRead, BinResult, BinWrite, Error, ReadOptions, WriteOptions,
 };
 use alloc::{boxed::Box, string::String};
 
@@ -75,7 +75,7 @@ where
 pub fn magic<R, B>(reader: &mut R, expected: B, options: &ReadOptions) -> BinResult<()>
 where
     B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + Clone + Copy + 'static,
-    R: io::Read + io::Seek,
+    R: Read + Seek,
 {
     let pos = reader.stream_position()?;
     let val = B::read_options(reader, options, ())?;
@@ -89,10 +89,19 @@ where
     }
 }
 
+pub fn parse_fn_type_hint<Ret, ParseFn, R, Args>(f: ParseFn) -> ParseFn
+where
+    Args: Clone,
+    R: Read + Seek,
+    ParseFn: FnOnce(&mut R, &ReadOptions, Args) -> BinResult<Ret>,
+{
+    f
+}
+
 pub fn parse_function_args_type_hint<R, Res, Args, F>(_: F, a: Args) -> Args
 where
-    R: crate::io::Read + Seek,
-    F: FnOnce(&mut R, &crate::ReadOptions, Args) -> crate::BinResult<Res>,
+    R: Read + Seek,
+    F: FnOnce(&mut R, &ReadOptions, Args) -> BinResult<Res>,
 {
     a
 }
@@ -100,7 +109,7 @@ where
 pub fn write_function_args_type_hint<T, W, Args, F>(_: F, a: Args) -> Args
 where
     W: Write + Seek,
-    F: FnOnce(&T, &mut W, &crate::WriteOptions, Args) -> crate::BinResult<()>,
+    F: FnOnce(&T, &mut W, &WriteOptions, Args) -> BinResult<()>,
 {
     a
 }
@@ -117,7 +126,7 @@ pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
 where
     Args: Clone,
     Writer: Write + Seek,
-    WriterFn: Fn(&T, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
+    WriterFn: FnOnce(&T, &mut Writer, &WriteOptions, Args) -> BinResult<()>,
 {
     x
 }
@@ -125,7 +134,7 @@ where
 pub fn write_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> Output,
-    Output: crate::BinWrite<Args = Args>,
+    Output: BinWrite<Args = Args>,
 {
     args
 }
@@ -137,7 +146,7 @@ pub fn write_try_map_args_type_hint<Input, Output, Error, MapFn, Args>(
 where
     Error: CustomError,
     MapFn: FnOnce(Input) -> Result<Output, Error>,
-    Output: crate::BinWrite<Args = Args>,
+    Output: BinWrite<Args = Args>,
 {
     args
 }

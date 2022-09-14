@@ -6,14 +6,14 @@ pub(crate) mod typed_builder;
 mod write_options;
 
 use crate::{
-    codegen::sanitization::{ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, POS},
     parser::{Assert, AssertionError, Input, ParseResult, PassedArgs, StructField},
+    util::quote_spanned_any,
 };
-use proc_macro2::{Span, TokenStream};
-use quote::quote;
+use proc_macro2::TokenStream;
+use quote::{quote, quote_spanned};
 use sanitization::{
-    ARGS, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT, OPT, READER, READ_OPTIONS, READ_TRAIT,
-    SEEK_TRAIT, WRITER, WRITE_OPTIONS, WRITE_TRAIT,
+    ARGS, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT, OPT, POS,
+    READER, READ_OPTIONS, READ_TRAIT, SEEK_TRAIT, WRITER, WRITE_OPTIONS, WRITE_TRAIT,
 };
 use syn::{spanned::Spanned, DeriveInput};
 
@@ -91,7 +91,9 @@ fn generate_trait_impl<const WRITE: bool>(
     let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
 
     quote! {
+        #[automatically_derived]
         #[allow(non_snake_case)]
+        #[allow(clippy::redundant_closure_call)]
         impl #impl_generics #trait_name for #name #ty_generics #where_clause {
             type Args = #arg_type;
 
@@ -130,37 +132,37 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
 
 fn get_passed_args(field: &StructField) -> Option<TokenStream> {
     let args = &field.args;
+    let span = args.span().unwrap_or_else(|| field.ty.span());
     match args {
-        PassedArgs::Named(fields) => Some(if let Some(count) = &field.count {
-            quote! {
-                #ARGS_MACRO! { count: ((#count) as usize) #(, #fields)* }
-            }
-        } else {
-            quote! {
-                #ARGS_MACRO! { #(#fields),* }
+        PassedArgs::Named(fields) => Some({
+            let extra_args = directives_to_args(field);
+            quote_spanned_any! { span=>
+                #ARGS_MACRO! { #extra_args #(#fields, )* }
             }
         }),
-        PassedArgs::List(list) => Some(quote! { (#(#list,)*) }),
-        PassedArgs::Tuple(tuple) => {
-            let tuple = tuple.as_ref();
-            Some(quote! { #tuple })
+        PassedArgs::List(list) => Some(quote_spanned! {span=> (#(#list,)*) }),
+        PassedArgs::Tuple(tuple) => Some(tuple.as_ref().clone()),
+        PassedArgs::None => {
+            let extra_args = directives_to_args(field);
+            (!extra_args.is_empty()).then(|| {
+                quote_spanned_any! { span=> #ARGS_MACRO! { #extra_args } }
+            })
         }
-        PassedArgs::None => field
-            .count
-            .as_ref()
-            .map(|count| quote! { #ARGS_MACRO! { count: ((#count) as usize) }}),
     }
-    .map(|ts| fixup_span(ts, args.span().unwrap_or_else(|| field.ty.span())))
 }
 
-// For an unknown reason, this seems to be the least invasive way to associate
-// the arguments correctly with the args token; quote_spanned does not get it
-// done and neither does only resetting the span on only the generated tokens
-fn fixup_span(ts: TokenStream, span: Span) -> TokenStream {
-    ts.into_iter()
-        .map(|mut tt| {
-            tt.set_span(span);
-            tt
-        })
-        .collect::<TokenStream>()
+fn directives_to_args(field: &StructField) -> TokenStream {
+    let args = field
+        .count
+        .as_ref()
+        .map(|count| quote! { count: ((#count) as usize) })
+        .into_iter()
+        .chain(
+            field
+                .offset
+                .as_ref()
+                .map(|offset| quote! { offset: (#offset) })
+                .into_iter(),
+        );
+    quote! { #(#args,)* }
 }

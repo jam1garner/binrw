@@ -1,10 +1,49 @@
+error[E0425]: cannot find value `missing` in this scope
+  --> tests/ui/bad_parse_with_fn.rs:17:23
+   |
+17 |     #[br(parse_with = missing)]
+   |                       ^^^^^^^ not found in this scope
+
+error[E0277]: expected a `FnOnce<(&mut _, &ReadOptions, _)>` closure, found `{integer}`
+ --> tests/ui/bad_parse_with_fn.rs:9:23
+  |
+9 |     #[br(parse_with = 56)]
+  |                       ^^ expected an `FnOnce<(&mut _, &ReadOptions, _)>` closure, found `{integer}`
+  |
+  = help: the trait `for<'a, 'b> FnOnce<(&'a mut _, &'b ReadOptions, _)>` is not implemented for `{integer}`
+note: required by a bound in `parse_fn_type_hint`
+ --> src/private.rs
+  |
+  |     ParseFn: FnOnce(&mut R, &ReadOptions, Args) -> BinResult<Ret>,
+  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `parse_fn_type_hint`
+
 error[E0618]: expected function, found `{integer}`
- --> $DIR/bad_parse_with_fn.rs:3:10
+ --> tests/ui/bad_parse_with_fn.rs:9:23
   |
-3 | #[derive(BinRead)]
-  |          ^^^^^^^
-  |          |
-  |          call expression requires function
-  |          `__binrw_generated_read_function` has type `{integer}`
-  |
-  = note: this error originates in the derive macro `BinRead` (in Nightly builds, run with -Z macro-backtrace for more info)
+9 |     #[br(parse_with = 56)]
+  |                       ^^ call expression requires function
+
+error[E0308]: mismatched types
+  --> tests/ui/bad_parse_with_fn.rs:11:35
+   |
+11 |     #[br(parse_with = |_, _, _| { true })]
+   |                                   ^^^^ expected enum `Result`, found `bool`
+   |
+   = note: expected enum `Result<_, binrw::Error>`
+              found type `bool`
+help: try wrapping the expression in `Ok`
+   |
+11 |     #[br(parse_with = |_, _, _| { Ok(true) })]
+   |                                   +++    +
+
+error[E0308]: mismatched types
+  --> tests/ui/bad_parse_with_fn.rs:13:23
+   |
+13 |     #[br(parse_with = |_, _, _| { Ok(true) })]
+   |                       ^^^^^^^^^^^^^^^^^^^^^^ expected `i32`, found `bool`
+
+error[E0308]: mismatched types
+  --> tests/ui/bad_parse_with_fn.rs:15:23
+   |
+15 |     #[br(parse_with = wrong)]
+   |                       ^^^^^ expected `i32`, found `bool`

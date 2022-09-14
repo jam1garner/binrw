@@ -4,8 +4,9 @@ mod r#struct;
 mod struct_field;
 
 use crate::{
-    codegen::sanitization::{IdentStr, BIN_ERROR, OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD},
+    codegen::sanitization::{BIN_ERROR, OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD},
     parser::{Input, Map},
+    util::IdentStr,
 };
 use proc_macro2::TokenStream;
 use quote::quote;

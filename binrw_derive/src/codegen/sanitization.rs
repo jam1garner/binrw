@@ -1,26 +1,7 @@
 ///! Utilities for helping sanitize macro
-use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, ToTokens, TokenStreamExt};
-
-macro_rules! ident_str {
-    () => {};
-
-    ($vis:vis $ident:ident = $path:expr; $($tail:tt)*) => {
-        ident_str!($vis $ident = $path);
-        ident_str!($($tail)*);
-    };
-
-    ($vis:vis $ident:ident = $path:expr) => {
-        $vis const $ident: $crate::codegen::sanitization::IdentStr =
-            $crate::codegen::sanitization::IdentStr::new($path);
-    };
-}
-
-macro_rules! from_crate {
-    ($path:path) => {
-        concat!("binrw::", stringify!($path))
-    };
-}
+use crate::util::{from_crate, ident_str};
+use proc_macro2::Ident;
+use quote::format_ident;
 
 macro_rules! from_read_trait {
     () => {
@@ -66,6 +47,7 @@ ident_str! {
     pub(crate) ARGS_TYPE_HINT = from_crate!(__private::parse_function_args_type_hint);
     pub(crate) MAP_ARGS_TYPE_HINT = from_crate!(__private::map_args_type_hint);
     pub(crate) REQUIRED_ARG_TRAIT = from_crate!(__private::Required);
+    pub(crate) PARSE_FN_TYPE_HINT = from_crate!(__private::parse_fn_type_hint);
     pub(crate) WRITE_FN_TYPE_HINT = from_crate!(__private::write_fn_type_hint);
     pub(crate) WRITE_ARGS_TYPE_HINT = from_crate!(__private::write_function_args_type_hint);
     pub(crate) WRITE_MAP_ARGS_TYPE_HINT = from_crate!(__private::write_map_args_type_hint);
@@ -100,26 +82,4 @@ pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
     let ident_string = ident.to_string();
     let ident_string = ident_string.strip_prefix("r#").unwrap_or(&ident_string);
     format_ident!("__binrw_generated_{}_{}", kind, ident_string)
-}
-
-/// A string wrapper that converts the str to a $path `TokenStream`, allowing
-/// for constant-time idents that can be shared across threads
-#[derive(Clone, Copy)]
-pub(crate) struct IdentStr(&'static str);
-
-impl IdentStr {
-    #[cfg_attr(coverage_nightly, no_coverage)] // const-only function
-    pub(crate) const fn new(str: &'static str) -> Self {
-        IdentStr(str)
-    }
-}
-
-impl ToTokens for IdentStr {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let idents = self
-            .0
-            .split("::")
-            .map(|ident| Ident::new(ident, Span::call_site()));
-        tokens.append_separated(idents, quote!(::));
-    }
 }

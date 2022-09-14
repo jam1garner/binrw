@@ -5,12 +5,14 @@ use crate::{
     codegen::{
         get_assertions, get_passed_args,
         sanitization::{
-            make_ident, IdentStr, AFTER_PARSE, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT,
-            COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD,
-            REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+            make_ident, AFTER_PARSE, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT, COERCE_FN,
+            DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, PARSE_FN_TYPE_HINT, POS, READER, READ_FUNCTION,
+            READ_METHOD, REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP,
+            WITH_CONTEXT,
         },
     },
     parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
+    util::{quote_spanned_any, IdentStr},
 };
 use alloc::borrow::Cow;
 use proc_macro2::TokenStream;
@@ -365,14 +367,20 @@ impl<'field> FieldGenerator<'field> {
 
     fn prefix_read_function(mut self) -> Self {
         let read_function = match &self.field.read_mode {
-            FieldMode::Function(parser) => Some(parser.clone()),
-            FieldMode::Normal => Some(READ_METHOD.to_token_stream()),
-            _ => None,
+            FieldMode::Function(parser) => {
+                quote_spanned_any! { parser.span()=>
+                    let #READ_FUNCTION = #PARSE_FN_TYPE_HINT(#parser);
+                }
+            }
+            FieldMode::Normal => quote! {
+                let #READ_FUNCTION = #READ_METHOD;
+            },
+            _ => return self,
         };
 
         let rest = self.out;
         self.out = quote! {
-            let #READ_FUNCTION = (#read_function);
+            #read_function
             #rest
         };
 
@@ -441,12 +449,25 @@ impl<'field> FieldGenerator<'field> {
         self.out = match &self.field.read_mode {
             FieldMode::Default => quote! { <_>::default() },
             FieldMode::Calc(calc) => quote! { #calc },
-            FieldMode::Normal | FieldMode::Function(_) => {
+            read_mode @ (FieldMode::Normal | FieldMode::Function(_)) => {
                 let args_arg = get_args_argument(self.field, &self.args_var);
                 let options_var = &self.options_var;
 
-                quote! {
-                    #READ_FUNCTION(#READER, #options_var, #args_arg)
+                if let FieldMode::Function(f) = read_mode {
+                    let ty = &self.field.ty;
+                    // Adding a closure suppresses mentions of the generated
+                    // READ_FUNCTION variable in errors; mapping the value with
+                    // an explicit type ensures the incompatible type is warned
+                    // here as a mismatched type instead of later as a
+                    // try-conversion error
+                    quote_spanned_any! { f.span()=>
+                        (|| #READ_FUNCTION)()(#READER, #options_var, #args_arg)
+                            .map(|v| -> #ty { v })
+                    }
+                } else {
+                    quote! {
+                        #READ_FUNCTION(#READER, #options_var, #args_arg)
+                    }
                 }
             }
         };

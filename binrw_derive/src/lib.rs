@@ -11,6 +11,7 @@ mod binrw_attr;
 mod codegen;
 mod named_args;
 mod parser;
+mod util;
 
 use codegen::generate_impl;
 use parser::{Input, ParseResult};

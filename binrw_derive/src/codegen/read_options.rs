@@ -5,9 +5,10 @@ mod r#struct;
 use super::get_assertions;
 use crate::{
     codegen::sanitization::{
-        IdentStr, ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT, TEMP,
+        ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT, TEMP,
     },
     parser::{CondEndian, Input, Magic, Map},
+    util::IdentStr,
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
