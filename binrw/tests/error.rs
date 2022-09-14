@@ -174,7 +174,7 @@ fn show_backtrace() {
     assert_eq!(
         err,
         if cfg!(feature = "verbose-backtrace") {
-            Cow::Borrowed(if rustversion::cfg!(nightly) {
+            Cow::Borrowed(if cfg!(nightly) {
                 include_str!("./error/backtrace_verbose_nightly.stderr")
             } else {
                 include_str!("./error/backtrace_verbose.stderr")
@@ -206,7 +206,7 @@ fn show_backtrace_2() {
     assert_eq!(
         err,
         if cfg!(feature = "verbose-backtrace") {
-            Cow::Borrowed(if rustversion::cfg!(nightly) {
+            Cow::Borrowed(if cfg!(nightly) {
                 include_str!("./error/backtrace_2_verbose_nightly.stderr")
             } else {
                 include_str!("./error/backtrace_2_verbose.stderr")

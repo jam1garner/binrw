@@ -14,6 +14,7 @@ use super::SeekFrom;
 /// inconsistency in the internal state of the `BufReader`. Calling
 /// [`BufReader::seek_invalidate`] will clear the read buffer and reset the
 /// internal state to be consistent with the wrapped stream.
+#[cfg_attr(all(doc, nightly), doc(cfg(feature = "std")))]
 pub struct BufReader<T> {
     inner: std::io::BufReader<T>,
     pos: Option<u64>,

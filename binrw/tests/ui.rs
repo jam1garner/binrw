@@ -5,16 +5,14 @@
 // In the future, possibly when proc macro diagnostic enhancements are
 // stabilised and https://github.com/dtolnay/trybuild/issues/6 is fixed, running
 // these tests all the time makes sense.
-#[rustversion::nightly]
-#[cfg(not(coverage))]
+#[cfg(all(nightly, not(coverage)))]
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/ui/*.rs");
 }
 
-#[rustversion::nightly]
-#[cfg(not(coverage))]
+#[cfg(all(nightly, not(coverage)))]
 #[test]
 fn ui_pass() {
     let t = trybuild::TestCases::new();
