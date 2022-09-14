@@ -79,7 +79,5 @@ ident_str! {
 }
 
 pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
-    let ident_string = ident.to_string();
-    let ident_string = ident_string.strip_prefix("r#").unwrap_or(&ident_string);
-    format_ident!("__binrw_generated_{}_{}", kind, ident_string)
+    format_ident!("__binrw_generated_{}_{}", kind, ident)
 }
