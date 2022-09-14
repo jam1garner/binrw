@@ -177,14 +177,14 @@ impl<'field> AfterParseCallGenerator<'field> {
         let args_arg = if let Some(offset) = &self.field.offset_after {
             let offset = offset.as_ref();
             if let Some(args_var) = args_var {
-                quote! {{
+                quote_spanned_any! { offset.span()=> {
                     let mut #TEMP = #args_var;
                     #TEMP.offset = #offset;
                     #TEMP
                 }}
             } else {
-                quote! {
-                    #ARGS_MACRO! { offset: (#offset) }
+                quote_spanned_any! { offset.span()=>
+                    #ARGS_MACRO! { offset: #offset }
                 }
             }
         } else {

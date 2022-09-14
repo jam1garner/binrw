@@ -4,13 +4,13 @@ use binrw::BinRead;
 struct NoDefault;
 
 #[derive(BinRead)]
-struct Foo(Vec<u8>);
+struct MissingArgs(Vec<u8>);
 
 #[derive(BinRead)]
-struct Bar(#[br(args((),))] Vec<u8>);
+struct WrongType(#[br(args((),))] Vec<u8>);
 
 #[derive(BinRead)]
-struct Baz(#[br(args { inner: () })] Vec<u8>);
+struct MissingCount(#[br(args { inner: () })] Vec<u8>);
 
 #[derive(BinRead)]
 #[br(import(_a: NoDefault))]
@@ -19,7 +19,10 @@ struct Inner {
 }
 
 #[derive(BinRead)]
-struct Qux(#[br(count = 1)] Vec<Inner>);
+struct WrongCountType(#[br(count = Some(1))] Vec<u8>);
+
+#[derive(BinRead)]
+struct MissingInnerArgs(#[br(count = 1)] Vec<Inner>);
 
 fn main() {
     Vec::<u8>::read(&mut binrw::io::Cursor::new(b"")).unwrap();

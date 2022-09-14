@@ -1,8 +1,8 @@
 error[E0277]: the trait bound `VecArgs<()>: Default` is not satisfied
- --> tests/ui/args_vec_mistakes.rs:7:12
+ --> tests/ui/args_vec_mistakes.rs:7:20
   |
-7 | struct Foo(Vec<u8>);
-  |            ^^^^^^^ the trait `Default` is not implemented for `VecArgs<()>`
+7 | struct MissingArgs(Vec<u8>);
+  |                    ^^^^^^^ the trait `Default` is not implemented for `VecArgs<()>`
   |
   = note: required for `VecArgs<()>` to implement `MissingArgsDirective`
 note: required by a bound in `Required::args`
@@ -12,21 +12,21 @@ note: required by a bound in `Required::args`
   |                     ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Required::args`
 
 error[E0308]: mismatched types
-  --> tests/ui/args_vec_mistakes.rs:10:17
+  --> tests/ui/args_vec_mistakes.rs:10:23
    |
-10 | struct Bar(#[br(args((),))] Vec<u8>);
-   |                 ^^^^        ------- expected due to this
-   |                 |
-   |                 expected struct `VecArgs`, found tuple
+10 | struct WrongType(#[br(args((),))] Vec<u8>);
+   |                       ^^^^        ------- expected due to this
+   |                       |
+   |                       expected struct `VecArgs`, found tuple
    |
    = note: expected struct `VecArgs<()>`
                found tuple `((),)`
 
 error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::VecArgsBuilder<(), Needed, Satisfied>`, but its trait bounds were not satisfied
-  --> tests/ui/args_vec_mistakes.rs:13:17
+  --> tests/ui/args_vec_mistakes.rs:13:26
    |
-13 | struct Baz(#[br(args { inner: () })] Vec<u8>);
-   |                 ^^^^ method cannot be called on `binrw::binread::impls::VecArgsBuilder<(), Needed, Satisfied>` due to unsatisfied trait bounds
+13 | struct MissingCount(#[br(args { inner: () })] Vec<u8>);
+   |                          ^^^^ method cannot be called on `binrw::binread::impls::VecArgsBuilder<(), Needed, Satisfied>` due to unsatisfied trait bounds
    |
   ::: src/named_args.rs
    |
@@ -37,11 +37,30 @@ error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::Ve
            `Needed: SatisfiedOrOptional`
    = note: this error originates in the macro `binrw::args` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::VecArgsBuilder<(NoDefault,), Satisfied, Needed>`, but its trait bounds were not satisfied
-  --> tests/ui/args_vec_mistakes.rs:22:29
+error[E0277]: the trait bound `usize: From<Option<{integer}>>` is not satisfied
+  --> tests/ui/args_vec_mistakes.rs:22:36
    |
-22 | struct Qux(#[br(count = 1)] Vec<Inner>);
-   |                             ^^^^^^^^^^ method cannot be called on `binrw::binread::impls::VecArgsBuilder<(NoDefault,), Satisfied, Needed>` due to unsatisfied trait bounds
+22 | struct WrongCountType(#[br(count = Some(1))] Vec<u8>);
+   |                                    ^^^^^^^ the trait `From<Option<{integer}>>` is not implemented for `usize`
+   |
+   = help: the following other types implement trait `From<T>`:
+             <f32 as From<i16>>
+             <f32 as From<i8>>
+             <f32 as From<u16>>
+             <f32 as From<u8>>
+             <f64 as From<f32>>
+             <f64 as From<i16>>
+             <f64 as From<i32>>
+             <f64 as From<i8>>
+           and $N others
+   = note: required for `Option<{integer}>` to implement `Into<usize>`
+   = note: required for `usize` to implement `TryFrom<Option<{integer}>>`
+
+error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::VecArgsBuilder<(NoDefault,), Satisfied, Needed>`, but its trait bounds were not satisfied
+  --> tests/ui/args_vec_mistakes.rs:25:42
+   |
+25 | struct MissingInnerArgs(#[br(count = 1)] Vec<Inner>);
+   |                                          ^^^^^^^^^^ method cannot be called on `binrw::binread::impls::VecArgsBuilder<(NoDefault,), Satisfied, Needed>` due to unsatisfied trait bounds
    |
   ::: src/named_args.rs
    |
@@ -54,9 +73,9 @@ error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::Ve
    = note: this error originates in the macro `binrw::args` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0277]: the trait bound `VecArgs<()>: Default` is not satisfied
-  --> tests/ui/args_vec_mistakes.rs:25:5
+  --> tests/ui/args_vec_mistakes.rs:28:5
    |
-25 |     Vec::<u8>::read(&mut binrw::io::Cursor::new(b"")).unwrap();
+28 |     Vec::<u8>::read(&mut binrw::io::Cursor::new(b"")).unwrap();
    |     ^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `VecArgs<()>`
    |
    = note: required for `VecArgs<()>` to implement `Required`

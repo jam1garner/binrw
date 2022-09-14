@@ -229,13 +229,13 @@ fn directives_to_args(field: &StructField) -> TokenStream {
     let args = field
         .count
         .as_ref()
-        .map(|count| quote! { count: ((#count) as usize) })
+        .map(|count| quote_spanned! { count.span()=> count: usize::try_from(#count).unwrap() })
         .into_iter()
         .chain(
             field
                 .offset
                 .as_ref()
-                .map(|offset| quote! { offset: (#offset) })
+                .map(|offset| quote_spanned! { offset.span()=> offset: #offset })
                 .into_iter(),
         );
     quote! { #(#args,)* }
