@@ -1,5 +1,5 @@
 use crate::parser::{attrs, KeywordToken};
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{parse::Parse, spanned::Spanned, token::Token, Expr, ExprLit, Lit};
 
@@ -11,6 +11,7 @@ pub(crate) enum Error {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Assert {
+    pub(crate) kw_span: Span,
     pub(crate) condition: TokenStream,
     pub(crate) consequent: Option<Error>,
 }
@@ -19,13 +20,14 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
     type Error = syn::Error;
 
     fn try_from(value: attrs::AssertLike<K>) -> Result<Self, Self::Error> {
+        let kw_span = value.keyword_span();
         let mut args = value.fields.iter();
 
         let condition = if let Some(cond) = args.next() {
             cond.into_token_stream()
         } else {
             return Err(Self::Error::new(
-                value.keyword_span(),
+                kw_span,
                 format!(
                     "{} requires a boolean expression as an argument",
                     value.dyn_display()
@@ -49,6 +51,7 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
         };
 
         Ok(Self {
+            kw_span,
             condition,
             consequent,
         })

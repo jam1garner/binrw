@@ -129,6 +129,7 @@ fn generate_trait_impl<const WRITE: bool>(
 fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {
     assertions.iter().map(
         |Assert {
+             kw_span,
              condition,
              consequent,
          }| {
@@ -148,7 +149,7 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
                 }
             };
 
-            quote! {
+            quote_spanned_any! {*kw_span=>
                 #ASSERT(#condition, #POS, #error_fn)?;
             }
         },
