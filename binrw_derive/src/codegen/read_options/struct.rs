@@ -477,9 +477,9 @@ impl<'field> FieldGenerator<'field> {
 
     fn try_conversion(mut self, name: Option<&Ident>, variant_name: Option<&str>) -> Self {
         if !self.field.generated_value() {
-            let result = &self.out;
+            let result = self.out;
             self.out = if self.field.do_try.is_some() {
-                quote! { #result.unwrap_or(<_>::default()) }
+                quote! { #result.unwrap_or_default() }
             } else {
                 let map_err = get_err_context(self.field, name, variant_name);
                 quote! { #result #map_err ? }
