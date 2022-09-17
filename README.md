@@ -33,7 +33,7 @@ readers and writers using ✨macro magic✨.
 
 ## Usage
 
-```
+```rust
 #[derive(BinRead)]
 #[br(magic = b"DOG", assert(name.len() != 0))]
 struct Dog {
