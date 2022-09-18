@@ -190,7 +190,7 @@ impl WriteOptions {
 /// assert_eq!(writer.into_inner(), [1, 0xff, 0xff, 2, 0x34, 0x12]);
 /// ```
 pub trait BinWriterExt: Write + Seek + Sized {
-    /// Write `T` to the reader with the given byte order.
+    /// Write `T` to the writer with the given byte order.
     ///
     /// # Errors
     ///
@@ -202,7 +202,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         self.write_type_args(value, endian, T::Args::default())
     }
 
-    /// Write `T` from the writer assuming big-endian byte order.
+    /// Write `T` to the writer assuming big-endian byte order.
     ///
     /// # Errors
     ///
@@ -214,7 +214,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         self.write_type(value, Endian::Big)
     }
 
-    /// Write `T` from the writer assuming little-endian byte order.
+    /// Write `T` to the writer assuming little-endian byte order.
     ///
     /// # Errors
     ///
@@ -226,7 +226,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         self.write_type(value, Endian::Little)
     }
 
-    /// Write `T` from the writer assuming native-endian byte order.
+    /// Write `T` to the writer assuming native-endian byte order.
     ///
     /// # Errors
     ///
@@ -238,7 +238,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         self.write_type(value, Endian::NATIVE)
     }
 
-    /// Write `T` from the writer with the given byte order and arguments.
+    /// Write `T` to the writer with the given byte order and arguments.
     ///
     /// # Errors
     ///
@@ -256,7 +256,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         Ok(())
     }
 
-    /// Write `T` from the writer, assuming big-endian byte order, using the
+    /// Write `T` to the writer, assuming big-endian byte order, using the
     /// given arguments.
     ///
     /// # Errors
@@ -266,7 +266,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         self.write_type_args(value, Endian::Big, args)
     }
 
-    /// Write `T` from the writer, assuming little-endian byte order, using the
+    /// Write `T` to the writer, assuming little-endian byte order, using the
     /// given arguments.
     ///
     /// # Errors
@@ -276,7 +276,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         self.write_type_args(value, Endian::Little, args)
     }
 
-    /// Write `T` from the writer, assuming native-endian byte order, using the
+    /// Write `T` to the writer, assuming native-endian byte order, using the
     /// given arguments.
     ///
     /// # Errors
