@@ -12,10 +12,8 @@ use crate::{
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };
-use core::cmp::Ordering;
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::collections::HashMap;
 use syn::Ident;
 
 pub(super) fn generate_unit_enum(
@@ -72,29 +70,31 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
 }
 
 fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
-    // group fields by the type (Kind) of their magic value
-    let mut fields_by_magic_type = variants
-        .iter()
-        .fold(HashMap::new(), |mut fields_by_magic_type, field| {
+    // group fields by the type (Kind) of their magic value, preserve the order
+    let group_by_magic_type = variants.iter().fold(
+        Vec::new(),
+        |mut group_by_magic_type: Vec<(_, Vec<_>)>, field| {
             let kind = field.magic.as_ref().map(|magic| magic.kind());
-            fields_by_magic_type
-                .entry(kind)
-                .or_insert(vec![])
-                .push(field);
+            let last = group_by_magic_type.last_mut();
+            match last {
+                // if the current field's magic kind is the same as the previous one
+                // then add the current field to the same group
+                // if the magic kind is none then it's a wildcard, just add it to the previous group
+                Some((last_kind, last_vec)) if kind.is_none() || *last_kind == kind => {
+                    last_vec.push(field);
+                }
+                // otherwise if the vector is empty
+                // or the last field's magic kind is different
+                // then create a new group
+                _ => group_by_magic_type.push((kind, vec![field])),
+            }
 
-            fields_by_magic_type
-        })
-        .into_iter()
-        .collect::<Vec<_>>();
-
-    fields_by_magic_type.sort_by(|a, b| match (&a.0, &b.0) {
-        (Some(_), None) => Ordering::Less,
-        (None, Some(_)) => Ordering::Greater,
-        _ => a.0.cmp(&b.0),
-    });
+            group_by_magic_type
+        },
+    );
 
     // for each type (Kind), read and try to match the magic of each field
-    let try_each_magic_type = fields_by_magic_type.into_iter().map(|(_, fields)| {
+    let try_each_magic_type = group_by_magic_type.into_iter().map(|(_kind, fields)| {
         let amp = fields[0].magic.as_ref().map(|magic| magic.add_ref());
 
         let matches = fields.iter().map(|field| {
