@@ -4,6 +4,7 @@ use crate::{
     io::{Seek, Write},
     BinResult, Endian,
     __private::Required,
+    meta::WriteEndian,
 };
 
 /// The `BinWrite` trait serialises objects and writes them to streams.
@@ -135,6 +136,172 @@ pub trait BinWrite {
     ) -> BinResult<()>;
 }
 
+/// Extension methods for writing [`BinWrite`] objects using a converter.
+pub trait WriteWith {
+    /// Write `Self` to the writer using the given converter.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_with<T, W>(&self, writer: &mut W) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+        T: WriteEndian,
+        <Self as WriteInto<T>>::Args: Required,
+    {
+        self.write_args_with::<T, _>(writer, <Self as WriteInto<T>>::Args::args())
+    }
+
+    /// Write `Self` to the writer, using the given converter, assuming
+    /// big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_be_with<T, W>(&self, writer: &mut W) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+        <Self as WriteInto<T>>::Args: Required,
+    {
+        self.write_be_args_with::<T, _>(writer, <Self as WriteInto<T>>::Args::args())
+    }
+
+    /// Write `Self` to the writer, using the given converter, assuming
+    /// little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_le_with<T, W>(&self, writer: &mut W) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+        <Self as WriteInto<T>>::Args: Required,
+    {
+        self.write_le_args_with::<T, _>(writer, <Self as WriteInto<T>>::Args::args())
+    }
+
+    /// Write `Self` to the writer, using the given converter, assuming
+    /// native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_ne_with<T, W>(&self, writer: &mut W) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+        <Self as WriteInto<T>>::Args: Required,
+    {
+        self.write_ne_args_with::<T, _>(writer, <Self as WriteInto<T>>::Args::args())
+    }
+
+    /// Write `Self` to the writer, using the given converter and arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_args_with<T, W>(
+        &self,
+        writer: &mut W,
+        args: <Self as WriteInto<T>>::Args,
+    ) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+        T: WriteEndian,
+    {
+        self.write_into(writer, Endian::Little, args)
+    }
+
+    /// Write `Self` to the writer, using the given converter and arguments,
+    /// assuming big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_be_args_with<T, W>(
+        &self,
+        writer: &mut W,
+        args: <Self as WriteInto<T>>::Args,
+    ) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+    {
+        self.write_into(writer, Endian::Big, args)
+    }
+
+    /// Write `Self` to the writer, using the given converter and arguments,
+    /// assuming little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_le_args_with<T, W>(
+        &self,
+        writer: &mut W,
+        args: <Self as WriteInto<T>>::Args,
+    ) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+    {
+        self.write_into(writer, Endian::Little, args)
+    }
+
+    /// Write `Self` to the writer, using the given converter and arguments,
+    /// assuming native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_ne_args_with<T, W>(
+        &self,
+        writer: &mut W,
+        args: <Self as WriteInto<T>>::Args,
+    ) -> BinResult<()>
+    where
+        Self: WriteInto<T>,
+        W: Write + Seek,
+    {
+        self.write_into(writer, Endian::NATIVE, args)
+    }
+}
+
+impl<T> WriteWith for T {}
+
+/// The `WriteInto` trait enables transparent conversion from a non-[`BinWrite`]
+/// type.
+pub trait WriteInto<T> {
+    /// The type used for the `args` parameter of [`write_into()`].
+    ///
+    /// [`write_into()`]: Self::write_into
+    type Args: Clone;
+
+    /// Write `Self` into the writer using the given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()>;
+}
+
 /// Extension methods for writing [`BinWrite`] objects directly to a writer.
 ///
 /// # Examples
@@ -244,6 +411,134 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_ne_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
         self.write_type_args(value, Endian::NATIVE, args)
+    }
+
+    /// Write `T` to the writer using the given converter.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_with<C, T>(&mut self, value: &T) -> BinResult<()>
+    where
+        C: WriteEndian,
+        T: WriteInto<C> + ?Sized,
+        <T as WriteInto<C>>::Args: Required,
+    {
+        self.write_args_with::<C, T>(value, <T as WriteInto<C>>::Args::args())
+    }
+
+    /// Write `T` to the writer, using the given converter, assuming
+    /// big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_be_with<C, T>(&mut self, value: &T) -> BinResult<()>
+    where
+        T: WriteInto<C> + ?Sized,
+        <T as WriteInto<C>>::Args: Required,
+    {
+        self.write_be_args_with::<C, T>(value, <T as WriteInto<C>>::Args::args())
+    }
+
+    /// Write `T` to the writer, using the given converter, assuming
+    /// little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_le_with<C, T>(&mut self, value: &T) -> BinResult<()>
+    where
+        T: WriteInto<C> + ?Sized,
+        <T as WriteInto<C>>::Args: Required,
+    {
+        self.write_le_args_with::<C, T>(value, <T as WriteInto<C>>::Args::args())
+    }
+
+    /// Write `T` to the writer, using the given converter, assuming
+    /// native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_ne_with<C, T>(&mut self, value: &T) -> BinResult<()>
+    where
+        T: WriteInto<C> + ?Sized,
+        <T as WriteInto<C>>::Args: Required,
+    {
+        self.write_ne_args_with::<C, T>(value, <T as WriteInto<C>>::Args::args())
+    }
+
+    /// Write `T` to the writer, using the given converter and arguments.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_args_with<C, T>(&mut self, value: &T, args: <T as WriteInto<C>>::Args) -> BinResult<()>
+    where
+        C: WriteEndian,
+        T: WriteInto<C> + ?Sized,
+    {
+        value.write_into(self, Endian::Little, args)
+    }
+
+    /// Write `T` to the writer, using the given converter and arguments,
+    /// assuming big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_be_args_with<C, T>(
+        &mut self,
+        value: &T,
+        args: <T as WriteInto<C>>::Args,
+    ) -> BinResult<()>
+    where
+        T: WriteInto<C> + ?Sized,
+    {
+        value.write_into(self, Endian::Big, args)
+    }
+
+    /// Write `T` to the writer, using the given converter and arguments,
+    /// assuming little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_le_args_with<C, T>(
+        &mut self,
+        value: &T,
+        args: <T as WriteInto<C>>::Args,
+    ) -> BinResult<()>
+    where
+        T: WriteInto<C> + ?Sized,
+    {
+        value.write_into(self, Endian::Little, args)
+    }
+
+    /// Write `T` to the writer, using the given converter and arguments,
+    /// assuming native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_ne_args_with<C, T>(
+        &mut self,
+        value: &T,
+        args: <T as WriteInto<C>>::Args,
+    ) -> BinResult<()>
+    where
+        T: WriteInto<C> + ?Sized,
+    {
+        value.write_into(self, Endian::NATIVE, args)
     }
 }
 

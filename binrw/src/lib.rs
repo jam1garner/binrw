@@ -35,6 +35,7 @@ pub mod pos_value;
 pub mod punctuated;
 #[doc(hidden)]
 pub mod strings;
+mod with;
 
 #[cfg(all(doc, not(feature = "std")))]
 use alloc::vec::Vec;
@@ -44,11 +45,12 @@ pub use {
     binwrite::*,
     endian::Endian,
     error::Error,
-    file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
+    file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8, FilePtrWith},
     helpers::{count, until, until_eof, until_exclusive},
     named_args::*,
     pos_value::PosValue,
     strings::{NullString, NullWideString},
+    with::With,
 };
 
 /// Derive macro generating an impl of the trait [`BinRead`].

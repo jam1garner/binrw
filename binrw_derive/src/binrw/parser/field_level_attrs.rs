@@ -24,7 +24,7 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(RW:Args, RW:ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(RW:Calc, RW:TryCalc, RO:Default, RW:Ignore, RO:ParseWith, WO:WriteWith)]
+        #[from(RW:Calc, RW:TryCalc, RO:Default, RW:Ignore, RW:With, RO:ParseWith, WO:WriteWith)]
         pub(crate) field_mode: FieldMode,
         #[from(RO:Count)]
         pub(crate) count: Option<TokenStream>,

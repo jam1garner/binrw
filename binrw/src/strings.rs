@@ -1,14 +1,14 @@
 //! Type definitions for string readers.
 
 use crate::{
-    alloc::string::{FromUtf16Error, FromUtf8Error},
+    helpers::until_exclusive,
     io::{Read, Seek, Write},
-    BinRead, BinResult, BinWrite, Endian,
+    meta::{EndianKind, ReadEndian, WriteEndian},
+    BinResult, BinWrite, Endian, ReadFrom, WriteInto,
 };
-use alloc::{string::String, vec, vec::Vec};
-use core::fmt::{self, Write as _};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
-/// A null-terminated 8-bit string.
+/// A converter for null-terminated 8-bit strings.
 ///
 /// The null terminator is consumed and not included in the value.
 ///
@@ -18,112 +18,122 @@ use core::fmt::{self, Write as _};
 /// let mut null_separated_strings = Cursor::new(b"null terminated strings? in my system's language?\0no thanks\0");
 ///
 /// assert_eq!(
-///     null_separated_strings.read_be::<NullString>().unwrap().to_string(),
+///     null_separated_strings.read_with::<NullString, String>().unwrap(),
 ///     "null terminated strings? in my system's language?"
 /// );
 ///
 /// assert_eq!(
-///     null_separated_strings.read_be::<NullString>().unwrap().to_string(),
-///     "no thanks"
+///     null_separated_strings.read_with::<NullString, Vec<u8>>().unwrap(),
+///     b"no thanks"
 /// );
 /// ```
-#[derive(Clone, Eq, PartialEq, Default)]
-pub struct NullString(
-    /// The raw byte string.
-    pub Vec<u8>,
-);
+pub enum NullString {}
 
-impl BinRead for NullString {
+impl ReadEndian for NullString {
+    const ENDIAN: EndianKind = EndianKind::None;
+}
+
+impl ReadFrom<NullString> for String {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(
+    fn read_from<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args,
+        args: Self::Args,
     ) -> BinResult<Self> {
-        let mut values = vec![];
-
-        loop {
-            let val = <u8>::read_options(reader, endian, ())?;
-            if val == 0 {
-                return Ok(Self(values));
-            }
-            values.push(val);
-        }
+        let pos = reader.stream_position()?;
+        <Vec<u8> as ReadFrom<NullString>>::read_from(reader, endian, args).and_then(|vec| {
+            Self::from_utf8(vec).map_err(|err| binrw::Error::Custom {
+                pos,
+                err: Box::new(err) as _,
+            })
+        })
     }
 }
 
-impl BinWrite for NullString {
+impl ReadFrom<NullString> for Vec<u8> {
     type Args = ();
 
-    fn write_options<W: Write + Seek>(
+    fn read_from<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<Self> {
+        until_exclusive(|b| *b == 0)(reader, endian, args)
+    }
+}
+
+impl WriteEndian for NullString {
+    const ENDIAN: EndianKind = EndianKind::None;
+}
+
+impl WriteInto<NullString> for String {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
         &self,
         writer: &mut W,
         endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
-        self.0.write_options(writer, endian, args)?;
-        0u8.write_options(writer, endian, args)?;
-
-        Ok(())
+        <_ as WriteInto<NullString>>::write_into(self.as_bytes(), writer, endian, args)
     }
 }
 
-impl From<&str> for NullString {
-    fn from(s: &str) -> Self {
-        Self(s.as_bytes().to_vec())
+impl WriteInto<NullString> for str {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        <_ as WriteInto<NullString>>::write_into(self.as_bytes(), writer, endian, args)
     }
 }
 
-impl From<String> for NullString {
-    fn from(s: String) -> Self {
-        Self(s.into_bytes())
+impl WriteInto<NullString> for Vec<u8> {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        <_ as WriteInto<NullString>>::write_into(self.as_slice(), writer, endian, args)
     }
 }
 
-impl From<NullString> for Vec<u8> {
-    fn from(s: NullString) -> Self {
-        s.0
+impl WriteInto<NullString> for [u8] {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        self.write_options(writer, endian, args)?;
+        0_u8.write_options(writer, endian, args)
     }
 }
 
-impl TryFrom<NullString> for String {
-    type Error = FromUtf8Error;
+impl<const N: usize> WriteInto<NullString> for [u8; N] {
+    type Args = ();
 
-    fn try_from(value: NullString) -> Result<Self, Self::Error> {
-        String::from_utf8(value.0)
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        <_ as WriteInto<NullString>>::write_into(self.as_slice(), writer, endian, args)
     }
 }
 
-impl core::ops::Deref for NullString {
-    type Target = Vec<u8>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl core::ops::DerefMut for NullString {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl fmt::Debug for NullString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "NullString(\"")?;
-        display_utf8(&self.0, f, str::escape_debug)?;
-        write!(f, "\")")
-    }
-}
-
-impl fmt::Display for NullString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        display_utf8(&self.0, f, str::chars)
-    }
-}
-
-/// A null-terminated 16-bit string.
+/// A converter for null-terminated 16-bit strings.
 ///
 /// The null terminator must also be 16-bits, and is consumed and not included
 /// in the value.
@@ -139,147 +149,113 @@ impl fmt::Display for NullString {
 ///
 /// assert_eq!(
 ///     // notice: read_le
-///     wide_strings.read_le::<NullWideString>().unwrap().to_string(),
+///     wide_strings.read_le_with::<NullWideString, String>().unwrap(),
 ///     "wide strings"
 /// );
 ///
 /// assert_eq!(
 ///     // notice: read_be
-///     are_endian_dependent.read_be::<NullWideString>().unwrap().to_string(),
+///     are_endian_dependent.read_be_with::<NullWideString, String>().unwrap(),
 ///     "are endian dependent"
 /// );
 /// ```
-#[derive(Clone, Eq, PartialEq, Default)]
-pub struct NullWideString(
-    /// The raw wide byte string.
-    pub Vec<u16>,
-);
+pub enum NullWideString {}
 
-impl BinRead for NullWideString {
+impl ReadFrom<NullWideString> for Vec<u16> {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(
+    fn read_from<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args,
+        args: Self::Args,
     ) -> BinResult<Self> {
-        let mut values = vec![];
-
-        loop {
-            let val = <u16>::read_options(reader, endian, ())?;
-            if val == 0 {
-                return Ok(Self(values));
-            }
-            values.push(val);
-        }
+        until_exclusive(|b| *b == 0)(reader, endian, args)
     }
 }
 
-impl BinWrite for NullWideString {
+impl ReadFrom<NullWideString> for String {
     type Args = ();
 
-    fn write_options<W: Write + Seek>(
+    fn read_from<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<Self> {
+        let pos = reader.stream_position()?;
+        <Vec<u16> as ReadFrom<NullWideString>>::read_from(reader, endian, args).and_then(|vec| {
+            String::from_utf16(&vec).map_err(|err| binrw::Error::Custom {
+                pos,
+                err: Box::new(err) as _,
+            })
+        })
+    }
+}
+
+impl WriteInto<NullWideString> for String {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
         &self,
         writer: &mut W,
         endian: Endian,
         args: Self::Args,
     ) -> BinResult<()> {
-        self.0.write_options(writer, endian, args)?;
-        0u16.write_options(writer, endian, args)?;
-
-        Ok(())
+        <_ as WriteInto<NullWideString>>::write_into(self.as_str(), writer, endian, args)
     }
 }
 
-impl From<NullWideString> for Vec<u16> {
-    fn from(s: NullWideString) -> Self {
-        s.0
-    }
-}
+impl WriteInto<NullWideString> for str {
+    type Args = ();
 
-impl From<&str> for NullWideString {
-    fn from(s: &str) -> Self {
-        Self(s.encode_utf16().collect())
-    }
-}
-
-impl From<String> for NullWideString {
-    fn from(s: String) -> Self {
-        Self(s.encode_utf16().collect())
-    }
-}
-
-impl TryFrom<NullWideString> for String {
-    type Error = FromUtf16Error;
-
-    fn try_from(value: NullWideString) -> Result<Self, Self::Error> {
-        String::from_utf16(&value.0)
-    }
-}
-
-impl core::ops::Deref for NullWideString {
-    type Target = Vec<u16>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl core::ops::DerefMut for NullWideString {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl fmt::Display for NullWideString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        display_utf16(&self.0, f, core::iter::once)
-    }
-}
-
-impl fmt::Debug for NullWideString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "NullWideString(\"")?;
-        display_utf16(&self.0, f, char::escape_debug)?;
-        write!(f, "\")")
-    }
-}
-
-fn display_utf16<Transformer: Fn(char) -> O, O: Iterator<Item = char>>(
-    input: &[u16],
-    f: &mut fmt::Formatter<'_>,
-    t: Transformer,
-) -> fmt::Result {
-    char::decode_utf16(input.iter().copied())
-        .flat_map(|r| t(r.unwrap_or(char::REPLACEMENT_CHARACTER)))
-        .try_for_each(|c| f.write_char(c))
-}
-
-fn display_utf8<'a, Transformer: Fn(&'a str) -> O, O: Iterator<Item = char> + 'a>(
-    mut input: &'a [u8],
-    f: &mut fmt::Formatter<'_>,
-    t: Transformer,
-) -> fmt::Result {
-    // Adapted from <https://doc.rust-lang.org/std/str/struct.Utf8Error.html>
-    loop {
-        match core::str::from_utf8(input) {
-            Ok(valid) => {
-                t(valid).try_for_each(|c| f.write_char(c))?;
-                break;
-            }
-            Err(error) => {
-                let (valid, after_valid) = input.split_at(error.valid_up_to());
-
-                t(core::str::from_utf8(valid).unwrap()).try_for_each(|c| f.write_char(c))?;
-                f.write_char(char::REPLACEMENT_CHARACTER)?;
-
-                if let Some(invalid_sequence_length) = error.error_len() {
-                    input = &after_valid[invalid_sequence_length..];
-                } else {
-                    break;
-                }
-            }
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        for c in self.encode_utf16() {
+            c.write_options(writer, endian, ())?;
         }
+        0_u16.write_options(writer, endian, args)
     }
-    Ok(())
+}
+
+impl WriteInto<NullWideString> for Vec<u16> {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        <_ as WriteInto<NullWideString>>::write_into(self.as_slice(), writer, endian, args)
+    }
+}
+
+impl WriteInto<NullWideString> for [u16] {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        self.write_options(writer, endian, args)?;
+        0_u16.write_options(writer, endian, args)
+    }
+}
+
+impl<const N: usize> WriteInto<NullWideString> for [u16; N] {
+    type Args = ();
+
+    fn write_into<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        <_ as WriteInto<NullWideString>>::write_into(self.as_slice(), writer, endian, args)
+    }
 }
