@@ -40,6 +40,31 @@ fn unit_enum_magic_different_types() {
 }
 
 #[test]
+fn unit_enum_magic_order() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(big)]
+    enum Test {
+        #[br(magic(b"\0\x01"))]
+        One,
+
+        EverythingElse,
+
+        #[br(magic(2u16))]
+        Two,
+    }
+
+    assert_eq!(
+        Test::read(&mut Cursor::new(b"\0\0")).unwrap(),
+        Test::EverythingElse
+    );
+    assert_eq!(Test::read(&mut Cursor::new(b"\0\x01")).unwrap(), Test::One);
+    assert_eq!(
+        Test::read(&mut Cursor::new(b"\0\x02")).unwrap(),
+        Test::EverythingElse
+    );
+}
+
+#[test]
 fn unit_enum_magic_bytes() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(big)]
