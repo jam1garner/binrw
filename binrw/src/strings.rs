@@ -283,3 +283,145 @@ fn display_utf8<'a, Transformer: Fn(&'a str) -> O, O: Iterator<Item = char> + 'a
     }
     Ok(())
 }
+
+
+/// An 8-bit string with pre-computed length.
+///
+/// The null terminator is consumed and included if the string is null-terminated.
+///
+/// ```
+/// use binrw::{prelude::*, FixedLenString, io::Cursor};
+///
+/// #[binread]
+/// struct EmbeddedString {
+///     #[br(temp)]
+///     len: u8,
+///     #[br(args(len.into()))]
+///     string: FixedLenString
+/// }
+/// let mut fixed_length_string = Cursor::new(b"\x04null");
+///
+/// assert_eq!(
+///     fixed_length_string.read_le::<EmbeddedString>().unwrap().string.to_string(),
+///     "null"
+/// );
+///
+/// ```
+#[derive(Clone, Eq, PartialEq, Default)]
+pub struct FixedLenString(
+    /// The raw byte string.
+    pub Vec<u8>,
+);
+
+impl BinRead for FixedLenString {
+    type Args = (usize,);
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self> {
+        
+        Ok(
+            Self(
+                (0..args.0)
+                .map(|_| u8::read_options(reader, options, ()))
+                .collect::<BinResult<Vec<u8>>>()?
+            )
+        )
+
+    }
+}
+
+impl BinWrite for FixedLenString {
+    type Args = ();
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        options: &crate::WriteOptions,
+        args: Self::Args,
+    ) -> BinResult<()> {
+        self.0.write_options(writer, options, args)?;
+
+        Ok(())
+    }
+}
+
+impl From<&str> for FixedLenString {
+    fn from(s: &str) -> Self {
+        Self(s.as_bytes().to_vec())
+    }
+}
+
+impl From<String> for FixedLenString {
+    fn from(s: String) -> Self {
+        Self(s.into_bytes())
+    }
+}
+
+impl From<FixedLenString> for Vec<u8> {
+    fn from(s: FixedLenString) -> Self {
+        s.0
+    }
+}
+
+impl TryFrom<FixedLenString> for String {
+    type Error = FromUtf8Error;
+
+    fn try_from(value: FixedLenString) -> Result<Self, Self::Error> {
+        String::from_utf8(value.0)
+    }
+}
+
+impl core::ops::Deref for FixedLenString {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl core::ops::DerefMut for FixedLenString {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl fmt::Debug for FixedLenString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FixedLenString(\"")?;
+        display_utf8(&self.0, f, str::escape_debug)?;
+        write!(f, "\")")
+    }
+}
+
+impl fmt::Display for FixedLenString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        display_utf8(&self.0, f, str::chars)
+    }
+}
+
+mod test {
+    #[test]
+    pub fn fixed_length_string() {
+        use binrw::{prelude::*, FixedLenString, io::Cursor};
+        
+         #[binread]
+         #[derive(Debug)]
+         struct EmbeddedString {
+             #[br(temp)]
+             _len: u8,
+             #[br(args(_len.into()))]
+             string: FixedLenString
+         }
+         let mut fixed_length_string = Cursor::new(b"\x04null");
+        
+         let parsed = fixed_length_string.read_ne::<EmbeddedString>();
+         println!("{:?}", parsed);
+         assert_eq!(
+             parsed.unwrap().string.to_string(),
+             "null"
+         );
+    }
+}

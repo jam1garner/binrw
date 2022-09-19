@@ -47,7 +47,7 @@ pub use {
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
     helpers::{count, until, until_eof, until_exclusive},
     pos_value::PosValue,
-    strings::{NullString, NullWideString},
+    strings::{NullString, NullWideString, FixedLenString},
 };
 
 /// The derive macro for [`BinRead`].
