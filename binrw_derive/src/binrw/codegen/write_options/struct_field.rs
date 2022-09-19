@@ -233,7 +233,7 @@ impl<'a> StructFieldGenerator<'a> {
                     let #args = #WRITE_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
                 },
-                Map::Try(_) | Map::Repr(_) => quote! {
+                Map::Try(_) => quote! {
                     let #args = #WRITE_TRY_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
                 },
@@ -296,7 +296,6 @@ fn args_ident(ident: &Ident) -> Ident {
 fn field_mapping(map: &Map) -> Option<TokenStream> {
     match map {
         Map::Try(map_fn) | Map::Map(map_fn) => Some(quote! { (#map_fn) }),
-        Map::Repr(ty) => Some(quote! { (<#ty as core::convert::TryFrom<_>>::try_from) }),
         Map::None => None,
     }
 }

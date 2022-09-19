@@ -23,10 +23,6 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
             Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
         },
         Map::Try(map) | Map::Map(map) => generate_map(input, name, map),
-        Map::Repr(map) => match input {
-            Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
-            _ => generate_map(input, name, map),
-        },
     };
 
     quote! {
@@ -42,11 +38,6 @@ fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> Token
         let map_err = get_map_err(POS, map.span());
         quote! { #map_err? }
     });
-    let map = if matches!(input.map(), Map::Repr(_)) {
-        quote! { <#map as core::convert::TryFrom<_>>::try_from }
-    } else {
-        map.clone()
-    };
     let write_data = quote! {
         #WRITE_METHOD(
             &((#map)(self) #map_try),

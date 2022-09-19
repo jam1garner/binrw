@@ -317,7 +317,7 @@ impl<'field> FieldGenerator<'field> {
                 let value = self.out;
                 quote! { #map_func(#value) }
             }
-            Map::Try(t) | Map::Repr(t) => {
+            Map::Try(t) => {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
                 let map_err = get_map_err(SAVED_POSITION, t.span());
@@ -343,15 +343,7 @@ impl<'field> FieldGenerator<'field> {
                     let #map_func = (#COERCE_FN::<#ty, _, _>(#map));
                 }
             }
-            Map::Try(try_map) | Map::Repr(try_map) => {
-                let try_map = if matches!(self.field.map, Map::Repr(_)) {
-                    quote! {
-                        <#try_map as core::convert::TryInto<_>>::try_into
-                    }
-                } else {
-                    try_map.clone()
-                };
-
+            Map::Try(try_map) => {
                 // TODO: Position should always just be saved once for a field if used
                 quote! {
                     let #map_func = (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map));
@@ -411,7 +403,7 @@ impl<'field> FieldGenerator<'field> {
                 }
             } else {
                 match &self.field.map {
-                    Map::Map(_) | Map::Try(_) | Map::Repr(_) => {
+                    Map::Map(_) | Map::Try(_) => {
                         quote_spanned! {ty.span()=>
                             let #args_var = #MAP_ARGS_TYPE_HINT(&#map_func, #args);
                         }

@@ -10,17 +10,9 @@ pub(crate) enum Map {
     None,
     Map(TokenStream),
     Try(TokenStream),
-    Repr(TokenStream),
 }
 
 impl Map {
-    pub(crate) fn as_repr(&self) -> Option<&TokenStream> {
-        match self {
-            Map::Repr(r) => Some(r),
-            _ => None,
-        }
-    }
-
     pub(crate) fn is_some(&self) -> bool {
         !matches!(self, Self::None)
     }
@@ -30,7 +22,7 @@ impl Map {
     }
 
     pub(crate) fn is_try(&self) -> bool {
-        matches!(self, Self::Try(_) | Self::Repr(_))
+        matches!(self, Self::Try(_))
     }
 }
 
@@ -49,12 +41,6 @@ impl From<attrs::Map> for Map {
 impl From<attrs::TryMap> for Map {
     fn from(try_map: attrs::TryMap) -> Self {
         Self::Try(try_map.value.to_token_stream())
-    }
-}
-
-impl From<attrs::Repr> for Map {
-    fn from(repr: attrs::Repr) -> Self {
-        Self::Repr(repr.value.to_token_stream())
     }
 }
 

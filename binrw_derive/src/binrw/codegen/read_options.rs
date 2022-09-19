@@ -27,14 +27,6 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
         },
         Map::Try(map) => map::generate_try_map(input, name, map),
         Map::Map(map) => map::generate_map(input, name, map),
-        Map::Repr(ty) => match input {
-            Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
-            _ => map::generate_try_map(
-                input,
-                name,
-                &quote! { <#ty as core::convert::TryInto<_>>::try_into },
-            ),
-        },
     };
 
     quote! {
