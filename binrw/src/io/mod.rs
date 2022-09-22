@@ -10,6 +10,7 @@ mod bufreader;
 mod no_std;
 pub mod prelude;
 mod seek;
+mod take_seek;
 
 #[cfg(feature = "std")]
 pub use bufreader::BufReader;
@@ -21,3 +22,4 @@ pub use no_std::*;
 pub use seek::NoSeek;
 #[cfg(feature = "std")]
 pub use std::io::{Bytes, Cursor, Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
+pub use take_seek::*;
