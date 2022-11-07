@@ -7,9 +7,9 @@ use crate::{
             get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
                 make_ident, AFTER_PARSE, ARGS_MACRO, ARGS_TYPE_HINT, BACKTRACE_FRAME,
-                BINREAD_TRAIT, COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, OPT,
-                PARSE_FN_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD, REQUIRED_ARG_TRAIT,
-                SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+                BINREAD_TRAIT, COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, MAP_READER_TYPE_HINT,
+                OPT, PARSE_FN_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD,
+                REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
             },
         },
         parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
@@ -81,10 +81,17 @@ impl<'input> StructGenerator<'input> {
             .st
             .fields
             .iter()
-            .map(|field| generate_field(field, name, variant_name));
+            .map(|field| generate_field(self.input, field, name, variant_name));
         let after_parse = {
-            let after_parse = self.st.fields.iter().map(generate_after_parse);
-            wrap_save_restore(quote!(#(#after_parse)*))
+            let after_parse = self
+                .st
+                .fields
+                .iter()
+                .map(|field| generate_after_parse(self.input, field));
+            wrap_save_restore(
+                &self.input.stream_ident_or(READER),
+                quote!(#(#after_parse)*),
+            )
         };
         self.out = quote! {
             #prelude
@@ -114,13 +121,13 @@ impl<'input> StructGenerator<'input> {
     }
 }
 
-fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
+fn generate_after_parse(input: &Input, field: &StructField) -> Option<TokenStream> {
     if field.deref_now.is_none() {
         get_after_parse_handler(field).map(|after_parse_fn| {
-            let (args_var, endian_var) = make_field_vars(field);
+            let (reader_var, endian_var, args_var) = make_field_vars(input, field);
             AfterParseCallGenerator::new(field)
                 .get_value_from_ident()
-                .call_after_parse(after_parse_fn, &endian_var, &args_var)
+                .call_after_parse(after_parse_fn, &reader_var, &endian_var, &args_var)
                 .finish()
         })
     } else {
@@ -129,6 +136,7 @@ fn generate_after_parse(field: &StructField) -> Option<TokenStream> {
 }
 
 fn generate_field(
+    input: &Input,
     field: &StructField,
     name: Option<&Ident>,
     variant_name: Option<&str>,
@@ -138,7 +146,7 @@ fn generate_field(
         return TokenStream::new();
     }
 
-    FieldGenerator::new(field)
+    FieldGenerator::new(input, field)
         .read_value()
         .try_conversion(name, variant_name)
         .map_value()
@@ -153,6 +161,7 @@ fn generate_field(
         .prefix_args_and_options()
         .prefix_map_function()
         .prefix_read_function()
+        .prefix_map_stream()
         .finish()
 }
 
@@ -172,6 +181,7 @@ impl<'field> AfterParseCallGenerator<'field> {
     fn call_after_parse(
         mut self,
         after_parse_fn: IdentStr,
+        reader_var: &TokenStream,
         endian_var: &TokenStream,
         args_var: &Option<Ident>,
     ) -> Self {
@@ -194,7 +204,7 @@ impl<'field> AfterParseCallGenerator<'field> {
         };
 
         self.out = quote! {
-            #after_parse_fn(#value, #READER, #endian_var, #args_arg)?;
+            #after_parse_fn(#value, #reader_var, #endian_var, #args_arg)?;
         };
 
         self
@@ -221,25 +231,30 @@ impl<'field> AfterParseCallGenerator<'field> {
 struct FieldGenerator<'field> {
     field: &'field StructField,
     out: TokenStream,
-    args_var: Option<Ident>,
+    outer_reader_var: TokenStream,
+    reader_var: TokenStream,
     endian_var: TokenStream,
+    args_var: Option<Ident>,
 }
 
 impl<'field> FieldGenerator<'field> {
-    fn new(field: &'field StructField) -> Self {
-        let (args_var, endian_var) = make_field_vars(field);
+    fn new(input: &Input, field: &'field StructField) -> Self {
+        let (reader_var, endian_var, args_var) = make_field_vars(input, field);
 
         Self {
             field,
             out: TokenStream::new(),
-            args_var,
+            outer_reader_var: input.stream_ident_or(READER),
+            reader_var,
             endian_var,
+            args_var,
         }
     }
 
     fn append_debug(mut self) -> Self {
         if self.field.debug.is_some() {
             let head = self.out;
+            let reader_var = &self.reader_var;
             let ident = &self.field.ident;
             let at = if ident.span().start().line == 0 {
                 quote!(::core::line!())
@@ -248,7 +263,7 @@ impl<'field> FieldGenerator<'field> {
             };
 
             self.out = quote! {
-                let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+                let #SAVED_POSITION = #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(0))?;
 
                 #head
 
@@ -290,7 +305,12 @@ impl<'field> FieldGenerator<'field> {
         if let Some(after_parse) = get_after_parse_handler(self.field) {
             let after_parse = AfterParseCallGenerator::new(self.field)
                 .get_value_from_temp()
-                .call_after_parse(after_parse, &self.endian_var, &self.args_var)
+                .call_after_parse(
+                    after_parse,
+                    &self.reader_var,
+                    &self.endian_var,
+                    &self.args_var,
+                )
                 .finish();
 
             let value = self.out;
@@ -321,8 +341,9 @@ impl<'field> FieldGenerator<'field> {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
                 let map_err = get_map_err(SAVED_POSITION, t.span());
+                let reader_var = &self.reader_var;
                 quote! {{
-                    let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#READER)?;
+                    let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#reader_var)?;
 
                     #map_func(#value)#map_err?
                 }}
@@ -364,6 +385,20 @@ impl<'field> FieldGenerator<'field> {
             #set_map_function
             #rest
         };
+
+        self
+    }
+
+    fn prefix_map_stream(mut self) -> Self {
+        if let Some(map_stream) = &self.field.map_stream {
+            let rest = self.out;
+            let reader_var = &self.reader_var;
+            let outer_reader_var = &self.outer_reader_var;
+            self.out = quote_spanned_any! { map_stream.span()=>
+                let #reader_var = &mut #MAP_READER_TYPE_HINT::<R, _, _>(#map_stream)(#outer_reader_var);
+                #rest
+            };
+        }
 
         self
     }
@@ -434,7 +469,7 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn prefix_magic(mut self) -> Self {
-        if let Some(magic) = get_magic(&self.field.magic, &self.endian_var) {
+        if let Some(magic) = get_magic(&self.field.magic, &self.reader_var, &self.endian_var) {
             let tail = self.out;
             self.out = quote! {
                 #magic
@@ -452,6 +487,7 @@ impl<'field> FieldGenerator<'field> {
             FieldMode::TryCalc(calc) => get_try_calc(POS, &self.field.ty, calc),
             read_mode @ (FieldMode::Normal | FieldMode::Function(_)) => {
                 let args_arg = get_args_argument(self.field, &self.args_var);
+                let reader_var = &self.reader_var;
                 let endian_var = &self.endian_var;
 
                 if let FieldMode::Function(f) = read_mode {
@@ -462,12 +498,12 @@ impl<'field> FieldGenerator<'field> {
                     // here as a mismatched type instead of later as a
                     // try-conversion error
                     quote_spanned_any! { f.span()=>
-                        (|| #READ_FUNCTION)()(#READER, #endian_var, #args_arg)
+                        (|| #READ_FUNCTION)()(#reader_var, #endian_var, #args_arg)
                             .map(|v| -> #ty { v })
                     }
                 } else {
                     quote! {
-                        #READ_FUNCTION(#READER, #endian_var, #args_arg)
+                        #READ_FUNCTION(#reader_var, #endian_var, #args_arg)
                     }
                 }
             }
@@ -512,15 +548,15 @@ impl<'field> FieldGenerator<'field> {
 
     fn wrap_restore_position(mut self) -> Self {
         if self.field.restore_position.is_some() {
-            self.out = wrap_save_restore(self.out);
+            self.out = wrap_save_restore(&self.reader_var, self.out);
         }
 
         self
     }
 
     fn wrap_seek(mut self) -> Self {
-        let seek_before = generate_seek_before(self.field);
-        let seek_after = generate_seek_after(self.field);
+        let seek_before = generate_seek_before(&self.reader_var, self.field);
+        let seek_after = generate_seek_after(&self.reader_var, self.field);
         if !seek_before.is_empty() || !seek_after.is_empty() {
             let value = self.out;
             self.out = quote! {{
@@ -604,21 +640,28 @@ fn get_prelude(input: &Input, name: Option<&Ident>) -> TokenStream {
         .add_imports(name)
         .add_endian()
         .add_magic_pre_assertion()
+        .add_map_stream()
         .finish()
 }
 
-fn generate_seek_after(field: &StructField) -> TokenStream {
+fn generate_seek_after(reader_var: &TokenStream, field: &StructField) -> TokenStream {
     let pad_size_to = field.pad_size_to.as_ref().map(|pad| {
         quote! {{
             let pad = (#pad) as i64;
-            let size = (#SEEK_TRAIT::stream_position(#READER)? - #POS) as i64;
+            let size = (#SEEK_TRAIT::stream_position(#reader_var)? - #POS) as i64;
             if size < pad {
-                #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(pad - size))?;
+                #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(pad - size))?;
             }
         }}
     });
-    let pad_after = field.pad_after.as_ref().map(map_pad);
-    let align_after = field.align_after.as_ref().map(map_align);
+    let pad_after = field
+        .pad_after
+        .as_ref()
+        .map(|value| map_pad(reader_var, value));
+    let align_after = field
+        .align_after
+        .as_ref()
+        .map(|value| map_align(reader_var, value));
 
     quote! {
         #pad_size_to
@@ -627,17 +670,23 @@ fn generate_seek_after(field: &StructField) -> TokenStream {
     }
 }
 
-fn generate_seek_before(field: &StructField) -> TokenStream {
+fn generate_seek_before(reader_var: &TokenStream, field: &StructField) -> TokenStream {
     let seek_before = field.seek_before.as_ref().map(|seek| {
         quote! {
-            #SEEK_TRAIT::seek(#READER, #seek)?;
+            #SEEK_TRAIT::seek(#reader_var, #seek)?;
         }
     });
-    let pad_before = field.pad_before.as_ref().map(map_pad);
-    let align_before = field.align_before.as_ref().map(map_align);
+    let pad_before = field
+        .pad_before
+        .as_ref()
+        .map(|value| map_pad(reader_var, value));
+    let align_before = field
+        .align_before
+        .as_ref()
+        .map(|value| map_align(reader_var, value));
     let pad_size_to_before = field.pad_size_to.as_ref().map(|_| {
         quote! {
-            let #POS = #SEEK_TRAIT::stream_position(#READER)?;
+            let #POS = #SEEK_TRAIT::stream_position(#reader_var)?;
         }
     });
 
@@ -657,11 +706,14 @@ fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {
     variant_ident.map_or_else(|| quote! { Self }, |ident| quote! { Self::#ident })
 }
 
-fn make_field_vars(field: &StructField) -> (Option<Ident>, TokenStream) {
-    let args_var = if field.needs_args() {
-        Some(make_ident(&field.ident, "args"))
+fn make_field_vars(
+    input: &Input,
+    field: &StructField,
+) -> (TokenStream, TokenStream, Option<Ident>) {
+    let reader_var = if field.map_stream.is_some() {
+        make_ident(&field.ident, "reader").into_token_stream()
     } else {
-        None
+        input.stream_ident_or(READER)
     };
 
     let endian_var = if field.needs_endian() {
@@ -670,31 +722,37 @@ fn make_field_vars(field: &StructField) -> (Option<Ident>, TokenStream) {
         OPT.to_token_stream()
     };
 
-    (args_var, endian_var)
+    let args_var = if field.needs_args() {
+        Some(make_ident(&field.ident, "args"))
+    } else {
+        None
+    };
+
+    (reader_var, endian_var, args_var)
 }
 
-fn map_align(align: &TokenStream) -> TokenStream {
+fn map_align(reader_var: &TokenStream, align: &TokenStream) -> TokenStream {
     quote! {{
         let align = (#align) as i64;
-        let pos = #SEEK_TRAIT::stream_position(#READER)? as i64;
-        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current((align - (pos % align)) % align))?;
+        let pos = #SEEK_TRAIT::stream_position(#reader_var)? as i64;
+        #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current((align - (pos % align)) % align))?;
     }}
 }
 
-fn map_pad(pad: &TokenStream) -> TokenStream {
+fn map_pad(reader_var: &TokenStream, pad: &TokenStream) -> TokenStream {
     quote! {
-        #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current((#pad) as i64))?;
+        #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current((#pad) as i64))?;
     }
 }
 
-fn wrap_save_restore(value: TokenStream) -> TokenStream {
+fn wrap_save_restore(reader_var: &TokenStream, value: TokenStream) -> TokenStream {
     if value.is_empty() {
         value
     } else {
         quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#READER)?;
+            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#reader_var)?;
             #value
-            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))?;
+            #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Start(#SAVED_POSITION))?;
         }
     }
 }

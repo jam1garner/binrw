@@ -28,8 +28,8 @@ pub(super) fn generate_unit_enum(
         .finish();
 
     let read = match en.map.as_repr() {
-        Some(repr) => generate_unit_enum_repr(repr, &en.fields),
-        None => generate_unit_enum_magic(&en.fields),
+        Some(repr) => generate_unit_enum_repr(&input.stream_ident_or(READER), repr, &en.fields),
+        None => generate_unit_enum_magic(&input.stream_ident_or(READER), &en.fields),
     };
 
     quote! {
@@ -38,7 +38,11 @@ pub(super) fn generate_unit_enum(
     }
 }
 
-fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_repr(
+    reader_var: &TokenStream,
+    repr: &TokenStream,
+    variants: &[UnitEnumField],
+) -> TokenStream {
     let clauses = variants.iter().map(|variant| {
         let ident = &variant.ident;
         let pre_assertions = variant
@@ -54,7 +58,7 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
     });
 
     quote! {
-        let #TEMP: #repr = #READ_METHOD(#READER, #OPT, ())?;
+        let #TEMP: #repr = #READ_METHOD(#reader_var, #OPT, ())?;
         #(#clauses else)* {
             Err(#WITH_CONTEXT(
                 #BIN_ERROR::NoVariantMatch {
@@ -69,7 +73,7 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
     }
 }
 
-fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_magic(reader_var: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
     // group fields by the type (Kind) of their magic value, preserve the order
     let group_by_magic_type = variants.iter().fold(
         Vec::new(),
@@ -117,7 +121,7 @@ fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
         });
 
         let body = quote! {
-            match #amp #READ_METHOD(#READER, #OPT, ())? {
+            match #amp #READ_METHOD(#reader_var, #OPT, ())? {
                 #(#matches,)*
                 _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS })
             }
@@ -132,7 +136,7 @@ fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
                 return #TEMP;
             }
 
-            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
+            #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Start(#POS))?;
         }
     });
 
@@ -182,6 +186,8 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
         .reset_position_after_magic()
         .finish();
 
+    let reader_var = input.stream_ident_or(READER);
+
     let try_each_variant = en.variants.iter().map(|variant| {
         let body = generate_variant_impl(en, variant);
 
@@ -203,7 +209,7 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
                 return #TEMP;
             } else {
                 #handle_error
-                #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#POS))?;
+                #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Start(#POS))?;
             }
         }
     });

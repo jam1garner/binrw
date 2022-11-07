@@ -45,6 +45,8 @@ ident_str! {
     pub(crate) ARGS_TYPE_HINT = from_crate!(__private::parse_function_args_type_hint);
     pub(crate) MAP_ARGS_TYPE_HINT = from_crate!(__private::map_args_type_hint);
     pub(crate) REQUIRED_ARG_TRAIT = from_crate!(__private::Required);
+    pub(crate) MAP_READER_TYPE_HINT = from_crate!(__private::map_reader_type_hint);
+    pub(crate) MAP_WRITER_TYPE_HINT = from_crate!(__private::map_writer_type_hint);
     pub(crate) PARSE_FN_TYPE_HINT = from_crate!(__private::parse_fn_type_hint);
     pub(crate) WRITE_FN_TYPE_HINT = from_crate!(__private::write_fn_type_hint);
     pub(crate) WRITE_ARGS_TYPE_HINT = from_crate!(__private::write_function_args_type_hint);

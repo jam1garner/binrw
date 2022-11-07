@@ -1,5 +1,5 @@
-error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `repr`, `magic`, `import`, `import_raw`, `assert`, `pre_assert`, `return_all_errors`, `return_unexpected_error`
- --> $DIR/invalid_keyword_enum.rs:4:6
+error: expected one of: `stream`, `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `repr`, `map_stream`, `magic`, `import`, `import_raw`, `assert`, `pre_assert`, `return_all_errors`, `return_unexpected_error`
+ --> tests/ui/invalid_keyword_enum.rs:4:6
   |
 4 | #[br(invalid_enum_keyword)]
   |      ^^^^^^^^^^^^^^^^^^^^

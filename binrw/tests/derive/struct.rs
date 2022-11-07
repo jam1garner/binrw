@@ -316,6 +316,48 @@ fn magic_const() {
 }
 
 #[test]
+fn map_stream() {
+    use binrw::io::TakeSeekExt;
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(map_stream = |reader| reader.take_seek(4))]
+    struct Test {
+        #[br(parse_with = binrw::helpers::until_eof)]
+        a: Vec<u8>,
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"hello world")).unwrap(),
+        Test {
+            a: b"hell".to_vec()
+        }
+    );
+}
+
+#[test]
+fn map_stream_field() {
+    use binrw::io::TakeSeekExt;
+
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        #[br(map_stream = |reader| reader.take_seek(5), parse_with = binrw::helpers::until_eof)]
+        a: Vec<u8>,
+        b: u8,
+        #[br(map_stream = |reader| reader.take_seek(5), parse_with = binrw::helpers::until_eof)]
+        c: Vec<u8>,
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"hello world")).unwrap(),
+        Test {
+            a: b"hello".to_vec(),
+            b: b' ',
+            c: b"world".to_vec(),
+        }
+    );
+}
+
+#[test]
 fn named_args_trailing_commas() {
     #[rustfmt::skip]
     #[derive(BinRead, Debug, PartialEq)]
@@ -504,6 +546,61 @@ fn raw_ident() {
     }
 
     Test::read_le(&mut Cursor::new(vec![0x00, 0x00, 0x00, 0x00])).unwrap();
+}
+
+#[test]
+fn reader_var() {
+    struct Checksum<T> {
+        inner: T,
+        check: core::num::Wrapping<u8>,
+    }
+
+    impl<T> Checksum<T> {
+        fn new(inner: T) -> Self {
+            Self {
+                inner,
+                check: core::num::Wrapping(0),
+            }
+        }
+
+        fn check(&self) -> u8 {
+            self.check.0
+        }
+    }
+
+    impl<T: binrw::io::Read> binrw::io::Read for Checksum<T> {
+        fn read(&mut self, buf: &mut [u8]) -> binrw::io::Result<usize> {
+            let size = self.inner.read(buf)?;
+            for b in &buf[0..size] {
+                self.check += b;
+            }
+            Ok(size)
+        }
+    }
+
+    impl<T: Seek> Seek for Checksum<T> {
+        fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
+            self.inner.seek(pos)
+        }
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(little, stream = r, map_stream = Checksum::new)]
+    struct Test {
+        a: u16,
+        b: u16,
+        #[br(calc(r.check()))]
+        c: u8,
+    }
+
+    assert_eq!(
+        Test::read(&mut Cursor::new(b"\x01\x02\x03\x04")).unwrap(),
+        Test {
+            a: 0x201,
+            b: 0x403,
+            c: 10,
+        }
+    );
 }
 
 #[test]

@@ -122,6 +122,24 @@ where
     args
 }
 
+pub fn map_reader_type_hint<'a, Reader, MapFn, Output>(x: MapFn) -> MapFn
+where
+    Reader: Read + Seek + 'a,
+    MapFn: Fn(&'a mut Reader) -> Output,
+    Output: Read + Seek + 'a,
+{
+    x
+}
+
+pub fn map_writer_type_hint<'a, Writer, MapFn, Output>(x: MapFn) -> MapFn
+where
+    Writer: Write + Seek + 'a,
+    MapFn: Fn(&'a mut Writer) -> Output,
+    Output: Write + Seek + 'a,
+{
+    x
+}
+
 pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
 where
     Args: Clone,

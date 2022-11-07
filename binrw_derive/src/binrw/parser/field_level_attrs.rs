@@ -20,6 +20,8 @@ attr_struct! {
         pub(crate) endian: CondEndian,
         #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
+        #[from(RW:MapStream)]
+        pub(crate) map_stream: Option<TokenStream>,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
         #[from(RW:Args, RW:ArgsRaw)]
@@ -252,6 +254,7 @@ impl FromField for StructField {
             field: field.clone(),
             endian: <_>::default(),
             map: <_>::default(),
+            map_stream: <_>::default(),
             magic: <_>::default(),
             args: <_>::default(),
             field_mode: <_>::default(),

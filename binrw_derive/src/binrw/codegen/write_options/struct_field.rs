@@ -1,23 +1,27 @@
-use crate::binrw::{
-    codegen::{
-        get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
-        sanitization::{
-            make_ident, BEFORE_POS, BINWRITE_TRAIT, POS, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT,
-            WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
-            WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
-            WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
-            WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+use crate::{
+    binrw::{
+        codegen::{
+            get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
+            sanitization::{
+                make_ident, BEFORE_POS, BINWRITE_TRAIT, MAP_WRITER_TYPE_HINT, POS, SAVED_POSITION,
+                SEEK_FROM, SEEK_TRAIT, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
+                WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
+                WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
+                WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+            },
         },
+        parser::{FieldMode, Map, StructField},
     },
-    parser::{FieldMode, Map, StructField},
+    util::quote_spanned_any,
 };
+use alloc::borrow::Cow;
 use core::ops::Not;
 use proc_macro2::TokenStream;
-use quote::quote;
-use syn::Ident;
+use quote::{quote, ToTokens};
+use syn::{spanned::Spanned, Ident};
 
-pub(crate) fn write_field(field: &StructField) -> TokenStream {
-    StructFieldGenerator::new(field)
+pub(crate) fn write_field(writer_var: &TokenStream, field: &StructField) -> TokenStream {
+    StructFieldGenerator::new(field, writer_var)
         .write_field()
         .wrap_padding()
         .prefix_args()
@@ -26,18 +30,27 @@ pub(crate) fn write_field(field: &StructField) -> TokenStream {
         .prefix_magic()
         .wrap_condition()
         .prefix_assertions()
+        .prefix_map_stream()
         .finish()
 }
 
 struct StructFieldGenerator<'input> {
     field: &'input StructField,
+    outer_writer_var: &'input TokenStream,
+    writer_var: Cow<'input, TokenStream>,
     out: TokenStream,
 }
 
 impl<'a> StructFieldGenerator<'a> {
-    fn new(field: &'a StructField) -> Self {
+    fn new(field: &'a StructField, outer_writer_var: &'a TokenStream) -> Self {
         Self {
             field,
+            outer_writer_var,
+            writer_var: if field.map_stream.is_some() {
+                Cow::Owned(make_ident(&field.ident, "reader").into_token_stream())
+            } else {
+                Cow::Borrowed(outer_writer_var)
+            },
             out: TokenStream::new(),
         }
     }
@@ -50,6 +63,20 @@ impl<'a> StructFieldGenerator<'a> {
             #(#assertions)*
             #out
         };
+
+        self
+    }
+
+    fn prefix_map_stream(mut self) -> Self {
+        if let Some(map_stream) = &self.field.map_stream {
+            let rest = self.out;
+            let writer_var = &self.writer_var;
+            let outer_writer_var = &self.outer_writer_var;
+            self.out = quote_spanned_any! { map_stream.span()=>
+                let #writer_var = &mut #MAP_WRITER_TYPE_HINT::<W, _, _>(#map_stream)(#outer_writer_var);
+                #rest
+            };
+        }
 
         self
     }
@@ -78,7 +105,7 @@ impl<'a> StructFieldGenerator<'a> {
             quote! { #WRITE_FN_TYPE_HINT(#write_fn) }
         };
 
-        let out = &self.out;
+        let out = self.out;
         self.out = quote! {
             let #WRITE_FUNCTION = #write_fn;
             #out
@@ -111,6 +138,7 @@ impl<'a> StructFieldGenerator<'a> {
         let name = &self.field.ident;
         let args = args_ident(name);
         let endian = get_endian(&self.field.endian);
+        let writer_var = &self.writer_var;
 
         let initialize = match &self.field.field_mode {
             FieldMode::Calc(expr) => Some({
@@ -138,7 +166,7 @@ impl<'a> StructFieldGenerator<'a> {
         });
 
         let store_position = quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#WRITER)?;
+            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#writer_var)?;
         };
 
         let name = self
@@ -164,7 +192,7 @@ impl<'a> StructFieldGenerator<'a> {
 
             #WRITE_FUNCTION (
                 { #store_position &(#map_fn (#name) #map_try) },
-                #WRITER,
+                #writer_var,
                 #endian,
                 #args
             )?;
@@ -190,10 +218,10 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn wrap_padding(mut self) -> Self {
-        let out = &self.out;
+        let out = self.out;
 
-        let pad_before = pad_before(self.field);
-        let pad_after = pad_after(self.field);
+        let pad_before = pad_before(&self.writer_var, self.field);
+        let pad_after = pad_after(&self.writer_var, self.field);
         self.out = quote! {
             #pad_before
             #out
@@ -259,11 +287,12 @@ impl<'a> StructFieldGenerator<'a> {
         if let Some(magic) = &self.field.magic {
             let magic = magic.match_value();
             let endian = get_endian(&self.field.endian);
+            let writer_var = &self.writer_var;
             let out = self.out;
             self.out = quote! {
                 #WRITE_METHOD (
                     &#magic,
-                    #WRITER,
+                    #writer_var,
                     #endian,
                     ()
                 )?;
@@ -296,36 +325,36 @@ fn map_fn_ident(ident: &Ident) -> Ident {
     make_ident(ident, "map_fn")
 }
 
-fn pad_after(field: &StructField) -> TokenStream {
+fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     let pad_size_to = field.pad_size_to.as_ref().map(|size| {
         quote! {{
             let pad_to_size = (#size) as u64;
-            let after_pos = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+            let after_pos = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
             if let Some(size) = after_pos.checked_sub(#BEFORE_POS) {
                 if let Some(padding) = pad_to_size.checked_sub(size) {
-                    #WRITE_ZEROES(#WRITER, padding)?;
+                    #WRITE_ZEROES(#writer_var, padding)?;
                 }
             }
         }}
     });
     let pad_after = field.pad_after.as_ref().map(|padding| {
         quote! {
-            #WRITE_ZEROES(#WRITER, (#padding) as u64)?;
+            #WRITE_ZEROES(#writer_var, (#padding) as u64)?;
         }
     });
     let align_after = field.align_after.as_ref().map(|alignment| {
         quote! {{
-            let pos = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+            let pos = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
             let align = ((#alignment) as u64);
             let rem = pos % align;
             if rem != 0 {
-                #WRITE_ZEROES(#WRITER, align - rem)?;
+                #WRITE_ZEROES(#writer_var, align - rem)?;
             }
         }}
     });
     let restore_position = field.restore_position.map(|_| {
         quote! {
-            #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Start(#SAVED_POSITION))?;
+            #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Start(#SAVED_POSITION))?;
         }
     });
 
@@ -337,38 +366,38 @@ fn pad_after(field: &StructField) -> TokenStream {
     }
 }
 
-fn pad_before(field: &StructField) -> TokenStream {
+fn pad_before(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     let seek_before = field.seek_before.as_ref().map(|seek| {
         quote! {
             #SEEK_TRAIT::seek(
-                #WRITER,
+                #writer_var,
                 #seek,
             )?;
         }
     });
     let pad_before = field.pad_before.as_ref().map(|padding| {
         quote! {
-            #WRITE_ZEROES(#WRITER, (#padding) as u64)?;
+            #WRITE_ZEROES(#writer_var, (#padding) as u64)?;
         }
     });
     let align_before = field.align_before.as_ref().map(|alignment| {
         quote! {{
-            let pos = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+            let pos = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
             let align = ((#alignment) as u64);
             let rem = pos % align;
             if rem != 0 {
-                #WRITE_ZEROES(#WRITER, align - rem)?;
+                #WRITE_ZEROES(#writer_var, align - rem)?;
             }
         }}
     });
     let pad_size_to_before = field.pad_size_to.as_ref().map(|_| {
         quote! {
-            let #BEFORE_POS = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+            let #BEFORE_POS = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
         }
     });
     let store_position = field.restore_position.map(|_| {
         quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::seek(#WRITER, #SEEK_FROM::Current(0))?;
+            let #SAVED_POSITION = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
         }
     });
 
