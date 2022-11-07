@@ -92,6 +92,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`little`](#byte-order) | all except unit variant | Sets the byte order to little-endian.
 | rw  | [`magic`](#magic) | all | <span class="br">Matches</span><span class="bw">Writes</span> a magic number.
 | rw  | [`map`](#map) | all except unit variant | Maps an object or value to a new value.
+| rw  | [`map_stream`](#stream-access-and-manipulation) | all except unit variant | Maps the <span class="br">read</span><span class="bw">write</span> stream to a new stream.
 | r   | [`offset`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr) while parsing.
 | r   | [`offset_after`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr) after parsing.
 | rw  | [`pad_after`](#padding-and-alignment) | field | Skips N bytes after <span class="br">reading</span><span class="bw">writing</span> a field.
@@ -105,6 +106,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | r   | [`return_all_errors`](#enum-errors) | non-unit enum | Returns a [`Vec`] containing the error which occurred on each variant of an enum on failure. This is the default.
 | r   | [`return_unexpected_error`](#enum-errors) | non-unit enum | Returns a single generic error on failure.
 | rw  | [`seek_before`](#padding-and-alignment) | field | Moves the <span class="br">reader</span><span class="bw">writer</span> to a specific position before <span class="br">reading<span><span class="bw">writing</span> data.
+| rw  | [`stream`](#stream-access-and-manipulation) | struct, non-unit enum, unit-like enum | Exposes the underlying <span class="br">read</span><span class="bw">write</span> stream.
 | r   | [`temp`](#temp) | field | Uses a field as a temporary variable. Only usable with the [`binread`](macro@crate::binread) attribute macro.
 | r   | [`try`](#try) | field | Tries to parse and stores the [`default`](core::default::Default) value for the type if parsing fails instead of returning an error.
 | rw  | [`try_calc`](#calculations) | field | Like `calc`, but returns a [`Result`](Result).
@@ -2222,6 +2224,272 @@ an [`Io`](crate::Error::Io) error is returned and the
 position is reset to where it was before
 <span class="br">parsing</span><span class="bw">serialisation</span>
 started.
+
+# Stream access and manipulation
+
+The `stream` directive allows direct access to the underlying
+<span class="br">read</span><span class="bw">write</span> stream on a struct or
+enum:
+
+<div class="br">
+
+```text
+#[br(stream = $ident:ident)] or #[br(stream($ident:ident))]
+```
+</div>
+<div class="bw">
+
+```text
+#[bw(stream = $ident:ident)] or #[bw(stream($ident:ident))]
+```
+</div>
+
+The `map_stream` directive allows the <span class="br">read</span><span class="bw">write</span>
+stream to be replaced with another stream when <span class="br">reading</span><span class="bw">writing</span>
+an object or field:
+
+<div class="br">
+
+```text
+#[br(map_stream = $map_fn:expr)] or #[br(map_stream($map_fn:expr))]
+```
+</div>
+<div class="bw">
+
+```text
+#[bw(map_stream = $map_fn:expr)] or #[bw(map_stream($map_fn:expr))]
+```
+</div>
+
+The map function can be a plain function, closure, or call expression which
+returns a plain function or closure. The returned object must implement
+[`Read`](crate::io::Read) + [`Seek`](crate::io::Seek).
+
+## Examples
+
+<div class="br">
+
+### Verifying a checksum
+
+```
+# use core::num::Wrapping;
+# use binrw::{binread, BinRead, io::{Cursor, Read, Seek, SeekFrom}};
+#
+# struct Checksum<T> {
+#     inner: T,
+#     check: Wrapping<u8>,
+# }
+#
+# impl<T> Checksum<T> {
+#    fn new(inner: T) -> Self {
+#         Self {
+#             inner,
+#             check: Wrapping(0),
+#         }
+#    }
+#
+#    fn check(&self) -> u8 {
+#        self.check.0
+#    }
+# }
+#
+# impl<T: Read> Read for Checksum<T> {
+#     fn read(&mut self, buf: &mut [u8]) -> binrw::io::Result<usize> {
+#         let size = self.inner.read(buf)?;
+#         for b in &buf[0..size] {
+#             self.check += b;
+#         }
+#         Ok(size)
+#     }
+# }
+#
+# impl<T: Seek> Seek for Checksum<T> {
+#     fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
+#         self.inner.seek(pos)
+#     }
+# }
+#
+#[binread]
+# #[derive(Debug, PartialEq)]
+#[br(little, stream = r, map_stream = Checksum::new)]
+struct Test {
+    a: u16,
+    b: u16,
+    #[br(temp, assert(c == r.check() - c, "bad checksum: {:#x?} != {:#x?}", c, r.check() - c))]
+    c: u8,
+}
+
+assert_eq!(
+    Test::read(&mut Cursor::new(b"\x01\x02\x03\x04\x0a")).unwrap(),
+    Test {
+        a: 0x201,
+        b: 0x403,
+    }
+);
+```
+
+### Reading encrypted blocks
+
+```
+# use binrw::{binread, BinRead, io::{Cursor, Read, Seek, SeekFrom}, helpers::until_eof};
+#
+# struct BadCrypt<T> {
+#     inner: T,
+#     key: u8,
+# }
+#
+# impl<T> BadCrypt<T> {
+#     fn new(inner: T, key: u8) -> Self {
+#         Self { inner, key }
+#     }
+# }
+#
+# impl<T: Read> Read for BadCrypt<T> {
+#     fn read(&mut self, buf: &mut [u8]) -> binrw::io::Result<usize> {
+#         let size = self.inner.read(buf)?;
+#         for b in &mut buf[0..size] {
+#             *b ^= core::mem::replace(&mut self.key, *b);
+#         }
+#         Ok(size)
+#     }
+# }
+#
+# impl<T: Seek> Seek for BadCrypt<T> {
+#     fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
+#         self.inner.seek(pos)
+#     }
+# }
+#
+#[binread]
+# #[derive(Debug, PartialEq)]
+#[br(little)]
+struct Test {
+    iv: u8,
+    #[br(parse_with = until_eof, map_stream = |reader| BadCrypt::new(reader, iv))]
+    data: Vec<u8>,
+}
+
+assert_eq!(
+    Test::read(&mut Cursor::new(b"\x01\x03\0\x04\x01")).unwrap(),
+    Test {
+        iv: 1,
+        data: vec![2, 3, 4, 5],
+    }
+);
+```
+
+</div>
+
+<div class="bw">
+
+### Writing a checksum
+
+```
+# use core::num::Wrapping;
+# use binrw::{binwrite, BinWrite, io::{Cursor, Write, Seek, SeekFrom}};
+# struct Checksum<T> {
+#     inner: T,
+#     check: Wrapping<u8>,
+# }
+#
+# impl<T> Checksum<T> {
+#    fn new(inner: T) -> Self {
+#         Self {
+#             inner,
+#             check: Wrapping(0),
+#         }
+#    }
+#
+#    fn check(&self) -> u8 {
+#        self.check.0
+#    }
+# }
+#
+# impl<T: Write> Write for Checksum<T> {
+#     fn write(&mut self, buf: &[u8]) -> binrw::io::Result<usize> {
+#         for b in buf {
+#             self.check += b;
+#         }
+#         self.inner.write(buf)
+#     }
+#
+#     fn flush(&mut self) -> binrw::io::Result<()> {
+#         self.inner.flush()
+#     }
+# }
+#
+# impl<T: Seek> Seek for Checksum<T> {
+#     fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
+#         self.inner.seek(pos)
+#     }
+# }
+#
+#[binwrite]
+#[bw(little, stream = w, map_stream = Checksum::new)]
+struct Test {
+    a: u16,
+    b: u16,
+    #[bw(calc(w.check()))]
+    c: u8,
+}
+
+let mut out = Cursor::new(Vec::new());
+Test { a: 0x201, b: 0x403 }.write(&mut out).unwrap();
+
+assert_eq!(out.into_inner(), b"\x01\x02\x03\x04\x0a");
+```
+
+### Writing encrypted blocks
+
+```
+# use binrw::{binwrite, BinWrite, io::{Cursor, Write, Seek, SeekFrom}};
+#
+# struct BadCrypt<T> {
+#     inner: T,
+#     key: u8,
+# }
+#
+# impl<T> BadCrypt<T> {
+#     fn new(inner: T, key: u8) -> Self {
+#         Self { inner, key }
+#     }
+# }
+#
+# impl<T: Write> Write for BadCrypt<T> {
+#     fn write(&mut self, buf: &[u8]) -> binrw::io::Result<usize> {
+#         let mut w = 0;
+#         for b in buf {
+#             self.key ^= b;
+#             w += self.inner.write(&[self.key])?;
+#         }
+#         Ok(w)
+#     }
+#
+#     fn flush(&mut self) -> binrw::io::Result<()> {
+#         self.inner.flush()
+#     }
+# }
+#
+# impl<T: Seek> Seek for BadCrypt<T> {
+#     fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
+#         self.inner.seek(pos)
+#     }
+# }
+#
+#[binwrite]
+# #[derive(Debug, PartialEq)]
+#[bw(little)]
+struct Test {
+    iv: u8,
+    #[bw(map_stream = |writer| BadCrypt::new(writer, *iv))]
+    data: Vec<u8>,
+}
+
+let mut out = Cursor::new(Vec::new());
+Test { iv: 1, data: vec![2, 3, 4, 5] }.write(&mut out).unwrap();
+assert_eq!(out.into_inner(), b"\x01\x03\0\x04\x01");
+```
+</div>
 
 <div class="br">
 

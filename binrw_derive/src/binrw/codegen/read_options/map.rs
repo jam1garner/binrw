@@ -19,13 +19,14 @@ pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStrea
 
     let destructure_ref = destructure_ref(input);
     let assertions = field_asserts(input).chain(get_assertions(input.assertions()));
+    let reader_var = input.stream_ident_or(READER);
 
     // TODO: replace args with top-level arguments and only
     // use `()` as a default
     quote! {
         #prelude
 
-        #READ_METHOD(#READER, #OPT, ())
+        #READ_METHOD(#reader_var, #OPT, ())
             .map(#map)
                 .and_then(|this| {
                     #destructure_ref
@@ -55,13 +56,14 @@ pub(crate) fn generate_try_map(
 
     let destructure_ref = destructure_ref(input);
     let assertions = field_asserts(input).chain(get_assertions(input.assertions()));
+    let reader_var = input.stream_ident_or(READER);
 
     // TODO: replace args with top-level arguments and only
     // use `()` as a default
     quote! {
         #prelude
 
-        #READ_METHOD(#READER, #OPT, #ARGS).and_then(|value| {
+        #READ_METHOD(#reader_var, #OPT, #ARGS).and_then(|value| {
             (#map)(value)#map_err
         })
         .and_then(|this| {

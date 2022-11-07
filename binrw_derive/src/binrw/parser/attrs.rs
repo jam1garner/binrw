@@ -1,7 +1,7 @@
 use super::keywords as kw;
 use crate::meta_types::{
-    IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaList, MetaLit, MetaType,
-    MetaValue, MetaVoid,
+    IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaIdent, MetaList, MetaLit,
+    MetaType, MetaValue, MetaVoid,
 };
 use syn::{Expr, FieldValue, Token};
 
@@ -27,6 +27,7 @@ pub(super) type IsLittle = MetaExpr<kw::is_little>;
 pub(super) type Little = MetaVoid<kw::little>;
 pub(super) type Magic = MetaLit<kw::magic>;
 pub(super) type Map = MetaExpr<kw::map>;
+pub(super) type MapStream = MetaExpr<kw::map_stream>;
 pub(super) type Offset = MetaExpr<kw::offset>;
 pub(super) type OffsetAfter = MetaExpr<kw::offset_after>;
 pub(super) type PadAfter = MetaExpr<kw::pad_after>;
@@ -40,6 +41,7 @@ pub(super) type RestorePosition = MetaVoid<kw::restore_position>;
 pub(super) type ReturnAllErrors = MetaVoid<kw::return_all_errors>;
 pub(super) type ReturnUnexpectedError = MetaVoid<kw::return_unexpected_error>;
 pub(super) type SeekBefore = MetaExpr<kw::seek_before>;
+pub(super) type Stream = MetaIdent<kw::stream>;
 pub(super) type Temp = MetaVoid<kw::temp>;
 pub(super) type Try = MetaVoid<Token![try]>;
 pub(super) type TryCalc = MetaExpr<kw::try_calc>;

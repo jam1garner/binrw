@@ -5,7 +5,8 @@ use super::{
 };
 use crate::binrw::Options;
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
+use quote::ToTokens;
+use syn::{spanned::Spanned, Ident};
 
 /// The parsed representation of binrw attributes on a data structure.
 pub(crate) enum Input {
@@ -158,12 +159,33 @@ impl Input {
         }
     }
 
+    pub(crate) fn map_stream(&self) -> Option<&TokenStream> {
+        match self {
+            Input::Struct(s) | Input::UnitStruct(s) => s.map_stream.as_ref(),
+            Input::Enum(en) => en.map_stream.as_ref(),
+            Input::UnitOnlyEnum(en) => en.map_stream.as_ref(),
+        }
+    }
+
     pub(crate) fn pre_assertions(&self) -> &[Assert] {
         match self {
             Input::Struct(s) | Input::UnitStruct(s) => &s.pre_assertions,
             Input::Enum(e) => &e.pre_assertions,
             Input::UnitOnlyEnum(_) => &[],
         }
+    }
+
+    pub(crate) fn stream_ident(&self) -> Option<&Ident> {
+        match self {
+            Input::Struct(s) | Input::UnitStruct(s) => s.stream_ident.as_ref(),
+            Input::Enum(en) => en.stream_ident.as_ref(),
+            Input::UnitOnlyEnum(en) => en.stream_ident.as_ref(),
+        }
+    }
+
+    pub(crate) fn stream_ident_or(&self, or: impl ToTokens) -> TokenStream {
+        self.stream_ident()
+            .map_or_else(|| or.to_token_stream(), ToTokens::to_token_stream)
     }
 
     pub(crate) fn assertions(&self) -> &[Assert] {
@@ -179,10 +201,14 @@ attr_struct! {
     #[from(StructAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Struct {
+        #[from(RW:Stream)]
+        pub(crate) stream_ident: Option<Ident>,
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
+        #[from(RW:MapStream)]
+        pub(crate) map_stream: Option<TokenStream>,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
         #[from(RW:Import, RW:ImportRaw)]
@@ -282,10 +308,14 @@ attr_struct! {
     #[derive(Clone, Debug, Default)]
     pub(crate) struct Enum {
         pub(crate) ident: Option<syn::Ident>,
+        #[from(RW:Stream)]
+        pub(crate) stream_ident: Option<Ident>,
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
+        #[from(RW:MapStream)]
+        pub(crate) map_stream: Option<TokenStream>,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
         #[from(RW:Import, RW:ImportRaw)]
@@ -330,10 +360,14 @@ attr_struct! {
     #[from(UnitEnumAttr)]
     #[derive(Clone, Debug, Default)]
     pub(crate) struct UnitOnlyEnum {
+        #[from(RW:Stream)]
+        pub(crate) stream_ident: Option<Ident>,
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
         #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
+        #[from(RW:MapStream)]
+        pub(crate) map_stream: Option<TokenStream>,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
         #[from(RW:Import, RW:ImportRaw)]

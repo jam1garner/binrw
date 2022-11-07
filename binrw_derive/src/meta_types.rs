@@ -6,7 +6,7 @@ use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
     token::{self, Token},
-    Expr, Lit, Token, Type,
+    Expr, Ident, Lit, Token, Type,
 };
 
 pub(crate) trait KeywordToken {
@@ -38,6 +38,13 @@ pub(crate) type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
 /// * ident = ty
 /// both are always allowed
 pub(crate) type MetaType<Keyword> = MetaValue<Keyword, Type>;
+
+/// `MetaIdent` represents a key/ident pair
+/// Takes two forms:
+/// * ident(ident)
+/// * ident = ident
+/// both are always allowed
+pub(crate) type MetaIdent<Keyword> = MetaValue<Keyword, Ident>;
 
 /// `MetaLit` represents a key/lit pair
 /// Takes two forms:
@@ -79,6 +86,12 @@ impl<Keyword: Parse, Value: Parse> Parse for MetaValue<Keyword, Value> {
 impl<Keyword, Value: ToTokens> From<MetaValue<Keyword, Value>> for TokenStream {
     fn from(value: MetaValue<Keyword, Value>) -> Self {
         value.value.into_token_stream()
+    }
+}
+
+impl<Keyword> From<MetaValue<Keyword, Ident>> for Ident {
+    fn from(value: MetaValue<Keyword, Ident>) -> Self {
+        value.value
     }
 }
 

@@ -29,8 +29,11 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
         },
     };
 
+    let writer_var = input.stream_ident_or(WRITER);
+
     quote! {
-        let #POS = #SEEK_TRAIT::stream_position(#WRITER)?;
+        let #writer_var = #WRITER;
+        let #POS = #SEEK_TRAIT::stream_position(#writer_var)?;
         #inner
 
         Ok(())
@@ -47,10 +50,11 @@ fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> Token
     } else {
         map.clone()
     };
+    let writer_var = input.stream_ident_or(WRITER);
     let write_data = quote! {
         #WRITE_METHOD(
             &((#map)(self) #map_try),
-            #WRITER,
+            #writer_var,
             #OPT,
             ()
         )?;
@@ -58,7 +62,7 @@ fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> Token
 
     let magic = input.magic();
     let endian = input.endian();
-    prelude::PreludeGenerator::new(write_data, Some(input), name)
+    prelude::PreludeGenerator::new(write_data, Some(input), name, &writer_var)
         .prefix_magic(magic)
         .prefix_endian(endian)
         .prefix_imports()

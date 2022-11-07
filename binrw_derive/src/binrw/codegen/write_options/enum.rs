@@ -11,20 +11,22 @@ pub(crate) fn generate_unit_enum(
     name: Option<&Ident>,
     en: &UnitOnlyEnum,
 ) -> TokenStream {
+    let writer_var = input.stream_ident_or(WRITER);
     let write = match en.map.as_repr() {
-        Some(repr) => generate_unit_enum_repr(repr, &en.fields),
-        None => generate_unit_enum_magic(&en.fields),
+        Some(repr) => generate_unit_enum_repr(&writer_var, repr, &en.fields),
+        None => generate_unit_enum_magic(&writer_var, &en.fields),
     };
 
-    PreludeGenerator::new(write, Some(input), name)
+    PreludeGenerator::new(write, Some(input), name, &writer_var)
         .prefix_magic(&en.magic)
         .prefix_endian(&en.endian)
         .prefix_imports()
+        .prefix_map_stream()
         .finish()
 }
 
 pub(crate) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum) -> TokenStream {
-    EnumGenerator::new(input, name, en)
+    EnumGenerator::new(input, name, en, input.stream_ident_or(WRITER))
         .write_variants()
         .prefix_prelude()
         .finish()
@@ -34,15 +36,22 @@ struct EnumGenerator<'a> {
     en: &'a Enum,
     input: &'a Input,
     name: Option<&'a Ident>,
+    writer_var: TokenStream,
     out: TokenStream,
 }
 
 impl<'a> EnumGenerator<'a> {
-    fn new(input: &'a Input, name: Option<&'a Ident>, en: &'a Enum) -> Self {
+    fn new(
+        input: &'a Input,
+        name: Option<&'a Ident>,
+        en: &'a Enum,
+        writer_var: TokenStream,
+    ) -> Self {
         Self {
             input,
             name,
             en,
+            writer_var,
             out: TokenStream::new(),
         }
     }
@@ -55,11 +64,14 @@ impl<'a> EnumGenerator<'a> {
                 EnumVariant::Unit(_) => None,
             };
 
+            let writer_var = &self.writer_var;
             let writing = match variant {
-                EnumVariant::Variant { options, .. } => StructGenerator::new(None, options, None)
-                    .write_fields()
-                    .prefix_prelude()
-                    .finish(),
+                EnumVariant::Variant { options, .. } => {
+                    StructGenerator::new(None, options, None, &self.writer_var)
+                        .write_fields()
+                        .prefix_prelude()
+                        .finish()
+                }
                 EnumVariant::Unit(variant) => variant
                     .magic
                     .as_ref()
@@ -68,7 +80,7 @@ impl<'a> EnumGenerator<'a> {
                         quote! {
                             #WRITE_METHOD (
                                 &#magic,
-                                #WRITER,
+                                #writer_var,
                                 #OPT,
                                 ()
                             )?;
@@ -96,10 +108,11 @@ impl<'a> EnumGenerator<'a> {
     fn prefix_prelude(mut self) -> Self {
         let out = self.out;
 
-        self.out = PreludeGenerator::new(out, Some(self.input), self.name)
+        self.out = PreludeGenerator::new(out, Some(self.input), self.name, &self.writer_var)
             .prefix_magic(&self.en.magic)
             .prefix_endian(&self.en.endian)
             .prefix_imports()
+            .prefix_map_stream()
             .finish();
 
         self
@@ -110,7 +123,11 @@ impl<'a> EnumGenerator<'a> {
     }
 }
 
-fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_repr(
+    writer_var: &TokenStream,
+    repr: &TokenStream,
+    variants: &[UnitEnumField],
+) -> TokenStream {
     let branches = variants.iter().map(|variant| {
         let name = &variant.ident;
         quote! {
@@ -123,14 +140,14 @@ fn generate_unit_enum_repr(repr: &TokenStream, variants: &[UnitEnumField]) -> To
             &(match self {
                 #(#branches),*
             } as #repr),
-            #WRITER,
+            #writer_var,
             #OPT,
             (),
         )?;
     }
 }
 
-fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
+fn generate_unit_enum_magic(writer_var: &TokenStream, variants: &[UnitEnumField]) -> TokenStream {
     let branches = variants.iter().map(|variant| {
         let name = &variant.ident;
         let magic = variant.magic.as_ref().map(|magic| {
@@ -139,7 +156,7 @@ fn generate_unit_enum_magic(variants: &[UnitEnumField]) -> TokenStream {
             quote! {
                 #WRITE_METHOD (
                     &#magic,
-                    #WRITER,
+                    #writer_var,
                     #OPT,
                     (),
                 )?;
