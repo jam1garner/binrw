@@ -260,17 +260,13 @@ impl Error {
     /// [`io::ErrorKind::UnexpectedEof`].
     #[must_use]
     pub fn is_eof(&self) -> bool {
-        if let Error::EnumErrors {
-            pos: _,
-            variant_errors,
-        } = self
-        {
-            variant_errors.iter().all(|(_, err)| err.is_eof())
-        } else {
-            matches!(
-                self.root_cause(),
-                Error::Io(err) if err.kind() == io::ErrorKind::UnexpectedEof,
-            )
+        match self {
+            Error::Io(err) if err.kind() == io::ErrorKind::UnexpectedEof => true,
+            Error::EnumErrors { variant_errors, .. } => {
+                variant_errors.iter().all(|(_, err)| err.is_eof())
+            }
+            Error::Backtrace(bt) => bt.error.is_eof(),
+            _ => false,
         }
     }
 

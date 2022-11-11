@@ -130,6 +130,26 @@ fn enum_is_eol() {
 }
 
 #[test]
+fn is_eof() {
+    use binrw::{io::Cursor, BinRead};
+
+    #[derive(BinRead, Debug)]
+    enum A {
+        A([u8; 2]),
+        B([u8; 1]),
+    }
+
+    #[derive(BinRead, Debug)]
+    struct Test {
+        _a: A,
+    }
+
+    assert!(Test::read_le(&mut Cursor::new(b""))
+        .expect_err("accepted bad data")
+        .is_eof());
+}
+
+#[test]
 fn not_custom_error() {
     let err = Error::AssertFail {
         pos: 0,
