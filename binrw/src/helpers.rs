@@ -375,6 +375,96 @@ where
     }
 }
 
+/// Creates a parser that uses an iterator to read into a collection, using
+/// each item of the iterator as an argument.
+///
+/// # Examples
+///
+/// Reading an object containing header data followed by body data:
+///
+/// ```
+/// # use binrw::{args, BinRead, helpers::from_iterator_args, io::Cursor, BinReaderExt};
+/// #[derive(BinRead)]
+/// #[br(big)]
+/// struct Header {
+///     count: u16,
+///
+///     #[br(args { count: count.into() })]
+///     sizes: Vec<u16>,
+/// }
+///
+/// #[derive(BinRead)]
+/// #[br(big)]
+/// struct Object {
+///     header: Header,
+///     #[br(parse_with = from_iterator_args(header.sizes.iter().map(|size| -> <Vec<u8> as BinRead>::Args {
+///         args! { count: (*size).into() }
+///     })))]
+///     segments: Vec<Vec<u8>>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\0\x02\0\x01\0\x02\x03\x04\x05");
+/// # let x = Object::read(&mut x).unwrap();
+/// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
+pub fn from_iterator_args<R, T, Arg, Ret, It>(
+    it: It,
+) -> impl FnOnce(&mut R, &ReadOptions, ()) -> BinResult<Ret>
+where
+    T: BinRead<Args = Arg>,
+    R: Read + Seek,
+    Arg: Clone,
+    Ret: FromIterator<T> + 'static,
+    It: Iterator<Item = Arg>,
+{
+    from_iterator_args_with(it, default_reader)
+}
+
+/// Creates a parser that uses an iterator to read into a collection, using
+/// each item of the iterator as an argument passed to the given read function.
+///
+/// # Examples
+///
+/// Reading an object containing header data followed by body data:
+///
+/// ```
+/// # use binrw::{args, BinRead, helpers::from_iterator_args_with, io::Cursor, BinReaderExt};
+/// #[derive(BinRead)]
+/// #[br(big)]
+/// struct Header {
+///     count: u16,
+///
+///     #[br(args { count: count.into() })]
+///     sizes: Vec<u16>,
+/// }
+///
+/// #[derive(BinRead)]
+/// #[br(big)]
+/// struct Object {
+///     header: Header,
+///     #[br(parse_with = from_iterator_args_with(header.sizes.iter(), |reader, options, size| {
+///         Vec::<u8>::read_options(reader, options, args! { count: (*size).into() })
+///     }))]
+///     segments: Vec<Vec<u8>>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\0\x02\0\x01\0\x02\x03\x04\x05");
+/// # let x = Object::read(&mut x).unwrap();
+/// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
+pub fn from_iterator_args_with<Reader, T, Arg, Ret, It, ReadFn>(
+    it: It,
+    read: ReadFn,
+) -> impl FnOnce(&mut Reader, &ReadOptions, ()) -> BinResult<Ret>
+where
+    T: BinRead,
+    Reader: Read + Seek,
+    Arg: Clone,
+    Ret: FromIterator<T> + 'static,
+    It: Iterator<Item = Arg>,
+    ReadFn: Fn(&mut Reader, &ReadOptions, Arg) -> BinResult<T>,
+{
+    move |reader, options, _| it.map(|arg| read(reader, options, arg)).collect()
+}
+
 fn default_reader<R: Read + Seek, Arg: Clone, T: BinRead<Args = Arg>>(
     reader: &mut R,
     options: &ReadOptions,
