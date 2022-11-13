@@ -229,6 +229,51 @@ fn all_default_imports() {
 }
 
 #[test]
+fn gat_list() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(little, import(borrowed: &u8))]
+    struct Test {
+        #[br(calc(*borrowed))]
+        a: u8,
+    }
+
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b""), (&1_u8,)).unwrap(),
+        Test { a: 1 }
+    );
+}
+
+#[test]
+fn gat_named() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(little, import { borrowed: &u8 })]
+    struct Test {
+        #[br(calc(*borrowed))]
+        a: u8,
+    }
+
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b""), binrw::args! { borrowed: &1_u8 }).unwrap(),
+        Test { a: 1 }
+    );
+}
+
+#[test]
+fn gat_raw() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(little, import_raw(borrowed: &u8))]
+    struct Test {
+        #[br(calc(*borrowed))]
+        a: u8,
+    }
+
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b""), &1_u8).unwrap(),
+        Test { a: 1 }
+    );
+}
+
+#[test]
 fn if_alternate() {
     #[derive(BinRead, Debug)]
     #[br(import{ try_read: bool })]

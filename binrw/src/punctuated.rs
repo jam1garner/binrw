@@ -43,7 +43,11 @@ pub struct Punctuated<T: BinRead, P: BinRead> {
     pub separators: Vec<P>,
 }
 
-impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
+impl<T, P> Punctuated<T, P>
+where
+    T: BinRead,
+    P: for<'a> BinRead<Args<'a> = ()>,
+{
     /// Parses values of type `T` separated by values of type `P` without a
     /// trailing separator value.
     ///
@@ -72,7 +76,10 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     /// # assert_eq!(y.x.separators, vec![0, 1]);
     /// ```
     #[crate::parser(reader, endian)]
-    pub fn separated(args: VecArgs<T::Args>, ...) -> BinResult<Self> {
+    pub fn separated<'a>(args: VecArgs<T::Args<'a>>, ...) -> BinResult<Self>
+    where
+        T::Args<'a>: Clone,
+    {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count.max(1) - 1);
 
@@ -95,7 +102,10 @@ impl<T: BinRead, P: BinRead<Args = ()>> Punctuated<T, P> {
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[crate::parser(reader, endian)]
-    pub fn separated_trailing(args: VecArgs<T::Args>, ...) -> BinResult<Self> {
+    pub fn separated_trailing<'a>(args: VecArgs<T::Args<'a>>, ...) -> BinResult<Self>
+    where
+        T::Args<'a>: Clone,
+    {
         let mut data = Vec::with_capacity(args.count);
         let mut separators = Vec::with_capacity(args.count);
 

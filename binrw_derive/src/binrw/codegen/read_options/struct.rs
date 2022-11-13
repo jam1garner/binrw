@@ -409,7 +409,7 @@ impl<'field> FieldGenerator<'field> {
                     }
                     Map::None => {
                         quote_spanned! {ty.span()=>
-                            let #args_var: <#ty as #BINREAD_TRAIT>::Args = #args;
+                            let #args_var: <#ty as #BINREAD_TRAIT>::Args<'_> = #args;
                         }
                     }
                 }

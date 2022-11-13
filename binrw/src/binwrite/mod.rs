@@ -44,7 +44,7 @@ pub trait BinWrite {
     /// [`write()`]: Self::write
     /// [`write_args()`]: Self::write_args
     /// [`write_options()`]: Self::write_options
-    type Args: Clone;
+    type Args<'a>;
 
     /// Write `Self` to the writer using default arguments.
     ///
@@ -55,7 +55,7 @@ pub trait BinWrite {
     fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
     where
         Self: crate::meta::WriteEndian,
-        Self::Args: Required,
+        for<'a> Self::Args<'a>: Required,
     {
         self.write_args(writer, Self::Args::args())
     }
@@ -68,7 +68,7 @@ pub trait BinWrite {
     #[inline]
     fn write_be<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
     where
-        Self::Args: Required,
+        for<'a> Self::Args<'a>: Required,
     {
         self.write_be_args(writer, Self::Args::args())
     }
@@ -81,7 +81,7 @@ pub trait BinWrite {
     #[inline]
     fn write_le<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
     where
-        Self::Args: Required,
+        for<'a> Self::Args<'a>: Required,
     {
         self.write_le_args(writer, Self::Args::args())
     }
@@ -92,7 +92,7 @@ pub trait BinWrite {
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
-    fn write_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()>
+    fn write_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args<'_>) -> BinResult<()>
     where
         Self: crate::meta::WriteEndian,
     {
@@ -106,7 +106,11 @@ pub trait BinWrite {
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
-    fn write_be_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+    fn write_be_args<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
         self.write_options(writer, Endian::Big, args)
     }
 
@@ -117,7 +121,11 @@ pub trait BinWrite {
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[inline]
-    fn write_le_args<W: Write + Seek>(&self, writer: &mut W, args: Self::Args) -> BinResult<()> {
+    fn write_le_args<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
         self.write_options(writer, Endian::Little, args)
     }
 
@@ -131,7 +139,7 @@ pub trait BinWrite {
         &self,
         writer: &mut W,
         endian: Endian,
-        args: Self::Args,
+        args: Self::Args<'_>,
     ) -> BinResult<()>;
 }
 
@@ -159,7 +167,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_type<T: BinWrite>(&mut self, value: &T, endian: Endian) -> BinResult<()>
     where
-        T::Args: Required,
+        for<'a> T::Args<'a>: Required,
     {
         self.write_type_args(value, endian, T::Args::args())
     }
@@ -171,7 +179,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_be<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
-        T::Args: Required,
+        for<'a> T::Args<'a>: Required,
     {
         self.write_type(value, Endian::Big)
     }
@@ -183,7 +191,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_le<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
-        T::Args: Required,
+        for<'a> T::Args<'a>: Required,
     {
         self.write_type(value, Endian::Little)
     }
@@ -195,7 +203,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
     fn write_ne<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
-        T::Args: Required,
+        for<'a> T::Args<'a>: Required,
     {
         self.write_type(value, Endian::NATIVE)
     }
@@ -209,7 +217,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
         &mut self,
         value: &T,
         endian: Endian,
-        args: T::Args,
+        args: T::Args<'_>,
     ) -> BinResult<()> {
         T::write_options(value, self, endian, args)?;
 
@@ -222,7 +230,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
-    fn write_be_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
+    fn write_be_args<T: BinWrite>(&mut self, value: &T, args: T::Args<'_>) -> BinResult<()> {
         self.write_type_args(value, Endian::Big, args)
     }
 
@@ -232,7 +240,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
-    fn write_le_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
+    fn write_le_args<T: BinWrite>(&mut self, value: &T, args: T::Args<'_>) -> BinResult<()> {
         self.write_type_args(value, Endian::Little, args)
     }
 
@@ -242,7 +250,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
-    fn write_ne_args<T: BinWrite>(&mut self, value: &T, args: T::Args) -> BinResult<()> {
+    fn write_ne_args<T: BinWrite>(&mut self, value: &T, args: T::Args<'_>) -> BinResult<()> {
         self.write_type_args(value, Endian::NATIVE, args)
     }
 }

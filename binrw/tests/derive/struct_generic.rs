@@ -3,7 +3,7 @@ use binrw::{io::Cursor, BinRead};
 #[test]
 fn derive_generic() {
     #[derive(BinRead)]
-    struct Test<T: BinRead<Args = ()> + Default> {
+    struct Test<T: for<'a> BinRead<Args<'a> = ()> + Default> {
         a: [T; 3],
     }
 
