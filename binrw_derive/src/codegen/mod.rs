@@ -122,7 +122,10 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
                 }
                 None => {
                     let condition = condition.to_string();
-                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| { #condition }) }
+                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| {
+                        extern crate alloc;
+                        alloc::format!("assertion failed: `{}`", #condition)
+                    }) }
                 }
             };
 

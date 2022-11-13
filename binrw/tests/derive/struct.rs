@@ -75,7 +75,7 @@ fn assert() {
     match error {
         binrw::Error::AssertFail { pos, message } => {
             assert_eq!(pos, 0);
-            assert_eq!(message, "a == 1");
+            assert_eq!(message, "assertion failed: `a == 1`");
         }
         _ => panic!("bad error type"),
     }
