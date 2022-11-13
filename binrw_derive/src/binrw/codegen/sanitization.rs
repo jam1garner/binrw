@@ -20,6 +20,8 @@ macro_rules! from_write_trait {
     };
 }
 
+pub(crate) const ARGS_LIFETIME: &str = "__binrw_generated_args_lifetime";
+
 ident_str! {
     pub(crate) BINREAD_TRAIT = from_read_trait!();
     pub(crate) BINWRITE_TRAIT = from_write_trait!();

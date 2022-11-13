@@ -77,8 +77,13 @@ pub struct FilePtr<Ptr: IntoSeekFrom, T> {
     pub value: Option<T>,
 }
 
-impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value: BinRead> BinRead for FilePtr<Ptr, Value> {
-    type Args = FilePtrArgs<Value::Args>;
+impl<Ptr, Value> BinRead for FilePtr<Ptr, Value>
+where
+    Ptr: for<'a> BinRead<Args<'a> = ()> + IntoSeekFrom,
+    Value: BinRead,
+    for<'a> Value::Args<'a>: Clone,
+{
+    type Args<'a> = FilePtrArgs<Value::Args<'a>>;
 
     /// Reads the offset of the value from the reader.
     ///
@@ -87,7 +92,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value: BinRead> BinRead for FilePtr
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args,
+        _: Self::Args<'_>,
     ) -> BinResult<Self> {
         Ok(FilePtr {
             ptr: Ptr::read_options(reader, endian, ())?,
@@ -100,7 +105,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value: BinRead> BinRead for FilePtr
         &mut self,
         reader: &mut R,
         endian: Endian,
-        args: FilePtrArgs<Value::Args>,
+        args: Self::Args<'_>,
     ) -> BinResult<()>
     where
         R: Read + Seek,
@@ -115,7 +120,10 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value: BinRead> BinRead for FilePtr
     }
 }
 
-impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
+impl<Ptr, Value> FilePtr<Ptr, Value>
+where
+    Ptr: for<'a> BinRead<Args<'a> = ()> + IntoSeekFrom,
+{
     fn read_with_parser<R, Parser, AfterParse, Args>(
         parser: Parser,
         after_parse: AfterParse,
@@ -177,7 +185,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
     pub fn parse<Args>(args: FilePtrArgs<Args>, ...) -> BinResult<Value>
     where
         Args: Clone,
-        Value: BinRead<Args = Args>,
+        Value: for<'a> BinRead<Args<'a> = Args>,
     {
         Ok(Self::read_with_parser(
             Value::read_options,

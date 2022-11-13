@@ -11,9 +11,12 @@ fn BinReaderExt_calls_after_parse() {
 #[test]
 fn try_calls_after_parse() {
     #[derive(BinRead)]
-    struct Try<BR: BinRead<Args = Args>, Args: Default + 'static>(#[br(try)] Option<BR>);
+    struct Try<BR>(#[br(try)] Option<BR>)
+    where
+        BR: BinRead,
+        for<'a> BR::Args<'a>: Default + 'static;
 
-    let test: Try<FilePtr8<u8>, _> = Cursor::new([0x01, 0xFF]).read_be().unwrap();
+    let test: Try<FilePtr8<u8>> = Cursor::new([0x01, 0xFF]).read_be().unwrap();
 
     assert_eq!(*test.0.unwrap(), 0xFF)
 }

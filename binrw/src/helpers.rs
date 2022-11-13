@@ -31,7 +31,7 @@ pub fn until<Reader, T, CondFn, Arg, Ret>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
@@ -123,7 +123,7 @@ pub fn until_exclusive<Reader, T, CondFn, Arg, Ret>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
     Reader: Read + Seek,
     CondFn: Fn(&T) -> bool,
     Arg: Clone,
@@ -216,7 +216,7 @@ pub fn until_eof<Reader, T, Arg, Ret>(
     args: Arg,
 ) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
     Reader: Read + Seek,
     Arg: Clone,
     Ret: FromIterator<T>,
@@ -300,7 +300,7 @@ where
 /// #[br(big)]
 /// struct Object {
 ///     header: Header,
-///     #[br(parse_with = args_iter(header.sizes.iter().map(|&size| -> <Vec<u8> as BinRead>::Args {
+///     #[br(parse_with = args_iter(header.sizes.iter().map(|&size| -> <Vec<u8> as BinRead>::Args<'_> {
 ///         args! { count: size.into() }
 ///     })))]
 ///     segments: Vec<Vec<u8>>,
@@ -311,7 +311,7 @@ where
 /// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
 pub fn args_iter<R, T, Arg, Ret, It>(it: It) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
     R: Read + Seek,
     Arg: Clone,
     Ret: FromIterator<T>,
@@ -400,7 +400,7 @@ where
 /// ```
 pub fn count<R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, Endian, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args = Arg>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
     R: Read + Seek,
     Arg: Clone,
     Ret: FromIterator<T> + 'static,
@@ -476,7 +476,10 @@ where
 }
 
 #[binrw::parser(reader, endian)]
-fn default_reader<Arg: Clone, T: BinRead<Args = Arg>>(args: T::Args, ...) -> BinResult<T> {
+fn default_reader<'a, T: BinRead>(args: T::Args<'a>, ...) -> BinResult<T>
+where
+    T::Args<'a>: Clone,
+{
     let mut value = T::read_options(reader, endian, args.clone())?;
     value.after_parse(reader, endian, args)?;
     Ok(value)

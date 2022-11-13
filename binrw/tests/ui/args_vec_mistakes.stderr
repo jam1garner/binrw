@@ -82,5 +82,5 @@ error[E0277]: the trait bound `VecArgs<()>: Default` is not satisfied
 note: required by a bound in `binrw::BinRead::read`
   --> src/binread/mod.rs
    |
-   |         Self::Args: Required,
-   |                     ^^^^^^^^ required by this bound in `binrw::BinRead::read`
+   |         for<'a> Self::Args<'a>: Required,
+   |                                 ^^^^^^^^ required by this bound in `binrw::BinRead::read`

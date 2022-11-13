@@ -74,7 +74,14 @@ where
 
 pub fn magic<R, B>(reader: &mut R, expected: B, endian: Endian) -> BinResult<()>
 where
-    B: BinRead<Args = ()> + core::fmt::Debug + PartialEq + Sync + Send + Clone + Copy + 'static,
+    B: for<'a> BinRead<Args<'a> = ()>
+        + core::fmt::Debug
+        + PartialEq
+        + Sync
+        + Send
+        + Clone
+        + Copy
+        + 'static,
     R: Read + Seek,
 {
     let pos = reader.stream_position()?;
@@ -91,7 +98,6 @@ where
 
 pub fn parse_fn_type_hint<Ret, ParseFn, R, Args>(f: ParseFn) -> ParseFn
 where
-    Args: Clone,
     R: Read + Seek,
     ParseFn: FnOnce(&mut R, Endian, Args) -> BinResult<Ret>,
 {
@@ -117,14 +123,13 @@ where
 pub fn map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> Output,
-    Input: BinRead<Args = Args>,
+    Input: for<'a> BinRead<Args<'a> = Args>,
 {
     args
 }
 
 pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
 where
-    Args: Clone,
     Writer: Write + Seek,
     WriterFn: FnOnce(&T, &mut Writer, Endian, Args) -> BinResult<()>,
 {
@@ -134,7 +139,7 @@ where
 pub fn write_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> Output,
-    Output: BinWrite<Args = Args>,
+    Output: for<'a> BinWrite<Args<'a> = Args>,
 {
     args
 }
@@ -146,7 +151,7 @@ pub fn write_try_map_args_type_hint<Input, Output, Error, MapFn, Args>(
 where
     Error: CustomError,
     MapFn: FnOnce(Input) -> Result<Output, Error>,
-    Output: BinWrite<Args = Args>,
+    Output: for<'a> BinWrite<Args<'a> = Args>,
 {
     args
 }

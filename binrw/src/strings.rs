@@ -34,12 +34,12 @@ pub struct NullString(
 );
 
 impl BinRead for NullString {
-    type Args = ();
+    type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args,
+        _: Self::Args<'_>,
     ) -> BinResult<Self> {
         let mut values = vec![];
 
@@ -54,13 +54,13 @@ impl BinRead for NullString {
 }
 
 impl BinWrite for NullString {
-    type Args = ();
+    type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
         endian: Endian,
-        args: Self::Args,
+        args: Self::Args<'_>,
     ) -> BinResult<()> {
         self.0.write_options(writer, endian, args)?;
         0u8.write_options(writer, endian, args)?;
@@ -156,12 +156,12 @@ pub struct NullWideString(
 );
 
 impl BinRead for NullWideString {
-    type Args = ();
+    type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args,
+        _: Self::Args<'_>,
     ) -> BinResult<Self> {
         let mut values = vec![];
 
@@ -176,13 +176,13 @@ impl BinRead for NullWideString {
 }
 
 impl BinWrite for NullWideString {
-    type Args = ();
+    type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
         endian: Endian,
-        args: Self::Args,
+        args: Self::Args<'_>,
     ) -> BinResult<()> {
         self.0.write_options(writer, endian, args)?;
         0u16.write_options(writer, endian, args)?;

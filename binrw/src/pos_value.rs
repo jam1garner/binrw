@@ -30,12 +30,12 @@ pub struct PosValue<T> {
 }
 
 impl<T: BinRead> BinRead for PosValue<T> {
-    type Args = T::Args;
+    type Args<'a> = T::Args<'a>;
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        args: T::Args,
+        args: Self::Args<'_>,
     ) -> BinResult<Self> {
         let pos = reader.stream_position()?;
 
@@ -49,7 +49,7 @@ impl<T: BinRead> BinRead for PosValue<T> {
         &mut self,
         reader: &mut R,
         endian: Endian,
-        args: Self::Args,
+        args: Self::Args<'_>,
     ) -> BinResult<()> {
         self.val.after_parse(reader, endian, args)
     }

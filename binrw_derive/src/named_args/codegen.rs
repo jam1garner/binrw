@@ -422,19 +422,16 @@ impl BuilderField {
     }
 }
 
-impl From<&IdentTypeMaybeDefault> for BuilderField {
-    fn from(import: &IdentTypeMaybeDefault) -> Self {
-        let name = import.ident.clone();
-        let ty = import.ty.clone();
+impl From<IdentTypeMaybeDefault> for BuilderField {
+    fn from(import: IdentTypeMaybeDefault) -> Self {
+        let name = import.ident;
+        let ty = import.ty;
 
         // if no default is provided, mark as required
         let kind = import
             .default
-            .as_ref()
             .map_or(BuilderFieldKind::Required, |default| {
-                BuilderFieldKind::Optional {
-                    default: default.clone(),
-                }
+                BuilderFieldKind::Optional { default }
             });
 
         BuilderField { name, ty, kind }

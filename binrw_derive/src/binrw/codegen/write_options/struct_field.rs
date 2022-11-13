@@ -231,7 +231,7 @@ impl<'a> StructFieldGenerator<'a> {
                 Map::None => {
                     let ty = &self.field.ty;
                     quote! {
-                        let #args: <#ty as #BINWRITE_TRAIT>::Args = #args_val;
+                        let #args: <#ty as #BINWRITE_TRAIT>::Args<'_> = #args_val;
                         #out
                     }
                 }

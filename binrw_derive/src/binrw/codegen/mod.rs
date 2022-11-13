@@ -13,8 +13,9 @@ use crate::{
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use sanitization::{
-    ARGS, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_ERROR,
-    BIN_RESULT, ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, TEMP, WRITER, WRITE_TRAIT,
+    ARGS, ARGS_LIFETIME, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT,
+    BIN_ERROR, BIN_RESULT, ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, TEMP, WRITER,
+    WRITE_TRAIT,
 };
 use syn::{spanned::Spanned, DeriveInput, Ident, Type};
 
@@ -54,14 +55,80 @@ fn generate_imports(
     ty_vis: &syn::Visibility,
     is_write: bool,
 ) -> (TokenStream, Option<TokenStream>) {
+    use syn::fold::Fold;
+
+    fn has_elided_lifetime(ty: &syn::Type) -> bool {
+        use syn::visit::Visit;
+        struct Finder(bool);
+        impl Visit<'_> for Finder {
+            fn visit_lifetime(&mut self, i: &syn::Lifetime) {
+                self.0 |= i.ident == "_";
+            }
+
+            fn visit_type_reference(&mut self, i: &syn::TypeReference) {
+                self.0 |= i.lifetime.is_none();
+            }
+        }
+        let mut finder = Finder(false);
+        finder.visit_type(ty);
+        finder.0
+    }
+
+    struct ExpandLifetimes;
+    impl Fold for ExpandLifetimes {
+        fn fold_lifetime(&mut self, mut i: syn::Lifetime) -> syn::Lifetime {
+            if i.ident == "_" {
+                i.ident = syn::Ident::new(ARGS_LIFETIME, i.ident.span());
+            }
+            i
+        }
+
+        fn fold_type_reference(&mut self, mut i: syn::TypeReference) -> syn::TypeReference {
+            if i.lifetime.is_none() {
+                i.lifetime = Some(get_args_lifetime(i.and_token.span()));
+            }
+            i
+        }
+    }
+
     match imports {
         Imports::None => (quote! { () }, None),
-        Imports::List(_, types) => (quote! { (#(#types,)*) }, None),
-        Imports::Raw(_, ty) => (ty.to_token_stream(), None),
+        Imports::List(_, types) => {
+            let types = types.iter().map(|ty| ExpandLifetimes.fold_type(ty.clone()));
+            (quote! { (#(#types,)*) }, None)
+        }
+        Imports::Raw(_, ty) => (
+            ExpandLifetimes
+                .fold_type(ty.as_ref().clone())
+                .into_token_stream(),
+            None,
+        ),
         Imports::Named(args) => {
             let name = arg_type_name(type_name, is_write);
-            let defs = derive_from_imports(type_name, is_write, &name, ty_vis, args.iter());
-            (name.into_token_stream(), Some(defs))
+            let lifetime = args
+                .iter()
+                .any(|arg| has_elided_lifetime(&arg.ty))
+                .then(|| get_args_lifetime(type_name.span()));
+            let defs = derive_from_imports(
+                type_name,
+                is_write,
+                &name,
+                ty_vis,
+                lifetime.clone(),
+                args.iter().map(|arg| {
+                    let mut arg = arg.clone();
+                    arg.ty = ExpandLifetimes.fold_type(arg.ty);
+                    arg
+                }),
+            );
+            (
+                if let Some(lifetime) = lifetime {
+                    quote_spanned! { type_name.span()=> #name<#lifetime> }
+                } else {
+                    name.into_token_stream()
+                },
+                Some(defs),
+            )
         }
     }
 }
@@ -79,7 +146,7 @@ fn generate_trait_impl<const WRITE: bool>(
                     &self,
                     #WRITER: &mut W,
                     #OPT: #ENDIAN_ENUM,
-                    #ARGS: Self::Args
+                    #ARGS: Self::Args<'_>
                 ) -> #BIN_RESULT<()>
             },
         )
@@ -88,7 +155,7 @@ fn generate_trait_impl<const WRITE: bool>(
             BINREAD_TRAIT,
             quote! {
                 fn read_options<R: #READ_TRAIT + #SEEK_TRAIT>
-                    (#READER: &mut R, #OPT: #ENDIAN_ENUM, #ARGS: Self::Args)
+                    (#READER: &mut R, #OPT: #ENDIAN_ENUM, #ARGS: Self::Args<'_>)
                     -> #BIN_RESULT<Self>
             },
         )
@@ -112,18 +179,23 @@ fn generate_trait_impl<const WRITE: bool>(
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
 
+    let args_lifetime = get_args_lifetime(Span::call_site());
     quote! {
         #[automatically_derived]
         #[allow(non_snake_case)]
         #[allow(clippy::redundant_closure_call)]
         impl #impl_generics #trait_name for #name #ty_generics #where_clause {
-            type Args = #arg_type;
+            type Args<#args_lifetime> = #arg_type;
 
             #fn_sig {
                 #fn_impl
             }
         }
     }
+}
+
+fn get_args_lifetime(span: proc_macro2::Span) -> syn::Lifetime {
+    syn::Lifetime::new(&format!("'{}", ARGS_LIFETIME), span)
 }
 
 fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {

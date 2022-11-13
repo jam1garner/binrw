@@ -18,12 +18,13 @@ pub(crate) fn arg_type_name(ty_name: &Ident, is_write: bool) -> Ident {
     }
 }
 
-pub(crate) fn derive_from_imports<'a>(
+pub(crate) fn derive_from_imports(
     ty_name: &Ident,
     is_write: bool,
     result_name: &Ident,
     vis: &Visibility,
-    args: impl Iterator<Item = &'a IdentTypeMaybeDefault>,
+    lifetime: Option<syn::Lifetime>,
+    args: impl Iterator<Item = IdentTypeMaybeDefault>,
 ) -> TokenStream {
     let builder_name = &if is_write {
         format_ident!("{}BinWriteArgBuilder", ty_name, span = Span::mixed_site())
@@ -37,7 +38,10 @@ pub(crate) fn derive_from_imports<'a>(
         builder_name,
         result_name,
         fields: &args.map(Into::into).collect::<Vec<_>>(),
-        generics: &[],
+        generics: lifetime
+            .map(|lifetime| [syn::GenericParam::Lifetime(syn::LifetimeDef::new(lifetime))])
+            .as_ref()
+            .map_or(&[], |generics| generics.as_slice()),
         vis,
     }
     .generate(true)
