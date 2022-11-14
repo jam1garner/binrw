@@ -1189,6 +1189,11 @@ The `dbg` directive prints the offset and value of a field to
 
 The type of the field being inspected must implement [`Debug`](std::fmt::Debug).
 
+Non-nightly Rust versions without support for
+[`proc_macro_span`](https://github.com/rust-lang/rust/issues/54725) will emit
+line numbers pointing to the binrw attribute on the parent struct or enum rather
+than the field.
+
 ## Examples
 
 ```
@@ -1217,9 +1222,9 @@ struct Test {
 
 // prints:
 //
-// [file.rs:1 | offset 0x2] a = 0x10
-// [file.rs:1 | offset 0x6] b = 0x40302010
-// [file.rs:10 | offset 0x2] inner = Inner {
+// [file.rs:5 | offset 0x2] a = 0x10
+// [file.rs:7 | offset 0x6] b = 0x40302010
+// [file.rs:15 | offset 0x2] inner = Inner {
 //     a: 0x10,
 //     b: 0x40302010,
 // }

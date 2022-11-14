@@ -36,12 +36,14 @@ fn dbg() {
             std::str::from_utf8(&result).unwrap(),
             format!(
                 concat!(
-                    "[{file}:10 | offset 0x2] value = 0x4\n",
-                    "[{file}:10 | offset 0x6] inner = Inner(\n",
+                    "[{file}:{offset_0} | offset 0x2] value = 0x4\n",
+                    "[{file}:{offset_1} | offset 0x6] inner = Inner(\n",
                     "    0xeffed,\n",
                     ")\n"
                 ),
-                file = core::file!()
+                file = core::file!(),
+                offset_0 = if cfg!(nightly) { 15 } else { 10 },
+                offset_1 = if cfg!(nightly) { 17 } else { 10 },
             )
         );
     }

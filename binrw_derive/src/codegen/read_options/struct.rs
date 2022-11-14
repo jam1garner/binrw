@@ -244,14 +244,20 @@ impl<'field> FieldGenerator<'field> {
         if self.field.debug.is_some() {
             let head = self.out;
             let ident = &self.field.ident;
+            let at = if ident.span().start().line == 0 {
+                quote!(::core::line!())
+            } else {
+                ident.span().start().line.to_token_stream()
+            };
+
             self.out = quote! {
                 let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
 
                 #head
 
                 #DBG_EPRINTLN!(
-                    "[{}:{} | offset {:#x?}] {} = {:#x?}",
-                    ::core::file!(), ::core::line!(), #SAVED_POSITION, ::core::stringify!(#ident), &#ident
+                    "[{}:{} | offset {:#x}] {} = {:#x?}",
+                    ::core::file!(), #at, #SAVED_POSITION, ::core::stringify!(#ident), &#ident
                 );
             };
         }
