@@ -19,7 +19,7 @@ proc-macro = true
 [dependencies]
 either = "1.8"
 owo-colors = { version = "3", optional = true }
-proc-macro2 = "1"
+proc-macro2 = { version = "1", features = ["span-locations"] }
 quote = "1"
 syn = { version = "1", features = ["extra-traits", "full"] }
 
@@ -28,4 +28,4 @@ runtime-macros-derive = "0.4.0"
 
 [features]
 default = []
-verbose-backtrace = ["proc-macro2/span-locations", "owo-colors", "syn/visit"]
+verbose-backtrace = ["owo-colors", "syn/visit"]
