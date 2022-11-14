@@ -79,7 +79,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
 | rw  | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.
 | r   | [`count`](#count) | field | Sets the length of a vector.
-| r   | [`dbg`](#debug) | field | Prints out the parsed value and offset to help debug
+| r   | [`dbg`](#debug) | field | Prints the value and offset of a field to `stderr`.
 | r   | [`default`](#ignore) | field | An alias for `ignore`.
 | r   | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
 | r   | [`err_context`](#backtrace) | field | Adds additional context to errors.
@@ -1177,6 +1177,58 @@ struct MyType {
 </div>
 
 <div class="br">
+
+# Debug
+
+The `dbg` directive prints the offset and value of a field to
+[`stderr`](std::io::stderr) for quick and dirty debugging:
+
+```text
+#[br(dbg)]
+```
+
+The type of the field being inspected must implement [`Debug`](std::fmt::Debug).
+
+## Examples
+
+```
+# #[cfg(not(feature = "std"))] fn main() {}
+# #[cfg(feature = "std")]
+# fn main() {
+# use binrw::{prelude::*, io::Cursor};
+#[derive(BinRead, Debug)]
+# #[derive(PartialEq)]
+#[br(little)]
+struct Inner {
+    #[br(dbg)]
+    a: u32,
+    #[br(dbg)]
+    b: u32,
+}
+
+#[derive(BinRead, Debug)]
+# #[derive(PartialEq)]
+#[br(little)]
+struct Test {
+    first: u16,
+    #[br(dbg)]
+    inner: Inner,
+}
+
+// prints:
+//
+// [file.rs:1 | offset 0x2] a = 0x10
+// [file.rs:1 | offset 0x6] b = 0x40302010
+// [file.rs:10 | offset 0x2] inner = Inner {
+//     a: 0x10,
+//     b: 0x40302010,
+// }
+# assert_eq!(
+Test::read(&mut Cursor::new(b"\x01\0\x10\0\0\0\x10\x20\x30\x40")).unwrap(),
+# Test { first: 1, inner: Inner { a: 0x10, b: 0x40302010 } }
+# );
+# }
+```
 
 # Enum errors
 
