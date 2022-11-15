@@ -57,33 +57,28 @@ impl<T: AsRef<[u8]>> Read for Cursor<T> {
 
 impl<T: AsRef<[u8]>> Seek for Cursor<T> {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
-        match pos {
-            SeekFrom::Current(x) => {
-                if (self.pos as i64) + x < 0 {
-                    Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        "invalid seek to a negative or overflowing position",
-                    ))
-                } else {
-                    self.pos = ((self.pos as i64) + x) as u64;
-                    Ok(self.pos)
-                }
+        let (base_pos, offset) = match pos {
+            SeekFrom::Start(n) => {
+                self.pos = n;
+                return Ok(n);
             }
-            SeekFrom::Start(x) => {
-                self.pos = x;
+            SeekFrom::End(n) => (self.inner.as_ref().len() as u64, n),
+            SeekFrom::Current(n) => (self.pos, n),
+        };
+        let new_pos = if offset >= 0 {
+            base_pos.checked_add(offset as u64)
+        } else {
+            base_pos.checked_sub((offset.wrapping_neg()) as u64)
+        };
+        match new_pos {
+            Some(n) => {
+                self.pos = n;
                 Ok(self.pos)
             }
-            SeekFrom::End(x) => {
-                let end = self.inner.as_ref().len() as i64;
-                if (self.pos as i64) + end + x < 0 {
-                    Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        "invalid seek to a negative or overflowing position",
-                    ))
-                } else {
-                    Ok(self.pos)
-                }
-            }
+            None => Err(Error::new(
+                ErrorKind::InvalidInput,
+                "invalid seek to a negative or overflowing position",
+            )),
         }
     }
 }
