@@ -1,6 +1,6 @@
 mod codegen;
 
-use crate::parser::IdentTypeMaybeDefault;
+use crate::meta_types::IdentTypeMaybeDefault;
 use codegen::{Builder, BuilderField, BuilderFieldKind};
 use proc_macro2::{Span, TokenStream};
 use quote::format_ident;

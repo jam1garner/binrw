@@ -1,10 +1,18 @@
 use crate::{
-    codegen::sanitization::{NAMED_ARGS, NEEDED, OPTIONAL, SATISFIED, SATISFIED_OR_OPTIONAL},
-    parser::IdentTypeMaybeDefault,
+    meta_types::IdentTypeMaybeDefault,
+    util::{from_crate, ident_str},
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{GenericArgument, GenericParam, Ident, Type, Visibility};
+
+ident_str! {
+    SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
+    SATISFIED = from_crate!(Satisfied);
+    NEEDED = from_crate!(Needed);
+    OPTIONAL = from_crate!(Optional);
+    NAMED_ARGS = from_crate!(NamedArgs);
+}
 
 pub(super) struct Builder<'a> {
     pub(super) owner_name: Option<&'a Ident>,
