@@ -81,6 +81,10 @@ impl<T: AsRef<[u8]>> Seek for Cursor<T> {
             )),
         }
     }
+
+    fn stream_position(&mut self) -> Result<u64> {
+        Ok(self.pos)
+    }
 }
 
 // Non-resizing write implementation

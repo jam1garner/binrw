@@ -29,6 +29,10 @@ fn cursor_test() {
         test.seek(SeekFrom::Current(-1)).unwrap(),
         test2.seek(std::io::SeekFrom::Current(-1)).unwrap(),
     );
+    assert_eq!(
+        test.stream_position().unwrap(),
+        test2.stream_position().unwrap(),
+    );
     let mut buf = [0u8; 4];
     let mut buf2 = [0u8; 4];
     assert_eq!(test.read(&mut buf).unwrap(), test2.read(&mut buf2).unwrap());
