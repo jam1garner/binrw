@@ -65,7 +65,7 @@ jobs:
             value: --no-default-features --manifest-path binrw/Cargo.toml
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -124,7 +124,7 @@ jobs:
       # https://github.com/actions/runner/issues/520
       - name: Determine whether codecov.io secret is available
         id: has_codecov
-        run: echo '::set-output name=result::${{ secrets.CODECOV_TOKEN }}'
+        run: echo 'result=${{ secrets.CODECOV_TOKEN }}' >> $GITHUB_OUTPUT
       - name: Generate coverage file
         run: >
           cargo llvm-cov --doctests
