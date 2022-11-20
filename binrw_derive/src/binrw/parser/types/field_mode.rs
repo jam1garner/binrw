@@ -10,6 +10,7 @@ pub(crate) enum FieldMode {
     Normal,
     Default,
     Calc(TokenStream),
+    TryCalc(TokenStream),
     Function(TokenStream),
 }
 
@@ -34,6 +35,12 @@ impl From<attrs::Default> for FieldMode {
 impl From<attrs::Calc> for FieldMode {
     fn from(calc: attrs::Calc) -> Self {
         Self::Calc(calc.into_token_stream())
+    }
+}
+
+impl From<attrs::TryCalc> for FieldMode {
+    fn from(calc: attrs::TryCalc) -> Self {
+        Self::TryCalc(calc.into_token_stream())
     }
 }
 

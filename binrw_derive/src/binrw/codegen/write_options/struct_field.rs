@@ -1,11 +1,12 @@
 use crate::binrw::{
     codegen::{
-        get_assertions, get_endian, get_passed_args,
+        get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
         sanitization::{
-            make_ident, BEFORE_POS, BINWRITE_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, WRITER,
-            WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT,
-            WRITE_FN_TYPE_HINT, WRITE_FUNCTION, WRITE_MAP_ARGS_TYPE_HINT,
-            WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD, WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+            make_ident, BEFORE_POS, BINWRITE_TRAIT, POS, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT,
+            WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
+            WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
+            WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
+            WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
         },
     },
     parser::{FieldMode, Map, StructField},
@@ -58,8 +59,10 @@ impl<'a> StructFieldGenerator<'a> {
             return self;
         }
 
-        let write_fn = match &self.field.read_mode {
-            FieldMode::Normal | FieldMode::Calc(_) => quote! { #WRITE_METHOD },
+        let write_fn = match &self.field.field_mode {
+            FieldMode::Normal | FieldMode::Calc(_) | FieldMode::TryCalc(_) => {
+                quote! { #WRITE_METHOD }
+            }
             FieldMode::Function(write_fn) => write_fn.clone(),
             FieldMode::Default => unreachable!("Ignored fields are not written"),
         };
@@ -109,9 +112,16 @@ impl<'a> StructFieldGenerator<'a> {
         let args = args_ident(name);
         let endian = get_endian(&self.field.endian);
 
-        let initialize = match &self.field.read_mode {
+        let initialize = match &self.field.field_mode {
             FieldMode::Calc(expr) => Some({
                 let ty = &self.field.ty;
+                quote! {
+                    let #name: #ty = #expr;
+                }
+            }),
+            FieldMode::TryCalc(expr) => Some({
+                let ty = &self.field.ty;
+                let expr = get_try_calc(POS, &self.field.ty, expr);
                 quote! {
                     let #name: #ty = #expr;
                 }
@@ -123,7 +133,7 @@ impl<'a> StructFieldGenerator<'a> {
 
         let map_fn = self.field.map.is_some().then(|| map_fn_ident(name));
         let map_try = self.field.map.is_try().then(|| {
-            let map_err = super::get_map_err(SAVED_POSITION);
+            let map_err = get_map_err(SAVED_POSITION, name.span());
             quote! { #map_err? }
         });
 
@@ -207,8 +217,8 @@ impl<'a> StructFieldGenerator<'a> {
         };
 
         let map_fn = map_fn_ident(&self.field.ident);
-        let out = &self.out;
-        self.out = match self.field.read_mode {
+        let out = self.out;
+        self.out = match &self.field.field_mode {
             FieldMode::Normal => match &self.field.map {
                 Map::Map(_) => quote! {
                     let #args = #WRITE_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
@@ -226,7 +236,7 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 }
             },
-            FieldMode::Calc(_) => quote! {
+            FieldMode::Calc(_) | FieldMode::TryCalc(_) => quote! {
                 let #args = ();
                 #out
             },

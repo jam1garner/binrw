@@ -42,5 +42,6 @@ pub(super) type ReturnUnexpectedError = MetaVoid<kw::return_unexpected_error>;
 pub(super) type SeekBefore = MetaExpr<kw::seek_before>;
 pub(super) type Temp = MetaVoid<kw::temp>;
 pub(super) type Try = MetaVoid<Token![try]>;
+pub(super) type TryCalc = MetaExpr<kw::try_calc>;
 pub(super) type TryMap = MetaExpr<kw::try_map>;
 pub(super) type WriteWith = MetaExpr<kw::write_with>;

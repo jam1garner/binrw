@@ -572,6 +572,22 @@ fn try_directive() {
 }
 
 #[test]
+fn try_calc() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(big, import(v: u32))]
+    struct Test {
+        #[br(try_calc = <_>::try_from(v))]
+        a: u16,
+    }
+
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b""), (1,)).unwrap(),
+        Test { a: 1 }
+    );
+    Test::read_args(&mut Cursor::new(b""), (0x1_0000,)).unwrap_err();
+}
+
+#[test]
 fn tuple() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     struct Test(#[br(big)] u16, #[br(little)] u16);

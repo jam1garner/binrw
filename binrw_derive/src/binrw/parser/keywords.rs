@@ -46,6 +46,7 @@ define_keywords! {
     return_unexpected_error,
     seek_before,
     temp,
+    try_calc,
     try_map,
     write_with,
 }

@@ -1,5 +1,5 @@
-error: `try` is incompatible with `default` and `calc`
- --> $DIR/try_calc_conflict.rs:5:10
+error: `try` is incompatible with `default`, `calc`, and `try_calc`
+ --> tests/ui/try_calc_conflict.rs:5:10
   |
 5 |     #[br(try, calc(None))]
   |          ^^^

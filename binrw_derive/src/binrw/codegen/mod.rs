@@ -8,15 +8,15 @@ use crate::{
         Assert, AssertionError, CondEndian, Imports, Input, ParseResult, PassedArgs, StructField,
     },
     named_args::{arg_type_name, derive_from_imports},
-    util::quote_spanned_any,
+    util::{quote_spanned_any, IdentStr},
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use sanitization::{
-    ARGS, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_RESULT,
-    ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, WRITER, WRITE_TRAIT,
+    ARGS, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT, BIN_ERROR,
+    BIN_RESULT, ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, TEMP, WRITER, WRITE_TRAIT,
 };
-use syn::{spanned::Spanned, DeriveInput, Ident};
+use syn::{spanned::Spanned, DeriveInput, Ident, Type};
 
 pub(crate) fn generate_impl<const WRITE: bool>(
     derive_input: &DeriveInput,
@@ -205,6 +205,17 @@ fn get_endian(endian: &CondEndian) -> TokenStream {
     }
 }
 
+fn get_map_err(pos: IdentStr, span: Span) -> TokenStream {
+    quote_spanned_any! { span=>
+        .map_err(|e| {
+            #BIN_ERROR::Custom {
+                pos: #pos,
+                err: Box::new(e) as _,
+            }
+        })
+    }
+}
+
 fn get_passed_args(field: &StructField) -> Option<TokenStream> {
     let args = &field.args;
     let span = args.span().unwrap_or_else(|| field.ty.span());
@@ -224,6 +235,14 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
             })
         }
     }
+}
+
+fn get_try_calc(pos: IdentStr, ty: &Type, calc: &TokenStream) -> TokenStream {
+    let map_err = get_map_err(pos, calc.span());
+    quote_spanned! {ty.span()=> {
+        let #TEMP: ::core::result::Result<#ty, _> = #calc;
+        #TEMP #map_err ?
+    }}
 }
 
 fn directives_to_args(field: &StructField) -> TokenStream {

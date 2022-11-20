@@ -249,7 +249,9 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         PassedArgs::None => (),
     }
 
-    if let FieldMode::Calc(expr) | FieldMode::Function(expr) = &field.read_mode {
+    if let FieldMode::Calc(expr) | FieldMode::TryCalc(expr) | FieldMode::Function(expr) =
+        &field.field_mode
+    {
         visit!(expr.clone());
     }
 

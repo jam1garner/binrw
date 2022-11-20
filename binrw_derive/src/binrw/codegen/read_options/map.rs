@@ -1,14 +1,14 @@
-use super::{get_map_err, PreludeGenerator};
+use super::PreludeGenerator;
 use crate::binrw::{
     codegen::{
-        get_assertions,
+        get_assertions, get_map_err,
         sanitization::{ARGS, OPT, POS, READER, READ_METHOD},
     },
     parser::Input,
 };
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::Ident;
+use syn::{spanned::Spanned, Ident};
 
 pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> TokenStream {
     let prelude = PreludeGenerator::new(input)
@@ -46,7 +46,7 @@ pub(crate) fn generate_try_map(
     name: Option<&Ident>,
     map: &TokenStream,
 ) -> TokenStream {
-    let map_err = get_map_err(POS);
+    let map_err = get_map_err(POS, map.span());
     let prelude = PreludeGenerator::new(input)
         .add_imports(name)
         .add_endian()

@@ -1,7 +1,7 @@
 use crate::{
     binrw::{
         codegen::generate_impl,
-        parser::{Enum, EnumVariant, FieldMode, Input, ParseResult, Struct, StructField},
+        parser::{Enum, EnumVariant, Input, ParseResult, Struct, StructField},
         Options,
     },
     combine_error,
@@ -127,14 +127,12 @@ fn validate_fields_temporary(
 ) -> Option<syn::Error> {
     let mut all_errors = None::<syn::Error>;
     for field in fields {
-        if read_temporary.contains(&field.ident)
-            && !matches!(field.read_mode, FieldMode::Calc(_) | FieldMode::Default)
-        {
+        if read_temporary.contains(&field.ident) && !field.generated_value() {
             combine_error(
                 &mut all_errors,
                 syn::Error::new(
                     field.field.span(),
-                    "`#[br(temp)]` is invalid without a corresponding `#[bw(ignore)]` or `#[bw(calc)]`",
+                    "`#[br(temp)]` is invalid without a corresponding `#[bw(ignore)]`, `#[bw(calc)]`, or `#[bw(try_calc)]`",
                 ),
             );
         }

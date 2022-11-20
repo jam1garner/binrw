@@ -77,7 +77,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`args_raw`](#arguments) | struct field, data variant | Like `args`, but specifies a single variable containing the arguments.
 | rw  | [`assert`](#assert) | struct, field, non-unit enum, data variant | Asserts that a condition is true. Can be used multiple times.
 | rw  | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
-| rw  | [`calc`](#calculations) | field | Computes the value of a field instead of reading data.
+| rw  | [`calc`](#calculations) | field | Computes the value of a field instead of <span class="br">reading data</span><span class="bw">using a field</span>.
 | r   | [`count`](#count) | field | Sets the length of a vector.
 | r   | [`dbg`](#debug) | field | Prints the value and offset of a field to `stderr`.
 | r   | [`default`](#ignore) | field | An alias for `ignore`.
@@ -107,7 +107,8 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`seek_before`](#padding-and-alignment) | field | Moves the <span class="br">reader</span><span class="bw">writer</span> to a specific position before <span class="br">reading<span><span class="bw">writing</span> data.
 | r   | [`temp`](#temp) | field | Uses a field as a temporary variable. Only usable with the [`binread`](macro@crate::binread) attribute macro.
 | r   | [`try`](#try) | field | Tries to parse and stores the [`default`](core::default::Default) value for the type if parsing fails instead of returning an error.
-| rw  | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`BinResult`](crate::BinResult).
+| rw  | [`try_calc`](#calculations) | field | Like `calc`, but returns a [`Result`](Result).
+| rw  | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`Result`](Result).
 |  w  | [`write_with`](#custom-parserswriters) | field | Specifies a custom function for writing a field.
 
 # Arguments
@@ -787,29 +788,33 @@ object.write(&mut output)
 
 <div class="bw">
 
-**This directive can only be used with [`binwrite`](macro@crate::binwrite). It
-will not work with `#[derive(BinWrite)]`.**
+**These directives can only be used with [`binwrite`](macro@crate::binwrite).
+They will not work with `#[derive(BinWrite)]`.**
 </div>
 
-The `calc` directive computes the value of a field <span class="br">instead
-of reading data from the reader</span><span class="bw">to use when writing
-to the writer</span>:
+The `calc` and `try_calc` directives compute the value of a field instead of
+<span class="br">reading data from the reader</span><span class="bw">writing from
+a struct field</span>:
 
 <div class="br">
 
 ```text
 #[br(calc = $value:expr)] or #[br(calc($value:expr))]
+#[br(try_calc = $value:expr)] or #[br(try_calc($value:expr))]
 ```
 </div>
 <div class="bw">
 
 ```text
 #[bw(calc = $value:expr)] or #[bw(calc($value:expr))]
+#[bw(try_calc = $value:expr)] or #[bw(try_calc($value:expr))]
 ```
 </div>
 
 Any <span class="br">earlier</span> field or [import](#arguments) can be
 referenced by the expression in the directive.
+
+When using `try_calc`, the produced value must be a [`Result<T, E>`](Result).
 
 <div class="bw">
 
@@ -819,6 +824,8 @@ field, when deriving `BinRead`, the field should also be annotated with
 </div>
 
 ## Examples
+
+### Infallible calculation
 
 <div class="br">
 
@@ -851,6 +858,42 @@ let object = MyType { var: 4 };
 let mut output = Cursor::new(vec![]);
 object.write(&mut output).unwrap();
 assert_eq!(output.into_inner(), b"\0\0\0\x04\0\0\0\x01");
+```
+</div>
+
+### Fallible calculation
+
+<div class="br">
+
+```
+# use binrw::{prelude::*, io::Cursor};
+#[derive(BinRead)]
+struct MyType {
+    var: u32,
+    #[br(try_calc = u16::try_from(var + 3))]
+    var_plus_3: u16,
+}
+
+# assert_eq!(Cursor::new(b"\0\0\0\x01").read_be::<MyType>().unwrap().var_plus_3, 4);
+```
+</div>
+<div class="bw">
+
+```
+# use binrw::{prelude::*, io::Cursor};
+#[binwrite]
+#[bw(big)]
+struct MyType {
+    var: u32,
+    #[bw(try_calc = u16::try_from(var - 3))]
+    var_minus_3: u16,
+}
+
+let object = MyType { var: 4 };
+
+let mut output = Cursor::new(vec![]);
+object.write(&mut output).unwrap();
+assert_eq!(output.into_inner(), b"\0\0\0\x04\0\x01");
 ```
 </div>
 
