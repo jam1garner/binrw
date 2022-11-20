@@ -3,18 +3,16 @@ mod prelude;
 mod r#struct;
 mod struct_field;
 
-use crate::{
-    binrw::{
-        codegen::sanitization::{BIN_ERROR, OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD},
-        parser::{Input, Map},
-    },
-    util::IdentStr,
+use super::get_map_err;
+use crate::binrw::{
+    codegen::sanitization::{OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD},
+    parser::{Input, Map},
 };
 use proc_macro2::TokenStream;
 use quote::quote;
 use r#enum::{generate_data_enum, generate_unit_enum};
 use r#struct::generate_struct;
-use syn::Ident;
+use syn::{spanned::Spanned, Ident};
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);
@@ -41,7 +39,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
 
 fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> TokenStream {
     let map_try = input.map().is_try().then(|| {
-        let map_err = get_map_err(POS);
+        let map_err = get_map_err(POS, map.span());
         quote! { #map_err? }
     });
     let map = if matches!(input.map(), Map::Repr(_)) {
@@ -65,15 +63,4 @@ fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> Token
         .prefix_endian(endian)
         .prefix_imports()
         .finish()
-}
-
-fn get_map_err(pos: IdentStr) -> TokenStream {
-    quote! {
-        .map_err(|e| {
-            #BIN_ERROR::Custom {
-                pos: #pos,
-                err: Box::new(e) as _,
-            }
-        })
-    }
 }

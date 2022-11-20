@@ -24,8 +24,8 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(RW:Args, RW:ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(RW:Calc, RO:Default, RW:Ignore, RO:ParseWith, WO:WriteWith)]
-        pub(crate) read_mode: FieldMode,
+        #[from(RW:Calc, RW:TryCalc, RO:Default, RW:Ignore, RO:ParseWith, WO:WriteWith)]
+        pub(crate) field_mode: FieldMode,
         #[from(RO:Count)]
         pub(crate) count: Option<TokenStream>,
         #[from(RO:Offset)]
@@ -67,7 +67,7 @@ impl StructField {
     /// Returns true if this field is read from a parser with an `after_parse`
     /// method.
     pub(crate) fn can_call_after_parse(&self) -> bool {
-        matches!(self.read_mode, FieldMode::Normal) && self.map.is_none()
+        matches!(self.field_mode, FieldMode::Normal) && self.map.is_none()
     }
 
     /// Returns true if the code generator should emit `BinRead::after_parse()`
@@ -79,18 +79,22 @@ impl StructField {
     /// Returns true if this field is generated using a calculated value instead
     /// of a parser.
     pub(crate) fn generated_value(&self) -> bool {
-        matches!(self.read_mode, FieldMode::Calc(_) | FieldMode::Default)
+        matches!(
+            self.field_mode,
+            FieldMode::TryCalc(_) | FieldMode::Calc(_) | FieldMode::Default
+        )
     }
 
     /// Returns true if the field is handled as a temporary variable instead of
     /// an actual field.
     pub(crate) fn is_temp(&self, for_write: bool) -> bool {
-        (for_write && matches!(self.read_mode, FieldMode::Calc(_))) || self.temp.is_some()
+        (for_write && matches!(self.field_mode, FieldMode::TryCalc(_) | FieldMode::Calc(_)))
+            || self.temp.is_some()
     }
 
     /// Returns true if the field is actually written.
     pub(crate) fn is_written(&self) -> bool {
-        !matches!(self.read_mode, FieldMode::Default)
+        !matches!(self.field_mode, FieldMode::Default)
     }
 
     /// Returns true if the field requires arguments.
@@ -124,7 +128,7 @@ impl StructField {
         matches!(self.endian, CondEndian::Inherited)
             && matches!(self.map, Map::None)
             && matches!(self.args, PassedArgs::None)
-            && matches!(self.read_mode, FieldMode::Normal)
+            && matches!(self.field_mode, FieldMode::Normal)
             && all_fields_none!(
                 count,
                 offset,
@@ -176,15 +180,23 @@ impl StructField {
             let span = self.do_try.as_ref().unwrap().span();
             combine_error(
                 &mut all_errors,
-                syn::Error::new(span, "`try` is incompatible with `default` and `calc`"),
+                syn::Error::new(
+                    span,
+                    "`try` is incompatible with `default`, `calc`, and `try_calc`",
+                ),
             );
         }
 
-        if matches!(self.read_mode, FieldMode::Calc(_)) && self.args.is_some() {
+        if matches!(self.field_mode, FieldMode::TryCalc(_) | FieldMode::Calc(_))
+            && self.args.is_some()
+        {
             // TODO: Correct span (args + calc keywords)
             combine_error(
                 &mut all_errors,
-                syn::Error::new(self.field.span(), "`args` is incompatible with `calc`"),
+                syn::Error::new(
+                    self.field.span(),
+                    "`args` is incompatible with `calc` and `try_calc`",
+                ),
             );
         }
 
@@ -242,7 +254,7 @@ impl FromField for StructField {
             map: <_>::default(),
             magic: <_>::default(),
             args: <_>::default(),
-            read_mode: <_>::default(),
+            field_mode: <_>::default(),
             count: <_>::default(),
             offset: <_>::default(),
             offset_after: <_>::default(),

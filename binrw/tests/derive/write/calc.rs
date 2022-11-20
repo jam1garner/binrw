@@ -44,3 +44,21 @@ fn calc_visibility() {
 
     assert_eq!(x.into_inner(), [1, 0, 2, 0, 3]);
 }
+
+#[test]
+fn try_calc() {
+    #[binwrite]
+    #[derive(Debug, PartialEq)]
+    #[bw(big, import(v: u32))]
+    struct Test {
+        #[bw(try_calc = <_>::try_from(v))]
+        a: u16,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    Test {}.write_args(&mut x, (1,)).unwrap();
+    assert_eq!(x.into_inner(), b"\0\x01");
+    Test {}
+        .write_args(&mut Cursor::new(Vec::new()), (0x1_0000,))
+        .unwrap_err();
+}

@@ -3,17 +3,12 @@ mod map;
 mod r#struct;
 
 use super::{get_assertions, get_destructured_imports};
-use crate::{
-    binrw::{
-        codegen::{
-            get_endian,
-            sanitization::{
-                ARGS, ASSERT_MAGIC, BIN_ERROR, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT,
-            },
-        },
-        parser::{Input, Magic, Map},
+use crate::binrw::{
+    codegen::{
+        get_endian,
+        sanitization::{ARGS, ASSERT_MAGIC, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT},
     },
-    util::IdentStr,
+    parser::{Input, Magic, Map},
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
@@ -125,15 +120,4 @@ fn get_magic(magic: &Magic, endian_var: impl ToTokens) -> Option<TokenStream> {
             #ASSERT_MAGIC(#READER, #magic, #endian_var)?;
         }
     })
-}
-
-fn get_map_err(pos: IdentStr) -> TokenStream {
-    quote! {
-        .map_err(|e| {
-            #BIN_ERROR::Custom {
-                pos: #pos,
-                err: Box::new(e) as _,
-            }
-        })
-    }
 }

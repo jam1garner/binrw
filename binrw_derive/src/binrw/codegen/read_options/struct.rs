@@ -4,7 +4,7 @@ use crate::binrw::backtrace::BacktraceFrame;
 use crate::{
     binrw::{
         codegen::{
-            get_assertions, get_endian, get_passed_args,
+            get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
                 make_ident, AFTER_PARSE, ARGS_MACRO, ARGS_TYPE_HINT, BACKTRACE_FRAME,
                 BINREAD_TRAIT, COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, OPT,
@@ -134,7 +134,7 @@ fn generate_field(
     variant_name: Option<&str>,
 ) -> TokenStream {
     // temp + ignore == just don't bother
-    if field.is_temp(false) && matches!(field.read_mode, FieldMode::Default) {
+    if field.is_temp(false) && matches!(field.field_mode, FieldMode::Default) {
         return TokenStream::new();
     }
 
@@ -317,10 +317,10 @@ impl<'field> FieldGenerator<'field> {
                 let value = self.out;
                 quote! { #map_func(#value) }
             }
-            Map::Try(_) | Map::Repr(_) => {
+            Map::Try(t) | Map::Repr(t) => {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
-                let map_err = super::get_map_err(SAVED_POSITION);
+                let map_err = get_map_err(SAVED_POSITION, t.span());
                 quote! {{
                     let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#READER)?;
 
@@ -369,7 +369,7 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn prefix_read_function(mut self) -> Self {
-        let read_function = match &self.field.read_mode {
+        let read_function = match &self.field.field_mode {
             FieldMode::Function(parser) => {
                 quote_spanned_any! { parser.span()=>
                     let #READ_FUNCTION = #PARSE_FN_TYPE_HINT(#parser);
@@ -396,7 +396,7 @@ impl<'field> FieldGenerator<'field> {
             let args = get_passed_args(self.field);
             let ty = &self.field.ty;
 
-            if let FieldMode::Function(_) = &self.field.read_mode {
+            if let FieldMode::Function(_) = &self.field.field_mode {
                 quote_spanned! {ty.span()=>
                     let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
                 }
@@ -446,9 +446,10 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn read_value(mut self) -> Self {
-        self.out = match &self.field.read_mode {
+        self.out = match &self.field.field_mode {
             FieldMode::Default => quote! { <_>::default() },
             FieldMode::Calc(calc) => quote! { #calc },
+            FieldMode::TryCalc(calc) => get_try_calc(POS, &self.field.ty, calc),
             read_mode @ (FieldMode::Normal | FieldMode::Function(_)) => {
                 let args_arg = get_args_argument(self.field, &self.args_var);
                 let endian_var = &self.endian_var;
