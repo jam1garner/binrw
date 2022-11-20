@@ -150,9 +150,10 @@ using the `#[br]`, `#[bw]`, and `#[brw]` attributes:
 ```
 # use binrw::{prelude::*, io::Cursor, NullString};
 #
-#[derive(BinRead)]
-#[br(big, magic = b"DOG", assert(name.len() != 0))]
+#[binrw]
+#[brw(big, magic = b"DOG", assert(name.len() != 0))]
 struct Dog {
+    #[bw(try_calc(u8::try_from(bone_piles.len())))]
     bone_pile_count: u8,
 
     #[br(count = bone_pile_count)]
