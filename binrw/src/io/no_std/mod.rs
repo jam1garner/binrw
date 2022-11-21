@@ -394,3 +394,20 @@ impl Write for Vec<u8> {
         Ok(())
     }
 }
+
+impl<W: Write + ?Sized> Write for &mut W {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        (**self).write(buf)
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        (**self).flush()
+    }
+
+    #[inline]
+    fn write_all(&mut self, buf: &[u8]) -> Result<()> {
+        (**self).write_all(buf)
+    }
+}
