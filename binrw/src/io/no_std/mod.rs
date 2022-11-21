@@ -162,6 +162,16 @@ impl<R: Read + ?Sized> Read for &mut R {
     }
 
     #[inline]
+    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<usize> {
+        (**self).read_to_end(buf)
+    }
+
+    #[inline]
+    fn read_to_string(&mut self, buf: &mut String) -> Result<usize> {
+        (**self).read_to_string(buf)
+    }
+
+    #[inline]
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
         (**self).read_exact(buf)
     }
