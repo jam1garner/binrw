@@ -1,17 +1,18 @@
 //! Type definitions for wrappers which represent a layer of indirection within
 //! a file.
 
-use crate::NamedArgs;
 use crate::{
     io::{Read, Seek, SeekFrom},
-    BinRead, BinResult, Endian,
+    BinRead, BinResult, Endian, NamedArgs, ReadFrom,
 };
-use core::fmt;
-use core::num::{
-    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
-    NonZeroU32, NonZeroU64, NonZeroU8,
+use core::{
+    fmt,
+    num::{
+        NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
+        NonZeroU32, NonZeroU64, NonZeroU8,
+    },
+    ops::{Deref, DerefMut},
 };
-use core::ops::{Deref, DerefMut};
 
 /// A type alias for [`FilePtr`] with 8-bit offsets.
 pub type FilePtr8<T> = FilePtr<u8, T>;
@@ -34,6 +35,34 @@ pub type NonZeroFilePtr32<T> = FilePtr<NonZeroU32, T>;
 pub type NonZeroFilePtr64<T> = FilePtr<NonZeroU64, T>;
 /// A type alias for [`FilePtr`] with non-zero 128-bit offsets.
 pub type NonZeroFilePtr128<T> = FilePtr<NonZeroU128, T>;
+
+/// A converter for non-[`BinRead`] [`FilePtr`] values.
+pub enum FilePtrWith<C> {
+    #[doc(hidden)]
+    _Phantom(Private<C>),
+}
+#[doc(hidden)]
+pub struct Private<T>(core::marker::PhantomData<T>);
+
+impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, C, T: ReadFrom<C>> ReadFrom<FilePtrWith<C>>
+    for FilePtr<Ptr, T>
+{
+    type Args = FilePtrArgs<<T as ReadFrom<C>>::Args>;
+
+    fn read_from<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<Self> {
+        Self::read_with_parser(
+            |reader, endian, args| <T as ReadFrom<C>>::read_from(reader, endian, args),
+            |_, _, _, _| Ok(()),
+            reader,
+            endian,
+            args,
+        )
+    }
+}
 
 /// A wrapper type which represents a layer of indirection within a file.
 ///
@@ -250,7 +279,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, Value> FilePtr<Ptr, Value> {
 ///
 /// Will panic if `FilePtr` hasn’t been finalized by calling
 /// [`after_parse()`](Self::after_parse).
-impl<Ptr: IntoSeekFrom, Value: BinRead> Deref for FilePtr<Ptr, Value> {
+impl<Ptr: IntoSeekFrom, Value> Deref for FilePtr<Ptr, Value> {
     type Target = Value;
 
     fn deref(&self) -> &Self::Target {
@@ -266,7 +295,7 @@ impl<Ptr: IntoSeekFrom, Value: BinRead> Deref for FilePtr<Ptr, Value> {
 /// # Panics
 /// Will panic if the `FilePtr` has not been read yet using
 /// [`BinRead::after_parse`](BinRead::after_parse)
-impl<Ptr: IntoSeekFrom, Value: BinRead> DerefMut for FilePtr<Ptr, Value> {
+impl<Ptr: IntoSeekFrom, Value> DerefMut for FilePtr<Ptr, Value> {
     fn deref_mut(&mut self) -> &mut Value {
         match self.value.as_mut() {
             Some(x) => x,

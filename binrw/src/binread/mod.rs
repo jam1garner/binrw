@@ -178,6 +178,155 @@ pub trait BinRead: Sized + 'static {
     }
 }
 
+/// Extension methods for reading [`BinRead`] objects using a converter.
+pub trait ReadWith {
+    /// Read `Self` from the reader using the given converter.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_with<T, R>(reader: &mut R) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+        T: ReadEndian,
+        <Self as ReadFrom<T>>::Args: Required,
+    {
+        Self::read_args_with::<T, _>(reader, <Self as ReadFrom<T>>::Args::args())
+    }
+
+    /// Read `Self` from the reader, using the given converter, assuming
+    /// big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_be_with<T, R>(reader: &mut R) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+        <Self as ReadFrom<T>>::Args: Required,
+    {
+        Self::read_be_args_with::<T, _>(reader, <Self as ReadFrom<T>>::Args::args())
+    }
+
+    /// Read `Self` from the reader, using the given converter, assuming
+    /// little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_le_with<T, R>(reader: &mut R) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+        <Self as ReadFrom<T>>::Args: Required,
+    {
+        Self::read_le_args_with::<T, _>(reader, <Self as ReadFrom<T>>::Args::args())
+    }
+
+    /// Read `Self` from the reader, using the given converter, assuming
+    /// native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_ne_with<T, R>(reader: &mut R) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+        <Self as ReadFrom<T>>::Args: Required,
+    {
+        Self::read_ne_args_with::<T, _>(reader, <Self as ReadFrom<T>>::Args::args())
+    }
+
+    /// Read `Self` from the reader, using the given converter and arguments.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_args_with<T, R>(reader: &mut R, args: <Self as ReadFrom<T>>::Args) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+        T: ReadEndian,
+    {
+        Self::read_from(reader, Endian::Little, args)
+    }
+
+    /// Read `Self` from the reader, using the given converter and arguments,
+    /// assuming big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_be_args_with<T, R>(reader: &mut R, args: <Self as ReadFrom<T>>::Args) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+    {
+        Self::read_from(reader, Endian::Big, args)
+    }
+
+    /// Read `Self` from the reader, using the given converter and arguments,
+    /// assuming little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_le_args_with<T, R>(reader: &mut R, args: <Self as ReadFrom<T>>::Args) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+    {
+        Self::read_from(reader, Endian::Little, args)
+    }
+
+    /// Read `Self` from the reader, using the given converter and arguments,
+    /// assuming native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_ne_args_with<T, R>(reader: &mut R, args: <Self as ReadFrom<T>>::Args) -> BinResult<Self>
+    where
+        Self: ReadFrom<T> + Sized,
+        R: Read + Seek,
+    {
+        Self::read_from(reader, Endian::NATIVE, args)
+    }
+}
+
+impl<T> ReadWith for T {}
+
+/// The `ReadFrom` trait enables transparent deserialisation into a
+/// non-[`BinRead`] type.
+pub trait ReadFrom<T>: Sized {
+    /// The type used for the `args` parameter of [`read_from()`].
+    ///
+    /// [`read_from()`]: Self::read_from
+    type Args: Clone;
+
+    /// Read `T` from the reader using the given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    fn read_from<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args,
+    ) -> BinResult<Self>;
+}
+
 /// Extension methods for reading [`BinRead`] objects directly from a reader.
 ///
 /// # Examples
@@ -288,6 +437,122 @@ pub trait BinReaderExt: Read + Seek + Sized {
     #[inline]
     fn read_ne_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
         self.read_type_args(Endian::NATIVE, args)
+    }
+
+    /// Read `T` from the reader using the given converter.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_with<C, T>(&mut self) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+        C: ReadEndian,
+        <T as ReadFrom<C>>::Args: Required,
+    {
+        self.read_args_with::<C, T>(<T as ReadFrom<C>>::Args::args())
+    }
+
+    /// Read `T` from the reader, using the given converter, assuming
+    /// big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_be_with<C, T>(&mut self) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+        <T as ReadFrom<C>>::Args: Required,
+    {
+        self.read_be_args_with::<C, T>(<T as ReadFrom<C>>::Args::args())
+    }
+
+    /// Read `T` from the reader, using the given converter, assuming
+    /// little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_le_with<C, T>(&mut self) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+        <T as ReadFrom<C>>::Args: Required,
+    {
+        self.read_le_args_with::<C, T>(<T as ReadFrom<C>>::Args::args())
+    }
+
+    /// Read `T` from the reader, using the given converter, assuming
+    /// native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_ne_with<C, T>(&mut self) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+        <T as ReadFrom<C>>::Args: Required,
+    {
+        self.read_ne_args_with::<C, T>(<T as ReadFrom<C>>::Args::args())
+    }
+
+    /// Read `T` from the reader, using the given converter and arguments.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_args_with<C, T>(&mut self, args: <T as ReadFrom<C>>::Args) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+        C: ReadEndian,
+    {
+        T::read_from(self, Endian::Little, args)
+    }
+
+    /// Read `T` from the reader, using the given converter and arguments,
+    /// assuming big-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_be_args_with<C, T>(&mut self, args: <T as ReadFrom<C>>::Args) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+    {
+        T::read_from(self, Endian::Big, args)
+    }
+
+    /// Read `T` from the reader, using the given converter and arguments,
+    /// assuming little-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_le_args_with<C, T>(&mut self, args: <T as ReadFrom<C>>::Args) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+    {
+        T::read_from(self, Endian::Little, args)
+    }
+
+    /// Read `T` from the reader, using the given converter and arguments,
+    /// assuming native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn read_ne_args_with<C, T>(&mut self, args: <T as ReadFrom<C>>::Args) -> BinResult<T>
+    where
+        T: ReadFrom<C>,
+    {
+        T::read_from(self, Endian::NATIVE, args)
     }
 }
 

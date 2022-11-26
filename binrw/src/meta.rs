@@ -83,7 +83,7 @@ macro_rules! endian_impl {
     )+)+}
 }
 
-endian_impl!(() i8 u8 core::num::NonZeroU8 core::num::NonZeroI8 crate::strings::NullString => EndianKind::None);
+endian_impl!(() i8 u8 core::num::NonZeroU8 core::num::NonZeroI8 => EndianKind::None);
 
 impl<T: ReadEndian + ?Sized> ReadEndian for Box<T> {
     const ENDIAN: EndianKind = <T as ReadEndian>::ENDIAN;

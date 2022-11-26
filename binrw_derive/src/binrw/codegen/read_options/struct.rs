@@ -8,8 +8,8 @@ use crate::{
             sanitization::{
                 make_ident, AFTER_PARSE, ARGS_MACRO, ARGS_TYPE_HINT, BACKTRACE_FRAME,
                 BINREAD_TRAIT, COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, OPT,
-                PARSE_FN_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD, REQUIRED_ARG_TRAIT,
-                SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+                PARSE_FN_TYPE_HINT, POS, READER, READ_FROM_TRAIT, READ_FUNCTION, READ_METHOD,
+                REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
             },
         },
         parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
@@ -317,7 +317,7 @@ impl<'field> FieldGenerator<'field> {
                 let value = self.out;
                 quote! { #map_func(#value) }
             }
-            Map::Try(t) | Map::Repr(t) => {
+            Map::Try(t) => {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
                 let map_err = get_map_err(SAVED_POSITION, t.span());
@@ -343,15 +343,7 @@ impl<'field> FieldGenerator<'field> {
                     let #map_func = (#COERCE_FN::<#ty, _, _>(#map));
                 }
             }
-            Map::Try(try_map) | Map::Repr(try_map) => {
-                let try_map = if matches!(self.field.map, Map::Repr(_)) {
-                    quote! {
-                        <#try_map as core::convert::TryInto<_>>::try_into
-                    }
-                } else {
-                    try_map.clone()
-                };
-
+            Map::Try(try_map) => {
                 // TODO: Position should always just be saved once for a field if used
                 quote! {
                     let #map_func = (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map));
@@ -375,6 +367,12 @@ impl<'field> FieldGenerator<'field> {
                     let #READ_FUNCTION = #PARSE_FN_TYPE_HINT(#parser);
                 }
             }
+            FieldMode::Converter(converter) => {
+                let ty = &self.field.ty;
+                quote_spanned_any! { converter.span()=>
+                    let #READ_FUNCTION = <#ty as #READ_FROM_TRAIT<#converter>>::read_from;
+                }
+            }
             FieldMode::Normal => quote! {
                 let #READ_FUNCTION = #READ_METHOD;
             },
@@ -396,13 +394,16 @@ impl<'field> FieldGenerator<'field> {
             let args = get_passed_args(self.field);
             let ty = &self.field.ty;
 
-            if let FieldMode::Function(_) = &self.field.field_mode {
-                quote_spanned! {ty.span()=>
+            if matches!(
+                self.field.field_mode,
+                FieldMode::Function(_) | FieldMode::Converter(_)
+            ) {
+                quote_spanned! { ty.span()=>
                     let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
                 }
             } else {
                 match &self.field.map {
-                    Map::Map(_) | Map::Try(_) | Map::Repr(_) => {
+                    Map::Map(_) | Map::Try(_) => {
                         quote_spanned! {ty.span()=>
                             let #args_var = #MAP_ARGS_TYPE_HINT(&#map_func, #args);
                         }
@@ -450,11 +451,11 @@ impl<'field> FieldGenerator<'field> {
             FieldMode::Default => quote! { <_>::default() },
             FieldMode::Calc(calc) => quote! { #calc },
             FieldMode::TryCalc(calc) => get_try_calc(POS, &self.field.ty, calc),
-            read_mode @ (FieldMode::Normal | FieldMode::Function(_)) => {
+            read_mode @ (FieldMode::Normal | FieldMode::Function(_) | FieldMode::Converter(_)) => {
                 let args_arg = get_args_argument(self.field, &self.args_var);
                 let endian_var = &self.endian_var;
 
-                if let FieldMode::Function(f) = read_mode {
+                if let FieldMode::Function(f) | FieldMode::Converter(f) = read_mode {
                     let ty = &self.field.ty;
                     // Adding a closure suppresses mentions of the generated
                     // READ_FUNCTION variable in errors; mapping the value with

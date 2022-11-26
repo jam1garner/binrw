@@ -1,7 +1,7 @@
 use super::{
     attr_struct,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    EnumVariant, FromInput, ParseResult, StructField, TrySet, UnitEnumField,
+    EnumVariant, FromInput, ParseResult, SpannedValue, StructField, TrySet, UnitEnumField,
 };
 use crate::binrw::Options;
 use proc_macro2::TokenStream;
@@ -113,12 +113,17 @@ impl Input {
         }
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
-        match self {
-            Input::Struct(s) => s.fields.is_empty() && s.magic.is_none(),
-            Input::UnitStruct(_) => true,
-            Input::Enum(e) => e.variants.is_empty() && e.magic.is_none(),
-            Input::UnitOnlyEnum(_) => false,
+    pub(crate) fn is_endian_agnostic(&self) -> bool {
+        match self.map() {
+            Map::None => match self {
+                Input::Struct(s) => s.fields.is_empty() && s.magic.is_none(),
+                Input::UnitStruct(_) => true,
+                Input::Enum(en) => en.variants.is_empty() && en.magic.is_none(),
+                Input::UnitOnlyEnum(en) => {
+                    matches!(&en.repr, Some(repr) if ["i8", "u8"].contains(&repr.to_string().as_str()))
+                }
+            },
+            Map::Map(_) | Map::Try(_) => true,
         }
     }
 
@@ -181,7 +186,7 @@ attr_struct! {
     pub(crate) struct Struct {
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(RW:Map, RW:TryMap, RW:Repr)]
+        #[from(RW:Map, RW:TryMap)]
         pub(crate) map: Map,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
@@ -284,7 +289,7 @@ attr_struct! {
         pub(crate) ident: Option<syn::Ident>,
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(RW:Map, RW:TryMap, RW:Repr)]
+        #[from(RW:Map, RW:TryMap)]
         pub(crate) map: Map,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
@@ -332,12 +337,14 @@ attr_struct! {
     pub(crate) struct UnitOnlyEnum {
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(RW:Map, RW:TryMap, RW:Repr)]
+        #[from(RW:Map, RW:TryMap)]
         pub(crate) map: Map,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
         #[from(RW:Import, RW:ImportRaw)]
         pub(crate) imports: Imports,
+        #[from(RW:Repr)]
+        pub(crate) repr: Option<SpannedValue<TokenStream>>,
         pub(crate) fields: Vec<UnitEnumField>,
         pub(crate) is_magic_enum: bool,
     }
@@ -353,7 +360,7 @@ impl<const WRITE: bool> FromInput<UnitEnumAttr<WRITE>> for UnitOnlyEnum {
     type Field = UnitEnumField;
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
-        if let (Some(repr), Some(magic)) = (self.map.as_repr(), field.magic.as_ref()) {
+        if let (Some(repr), Some(magic)) = (self.repr.as_ref(), field.magic.as_ref()) {
             let magic_span = magic.span();
             let span = magic_span.join(repr.span()).unwrap_or(magic_span);
             Err(syn::Error::new(
@@ -368,7 +375,7 @@ impl<const WRITE: bool> FromInput<UnitEnumAttr<WRITE>> for UnitOnlyEnum {
     }
 
     fn validate(&self, options: Options) -> syn::Result<()> {
-        if self.map.as_repr().is_some() || self.is_magic_enum() {
+        if self.repr.is_some() || self.is_magic_enum() {
             Ok(())
         } else if options.write {
             Err(syn::Error::new(proc_macro2::Span::call_site(), "BinWrite on unit-like enums requires either `#[bw(repr = ...)]` on the enum or `#[bw(magic = ...)]` on at least one variant"))

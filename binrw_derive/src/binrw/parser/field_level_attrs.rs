@@ -18,13 +18,13 @@ attr_struct! {
         pub(crate) field: syn::Field,
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
-        #[from(RW:Map, RW:TryMap, RW:Repr)]
+        #[from(RW:Map, RW:TryMap)]
         pub(crate) map: Map,
         #[from(RW:Magic)]
         pub(crate) magic: Magic,
         #[from(RW:Args, RW:ArgsRaw)]
         pub(crate) args: PassedArgs,
-        #[from(RW:Calc, RW:TryCalc, RO:Default, RW:Ignore, RO:ParseWith, WO:WriteWith)]
+        #[from(RW:Calc, RW:TryCalc, RO:Default, RW:Ignore, RW:With, RO:ParseWith, WO:WriteWith)]
         pub(crate) field_mode: FieldMode,
         #[from(RO:Count)]
         pub(crate) count: Option<TokenStream>,

@@ -33,6 +33,8 @@ ident_str! {
     pub(crate) READ_METHOD = from_read_trait!(read_options);
     pub(crate) AFTER_PARSE = from_read_trait!(after_parse);
     pub(crate) WRITE_METHOD = from_write_trait!(write_options);
+    pub(crate) READ_FROM_TRAIT = from_crate!(ReadFrom);
+    pub(crate) WRITE_INTO_TRAIT = from_crate!(WriteInto);
     pub(crate) READER = "__binrw_generated_var_reader";
     pub(crate) WRITER = "__binrw_generated_var_writer";
     pub(crate) OPT = "__binrw_generated_var_endian";

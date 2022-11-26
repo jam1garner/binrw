@@ -1,154 +1,254 @@
-#[test]
-fn null_wide_strings() {
-    use binrw::{io::Cursor, BinReaderExt, NullWideString};
-
-    assert_eq!(
-        Cursor::new(b"w\0i\0d\0e\0 \0s\0t\0r\0i\0n\0g\0s\0\0\0")
-            .read_le::<NullWideString>()
-            .unwrap()
-            .to_string(),
-        "wide strings"
-    );
-
-    assert_eq!(
-        Cursor::new(b"\0a\0r\0e\0 \0e\0n\0d\0i\0a\0n\0 \0d\0e\0p\0e\0n\0d\0e\0n\0t\0\0")
-            .read_be::<NullWideString>()
-            .unwrap()
-            .to_string(),
-        "are endian dependent"
-    );
-
-    assert_eq!(
-        format!(
-            "{:?}",
-            Cursor::new(b"d\0e\0b\0u\0g\0\x3a\x26\n\0\0\0")
-                .read_le::<NullWideString>()
-                .unwrap()
-        ),
-        "NullWideString(\"debug☺\\n\")"
-    );
-
-    assert_eq!(
-        format!(
-            "{:?}",
-            Cursor::new(b"b\0a\0d\0 \0\0\xdc\0\xdc \0s\0u\0r\0r\0o\0g\0a\0t\0e\0\0\0")
-                .read_le::<NullWideString>()
-                .unwrap()
-        ),
-        "NullWideString(\"bad \u{FFFD}\u{FFFD} surrogate\")"
-    );
-
-    // Default/Deref/DerefMut
-    let mut s = NullWideString::default();
-    s.extend_from_slice(&[b'h'.into(), b'e'.into(), b'y'.into()]);
-    assert_eq!(&s[0..2], &[b'h'.into(), b'e'.into()]);
-
-    // Clone/TryFrom
-    let t = String::try_from(s.clone()).unwrap();
-    assert_eq!(t, "hey");
-    s.push(0xdc00);
-    String::try_from(s).expect_err("accepted bad data");
-
-    // From
-    let s = NullWideString::from(t.clone());
-    assert_eq!(Vec::from(s), t.encode_utf16().collect::<Vec<_>>());
-}
+use binrw::{io::Cursor, BinReaderExt, NullString, NullWideString, ReadWith};
 
 #[test]
 fn null_strings() {
-    use binrw::{io::Cursor, BinReaderExt, NullString};
+    use binrw::WriteWith;
 
     let mut null_separated_strings =
         Cursor::new(b"null terminated strings? in my system's language?\0no thanks\0");
 
     assert_eq!(
         null_separated_strings
-            .read_be::<NullString>()
-            .unwrap()
-            .to_string(),
+            .read_with::<NullString, String>()
+            .unwrap(),
         "null terminated strings? in my system's language?"
     );
 
     assert_eq!(
         null_separated_strings
-            .read_be::<NullString>()
-            .unwrap()
-            .to_string(),
+            .read_with::<NullString, String>()
+            .unwrap(),
         "no thanks"
     );
 
+    Cursor::new(b"no terminator")
+        .read_with::<NullString, Vec<u8>>()
+        .unwrap_err();
+
+    Cursor::new(b"bad utf8\xc3\x28\0")
+        .read_with::<NullString, String>()
+        .unwrap_err();
+
     assert_eq!(
-        format!(
-            "{:?}",
-            Cursor::new(b"debug\xe2\x98\xba\n\0")
-                .read_be::<NullString>()
-                .unwrap()
-        ),
-        "NullString(\"debug☺\\n\")"
+        String::read_with::<NullString, _>(&mut Cursor::new(b"test\0")).unwrap(),
+        "test"
+    );
+
+    let s = String::from("test");
+    let mut out = Cursor::new(Vec::new());
+    s.write_with::<NullString, _>(&mut out).unwrap();
+    assert_eq!(out.into_inner(), b"test\0");
+}
+
+#[test]
+fn null_wide_strings() {
+    use binrw::WriteWith;
+
+    assert_eq!(
+        Cursor::new(b"w\0i\0d\0e\0 \0s\0t\0r\0i\0n\0g\0s\0\0\0")
+            .read_le_with::<NullWideString, String>()
+            .unwrap(),
+        "wide strings"
     );
 
     assert_eq!(
-        format!(
-            "{:?}",
-            Cursor::new(b"bad \xfe utf8 \xfe\0")
-                .read_be::<NullString>()
-                .unwrap()
-        ),
-        "NullString(\"bad \u{FFFD} utf8 \u{FFFD}\")"
+        Cursor::new(b"\0a\0r\0e\0 \0e\0n\0d\0i\0a\0n\0 \0d\0e\0p\0e\0n\0d\0e\0n\0t\0\0")
+            .read_be_with::<NullWideString, String>()
+            .unwrap(),
+        "are endian dependent"
     );
+
+    Cursor::new(b"bad utf16\0\xd8\x3d\0\x27\0\0")
+        .read_be_with::<NullWideString, String>()
+        .unwrap_err();
+
+    Cursor::new(b"\0n\0o\0t\0e\0r\0m")
+        .read_be_with::<NullWideString, Vec<u16>>()
+        .unwrap_err();
 
     assert_eq!(
-        format!(
-            "{:?}",
-            Cursor::new(b"truncated\xe2\0")
-                .read_be::<NullString>()
-                .unwrap()
-        ),
-        "NullString(\"truncated\u{FFFD}\")"
+        String::read_be_with::<NullWideString, _>(&mut Cursor::new(b"\0t\0e\0s\0t\0\0")).unwrap(),
+        "test"
+    );
+    assert_eq!(
+        String::read_le_with::<NullWideString, _>(&mut Cursor::new(b"t\0e\0s\0t\0\0\0")).unwrap(),
+        "test"
+    );
+    assert_eq!(
+        String::read_ne_with::<NullWideString, _>(&mut Cursor::new(
+            if cfg!(target_endian = "big") {
+                b"\0t\0e\0s\0t\0\0"
+            } else {
+                b"t\0e\0s\0t\0\0\0"
+            }
+        ))
+        .unwrap(),
+        "test"
+    );
+    assert_eq!(
+        Cursor::new(if cfg!(target_endian = "big") {
+            b"\0t\0e\0s\0t\0\0"
+        } else {
+            b"t\0e\0s\0t\0\0\0"
+        })
+        .read_ne_with::<NullWideString, String>()
+        .unwrap(),
+        "test"
     );
 
-    // Default/Deref/DerefMut
-    let mut s = NullString::default();
-    s.extend_from_slice(b"hey");
-    assert_eq!(&s[0..2], b"he");
+    let s = String::from("test");
+    let mut out = Cursor::new(Vec::new());
+    s.write_be_with::<NullWideString, _>(&mut out).unwrap();
+    assert_eq!(out.into_inner(), b"\0t\0e\0s\0t\0\0");
+    let mut out = Cursor::new(Vec::new());
+    s.write_le_with::<NullWideString, _>(&mut out).unwrap();
+    assert_eq!(out.into_inner(), b"t\0e\0s\0t\0\0\0");
+    let mut out = Cursor::new(Vec::new());
+    s.write_ne_with::<NullWideString, _>(&mut out).unwrap();
+    assert_eq!(
+        out.into_inner(),
+        if cfg!(target_endian = "big") {
+            b"\0t\0e\0s\0t\0\0"
+        } else {
+            b"t\0e\0s\0t\0\0\0"
+        }
+    );
+}
 
-    // Clone/TryFrom
-    let t = String::try_from(s.clone()).unwrap();
-    assert_eq!(t, "hey");
-    s.extend_from_slice(b"\xe2");
-    String::try_from(s).expect_err("accepted bad data");
+#[test]
+fn bin_writer_ext() {
+    use binrw::BinWriterExt;
 
-    // From
-    let s = NullString::from(t.clone());
-    assert_eq!(Vec::from(s), t.as_bytes());
+    let s = String::from("test");
+    let mut out = Cursor::new(Vec::new());
+    out.write_be_with::<NullWideString, _>(&s).unwrap();
+    assert_eq!(out.into_inner(), b"\0t\0e\0s\0t\0\0");
+    let mut out = Cursor::new(Vec::new());
+    out.write_le_with::<NullWideString, _>(&s).unwrap();
+    assert_eq!(out.into_inner(), b"t\0e\0s\0t\0\0\0");
+    let mut out = Cursor::new(Vec::new());
+    out.write_ne_with::<NullWideString, _>(&s).unwrap();
+    assert_eq!(
+        out.into_inner(),
+        if cfg!(target_endian = "big") {
+            b"\0t\0e\0s\0t\0\0"
+        } else {
+            b"t\0e\0s\0t\0\0\0"
+        }
+    );
 }
 
 #[test]
 fn null_string_round_trip() {
-    use binrw::{io::Cursor, BinReaderExt, BinWriterExt, NullString};
+    use binrw::BinWriterExt;
 
-    let data = "test test test";
-    let s = NullString::from(data);
-
+    // str
+    let s = "test test test";
     let mut x = Cursor::new(Vec::new());
-    x.write_be(&s).unwrap();
+    x.write_with::<NullString, _>(s).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_with::<NullString, String>()
+            .unwrap(),
+        s
+    );
 
-    let s2: NullString = Cursor::new(x.into_inner()).read_be().unwrap();
+    // String
+    let mut x = Cursor::new(Vec::new());
+    x.write_with::<NullString, _>(&s.to_string()).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_with::<NullString, String>()
+            .unwrap(),
+        s
+    );
 
-    assert_eq!(&s2.to_string(), data);
+    // [u8; N]
+    let s = b"test test test";
+    let mut x = Cursor::new(Vec::new());
+    x.write_with::<NullString, _>(s).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_with::<NullString, Vec<u8>>()
+            .unwrap(),
+        s
+    );
+
+    // [u8]
+    let mut x = Cursor::new(Vec::new());
+    x.write_with::<NullString, _>(s.as_slice()).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_with::<NullString, Vec<u8>>()
+            .unwrap(),
+        s
+    );
+
+    // Vec<u8>
+    let mut x = Cursor::new(Vec::new());
+    x.write_with::<NullString, _>(&s.to_vec()).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_with::<NullString, Vec<u8>>()
+            .unwrap(),
+        s
+    );
 }
 
 #[test]
 fn null_wide_string_round_trip() {
-    use binrw::{io::Cursor, BinReaderExt, BinWriterExt, NullWideString};
+    use binrw::BinWriterExt;
 
-    let data = "test test test";
-    let s = NullWideString::from(data);
-
+    // str
+    let s = "test test test";
     let mut x = Cursor::new(Vec::new());
-    x.write_be(&s).unwrap();
+    x.write_be_with::<NullWideString, _>(s).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_be_with::<NullWideString, String>()
+            .unwrap(),
+        s
+    );
 
-    let s2: NullWideString = Cursor::new(x.into_inner()).read_be().unwrap();
+    // String
+    let mut x = Cursor::new(Vec::new());
+    x.write_be_with::<NullWideString, _>(&s.to_string())
+        .unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_be_with::<NullWideString, String>()
+            .unwrap(),
+        s
+    );
 
-    assert_eq!(&s2.to_string(), data);
+    // [u16; N]
+    let s = b"test test test".map(u16::from);
+    let mut x = Cursor::new(Vec::new());
+    x.write_be_with::<NullWideString, _>(&s).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_be_with::<NullWideString, Vec<u16>>()
+            .unwrap(),
+        s
+    );
+
+    // [u16]
+    let mut x = Cursor::new(Vec::new());
+    x.write_be_with::<NullWideString, _>(s.as_slice()).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_be_with::<NullWideString, Vec<u16>>()
+            .unwrap(),
+        s
+    );
+
+    // Vec<u16>
+    let mut x = Cursor::new(Vec::new());
+    x.write_be_with::<NullWideString, _>(&s.to_vec()).unwrap();
+    assert_eq!(
+        Cursor::new(x.into_inner())
+            .read_be_with::<NullWideString, Vec<u16>>()
+            .unwrap(),
+        s
+    );
 }

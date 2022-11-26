@@ -1,20 +1,23 @@
-use crate::binrw::{
-    codegen::{
-        get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
-        sanitization::{
-            make_ident, BEFORE_POS, BINWRITE_TRAIT, POS, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT,
-            WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
-            WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
-            WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
-            WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+use crate::{
+    binrw::{
+        codegen::{
+            get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
+            sanitization::{
+                make_ident, BEFORE_POS, BINWRITE_TRAIT, POS, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT,
+                WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
+                WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
+                WRITE_INTO_TRAIT, WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT,
+                WRITE_METHOD, WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+            },
         },
+        parser::{FieldMode, Map, StructField},
     },
-    parser::{FieldMode, Map, StructField},
+    util::quote_spanned_any,
 };
 use core::ops::Not;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::Ident;
+use syn::{spanned::Spanned, Ident};
 
 pub(crate) fn write_field(field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field)
@@ -64,6 +67,12 @@ impl<'a> StructFieldGenerator<'a> {
                 quote! { #WRITE_METHOD }
             }
             FieldMode::Function(write_fn) => write_fn.clone(),
+            FieldMode::Converter(converter) => {
+                let ty = &self.field.ty;
+                quote_spanned_any! {converter.span()=>
+                    <#ty as #WRITE_INTO_TRAIT<#converter>>::write_into
+                }
+            }
             FieldMode::Default => unreachable!("Ignored fields are not written"),
         };
 
@@ -224,7 +233,7 @@ impl<'a> StructFieldGenerator<'a> {
                     let #args = #WRITE_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
                 },
-                Map::Try(_) | Map::Repr(_) => quote! {
+                Map::Try(_) => quote! {
                     let #args = #WRITE_TRY_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
                 },
@@ -240,7 +249,7 @@ impl<'a> StructFieldGenerator<'a> {
                 let #args = ();
                 #out
             },
-            FieldMode::Function(_) => {
+            FieldMode::Function(_) | FieldMode::Converter(_) => {
                 let ty = &self.field.ty;
                 quote! {
                     let #args = #WRITE_ARGS_TYPE_HINT::<#ty, W, _, _>(
@@ -287,7 +296,6 @@ fn args_ident(ident: &Ident) -> Ident {
 fn field_mapping(map: &Map) -> Option<TokenStream> {
     match map {
         Map::Try(map_fn) | Map::Map(map_fn) => Some(quote! { (#map_fn) }),
-        Map::Repr(ty) => Some(quote! { (<#ty as core::convert::TryFrom<_>>::try_from) }),
         Map::None => None,
     }
 }

@@ -27,7 +27,7 @@ pub(super) fn generate_unit_enum(
         .add_magic_pre_assertion()
         .finish();
 
-    let read = match en.map.as_repr() {
+    let read = match &en.repr {
         Some(repr) => generate_unit_enum_repr(repr, &en.fields),
         None => generate_unit_enum_magic(&en.fields),
     };

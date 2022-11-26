@@ -1205,11 +1205,11 @@ assert_eq!(output.into_inner(), b"\0\0\0\x01\0\x02\0\x03");
 ### Using `FilePtr::parse` to read a `NullString` without storing a `FilePtr`
 
 ```
-# use binrw::{prelude::*, io::Cursor, FilePtr32, NullString};
+# use binrw::{prelude::*, io::Cursor, FilePtr32, NullString, ReadFrom};
 #[derive(BinRead)]
 struct MyType {
-    #[br(parse_with = FilePtr32::parse)]
-    some_string: NullString,
+    #[br(parse_with = FilePtr32::parse_with(<_ as ReadFrom<NullString>>::read_from))]
+    some_string: String,
 }
 
 # let val: MyType = Cursor::new(b"\0\0\0\x04Test\0").read_be().unwrap();
@@ -1933,8 +1933,8 @@ referenced by the expressions in any of these directives.
 # use binrw::{prelude::*, NullString, io::SeekFrom};
 #[derive(BinRead)]
 struct MyType {
-    #[br(align_before = 4, pad_after = 1, align_after = 4)]
-    str: NullString,
+    #[br(align_before = 4, pad_after = 1, align_after = 4, with(NullString))]
+    str: String,
 
     #[br(pad_size_to = 0x10)]
     test: u64,
@@ -1950,8 +1950,8 @@ struct MyType {
 # use binrw::{prelude::*, NullString, io::SeekFrom};
 #[derive(BinWrite)]
 struct MyType {
-    #[bw(align_before = 4, pad_after = 1, align_after = 4)]
-    str: NullString,
+    #[bw(align_before = 4, pad_after = 1, align_after = 4, with(NullString))]
+    str: String,
 
     #[bw(pad_size_to = 0x10)]
     test: u64,
@@ -2000,12 +2000,12 @@ this to happen.
 ## Examples
 
 ```
-# use binrw::{prelude::*, FilePtr32, NullString, io::Cursor};
+# use binrw::{prelude::*, FilePtr32, FilePtrWith, NullString, io::Cursor};
 #[derive(BinRead, Debug)]
 #[br(big, magic = b"TEST")]
 struct TestFile {
-    #[br(deref_now)]
-    ptr: FilePtr32<NullString>,
+    #[br(deref_now, with(FilePtrWith<NullString>))]
+    ptr: FilePtr32<String>,
 
     value: i32,
 
@@ -2018,7 +2018,7 @@ struct TestFile {
 # let test = Cursor::new(test_contents).read_be::<TestFile>().unwrap();
 # assert_eq!(test.ptr_len, 11);
 # assert_eq!(test.value, -1);
-# assert_eq!(test.ptr.to_string(), "Test string");
+# assert_eq!(*test.ptr, "Test string");
 ```
 </div>
 

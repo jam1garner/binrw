@@ -11,7 +11,7 @@ pub(crate) fn generate_unit_enum(
     name: Option<&Ident>,
     en: &UnitOnlyEnum,
 ) -> TokenStream {
-    let write = match en.map.as_repr() {
+    let write = match &en.repr {
         Some(repr) => generate_unit_enum_repr(repr, &en.fields),
         None => generate_unit_enum_magic(&en.fields),
     };

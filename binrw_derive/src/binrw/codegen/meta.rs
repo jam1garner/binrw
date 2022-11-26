@@ -1,5 +1,5 @@
 use super::sanitization::{META_ENDIAN_KIND, READ_ENDIAN, READ_MAGIC, WRITE_ENDIAN, WRITE_MAGIC};
-use crate::binrw::parser::{CondEndian, Input, Map};
+use crate::binrw::parser::{CondEndian, Input};
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -25,19 +25,11 @@ pub(crate) fn generate<const WRITE: bool>(
     let endian_meta = if WRITE { WRITE_ENDIAN } else { READ_ENDIAN };
 
     let endian = match input.endian() {
-        CondEndian::Inherited => match input.map() {
-            Map::None => input.is_empty().then(|| {
-                quote! {
-                    #META_ENDIAN_KIND::None
-                }
-            }),
-            Map::Map(_) | Map::Try(_) => Some(quote! {
+        CondEndian::Inherited => input.is_endian_agnostic().then(|| {
+            quote! {
                 #META_ENDIAN_KIND::None
-            }),
-            Map::Repr(repr) => ["i8", "u8"].contains(&repr.to_string().as_str()).then(|| {
-                quote! { <(#repr) as #endian_meta>::ENDIAN }
-            }),
-        },
+            }
+        }),
         CondEndian::Fixed(endian) => Some(quote! {
             #META_ENDIAN_KIND::Endian(#endian)
         }),

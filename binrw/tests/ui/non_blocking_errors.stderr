@@ -1,16 +1,16 @@
-error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `repr`, `magic`, `import`, `import_raw`, `assert`, `pre_assert`
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `magic`, `import`, `import_raw`, `assert`, `pre_assert`
  --> tests/ui/non_blocking_errors.rs:6:6
   |
 6 | #[br(invalid_keyword_struct)]
   |      ^^^^^^^^^^^^^^^^^^^^^^
 
-error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `repr`, `magic`, `args`, `args_raw`, `calc`, `try_calc`, `default`, `ignore`, `parse_with`, `count`, `offset`, `offset_after`, `if`, `deref_now`, `postprocess_now`, `restore_position`, `try`, `temp`, `assert`, `err_context`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`, `dbg`
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `magic`, `args`, `args_raw`, `calc`, `try_calc`, `default`, `ignore`, `with`, `parse_with`, `count`, `offset`, `offset_after`, `if`, `deref_now`, `postprocess_now`, `restore_position`, `try`, `temp`, `assert`, `err_context`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`, `dbg`
  --> tests/ui/non_blocking_errors.rs:8:10
   |
 8 |     #[br(invalid_keyword_struct_field_a)]
   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `repr`, `magic`, `args`, `args_raw`, `calc`, `try_calc`, `default`, `ignore`, `parse_with`, `count`, `offset`, `offset_after`, `if`, `deref_now`, `postprocess_now`, `restore_position`, `try`, `temp`, `assert`, `err_context`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`, `dbg`
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `magic`, `args`, `args_raw`, `calc`, `try_calc`, `default`, `ignore`, `with`, `parse_with`, `count`, `offset`, `offset_after`, `if`, `deref_now`, `postprocess_now`, `restore_position`, `try`, `temp`, `assert`, `err_context`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`, `dbg`
   --> tests/ui/non_blocking_errors.rs:10:10
    |
 10 |     #[br(invalid_keyword_struct_field_b)]

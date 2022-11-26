@@ -1,7 +1,7 @@
 use binrw::{
     args, binread,
     io::{Cursor, Seek, SeekFrom},
-    BinRead, BinResult, FilePtr, NullString,
+    BinRead, BinResult, FilePtr, FilePtrWith, NullString,
 };
 
 #[test]
@@ -49,7 +49,7 @@ fn all_the_things() {
         offsets: (u16, u16),
 
         #[br(if(offsets.0 == 0x20))]
-        name: Option<FilePtr<u32, NullString>>,
+        name: Option<FilePtr<u32, binrw::With<NullString, String>>>,
 
         #[br(calc(extra_val))]
         extra_val: u8,
@@ -153,8 +153,8 @@ fn deref_now() {
     struct Test {
         // deref_now on the first field tests that the reader position is correctly
         // restored before reading the second field
-        #[br(deref_now)]
-        a: FilePtr<u32, NullString>,
+        #[br(deref_now, with(FilePtrWith<NullString>))]
+        a: FilePtr<u32, String>,
         b: i32,
     }
 
@@ -164,7 +164,7 @@ fn deref_now() {
         Test {
             a: FilePtr {
                 ptr: 0x10,
-                value: Some(NullString(b"Test string".to_vec()))
+                value: Some("Test string".to_string())
             },
             b: -1,
         }
@@ -177,17 +177,17 @@ fn move_temp_field() {
     #[binread]
     #[derive(Debug, Eq, PartialEq)]
     struct Foo {
-        #[br(temp, postprocess_now)]
-        foo: binrw::NullString,
+        #[br(temp, postprocess_now, with(binrw::NullString))]
+        foo: String,
 
         #[br(calc = foo)]
-        bar: binrw::NullString,
+        bar: String,
     }
 
     assert_eq!(
         Foo::read_le(&mut Cursor::new(b"hello\0goodbyte\0")).unwrap(),
         Foo {
-            bar: binrw::NullString::from("hello"),
+            bar: String::from("hello"),
         }
     );
 }
