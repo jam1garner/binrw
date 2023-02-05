@@ -1,3 +1,4 @@
+#![allow(clippy::seek_to_start_instead_of_rewind)]
 use binrw::io::{BufReader, Cursor, Read, Seek, SeekFrom};
 use std::io::BufRead;
 

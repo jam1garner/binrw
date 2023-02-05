@@ -1,3 +1,4 @@
+#![allow(clippy::seek_to_start_instead_of_rewind)]
 use binrw::io::{Cursor, Read, Seek, SeekFrom};
 use std::io::{Read as StdReadExt, Seek as StdSeekExt};
 
@@ -19,7 +20,7 @@ fn cursor_test() {
     assert_eq!(test.position(), test2.position());
     assert_eq!(
         test.seek(SeekFrom::Start(0)).unwrap(),
-        test2.rewind().unwrap(),
+        test2.seek(std::io::SeekFrom::Start(0)).unwrap(),
     );
     assert_eq!(
         test.seek(SeekFrom::End(-1)).unwrap(),
