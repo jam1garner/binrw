@@ -102,10 +102,10 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | r   | [`postprocess_now`](#postprocessing) | field | Calls [`after_parse`](crate::BinRead::after_parse) immediately after reading data instead of after all fields have been read.
 | r   | [`pre_assert`](#pre-assert) | struct, non-unit enum, unit variant | Like `assert`, but checks the condition before parsing.
 | rw  | [`repr`](#repr) | unit-like enum | Specifies the underlying type for a unit-like (C-style) enum.
-| rw  | [`restore_position`](#restore-position) | field | Restores the <span class="br">reader’s</span><span class="bw">writer’s</span> position after <span class="br">reading<span><span class="bw">writing</span> a field.
+| rw  | [`restore_position`](#restore-position) | field | Restores the <span class="br">reader’s</span><span class="bw">writer’s</span> position after <span class="br">reading</span><span class="bw">writing</span> a field.
 | r   | [`return_all_errors`](#enum-errors) | non-unit enum | Returns a [`Vec`] containing the error which occurred on each variant of an enum on failure. This is the default.
 | r   | [`return_unexpected_error`](#enum-errors) | non-unit enum | Returns a single generic error on failure.
-| rw  | [`seek_before`](#padding-and-alignment) | field | Moves the <span class="br">reader</span><span class="bw">writer</span> to a specific position before <span class="br">reading<span><span class="bw">writing</span> data.
+| rw  | [`seek_before`](#padding-and-alignment) | field | Moves the <span class="br">reader</span><span class="bw">writer</span> to a specific position before <span class="br">reading</span><span class="bw">writing</span> data.
 | rw  | [`stream`](#stream-access-and-manipulation) | struct, non-unit enum, unit-like enum | Exposes the underlying <span class="br">read</span><span class="bw">write</span> stream.
 | r   | [`temp`](#temp) | field | Uses a field as a temporary variable. Only usable with the [`binread`](macro@crate::binread) attribute macro.
 | r   | [`try`](#try) | field | Tries to parse and stores the [`default`](core::default::Default) value for the type if parsing fails instead of returning an error.
