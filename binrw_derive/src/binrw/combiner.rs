@@ -46,6 +46,7 @@ pub(crate) fn derive(mut derive_input: DeriveInput) -> proc_macro2::TokenStream 
 }
 
 /// Check the fields of each input and copy temp state to the other input.
+#[rustfmt::skip]
 fn apply_temp_crossover(
     binread_result: &mut ParseResult<Input>,
     binwrite_result: &mut ParseResult<Input>,
