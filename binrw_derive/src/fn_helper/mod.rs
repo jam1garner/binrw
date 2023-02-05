@@ -135,7 +135,7 @@ impl<const WRITE: bool> Parse for Options<WRITE> {
             } else {
                 combine_error(
                     all_errors,
-                    Error::new(value.span(), format!("conflicting `{}` keyword", kw)),
+                    Error::new(value.span(), format!("conflicting `{kw}` keyword")),
                 );
             }
         }

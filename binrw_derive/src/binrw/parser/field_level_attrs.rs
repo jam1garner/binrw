@@ -226,7 +226,7 @@ impl StructField {
                 if used {
                     combine_error(&mut all_errors, syn::Error::new(
                         span,
-                        format!("`{}` can only be used with named args; did you mean `args {{ inner: {} }}`?", name, repr)
+                        format!("`{name}` can only be used with named args; did you mean `args {{ inner: {repr} }}`?")
                     ));
                 }
             }

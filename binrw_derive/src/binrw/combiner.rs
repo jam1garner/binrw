@@ -50,11 +50,10 @@ fn apply_temp_crossover(
     binread_result: &mut ParseResult<Input>,
     binwrite_result: &mut ParseResult<Input>,
 ) -> Option<syn::Error> {
-    let (binread_input, binwrite_input) = match (binread_result, binwrite_result) {
-        (ParseResult::Ok(binread), ParseResult::Ok(binwrite)) => (binread, binwrite),
+    let (ParseResult::Ok(binread_input), ParseResult::Ok(binwrite_input)) = (binread_result, binwrite_result) else { 
         // We don't need to apply this in the case of Partial because no
         // implementation is generated.
-        _ => return None,
+        return None;
     };
 
     match (binread_input, binwrite_input) {

@@ -7,8 +7,9 @@ use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use syn::spanned::Spanned;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) enum PassedArgs {
+    #[default]
     None,
     List(SpannedValue<Vec<TokenStream>>),
     Tuple(SpannedValue<TokenStream>),
@@ -26,12 +27,6 @@ impl PassedArgs {
             PassedArgs::Tuple(s) => Some(s.span()),
             PassedArgs::List(s) | PassedArgs::Named(s) => Some(s.span()),
         }
-    }
-}
-
-impl Default for PassedArgs {
-    fn default() -> Self {
-        PassedArgs::None
     }
 }
 

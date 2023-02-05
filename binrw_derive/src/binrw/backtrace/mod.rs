@@ -178,11 +178,11 @@ impl Display for BacktraceFrame {
 
             let bars = "─".repeat(max_digits);
 
-            writeln!(f, "  ┄{}─╮", bars)?;
+            writeln!(f, "  ┄{bars}─╮")?;
             for line in self.iter_lines() {
                 self.write_line(line, max_digits, f)?;
             }
-            writeln!(f, "  ┄{}─╯", bars)?;
+            writeln!(f, "  ┄{bars}─╯")?;
         }
 
         Ok(())

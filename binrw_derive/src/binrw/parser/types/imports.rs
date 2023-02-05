@@ -4,18 +4,13 @@ use crate::{
 };
 use syn::{Ident, Type};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) enum Imports {
+    #[default]
     None,
     Raw(Ident, Box<Type>),
     List(Vec<Ident>, Vec<Type>),
     Named(Vec<IdentTypeMaybeDefault>),
-}
-
-impl Default for Imports {
-    fn default() -> Self {
-        Imports::None
-    }
 }
 
 fn imports_from_attr(list: Enclosure<IdentPatType, IdentTypeMaybeDefault>) -> Imports {

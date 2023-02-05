@@ -195,7 +195,7 @@ fn generate_trait_impl<const WRITE: bool>(
 }
 
 fn get_args_lifetime(span: proc_macro2::Span) -> syn::Lifetime {
-    syn::Lifetime::new(&format!("'{}", ARGS_LIFETIME), span)
+    syn::Lifetime::new(&format!("'{ARGS_LIFETIME}"), span)
 }
 
 fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + '_ {

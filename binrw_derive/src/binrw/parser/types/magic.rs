@@ -71,10 +71,7 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
                 if i.suffix().is_empty() {
                     return Err(syn::Error::new(
                         value.span(),
-                        format!(
-                            "expected explicit type suffix for integer literal\ne.g {}u64",
-                            i
-                        ),
+                        format!("expected explicit type suffix for integer literal\ne.g {i}u64",),
                     ));
                 }
                 Kind::Numeric(i.suffix().to_owned())
@@ -84,8 +81,7 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
                     return Err(syn::Error::new(
                         value.span(),
                         format!(
-                            "expected explicit type suffix for float literal\nvalid values are {0}f32 or {0}f64",
-                            f
+                            "expected explicit type suffix for float literal\nvalid values are {f}f32 or {f}f64",
                         ),
                     ));
                 }

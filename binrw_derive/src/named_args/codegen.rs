@@ -59,10 +59,7 @@ impl<'a> Builder<'a> {
                     ("BinRead", "read_options")
                 };
                 format!(
-                    "Named arguments for the [`{0}::{1}`](::binrw::{0}::{1}) implementation of [`{2}`].",
-                    impl_name,
-                    impl_fn,
-                    owner_name,
+                    "Named arguments for the [`{impl_name}::{impl_fn}`](::binrw::{impl_name}::{impl_fn}) implementation of [`{owner_name}`].",
                 )
             });
 
