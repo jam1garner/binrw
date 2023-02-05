@@ -170,7 +170,7 @@ fn show_backtrace() {
             .map(|_| ())
             .unwrap_err()
     );
-    println!("{}", err);
+    println!("{err}");
     assert_eq!(
         err,
         if cfg!(feature = "verbose-backtrace") {
@@ -202,7 +202,7 @@ fn show_backtrace_2() {
             .map(|_| ())
             .unwrap_err()
     );
-    println!("{}", err);
+    println!("{err}");
     assert_eq!(
         err,
         if cfg!(feature = "verbose-backtrace") {

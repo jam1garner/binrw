@@ -97,7 +97,7 @@ fn assert_custom_err() {
 
     Test::read_le(&mut Cursor::new("\x01")).unwrap();
     let error = Test::read_le(&mut Cursor::new("\x02")).expect_err("accepted bad data");
-    assert_eq!(format!("{}", error), "oops! at 0x0");
+    assert_eq!(format!("{error}"), "oops! at 0x0");
     let error = error.custom_err::<Oops>().expect("bad error type");
     assert_eq!(error.0, 2);
 }
@@ -661,7 +661,7 @@ fn rewind_on_assert() {
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
     Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+    assert_eq!(expected, data.stream_position().unwrap());
 }
 
 #[test]
@@ -677,7 +677,7 @@ fn rewind_on_eof() {
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
     Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+    assert_eq!(expected, data.stream_position().unwrap());
 }
 
 #[test]
@@ -695,7 +695,7 @@ fn rewind_on_field_assert() {
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
     Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+    assert_eq!(expected, data.stream_position().unwrap());
 }
 
 #[test]

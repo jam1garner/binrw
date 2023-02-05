@@ -158,7 +158,7 @@ impl BacktraceFrame {
                     " {index}: {BOLD_OPEN}{message}{BOLD_CLOSE}\n     at {file}:{line}",
                 )?;
                 if let Some(code) = code {
-                    write!(f, "{}", code)?;
+                    write!(f, "{code}")?;
                 }
                 Ok(())
             }
@@ -204,8 +204,7 @@ impl fmt::Display for FirstErrorFmt<'_> {
 
                     writeln!(
                         f,
-                        "   ╭───────────────────────┄ {} ┄────────────────────┄",
-                        name
+                        "   ╭───────────────────────┄ {name} ┄────────────────────┄"
                     )?;
                     writeln!(f, "   ┆")?;
                     write!(f, "   ┆")?;

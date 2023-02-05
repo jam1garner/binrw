@@ -183,7 +183,7 @@ fn enum_return_all_errors() {
             assert_eq!(variant_errors[0].0, "One");
             if let binrw::Error::BadMagic { pos, found } = &variant_errors[0].1 {
                 assert_eq!(pos, &0);
-                assert_eq!(&format!("{:?}", found), "1");
+                assert_eq!(&format!("{found:?}"), "1");
             } else {
                 panic!("expected BadMagic; got {:?}", variant_errors[0].1);
             }
@@ -210,7 +210,7 @@ fn enum_rewind_on_assert() {
     let mut data = Cursor::new(b"\0\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
     Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+    assert_eq!(expected, data.stream_position().unwrap());
 }
 
 #[test]
@@ -228,7 +228,7 @@ fn enum_rewind_on_eof() {
     let mut data = Cursor::new(b"\0\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
     Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+    assert_eq!(expected, data.stream_position().unwrap());
 }
 
 #[test]
@@ -243,7 +243,7 @@ fn enum_rewind_on_variant_assert() {
     let mut data = Cursor::new(b"\0\0");
     let expected = data.seek(SeekFrom::Start(1)).unwrap();
     Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.seek(SeekFrom::Current(0)).unwrap());
+    assert_eq!(expected, data.stream_position().unwrap());
 }
 
 #[test]

@@ -291,18 +291,18 @@ impl From<io::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::BadMagic { pos, found } => write!(f, "bad magic at 0x{:x}: {:?}", pos, found),
-            Self::AssertFail { pos, message } => write!(f, "{} at 0x{:x}", message, pos),
+            Self::BadMagic { pos, found } => write!(f, "bad magic at 0x{pos:x}: {found:?}"),
+            Self::AssertFail { pos, message } => write!(f, "{message} at 0x{pos:x}"),
             Self::Io(err) => fmt::Display::fmt(err, f),
-            Self::Custom { pos, err } => write!(f, "{} at 0x{:x}", err, pos),
-            Self::NoVariantMatch { pos } => write!(f, "no variants matched at 0x{:x}", pos),
+            Self::Custom { pos, err } => write!(f, "{err} at 0x{pos:x}"),
+            Self::NoVariantMatch { pos } => write!(f, "no variants matched at 0x{pos:x}"),
             Self::EnumErrors {
                 pos,
                 variant_errors,
             } => {
-                write!(f, "no variants matched at 0x{:x}:", pos)?;
+                write!(f, "no variants matched at 0x{pos:x}:")?;
                 for (name, err) in variant_errors {
-                    write!(f, "\n  {}: {}", name, err)?;
+                    write!(f, "\n  {name}: {err}")?;
                 }
                 Ok(())
             }

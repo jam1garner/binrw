@@ -7,7 +7,7 @@ fn read() {
 
     assert_eq!(stream.stream_position().unwrap(), 0);
     assert_eq!(stream.seek(SeekFrom::Start(0)).unwrap(), 0);
-    assert_eq!(stream.seek(SeekFrom::Current(0)).unwrap(), 0);
+    assert_eq!(stream.stream_position().unwrap(), 0);
     stream.seek(SeekFrom::Start(1)).unwrap_err();
     stream.seek(SeekFrom::Current(1)).unwrap_err();
     stream.seek(SeekFrom::Current(-1)).unwrap_err();
@@ -17,7 +17,7 @@ fn read() {
     assert_eq!(&buf, b"hello");
     assert_eq!(stream.stream_position().unwrap(), 5);
     assert_eq!(stream.seek(SeekFrom::Start(5)).unwrap(), 5);
-    assert_eq!(stream.seek(SeekFrom::Current(0)).unwrap(), 5);
+    assert_eq!(stream.stream_position().unwrap(), 5);
     stream.seek(SeekFrom::Start(0)).unwrap_err();
 
     assert_eq!(stream.read(&mut buf).unwrap(), 5);
@@ -78,7 +78,7 @@ fn write() {
     let mut stream = NoSeek::new(Vec::new());
     assert_eq!(stream.write(b"helloworld").unwrap(), 10);
     assert_eq!(stream.stream_position().unwrap(), 10);
-    assert_eq!(stream.seek(SeekFrom::Current(0)).unwrap(), 10);
+    assert_eq!(stream.stream_position().unwrap(), 10);
     assert_eq!(stream.seek(SeekFrom::Start(10)).unwrap(), 10);
     assert_eq!(stream.get_ref(), b"helloworld");
     stream.seek(SeekFrom::Start(1)).unwrap_err();

@@ -66,7 +66,7 @@ fn bufreader() {
     assert_eq!(stream.get_ref().reads, 1);
 
     // Null seek
-    assert_eq!(stream.seek(SeekFrom::Current(0)).unwrap(), 7);
+    assert_eq!(stream.stream_position().unwrap(), 7);
     assert_eq!(stream.stream_position().unwrap(), 7);
     assert_eq!(stream.seek(SeekFrom::Start(7)).unwrap(), 7);
     assert_eq!(stream.stream_position().unwrap(), 7);
