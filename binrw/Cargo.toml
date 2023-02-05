@@ -1,6 +1,6 @@
 [package]
 name = "binrw"
-version = "0.11.0"
+version = "0.11.1"
 authors = [
     "jam1garner <jam@jam1.re>",
     "Colin Snover <github.com@zetafleet.com>",
@@ -17,7 +17,7 @@ homepage = "https://binrw.rs"
 
 [dependencies]
 array-init = "2.0"
-binrw_derive = { version = "0.11.0", path = "../binrw_derive" }
+binrw_derive = { version = "0.11.1", path = "../binrw_derive" }
 bytemuck = "1.12"
 
 [dev-dependencies]
