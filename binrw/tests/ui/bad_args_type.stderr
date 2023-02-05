@@ -2,7 +2,7 @@ error[E0308]: mismatched types
   --> tests/ui/bad_args_type.rs:11:10
    |
 11 |     #[br(args(a))]
-   |          ^^^^ expected struct `ItemBinReadArgs`, found tuple
+   |          ^^^^ expected `ItemBinReadArgs`, found `(u8,)`
 12 |     c: Item,
    |        ---- expected due to this
    |

@@ -5,7 +5,7 @@ error[E0308]: mismatched types
     |                   ^
     |                   |
     |                   expected `u64`, found `u8`
-    |                   arguments to this function are incorrect
+    |                   arguments to this method are incorrect
     |
 note: associated function defined here
    --> src/file_ptr.rs
@@ -24,7 +24,7 @@ error[E0308]: mismatched types
     |                         ^
     |                         |
     |                         expected `u64`, found `u8`
-    |                         arguments to this function are incorrect
+    |                         arguments to this method are incorrect
     |
 note: associated function defined here
    --> src/file_ptr.rs

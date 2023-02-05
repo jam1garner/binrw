@@ -19,7 +19,7 @@ fn cursor_test() {
     assert_eq!(test.position(), test2.position());
     assert_eq!(
         test.seek(SeekFrom::Start(0)).unwrap(),
-        test2.seek(std::io::SeekFrom::Start(0)).unwrap(),
+        test2.rewind().unwrap(),
     );
     assert_eq!(
         test.seek(SeekFrom::End(-1)).unwrap(),
