@@ -103,6 +103,12 @@ fn generate<const WRITE: bool>(
             }
         }
 
+        if args_ty.len() == 1 {
+            // Add trailing comma so it's a single-element tuple, not a parenthesized item
+            args_pat.push_punct(parse_quote!(,));
+            args_ty.push_punct(parse_quote!(,));
+        }
+
         func.sig.inputs.push(parse_quote!((#args_pat): (#args_ty)));
     }
 
