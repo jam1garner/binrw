@@ -321,7 +321,7 @@ fn directives_to_args(field: &StructField) -> TokenStream {
     let args = field
         .count
         .as_ref()
-        .map(|count| quote_spanned! { count.span()=> count: usize::try_from(#count).unwrap() })
+        .map(|count| quote_spanned! { count.span()=> count: usize::try_from(#count).expect("error converting count to usize") })
         .into_iter()
         .chain(
             field
