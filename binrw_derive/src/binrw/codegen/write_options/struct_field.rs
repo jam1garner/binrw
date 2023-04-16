@@ -4,7 +4,7 @@ use crate::{
             get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
                 make_ident, BEFORE_POS, BINWRITE_TRAIT, MAP_WRITER_TYPE_HINT, POS, SAVED_POSITION,
-                SEEK_FROM, SEEK_TRAIT, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
+                SEEK_FROM, SEEK_TRAIT, WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
                 WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
                 WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
                 WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
@@ -238,7 +238,7 @@ impl<'a> StructFieldGenerator<'a> {
 
         let args = args_ident(&self.field.ident);
 
-        let args_val = if let Some(args) = get_passed_args(self.field) {
+        let args_val = if let Some(args) = get_passed_args(self.field, WRITER) {
             args
         } else {
             quote! { () }

@@ -288,12 +288,12 @@ fn get_map_err(pos: IdentStr, span: Span) -> TokenStream {
     }
 }
 
-fn get_passed_args(field: &StructField) -> Option<TokenStream> {
+fn get_passed_args(field: &StructField, stream: IdentStr) -> Option<TokenStream> {
     let args = &field.args;
     let span = args.span().unwrap_or_else(|| field.ty.span());
     match args {
         PassedArgs::Named(fields) => Some({
-            let extra_args = directives_to_args(field);
+            let extra_args = directives_to_args(field, stream);
             quote_spanned_any! { span=>
                 #ARGS_MACRO! { #extra_args #(#fields, )* }
             }
@@ -301,7 +301,7 @@ fn get_passed_args(field: &StructField) -> Option<TokenStream> {
         PassedArgs::List(list) => Some(quote_spanned! {span=> (#(#list,)*) }),
         PassedArgs::Tuple(tuple) => Some(tuple.as_ref().clone()),
         PassedArgs::None => {
-            let extra_args = directives_to_args(field);
+            let extra_args = directives_to_args(field, stream);
             (!extra_args.is_empty()).then(|| {
                 quote_spanned_any! { span=> #ARGS_MACRO! { #extra_args } }
             })
@@ -317,11 +317,30 @@ fn get_try_calc(pos: IdentStr, ty: &Type, calc: &TokenStream) -> TokenStream {
     }}
 }
 
-fn directives_to_args(field: &StructField) -> TokenStream {
+fn directives_to_args(field: &StructField, stream: IdentStr) -> TokenStream {
     let args = field
         .count
         .as_ref()
-        .map(|count| quote_spanned! { count.span()=> count: usize::try_from(#count).unwrap() })
+        .map(|count| {
+            quote_spanned_any! {count.span()=>
+                count: {
+                    let #TEMP = #count;
+                    usize::try_from(#TEMP).map_err(|_| {
+                        extern crate alloc;
+                        #BIN_ERROR::AssertFail {
+                            pos: #SEEK_TRAIT::stream_position(#stream)
+                                .unwrap_or_default(),
+                            // This is using debug formatting instead of display
+                            // formatting to reduce the chance of some
+                            // additional confusing error complaining about
+                            // Display not being implemented if someone tries
+                            // using a bogus type with `count`
+                            message: alloc::format!("count {:?} out of range of usize", #TEMP)
+                        }
+                    })?
+                }
+            }
+        })
         .into_iter()
         .chain(
             field
