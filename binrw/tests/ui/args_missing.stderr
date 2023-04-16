@@ -13,5 +13,6 @@ note: required by a bound in `Required::args`
    |                     ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Required::args`
 help: consider annotating `NoDefault` with `#[derive(Default)]`
    |
-4  | #[derive(Default)]
+4  + #[derive(Default)]
+5  | struct NoDefault;
    |
