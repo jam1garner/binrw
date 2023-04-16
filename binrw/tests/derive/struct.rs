@@ -147,6 +147,30 @@ fn calc_temp_field() {
 }
 
 #[test]
+fn count_too_big() {
+    #[derive(BinRead, Debug)]
+    #[br(little)]
+    struct Test {
+        _a: u128,
+        #[br(count = _a)]
+        _b: Vec<u8>,
+    }
+
+    let error =
+        Test::read(&mut Cursor::new(u128::MAX.to_le_bytes())).expect_err("accepted bad count");
+    match error {
+        binrw::Error::AssertFail { pos, message } => {
+            assert_eq!(pos, core::mem::size_of::<u128>() as u64);
+            assert_eq!(
+                message,
+                format!("count {} out of range of usize", u128::MAX)
+            );
+        }
+        _ => panic!("bad error type"),
+    }
+}
+
+#[test]
 fn deref_now() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(big, magic = b"TEST")]
