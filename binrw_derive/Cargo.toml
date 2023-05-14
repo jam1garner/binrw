@@ -1,17 +1,13 @@
 [package]
 name = "binrw_derive"
-version = "0.11.1"
-authors = [
-    "jam1garner <jam@jam1.re>",
-    "Colin Snover <github.com@zetafleet.com>",
-    "Kitlith <kitlith@kitl.pw>",
-    "roblabla <robinlambertz+dev@gmail.com>"
-]
-edition = "2021"
 description = "Derive macro for binrw"
-repository = "https://github.com/jam1garner/binrw"
-license = "MIT"
-homepage = "https://binrw.rs"
+authors.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [lib]
 proc-macro = true

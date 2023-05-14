@@ -1,19 +1,16 @@
 [package]
 name = "binrw"
-version = "0.11.1"
-authors = [
-    "jam1garner <jam@jam1.re>",
-    "Colin Snover <github.com@zetafleet.com>",
-    "Kitlith <kitlith@kitl.pw>",
-    "roblabla <robinlambertz+dev@gmail.com>"
-]
-edition = "2021"
-repository = "https://github.com/jam1garner/binrw"
-license = "MIT"
 description = "A Rust crate for helping read structs from binary data using ✨macro magic✨"
+categories = [ "encoding", "parsing" ]
+keywords = [ "binary", "encode", "decode", "serialize", "deserialize" ]
 readme = "../README.md"
-documentation = "https://docs.rs/binrw"
-homepage = "https://binrw.rs"
+authors.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 array-init = "2.0"

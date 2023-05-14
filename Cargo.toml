@@ -3,3 +3,17 @@ members = [
     "binrw",
     "binrw_derive"
 ]
+
+[workspace.package]
+authors = [
+    "jam1garner <jam@jam1.re>",
+    "Colin Snover <github.com@zetafleet.com>",
+    "Kitlith <kitlith@kitl.pw>",
+    "roblabla <robinlambertz+dev@gmail.com>"
+]
+documentation = "https://docs.rs/binrw"
+edition = "2021"
+homepage = "https://binrw.rs"
+license = "MIT"
+repository = "https://github.com/jam1garner/binrw"
+version = "0.11.1"
