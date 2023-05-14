@@ -11,6 +11,8 @@ note: required by a bound in `Required::args`
    |
    | pub trait Required: MissingArgsDirective {
    |                     ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Required::args`
+   |     fn args() -> Self;
+   |        ---- required by a bound in this associated function
 help: consider annotating `NoDefault` with `#[derive(Default)]`
    |
 4  + #[derive(Default)]

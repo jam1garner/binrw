@@ -15,6 +15,7 @@ macro_rules! compare {
 }
 
 #[test]
+#[allow(unused_allocation)]
 fn boxed() {
     compare!(Box::new(3_u8), b"\x03");
     compare!(Box::new(3_u16), Endian::Big, b"\0\x03");
