@@ -200,7 +200,7 @@ impl<'field> AfterParseCallGenerator<'field> {
                 }
             }
         } else {
-            get_args_argument(self.field, args_var)
+            get_args_argument(self.field, args_var, false)
         };
 
         self.out = quote! {
@@ -486,7 +486,11 @@ impl<'field> FieldGenerator<'field> {
             FieldMode::Calc(calc) => quote! { #calc },
             FieldMode::TryCalc(calc) => get_try_calc(POS, &self.field.ty, calc),
             read_mode @ (FieldMode::Normal | FieldMode::Function(_)) => {
-                let args_arg = get_args_argument(self.field, &self.args_var);
+                let args_arg = get_args_argument(
+                    self.field,
+                    &self.args_var,
+                    matches!(read_mode, FieldMode::Normal),
+                );
                 let reader_var = &self.reader_var;
                 let endian_var = &self.endian_var;
 
@@ -571,10 +575,20 @@ impl<'field> FieldGenerator<'field> {
     }
 }
 
-fn get_args_argument(field: &StructField, args_var: &Option<Ident>) -> TokenStream {
+fn get_args_argument(
+    field: &StructField,
+    args_var: &Option<Ident>,
+    need_clone: bool,
+) -> TokenStream {
     args_var.as_ref().map_or_else(
         || quote_spanned! {field.ty.span()=> <_ as #REQUIRED_ARG_TRAIT>::args() },
-        |args_var| quote! { #args_var.clone() },
+        |args_var| {
+            if need_clone {
+                quote! { #args_var.clone() }
+            } else {
+                quote! { #args_var }
+            }
+        },
     )
 }
 

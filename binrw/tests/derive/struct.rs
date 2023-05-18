@@ -774,3 +774,30 @@ fn tuple_calc_temp_field() {
     // compilation would fail if it weren’t due to missing a second item
     assert_eq!(result, Test(5u32));
 }
+
+#[test]
+fn no_clone_needed_for_parse_with() {
+    #[binread]
+    #[derive(Debug, Eq, PartialEq)]
+    pub struct Test {
+        foo: u8,
+        #[br(parse_with = files_parser, args(&mut foo))]
+        files: u8,
+    }
+
+    #[binrw::parser]
+    fn files_parser(foo: &mut u8) -> BinResult<u8> {
+        let old_value = *foo;
+        *foo = 0x0A;
+        Ok(old_value)
+    }
+
+    let result = Test::read_le(&mut Cursor::new(b"\x0B")).unwrap();
+    assert_eq!(
+        result,
+        Test {
+            foo: 0x0A,
+            files: 0x0B
+        }
+    );
+}
