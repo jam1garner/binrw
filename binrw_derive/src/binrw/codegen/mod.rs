@@ -325,6 +325,7 @@ fn directives_to_args(field: &StructField, stream: IdentStr) -> TokenStream {
             quote_spanned_any! {count.span()=>
                 count: {
                     let #TEMP = #count;
+                    #[allow(clippy::useless_conversion)]
                     usize::try_from(#TEMP).map_err(|_| {
                         extern crate alloc;
                         #BIN_ERROR::AssertFail {

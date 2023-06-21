@@ -171,6 +171,21 @@ fn count_too_big() {
 }
 
 #[test]
+fn count_no_useless_conversion_lint() {
+    const LEN: usize = 1;
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(little)]
+    struct Test {
+        #[br(count = LEN)]
+        data: Vec<u8>,
+    }
+    assert_eq!(
+        Test::read(&mut Cursor::new("\x01")).unwrap(),
+        Test { data: vec![1; 1] }
+    );
+}
+
+#[test]
 fn deref_now() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(big, magic = b"TEST")]
