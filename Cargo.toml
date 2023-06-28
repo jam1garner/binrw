@@ -3,6 +3,7 @@ members = [
     "binrw",
     "binrw_derive"
 ]
+resolver = "2"
 
 [workspace.package]
 authors = [
