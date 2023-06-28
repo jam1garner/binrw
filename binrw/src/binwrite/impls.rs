@@ -8,7 +8,7 @@ use core::{
     marker::PhantomData,
     num::{
         NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
-        NonZeroU32, NonZeroU64, NonZeroU8,
+        NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, NonZeroIsize,
     },
 };
 
@@ -34,7 +34,7 @@ macro_rules! binwrite_num_impl {
     };
 }
 
-binwrite_num_impl!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
+binwrite_num_impl!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64);
 
 macro_rules! binwrite_nonzero_num_impl {
     ($($non_zero_type:ty => $type_name:ty),*$(,)?) => {
@@ -66,11 +66,13 @@ binwrite_nonzero_num_impl!(
     NonZeroU32  => u32,
     NonZeroU64  => u64,
     NonZeroU128 => u128,
+    NonZeroUsize => usize,
     NonZeroI8   => i8,
     NonZeroI16  => i16,
     NonZeroI32  => i32,
     NonZeroI64  => i64,
     NonZeroI128 => i128,
+    NonZeroIsize => isize,
 );
 
 impl<T, const N: usize> BinWrite for [T; N]

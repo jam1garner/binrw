@@ -5,7 +5,7 @@ use crate::{
 use alloc::{boxed::Box, vec::Vec};
 use core::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
-    NonZeroU32, NonZeroU64, NonZeroU8,
+    NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, NonZeroIsize,
 };
 
 macro_rules! binread_impl {
@@ -36,7 +36,7 @@ macro_rules! binread_impl {
     }
 }
 
-binread_impl!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
+binread_impl!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64);
 
 fn unexpected_zero_num() -> Error {
     Error::Io(io::Error::new(
@@ -67,8 +67,8 @@ macro_rules! binread_nonzero_impl {
 }
 
 binread_nonzero_impl! {
-    NonZeroU8, u8, NonZeroU16, u16, NonZeroU32, u32, NonZeroU64, u64, NonZeroU128, u128,
-    NonZeroI8, i8, NonZeroI16, i16, NonZeroI32, i32, NonZeroI64, i64, NonZeroI128, i128,
+    NonZeroU8, u8, NonZeroU16, u16, NonZeroU32, u32, NonZeroU64, u64, NonZeroU128, u128, NonZeroUsize, usize,
+    NonZeroI8, i8, NonZeroI16, i16, NonZeroI32, i32, NonZeroI64, i64, NonZeroI128, i128, NonZeroIsize, isize,
 }
 
 /// Named arguments for the [`BinRead::read_options()`] implementation of [`Vec`].
