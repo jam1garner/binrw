@@ -1,4 +1,4 @@
-///! Utilities for helping sanitize macro
+//! Utilities for helping sanitize macro
 use crate::util::{from_crate, ident_str};
 use proc_macro2::Ident;
 use quote::format_ident;
