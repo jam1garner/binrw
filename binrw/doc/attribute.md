@@ -813,7 +813,7 @@ a struct field</span>:
 ```
 </div>
 
-Any <span class="br">earlier</span> field or [import](#arguments) can be
+Any field, <span class="br">earlier</span> temporary field, or [import](#arguments) can be
 referenced by the expression in the directive.
 
 When using `try_calc`, the produced value must be a [`Result<T, E>`](Result).
