@@ -37,7 +37,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T>,
 {
-    until_with(cond, default_reader)
+    until_with(cond, T::read_options)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -129,7 +129,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T>,
 {
-    until_exclusive_with(cond, default_reader)
+    until_exclusive_with(cond, T::read_options)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -221,7 +221,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T>,
 {
-    until_eof_with(default_reader)(reader, endian, args)
+    until_eof_with(T::read_options)(reader, endian, args)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -318,7 +318,7 @@ where
     Ret: FromIterator<T>,
     It: IntoIterator<Item = Arg>,
 {
-    args_iter_with(it, default_reader)
+    args_iter_with(it, T::read_options)
 }
 
 /// Creates a parser that uses a given function to build a collection, using
@@ -406,7 +406,7 @@ where
     Arg: Clone,
     Ret: FromIterator<T> + 'static,
 {
-    count_with(n, default_reader)
+    count_with(n, T::read_options)
 }
 
 /// Creates a parser that uses a given function to read N items into a
@@ -475,16 +475,6 @@ where
             }
         })
     }
-}
-
-#[binrw::parser(reader, endian)]
-fn default_reader<'a, T: BinRead>(args: T::Args<'a>, ...) -> BinResult<T>
-where
-    T::Args<'a>: Clone,
-{
-    let mut value = T::read_options(reader, endian, args.clone())?;
-    value.after_parse(reader, endian, args)?;
-    Ok(value)
 }
 
 fn not_enough_bytes<T>(_: T) -> Error {

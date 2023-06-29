@@ -16,22 +16,3 @@ help: you can convert a `u8` to a `u64`
     |
 6   |     #[br(offset = a.into())]
     |                    +++++++
-
-error[E0308]: mismatched types
- --> tests/ui/invalid_offset_type.rs:8:25
-  |
-8 |     #[br(offset_after = d)]
-  |                         ^
-  |                         |
-  |                         expected `u64`, found `u8`
-  |                         arguments to this method are incorrect
-  |
-note: method defined here
- --> src/file_ptr.rs
-  |
-  |     pub offset: u64,
-  |         ^^^^^^
-help: you can convert a `u8` to a `u64`
-    |
-8   |     #[br(offset_after = d.into())]
-    |                          +++++++

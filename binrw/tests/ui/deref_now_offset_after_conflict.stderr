@@ -1,5 +1,0 @@
-error: `deref_now` and `offset_after` are mutually exclusive
- --> $DIR/deref_now_offset_after_conflict.rs:5:10
-  |
-5 |     #[br(deref_now, offset_after(1))]
-  |          ^^^^^^^^^^^^^^^^^^^^^^^

@@ -201,10 +201,6 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         pad_size_to
     );
 
-    if let Some(tokens) = field.offset_after.clone() {
-        visit!((*tokens).clone());
-    }
-
     if let Some(condition) = field.if_cond.clone() {
         let Condition {
             condition,
@@ -408,9 +404,9 @@ fn is_keyword_ident(ident: &syn::Ident) -> bool {
 
         // binrw 'keywords'
         align_after, align_before, args, args_raw, assert, big, binread, br, brw, binwrite,
-        bw, calc, count, default, deref_now, ignore, import, import_raw, is_big, is_little,
-        little, magic, map, offset, offset_after, pad_after, pad_before, pad_size_to, parse_with,
-        postprocess_now, pre_assert, repr, restore_position, return_all_errors,
+        bw, calc, count, default, ignore, import, import_raw, is_big, is_little,
+        little, magic, map, offset, pad_after, pad_before, pad_size_to, parse_with,
+        pre_assert, repr, restore_position, return_all_errors,
         return_unexpected_error, seek_before, temp, try_map, write_with
     );
 

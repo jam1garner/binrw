@@ -87,7 +87,6 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | r   | [`count`](#count) | field | Sets the length of a vector.
 | r   | [`dbg`](#debug) | field | Prints the value and offset of a field to `stderr`.
 | r   | [`default`](#ignore) | field | An alias for `ignore`.
-| r   | [`deref_now`](#postprocessing) | field | An alias for `postprocess_now`.
 | r   | [`err_context`](#backtrace) | field | Adds additional context to errors.
 | rw  | [`if`](#conditional-values) | field | <span class="brw">Reads or writes</span><span class="br">Reads</span><span class="bw">Writes</span> data only if a condition is true.
 | rw  | [`ignore`](#ignore) | field | <span class="brw">For `BinRead`, uses the [`default`](core::default::Default) value for a field instead of reading data. For `BinWrite`, skips writing the field.</span><span class="br">Uses the [`default`](core::default::Default) value for a field instead of reading data.</span><span class="bw">Skips writing the field.</span>
@@ -100,12 +99,10 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`map`](#map) | all except unit variant | Maps an object or value to a new value.
 | rw  | [`map_stream`](#stream-access-and-manipulation) | all except unit variant | Maps the <span class="br">read</span><span class="bw">write</span> stream to a new stream.
 | r   | [`offset`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr) while parsing.
-| r   | [`offset_after`](#offset) | field | Modifies the offset used by a [`FilePtr`](crate::FilePtr) after parsing.
 | rw  | [`pad_after`](#padding-and-alignment) | field | Skips N bytes after <span class="br">reading</span><span class="bw">writing</span> a field.
 | rw  | [`pad_before`](#padding-and-alignment) | field | Skips N bytes before <span class="br">reading</span><span class="bw">writing</span> a field.
 | rw  | [`pad_size_to`](#padding-and-alignment) | field | Ensures the <span class="br">reader</span><span class="bw">writer</span> is always advanced at least N bytes.
 | r   | [`parse_with`](#custom-parserswriters) | field | Specifies a custom function for reading a field.
-| r   | [`postprocess_now`](#postprocessing) | field | Calls [`after_parse`](crate::BinRead::after_parse) immediately after reading data instead of after all fields have been read.
 | r   | [`pre_assert`](#pre-assert) | struct, non-unit enum, unit variant | Like `assert`, but checks the condition before parsing.
 | rw  | [`repr`](#repr) | unit-like enum | Specifies the underlying type for a unit-like (C-style) enum.
 | rw  | [`restore_position`](#restore-position) | field | Restores the <span class="br">reader’s</span><span class="bw">writer’s</span> position after <span class="br">reading</span><span class="bw">writing</span> a field.
@@ -1760,13 +1757,11 @@ reset to where it was before parsing started.
 
 # Offset
 
-The `offset` and `offset_after` directives are shorthands for passing
-`offset` and `offset_after` arguments to a parser that operates like
-[`FilePtr`](crate::FilePtr):
+The `offset` directive is shorthand for passing `offset` to a parser that
+operates like [`FilePtr`](crate::FilePtr):
 
 ```text
 #[br(offset = $offset:expr)] or #[br(offset($offset:expr))]
-#[br(offset_after = $offset:expr)] or #[br(offset_after($offset:expr))]
 ```
 
 When manually implementing
@@ -1774,12 +1769,9 @@ When manually implementing
 [custom parser function](#custom-parserswriters), the offset is accessible
 from a named argument named `offset`.
 
-For `offset`, any earlier field or [import](#arguments) can be referenced by
-the expression in the directive.
-
-For `offset_after`, *all* fields and imports can be referenced by the
-expression in the directive, but [`deref_now`](#postprocessing) cannot be
-used.
+Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can be
+referenced by the expression in the directive.
 
 ## Examples
 
@@ -1985,58 +1977,6 @@ If seeking fails, an [`Io`](crate::Error::Io) error is returned and the
 reset to where it was before
 <span class="br">parsing</span><span class="bw">serialisation</span>
 started.
-
-<div class="br">
-
-# Postprocessing
-
-The `deref_now` directive, and its alias `postprocess_now`, cause a
-field’s [`after_parse`](crate::BinRead::after_parse) function to be called
-immediately after the field is parsed, instead of deferring the call until
-the entire parent object has been parsed:
-
-```text
-#[br(deref_now)] or #[br(postprocess_now)]
-```
-
-The [`BinRead::after_parse`](crate::BinRead::after_parse) function is
-normally used to perform additional work after the whole parent object has
-been parsed. For example, the [`FilePtr`](crate::FilePtr) type reads an
-object offset during parsing with
-[`read_options`](crate::BinRead::read_options), then actually seeks to and
-parses the pointed-to object in `after_parse`. This improves read
-performance by reading the whole parent object sequentially before seeking
-to read the pointed-to object.
-
-However, if another field in the parent object needs to access data from the
-pointed-to object, `after_parse` needs to be called earlier. Adding
-`deref_now` (or its alias, `postprocess_now`) to the earlier field causes
-this to happen.
-
-## Examples
-
-```
-# use binrw::{prelude::*, FilePtr32, NullString, io::Cursor};
-#[derive(BinRead, Debug)]
-#[br(big, magic = b"TEST")]
-struct TestFile {
-    #[br(deref_now)]
-    ptr: FilePtr32<NullString>,
-
-    value: i32,
-
-    // Notice how `ptr` can be used as it has already been postprocessed
-    #[br(calc = ptr.len())]
-    ptr_len: usize,
-}
-
-# let test_contents = b"\x54\x45\x53\x54\x00\x00\x00\x10\xFF\xFF\xFF\xFF\x00\x00\x00\x00\x54\x65\x73\x74\x20\x73\x74\x72\x69\x6E\x67\x00\x00\x00\x00\x69";
-# let test = Cursor::new(test_contents).read_be::<TestFile>().unwrap();
-# assert_eq!(test.ptr_len, 11);
-# assert_eq!(test.value, -1);
-# assert_eq!(test.ptr.to_string(), "Test string");
-```
-</div>
 
 <div class="br">
 
