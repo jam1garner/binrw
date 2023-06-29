@@ -252,14 +252,28 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn append_debug(mut self) -> Self {
+        // Unwrapping the proc-macro2 Span is undesirable but necessary until its API
+        // is updated to allow retrieving line/column again. Using a separate function
+        // to unwrap just to make it clearer what needs to be undone later.
+        // <https://github.com/dtolnay/proc-macro2/pull/383>
+        #[cfg(all(feature = "verbose-backtrace", nightly, proc_macro))]
+        fn start_line(span: proc_macro2::Span) -> usize {
+            span.unwrap().start().line()
+        }
+        #[cfg(not(all(feature = "verbose-backtrace", nightly, proc_macro)))]
+        fn start_line(_: proc_macro2::Span) -> usize {
+            0
+        }
+
         if self.field.debug.is_some() {
             let head = self.out;
             let reader_var = &self.reader_var;
             let ident = &self.field.ident;
-            let at = if ident.span().start().line == 0 {
+            let start_line = start_line(ident.span());
+            let at = if start_line == 0 {
                 quote!(::core::line!())
             } else {
-                ident.span().start().line.to_token_stream()
+                start_line.to_token_stream()
             };
 
             self.out = quote! {

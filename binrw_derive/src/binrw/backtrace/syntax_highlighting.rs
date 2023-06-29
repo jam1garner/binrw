@@ -1,3 +1,4 @@
+use super::{end, start};
 use crate::binrw::parser::{
     AssertionError, CondEndian, Condition, ErrContext, FieldMode, Map, PassedArgs, StructField,
 };
@@ -81,16 +82,16 @@ struct Visitor {
 
 impl SyntaxInfo {
     fn highlight_color(&mut self, span: Span, color: Color) {
-        let start = span.start();
-        let end = span.end();
+        let start = start(span);
+        let end = end(span);
 
         let line = self
             .lines
-            .entry(start.line)
+            .entry(start.line())
             .or_insert_with(LineSyntax::default);
 
-        assert_eq!(start.line, end.line);
-        line.highlights.push((start.column..end.column, color));
+        assert_eq!(start.line(), end.line());
+        line.highlights.push((start.column()..end.column(), color));
     }
 }
 
@@ -104,15 +105,15 @@ pub(super) fn get_syntax_highlights(field: &StructField) -> SyntaxInfo {
     let Visitor { mut syntax_info } = visit;
 
     for keyword_span in &field.keyword_spans {
-        let start = keyword_span.start();
-        let end = keyword_span.end();
+        let start = start(*keyword_span);
+        let end = end(*keyword_span);
         let line = syntax_info
             .lines
-            .entry(start.line)
+            .entry(start.line())
             .or_insert_with(LineSyntax::default);
 
         line.highlights
-            .push((start.column..end.column, Color::Keyword));
+            .push((start.column()..end.column(), Color::Keyword));
     }
 
     // ensure highlights are sorted in-order
@@ -144,18 +145,20 @@ fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
         //  |___|___ brackets
         //
         let span = attr.bracket_token.span;
-        let start = span.start();
-        let end = span.end();
+        let start = start(span);
+        let end = end(span);
 
         let line = syntax_info
             .lines
-            .entry(start.line)
+            .entry(start.line())
             .or_insert_with(LineSyntax::default);
 
+        line.highlights.push((
+            start.column()..start.column().saturating_add(1),
+            Color::Keyword,
+        ));
         line.highlights
-            .push((start.column..start.column.saturating_add(1), Color::Keyword));
-        line.highlights
-            .push((end.column.saturating_sub(1)..end.column, Color::Keyword));
+            .push((end.column().saturating_sub(1)..end.column(), Color::Keyword));
 
         // #[path(...)]
         //       ^   ^
@@ -288,19 +291,19 @@ impl Parse for ArgList {
 
 impl<'ast> Visit<'ast> for Visitor {
     fn visit_lit(&mut self, lit: &'ast syn::Lit) {
-        let start = lit.span().start();
-        let end = lit.span().end();
+        let start = start(lit.span());
+        let end = end(lit.span());
 
         // syntax highlighting for multi-line spans isn't supported yet (sorry)
-        if start.line == end.line {
+        if start.line() == end.line() {
             let lines = self
                 .syntax_info
                 .lines
-                .entry(start.line)
+                .entry(start.line())
                 .or_insert_with(LineSyntax::default);
 
             lines.highlights.push((
-                start.column..end.column,
+                start.column()..end.column(),
                 match lit {
                     Lit::Str(_) | Lit::ByteStr(_) => Color::String,
                     Lit::Byte(_) | Lit::Char(_) => Color::Char,
@@ -313,29 +316,29 @@ impl<'ast> Visit<'ast> for Visitor {
 
     fn visit_ident(&mut self, ident: &'ast proc_macro2::Ident) {
         if is_keyword_ident(ident) {
-            let start = ident.span().start();
-            let end = ident.span().end();
+            let start = start(ident.span());
+            let end = end(ident.span());
 
             self.syntax_info
                 .lines
-                .entry(start.line)
+                .entry(start.line())
                 .or_insert_with(LineSyntax::default)
                 .highlights
-                .push((start.column..end.column, Color::Keyword));
+                .push((start.column()..end.column(), Color::Keyword));
         }
     }
 
     fn visit_expr_method_call(&mut self, call: &'ast syn::ExprMethodCall) {
         let ident = &call.method;
-        let start = ident.span().start();
-        let end = ident.span().end();
+        let start = start(ident.span());
+        let end = end(ident.span());
 
         self.syntax_info
             .lines
-            .entry(start.line)
+            .entry(start.line())
             .or_insert_with(LineSyntax::default)
             .highlights
-            .push((start.column..end.column, Color::Function));
+            .push((start.column()..end.column(), Color::Function));
 
         // continue walking ast
         visit::visit_expr_method_call(self, call);
@@ -345,15 +348,15 @@ impl<'ast> Visit<'ast> for Visitor {
         if let syn::Expr::Path(path) = &*call.func {
             if let Some(ident) = path.path.segments.last() {
                 let ident = &ident.ident;
-                let start = ident.span().start();
-                let end = ident.span().end();
+                let start = start(ident.span());
+                let end = end(ident.span());
 
                 self.syntax_info
                     .lines
-                    .entry(start.line)
+                    .entry(start.line())
                     .or_insert_with(LineSyntax::default)
                     .highlights
-                    .push((start.column..end.column, Color::Function));
+                    .push((start.column()..end.column(), Color::Function));
             }
         }
 

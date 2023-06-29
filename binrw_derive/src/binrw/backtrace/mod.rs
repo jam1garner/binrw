@@ -23,23 +23,14 @@ impl BacktraceFrame {
     pub(crate) fn from_field(field: &StructField) -> Self {
         Self {
             span: field.field.span(),
-            highlight_line: field.ty.span().start().line,
+            highlight_line: start(field.ty.span()).line(),
             syntax_info: syntax_highlighting::get_syntax_highlights(field),
         }
     }
 
     fn iter_lines(&self) -> impl Iterator<Item = Line> + '_ {
-        // Calling `unwrap` will cause a panic during code coverage analysis
-        // since in that case proc_macro is being emulated so there is no
-        // underlying Span; this code therefore must only run when the
-        // proc_macro condition is set
-        #[cfg(all(feature = "verbose-backtrace", nightly, proc_macro))]
-        let source_text = self.span.unwrap().source_text();
-        #[cfg(not(all(feature = "verbose-backtrace", nightly, proc_macro)))]
-        let source_text = None::<String>;
-
-        if let Some(text) = source_text {
-            let start_col = self.span.start().column - 1;
+        if let Some(text) = self.span.source_text() {
+            let start_col = start(self.span).column() - 1;
             let mut min_whitespace = start_col;
             for line in text.lines().skip(1) {
                 for (i, c) in line.chars().enumerate() {
@@ -51,7 +42,7 @@ impl BacktraceFrame {
             }
 
             either::Left(
-                (self.span.start().line..)
+                (start(self.span).line()..)
                     .zip(text.lines().enumerate().map(|(i, line)| {
                         let line = if i == 0 {
                             let spaces_to_add = start_col - min_whitespace;
@@ -170,7 +161,7 @@ impl BacktraceFrame {
 
 impl Display for BacktraceFrame {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let line = self.span.end().line;
+        let line = end(self.span).line();
 
         if line != 0 {
             let max_digits =
@@ -187,4 +178,48 @@ impl Display for BacktraceFrame {
 
         Ok(())
     }
+}
+
+// Unwrapping the proc-macro2 Span is undesirable but necessary until its API
+// is updated to allow retrieving line/column again. Using a separate function
+// to unwrap just to make it clearer what needs to be undone later.
+// <https://github.com/dtolnay/proc-macro2/pull/383>
+struct LineColumn {
+    line: usize,
+    column: usize,
+}
+
+impl LineColumn {
+    fn line(&self) -> usize {
+        self.line
+    }
+
+    fn column(&self) -> usize {
+        self.column
+    }
+}
+
+#[cfg(all(feature = "verbose-backtrace", nightly, proc_macro))]
+fn start(span: Span) -> LineColumn {
+    let span = span.unwrap().start();
+    LineColumn {
+        line: span.line(),
+        column: span.column(),
+    }
+}
+#[cfg(all(feature = "verbose-backtrace", nightly, proc_macro))]
+fn end(span: Span) -> LineColumn {
+    let span = span.unwrap().end();
+    LineColumn {
+        line: span.line(),
+        column: span.column(),
+    }
+}
+#[cfg(not(all(feature = "verbose-backtrace", nightly, proc_macro)))]
+fn start(_: Span) -> LineColumn {
+    LineColumn { line: 0, column: 0 }
+}
+#[cfg(not(all(feature = "verbose-backtrace", nightly, proc_macro)))]
+fn end(_: Span) -> LineColumn {
+    LineColumn { line: 0, column: 0 }
 }
