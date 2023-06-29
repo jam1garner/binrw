@@ -43,6 +43,8 @@ readers and writers using ✨macro magic✨.
 [Discord]
 
 [Matrix]
+
+[More documentation](docs)
 </div>
 </nav>
 </div>
