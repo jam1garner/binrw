@@ -11,7 +11,7 @@ fn dbg() {
     #[br(big)]
     struct Test {
         before: u16,
-        #[br(dbg)]
+        #[br(dbg, pad_before = 2)]
         value: u32,
         #[br(dbg)]
         inner: Inner,
@@ -19,7 +19,7 @@ fn dbg() {
 
     // 🥴
     if let Some("1") = option_env!("BINRW_IN_CHILD_PROC") {
-        Test::read(&mut Cursor::new(b"\0\0\0\0\0\x04\0\x0e\xff\xed")).unwrap();
+        Test::read(&mut Cursor::new(b"\0\0\xff\xff\0\0\0\x04\0\x0e\xff\xed")).unwrap();
     } else {
         use std::process::{Command, Stdio};
 
@@ -36,8 +36,8 @@ fn dbg() {
             std::str::from_utf8(&result).unwrap(),
             format!(
                 concat!(
-                    "[{file}:{offset_0} | offset 0x2] value = 0x4\n",
-                    "[{file}:{offset_1} | offset 0x6] inner = Inner(\n",
+                    "[{file}:{offset_0} | offset 0x4] value = 0x4\n",
+                    "[{file}:{offset_1} | offset 0x8] inner = Inner(\n",
                     "    0xeffed,\n",
                     ")\n"
                 ),

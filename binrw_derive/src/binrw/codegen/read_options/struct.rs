@@ -151,10 +151,10 @@ fn generate_field(
         .try_conversion(name, variant_name)
         .map_value()
         .deref_now()
+        .wrap_debug()
         .wrap_seek()
         .wrap_condition()
         .assign_to_var()
-        .append_debug()
         .append_assertions()
         .wrap_restore_position()
         .prefix_magic()
@@ -251,7 +251,7 @@ impl<'field> FieldGenerator<'field> {
         }
     }
 
-    fn append_debug(mut self) -> Self {
+    fn wrap_debug(mut self) -> Self {
         // Unwrapping the proc-macro2 Span is undesirable but necessary until its API
         // is updated to allow retrieving line/column again. Using a separate function
         // to unwrap just to make it clearer what needs to be undone later.
@@ -276,16 +276,15 @@ impl<'field> FieldGenerator<'field> {
                 start_line.to_token_stream()
             };
 
-            self.out = quote! {
+            self.out = quote! {{
                 let #SAVED_POSITION = #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(0))?;
-
-                #head
-
+                let #TEMP = #head;
                 #DBG_EPRINTLN!(
                     "[{}:{} | offset {:#x}] {} = {:#x?}",
-                    ::core::file!(), #at, #SAVED_POSITION, ::core::stringify!(#ident), &#ident
+                    ::core::file!(), #at, #SAVED_POSITION, ::core::stringify!(#ident), &#TEMP
                 );
-            };
+                #TEMP
+            }};
         }
 
         self
