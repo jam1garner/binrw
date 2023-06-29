@@ -266,6 +266,21 @@ impl<'field> FieldGenerator<'field> {
         }
 
         if self.field.debug.is_some() {
+            fn dbg_space(
+                name: &'static str,
+                at: &TokenStream,
+                which: Option<&TokenStream>,
+            ) -> Option<TokenStream> {
+                which.map(|space| {
+                    quote_spanned! {space.span()=> {
+                        #DBG_EPRINTLN!(
+                            ::core::concat!("[{}:{} | ", #name, " {:#x}]"),
+                            ::core::file!(), #at, #space
+                        );
+                    }}
+                })
+            }
+
             let head = self.out;
             let reader_var = &self.reader_var;
             let ident = &self.field.ident;
@@ -276,13 +291,24 @@ impl<'field> FieldGenerator<'field> {
                 start_line.to_token_stream()
             };
 
+            let dbg_pad_before = dbg_space("pad_before", &at, self.field.pad_before.as_ref());
+            let dbg_align_before = dbg_space("align_before", &at, self.field.align_before.as_ref());
+            let dbg_pad_size_to = dbg_space("pad_size_to", &at, self.field.pad_size_to.as_ref());
+            let dbg_pad_after = dbg_space("pad_after", &at, self.field.pad_after.as_ref());
+            let dbg_align_after = dbg_space("align_after", &at, self.field.align_after.as_ref());
+
             self.out = quote! {{
+                #dbg_pad_before
+                #dbg_align_before
                 let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#reader_var)?;
                 let #TEMP = #head;
                 #DBG_EPRINTLN!(
                     "[{}:{} | offset {:#x}] {} = {:#x?}",
                     ::core::file!(), #at, #SAVED_POSITION, ::core::stringify!(#ident), &#TEMP
                 );
+                #dbg_pad_size_to
+                #dbg_pad_after
+                #dbg_align_after
                 #TEMP
             }};
         }
