@@ -242,7 +242,7 @@ impl Struct {
     pub(crate) fn has_no_attrs(&self) -> bool {
         matches!(self.endian, CondEndian::Inherited)
             && matches!(self.map, Map::None)
-            && matches!(self.magic, None)
+            && self.magic.is_none()
             && matches!(self.imports, Imports::None)
             && self.fields.iter().all(StructField::has_no_attrs)
     }

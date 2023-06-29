@@ -120,7 +120,7 @@ impl StructField {
         macro_rules! all_fields_none {
             ($($field:ident),*) => {
                 $(
-                    matches!(self.$field, None) &&
+                    self.$field.is_none() &&
                 )*
 
                 true
