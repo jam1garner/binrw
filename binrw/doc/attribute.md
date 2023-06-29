@@ -46,6 +46,12 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
     .br, .bw, .brw {
         display: contents;
     }
+    /* undoing rustdoc style that does not behave appropriately when wrapped */
+    .br .example-wrap:last-child,
+    .bw .example-wrap:last-child,
+    .brw .example-wrap:last-child {
+        margin-bottom: 10px;
+    }
     #show_both:checked ~ span.brw + span.br,
     #show_both:checked ~ span.brw + span.br + span.bw,
     #show_both:checked ~ * span.brw + span.br,
