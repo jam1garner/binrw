@@ -144,22 +144,6 @@ where
     ) -> BinResult<Self> {
         crate::helpers::count_with(args.count, B::read_options)(reader, endian, args.inner)
     }
-
-    fn after_parse<R>(
-        &mut self,
-        reader: &mut R,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<()>
-    where
-        R: Read + Seek,
-    {
-        for val in self.iter_mut() {
-            val.after_parse(reader, endian, args.inner.clone())?;
-        }
-
-        Ok(())
-    }
 }
 
 impl<B, const N: usize> BinRead for [B; N]
@@ -176,22 +160,6 @@ where
     ) -> BinResult<Self> {
         array_init::try_array_init(|_| BinRead::read_options(reader, endian, args.clone()))
     }
-
-    fn after_parse<R>(
-        &mut self,
-        reader: &mut R,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<()>
-    where
-        R: Read + Seek,
-    {
-        for val in self.iter_mut() {
-            val.after_parse(reader, endian, args.clone())?;
-        }
-
-        Ok(())
-    }
 }
 
 macro_rules! binread_tuple_impl {
@@ -207,19 +175,6 @@ macro_rules! binread_tuple_impl {
                         <$types>::read_options(reader, endian, args.clone())?
                     ),*
                 ))
-            }
-
-            fn after_parse<R: Read + Seek>(&mut self, reader: &mut R, endian: Endian, args: Self::Args<'_>) -> BinResult<()> {
-                let ($type1, $(
-                    $types
-                ),*) = self;
-
-                $type1.after_parse(reader, endian, args.clone())?;
-                $(
-                    $types.after_parse(reader, endian, args.clone())?;
-                )*
-
-                Ok(())
             }
         }
 
@@ -263,21 +218,6 @@ impl<T: BinRead> BinRead for Option<T> {
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
         Ok(Some(T::read_options(reader, endian, args)?))
-    }
-
-    fn after_parse<R>(
-        &mut self,
-        reader: &mut R,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<()>
-    where
-        R: Read + Seek,
-    {
-        match self {
-            Some(val) => val.after_parse(reader, endian, args),
-            None => Ok(()),
-        }
     }
 }
 

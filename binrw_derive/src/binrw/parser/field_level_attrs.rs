@@ -32,12 +32,8 @@ attr_struct! {
         pub(crate) count: Option<TokenStream>,
         #[from(RO:Offset)]
         pub(crate) offset: Option<TokenStream>,
-        #[from(RO:OffsetAfter)]
-        pub(crate) offset_after: Option<SpannedValue<TokenStream>>,
         #[from(RW:If)]
         pub(crate) if_cond: Option<Condition>,
-        #[from(RO:DerefNow, RO:PostProcessNow)]
-        pub(crate) deref_now: Option<SpannedValue<()>>,
         #[from(RW:RestorePosition)]
         pub(crate) restore_position: Option<()>,
         #[from(RO:Try)]
@@ -66,18 +62,6 @@ attr_struct! {
 }
 
 impl StructField {
-    /// Returns true if this field is read from a parser with an `after_parse`
-    /// method.
-    pub(crate) fn can_call_after_parse(&self) -> bool {
-        matches!(self.field_mode, FieldMode::Normal) && self.map.is_none()
-    }
-
-    /// Returns true if the code generator should emit `BinRead::after_parse()`
-    /// after all fields have been read.
-    pub(crate) fn should_use_after_parse(&self) -> bool {
-        self.deref_now.is_none() && self.map.is_none()
-    }
-
     /// Returns true if this field is generated using a calculated value instead
     /// of a parser.
     pub(crate) fn generated_value(&self) -> bool {
@@ -112,7 +96,7 @@ impl StructField {
     /// Returns true if the field is using shorthand directives that are
     /// converted into named arguments.
     pub(crate) fn has_named_arg_directives(&self) -> bool {
-        self.count.is_some() || self.offset.is_some() || self.offset_after.is_some()
+        self.count.is_some() || self.offset.is_some()
     }
 
     /// Returns true if the only field-level attributes are asserts
@@ -134,9 +118,7 @@ impl StructField {
             && all_fields_none!(
                 count,
                 offset,
-                offset_after,
                 if_cond,
-                deref_now,
                 restore_position,
                 do_try,
                 temp,
@@ -162,20 +144,6 @@ impl StructField {
 
     fn validate(&self, _: Options) -> syn::Result<()> {
         let mut all_errors = None::<syn::Error>;
-
-        if let (Some(offset_after), Some(deref_now)) = (&self.offset_after, &self.deref_now) {
-            let offset_after_span = offset_after.span();
-            let span = offset_after_span
-                .join(deref_now.span())
-                .unwrap_or(offset_after_span);
-            combine_error(
-                &mut all_errors,
-                syn::Error::new(
-                    span,
-                    "`deref_now` and `offset_after` are mutually exclusive",
-                ),
-            );
-        }
 
         if self.do_try.is_some() && self.generated_value() {
             //TODO: join with span of read mode somehow
@@ -221,7 +189,6 @@ impl StructField {
             for (used, name) in [
                 (self.count.is_some(), "count"),
                 (self.offset.is_some(), "offset"),
-                (self.offset_after.is_some(), "offset_after"),
             ] {
                 if used {
                     combine_error(&mut all_errors, syn::Error::new(
@@ -260,9 +227,7 @@ impl FromField for StructField {
             field_mode: <_>::default(),
             count: <_>::default(),
             offset: <_>::default(),
-            offset_after: <_>::default(),
             if_cond: <_>::default(),
-            deref_now: <_>::default(),
             restore_position: <_>::default(),
             do_try: <_>::default(),
             temp: <_>::default(),

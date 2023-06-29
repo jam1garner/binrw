@@ -6,15 +6,15 @@ use crate::{
         codegen::{
             get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
-                make_ident, AFTER_PARSE, ARGS_MACRO, ARGS_TYPE_HINT, BACKTRACE_FRAME,
-                BINREAD_TRAIT, COERCE_FN, DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, MAP_READER_TYPE_HINT,
-                OPT, PARSE_FN_TYPE_HINT, POS, READER, READ_FUNCTION, READ_METHOD,
-                REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+                make_ident, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT, COERCE_FN,
+                DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, MAP_READER_TYPE_HINT, OPT, PARSE_FN_TYPE_HINT,
+                POS, READER, READ_FUNCTION, READ_METHOD, REQUIRED_ARG_TRAIT, SAVED_POSITION,
+                SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
             },
         },
         parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
     },
-    util::{quote_spanned_any, IdentStr},
+    util::quote_spanned_any,
 };
 use alloc::borrow::Cow;
 use proc_macro2::TokenStream;
@@ -82,21 +82,9 @@ impl<'input> StructGenerator<'input> {
             .fields
             .iter()
             .map(|field| generate_field(self.input, field, name, variant_name));
-        let after_parse = {
-            let after_parse = self
-                .st
-                .fields
-                .iter()
-                .map(|field| generate_after_parse(self.input, field));
-            wrap_save_restore(
-                &self.input.stream_ident_or(READER),
-                quote!(#(#after_parse)*),
-            )
-        };
         self.out = quote! {
             #prelude
             #(#read_fields)*
-            #after_parse
         };
 
         self
@@ -121,20 +109,6 @@ impl<'input> StructGenerator<'input> {
     }
 }
 
-fn generate_after_parse(input: &Input, field: &StructField) -> Option<TokenStream> {
-    if field.deref_now.is_none() {
-        get_after_parse_handler(field).map(|after_parse_fn| {
-            let (reader_var, endian_var, args_var) = make_field_vars(input, field);
-            AfterParseCallGenerator::new(field)
-                .get_value_from_ident()
-                .call_after_parse(after_parse_fn, &reader_var, &endian_var, &args_var)
-                .finish()
-        })
-    } else {
-        None
-    }
-}
-
 fn generate_field(
     input: &Input,
     field: &StructField,
@@ -150,7 +124,6 @@ fn generate_field(
         .read_value()
         .try_conversion(name, variant_name)
         .map_value()
-        .deref_now()
         .wrap_debug()
         .wrap_seek()
         .wrap_condition()
@@ -163,69 +136,6 @@ fn generate_field(
         .prefix_read_function()
         .prefix_map_stream()
         .finish()
-}
-
-struct AfterParseCallGenerator<'field> {
-    field: &'field StructField,
-    out: TokenStream,
-}
-
-impl<'field> AfterParseCallGenerator<'field> {
-    fn new(field: &'field StructField) -> Self {
-        Self {
-            field,
-            out: TokenStream::new(),
-        }
-    }
-
-    fn call_after_parse(
-        mut self,
-        after_parse_fn: IdentStr,
-        reader_var: &TokenStream,
-        endian_var: &TokenStream,
-        args_var: &Option<Ident>,
-    ) -> Self {
-        let value = self.out;
-        let args_arg = if let Some(offset) = &self.field.offset_after {
-            let offset = offset.as_ref();
-            if let Some(args_var) = args_var {
-                quote_spanned_any! { offset.span()=> {
-                    let mut #TEMP = #args_var;
-                    #TEMP.offset = #offset;
-                    #TEMP
-                }}
-            } else {
-                quote_spanned_any! { offset.span()=>
-                    #ARGS_MACRO! { offset: #offset }
-                }
-            }
-        } else {
-            get_args_argument(self.field, args_var, false)
-        };
-
-        self.out = quote! {
-            #after_parse_fn(#value, #reader_var, #endian_var, #args_arg)?;
-        };
-
-        self
-    }
-
-    fn finish(self) -> TokenStream {
-        self.out
-    }
-
-    fn get_value_from_ident(mut self) -> Self {
-        let ident = &self.field.ident;
-        self.out = quote! { &mut #ident };
-
-        self
-    }
-
-    fn get_value_from_temp(mut self) -> Self {
-        self.out = quote! { &mut #TEMP };
-
-        self
-    }
 }
 
 struct FieldGenerator<'field> {
@@ -332,33 +242,6 @@ impl<'field> FieldGenerator<'field> {
         let ty = &self.field.ty;
         let value = self.out;
         self.out = quote! { let mut #ident: #ty = #value; };
-
-        self
-    }
-
-    fn deref_now(mut self) -> Self {
-        if self.field.should_use_after_parse() {
-            return self;
-        }
-
-        if let Some(after_parse) = get_after_parse_handler(self.field) {
-            let after_parse = AfterParseCallGenerator::new(self.field)
-                .get_value_from_temp()
-                .call_after_parse(
-                    after_parse,
-                    &self.reader_var,
-                    &self.endian_var,
-                    &self.args_var,
-                )
-                .finish();
-
-            let value = self.out;
-            self.out = quote! {{
-                let mut #TEMP = #value;
-                #after_parse
-                #TEMP
-            }};
-        }
 
         self
     }
@@ -525,10 +408,9 @@ impl<'field> FieldGenerator<'field> {
             FieldMode::Calc(calc) => quote! { #calc },
             FieldMode::TryCalc(calc) => get_try_calc(POS, &self.field.ty, calc),
             read_mode @ (FieldMode::Normal | FieldMode::Function(_)) => {
-                let args_arg = get_args_argument(
-                    self.field,
-                    &self.args_var,
-                    matches!(read_mode, FieldMode::Normal),
+                let args_arg = self.args_var.as_ref().map_or_else(
+                    || quote_spanned! {self.field.ty.span()=> <_ as #REQUIRED_ARG_TRAIT>::args() },
+                    ToTokens::to_token_stream,
                 );
                 let reader_var = &self.reader_var;
                 let endian_var = &self.endian_var;
@@ -612,23 +494,6 @@ impl<'field> FieldGenerator<'field> {
 
         self
     }
-}
-
-fn get_args_argument(
-    field: &StructField,
-    args_var: &Option<Ident>,
-    need_clone: bool,
-) -> TokenStream {
-    args_var.as_ref().map_or_else(
-        || quote_spanned! {field.ty.span()=> <_ as #REQUIRED_ARG_TRAIT>::args() },
-        |args_var| {
-            if need_clone {
-                quote! { #args_var.clone() }
-            } else {
-                quote! { #args_var }
-            }
-        },
-    )
 }
 
 fn get_err_context(
@@ -749,10 +614,6 @@ fn generate_seek_before(reader_var: &TokenStream, field: &StructField) -> TokenS
         #align_before
         #pad_size_to_before
     }
-}
-
-fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
-    field.can_call_after_parse().then_some(AFTER_PARSE)
 }
 
 fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {

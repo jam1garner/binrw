@@ -190,9 +190,6 @@ fn deref_now() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(big, magic = b"TEST")]
     struct Test {
-        // deref_now on the first field tests that the reader position is correctly
-        // restored before reading the second field
-        #[br(deref_now)]
         a: FilePtr<u32, NullString>,
         b: i32,
     }
@@ -203,10 +200,73 @@ fn deref_now() {
         Test {
             a: FilePtr {
                 ptr: 0x10,
-                value: Some(NullString(b"Test string".to_vec()))
+                value: NullString(b"Test string".to_vec())
             },
             b: -1,
         }
+    );
+}
+
+#[test]
+fn move_args() {
+    #[derive(Debug, PartialEq)]
+    struct NonCopyArg;
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(v: NonCopyArg))]
+    struct Inner(#[br(calc = v)] NonCopyArg);
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(v: NonCopyArg))]
+    struct Test {
+        #[br(args(v))]
+        inner: Inner,
+    }
+
+    assert_eq!(
+        Test::read_le_args(&mut Cursor::new(b""), (NonCopyArg,)).unwrap(),
+        Test {
+            inner: Inner(NonCopyArg)
+        }
+    );
+}
+
+#[test]
+fn move_parser() {
+    struct A;
+    impl A {
+        fn accept(&self, x: u32) -> bool {
+            x == 0
+        }
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(a: A))]
+    struct Test {
+        #[br(parse_with = binrw::helpers::until(|x| a.accept(*x)))]
+        using_until: Vec<u32>,
+    }
+
+    assert_eq!(
+        Test::read_le_args(&mut Cursor::new(b"\x01\0\0\0\x02\0\0\0\0\0\0\0"), (A,)).unwrap(),
+        Test {
+            using_until: vec![1, 2, 0],
+        }
+    );
+}
+
+#[test]
+fn move_stream() {
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    struct Test {
+        #[br(map_stream = |r| r)]
+        flags: u32,
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"\x01\0\0\0")).unwrap(),
+        Test { flags: 1 }
     );
 }
 
@@ -216,7 +276,7 @@ fn move_temp_field() {
     #[binread]
     #[derive(Debug, Eq, PartialEq)]
     struct Foo {
-        #[br(temp, postprocess_now)]
+        #[br(temp)]
         foo: binrw::NullString,
 
         #[br(calc = foo)]
@@ -622,20 +682,6 @@ fn mixed_attrs() {
     let mut output = Cursor::new(vec![]);
     binrw::BinWrite::write(&test, &mut output).unwrap();
     assert_eq!(output.into_inner(), b"\x2a");
-}
-
-#[test]
-fn offset_after() {
-    #[allow(dead_code)]
-    #[derive(BinRead, Debug)]
-    struct Test {
-        #[br(offset_after = b.into())]
-        a: FilePtr<u8, u8>,
-        b: u8,
-    }
-
-    let result = Test::read_le(&mut Cursor::new(b"\x01\x03\xff\xff\x04")).unwrap();
-    assert_eq!(*result.a, 4);
 }
 
 #[test]

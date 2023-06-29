@@ -33,7 +33,6 @@ ident_str! {
     pub(crate) BIN_RESULT = from_crate!(BinResult);
     pub(crate) ENDIAN_ENUM = from_crate!(Endian);
     pub(crate) READ_METHOD = from_read_trait!(read_options);
-    pub(crate) AFTER_PARSE = from_read_trait!(after_parse);
     pub(crate) WRITE_METHOD = from_write_trait!(write_options);
     pub(crate) READER = "__binrw_generated_var_reader";
     pub(crate) WRITER = "__binrw_generated_var_writer";

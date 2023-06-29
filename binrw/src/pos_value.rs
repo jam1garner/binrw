@@ -44,15 +44,6 @@ impl<T: BinRead> BinRead for PosValue<T> {
             val: T::read_options(reader, endian, args)?,
         })
     }
-
-    fn after_parse<R: Read + Seek>(
-        &mut self,
-        reader: &mut R,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<()> {
-        self.val.after_parse(reader, endian, args)
-    }
 }
 
 impl<T> core::ops::Deref for PosValue<T> {
