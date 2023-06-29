@@ -134,7 +134,8 @@ argument of a
 <span class="bw">[`BinWrite::write_options`](crate::BinWrite::write_options)</span>
 call, respectively.
 
-Any earlier field or [import](#arguments) can be referenced in `args`.
+Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can be referenced in `args`.
 
 ## Ways to pass and receive arguments
 
@@ -429,7 +430,8 @@ executed in order.
 Assertions added to the top of an enum will be checked against every variant
 in the enum.
 
-Any earlier field or [import](#arguments) can be referenced by expressions
+Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can be referenced by expressions
 in the directive.
 
 ## Examples
@@ -643,7 +645,9 @@ a struct field:
 </div>
 
 The `is_big` and `is_little` directives are primarily useful when byte order
-is defined in the data itself. Any earlier field or [import](#arguments) can
+is defined in the data itself. Any
+<span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can
 be referenced in the condition. Conditional byte order directives can only
 be used on struct fields.
 
@@ -819,8 +823,9 @@ a struct field</span>:
 ```
 </div>
 
-Any <span class="br">earlier</span> field or [import](#arguments) can be
-referenced by the expression in the directive.
+Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can be referenced by the expression in the
+directive.
 
 When using `try_calc`, the produced value must be a [`Result<T, E>`](Result).
 
@@ -940,7 +945,8 @@ The alternate expression is not evaluated unless the condition is false, so
 it is safe for it to contain expensive operations without impacting
 performance.
 
-Any earlier field or [import](#arguments) can be referenced by the
+Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can be referenced by the
 expression in the directive.
 
 <span class="bw">The [`map`](#map) directive can also be used to conditionally
@@ -1606,7 +1612,8 @@ and must return a type that implements [`BinWrite`](crate::BinWrite) for
 <span class="bw">will receive an immutable reference to the entire object
 and must return a type that implements [`BinWrite`](crate::BinWrite).</span>
 
-Any <span class="br">earlier</span> field or [import](#arguments) can be
+Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can be
 referenced by the expression in the directive.
 
 ## Examples
@@ -1930,7 +1937,8 @@ read the string and `pad_size_to(256)` will ensure the reader skips whatever
 padding, if any, remains. If the string is longer than 256 bytes, no padding
 will be skipped.
 
-Any <span class="br">earlier</span> field or [import](#arguments) can be
+Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
+field or [import](#arguments) can be
 referenced by the expressions in any of these directives.
 
 ## Examples
