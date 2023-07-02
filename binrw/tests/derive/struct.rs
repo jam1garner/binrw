@@ -292,6 +292,23 @@ fn move_temp_field() {
 }
 
 #[test]
+fn mut_map() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(v: &mut Vec<u8>))]
+    struct Test {
+        #[br(map = |a: u8| a + v.pop().unwrap())]
+        a: u8,
+        #[br(map = |b: u8| b + v.pop().unwrap())]
+        b: u8,
+    }
+
+    assert_eq!(
+        Test::read_le_args(&mut Cursor::new(b"\x01\x02"), (&mut vec![1, 2],)).unwrap(),
+        Test { a: 3, b: 3 }
+    );
+}
+
+#[test]
 fn empty_imports() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(import())]
