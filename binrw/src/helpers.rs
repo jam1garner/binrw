@@ -309,6 +309,7 @@ where
 /// # let mut x = Cursor::new(b"\0\x02\0\x01\0\x02\x03\x04\x05");
 /// # let x = Object::read(&mut x).unwrap();
 /// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
+/// ```
 pub fn args_iter<R, T, Arg, Ret, It>(it: It) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Ret>
 where
     T: for<'a> BinRead<Args<'a> = Arg>,
@@ -436,6 +437,7 @@ where
 /// # let mut x = Cursor::new(b"\x02\x01\x02\x03\x04");
 /// # let x: CountBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
+/// ```
 pub fn count_with<R, T, Arg, ReadFn, Ret>(
     n: usize,
     read: ReadFn,
