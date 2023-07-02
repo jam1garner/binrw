@@ -41,11 +41,11 @@ macro_rules! args {
                 // since this helper is of PhantomData<T> -> T,
                 // and the compiler knows that the type Ret should be returned,
                 // it infers that args_ty should be of type PhantomData<Ret>.
-                $crate::passthrough_helper(args_ty)
+                $crate::__private::passthrough_helper(args_ty)
             } else {
                 // we now pass the PhantomData<Ret> to a helper of PhantomData<T> -> T::Builder
                 // to obtain a builder for the type of the block.
-                let builder = $crate::builder_helper(args_ty);
+                let builder = $crate::__private::builder_helper(args_ty);
 
                 $(let builder = builder.$name($crate::args!(@ifn { $($value)? } $name));)*
 

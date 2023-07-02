@@ -5,6 +5,10 @@ use crate::{
 };
 use alloc::{boxed::Box, string::String};
 
+pub use crate::named_args::{
+    builder_helper, passthrough_helper, Needed, Optional, Satisfied, SatisfiedOrOptional,
+};
+
 // This is some nonsense to improve the diagnostic output for types that require
 // arguments so that the emitted output is clearer about this fact. Because this
 // is implemented for any `Default`, and used as the constraint for shorthand

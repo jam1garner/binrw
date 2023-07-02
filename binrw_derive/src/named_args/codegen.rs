@@ -7,10 +7,10 @@ use quote::{quote, ToTokens};
 use syn::{GenericArgument, GenericParam, Ident, Type, Visibility};
 
 ident_str! {
-    SATISFIED_OR_OPTIONAL = from_crate!(SatisfiedOrOptional);
-    SATISFIED = from_crate!(Satisfied);
-    NEEDED = from_crate!(Needed);
-    OPTIONAL = from_crate!(Optional);
+    SATISFIED_OR_OPTIONAL = from_crate!(__private::SatisfiedOrOptional);
+    SATISFIED = from_crate!(__private::Satisfied);
+    NEEDED = from_crate!(__private::Needed);
+    OPTIONAL = from_crate!(__private::Optional);
     NAMED_ARGS = from_crate!(NamedArgs);
 }
 
