@@ -45,7 +45,6 @@ pub use {
     endian::Endian,
     error::Error,
     file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
-    helpers::{count, until, until_eof, until_exclusive},
     named_args::NamedArgs,
     pos_value::PosValue,
     strings::{NullString, NullWideString},
