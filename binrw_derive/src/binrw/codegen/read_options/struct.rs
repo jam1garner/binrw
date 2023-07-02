@@ -374,7 +374,7 @@ impl<'field> FieldGenerator<'field> {
             Map::None => return self,
             Map::Map(map) => {
                 quote! {
-                    let #map_func = (#COERCE_FN::<#ty, _, _>(#map));
+                    let mut #map_func = (#COERCE_FN::<#ty, _, _>(#map));
                 }
             }
             Map::Try(try_map) | Map::Repr(try_map) => {
@@ -388,7 +388,7 @@ impl<'field> FieldGenerator<'field> {
 
                 // TODO: Position should always just be saved once for a field if used
                 quote! {
-                    let #map_func = (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map));
+                    let mut #map_func = (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map));
                 }
             }
         };

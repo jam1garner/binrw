@@ -71,7 +71,7 @@ where
 // capturing closures since they are not compatible with that type.
 pub fn coerce_fn<R, T, F>(f: F) -> F
 where
-    F: Fn(T) -> R,
+    F: FnMut(T) -> R,
 {
     f
 }
