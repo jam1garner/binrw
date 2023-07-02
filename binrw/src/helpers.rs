@@ -357,12 +357,12 @@ where
 /// # let mut x = Cursor::new(b"\0\x02\0\x01\0\x02\x03\x04\x05");
 /// # let x = Object::read(&mut x).unwrap();
 /// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
+/// ```
 pub fn args_iter_with<Reader, T, Arg, Ret, It, ReadFn>(
     it: It,
     read: ReadFn,
 ) -> impl FnOnce(&mut Reader, Endian, ()) -> BinResult<Ret>
 where
-    T: BinRead,
     Reader: Read + Seek,
     Arg: Clone,
     Ret: FromIterator<T>,
