@@ -16,6 +16,38 @@ pub use impls::VecArgs;
 /// [`Args`]: Self::Args
 /// [`read_options()`]: Self::read_options
 ///
+/// # Examples
+///
+/// Creating a parser for a relative offset with an optional base offset specified using `#[br(offset = ...)]`:
+///
+/// ```
+/// # use binrw::{BinRead, BinResult, file_ptr::FilePtrArgs};
+/// # use binrw::io::{Read, Seek, SeekFrom};
+/// struct CustomPtr32<T>(T);
+///
+/// impl<T, TArgs> BinRead for CustomPtr32<T>
+/// where
+///     for<'a> T: BinRead<Args<'a> = TArgs>,
+/// {
+///     type Args<'a> = FilePtrArgs<TArgs>;
+///
+///     fn read_options<R: Read + Seek>(
+///         reader: &mut R,
+///         endian: binrw::Endian,
+///         args: Self::Args<'_>,
+///     ) -> BinResult<Self> {
+///         let offset = u32::read_options(reader, endian, ())?;
+///         let position = reader.stream_position()?;
+///
+///         reader.seek(SeekFrom::Start(args.offset + offset as u64))?;
+///         let value = T::read_options(reader, endian, args.inner)?;
+///         reader.seek(SeekFrom::Start(position))?;
+///
+///         Ok(CustomPtr32(value))
+///     }
+/// }
+/// ```
+///
 /// # Derivable
 ///
 /// This trait can be used with `#[derive]` or `#[binread]`. Each field of a
