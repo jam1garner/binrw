@@ -173,7 +173,7 @@ like a normal function call:
 ```
 # use binrw::prelude::*;
 #[derive(BinRead)]
-#[br(import(val1: u32, val2: &'static str))]
+#[br(import(val1: u32, val2: &str))]
 struct Child {
     // ...
 }
@@ -191,7 +191,7 @@ struct Parent {
 ```
 # use binrw::prelude::*;
 #[derive(BinWrite)]
-#[bw(import(val1: u32, val2: &'static str))]
+#[bw(import(val1: u32, val2: &str))]
 struct Child {
     // ...
 }
@@ -458,13 +458,6 @@ struct Parent {
 </div>
 
 ## Limitations
-
-### Borrowing values
-
-Non-static lifetimes for borrowed values are currently unavailable because
-the associated type would require
-[GATs](https://rust-lang.github.io/rfcs/1598-generic_associated_types.html)
-to properly bind lifetimes to the function.
 
 ### Named arguments conflicting with `count` directive
 
