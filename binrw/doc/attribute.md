@@ -142,9 +142,7 @@ field or [import](#arguments) can be referenced in `args`.
 There are 3 ways arguments can be passed and received:
 
 * Tuple-style arguments (or “ordered arguments”): arguments passed as a tuple
-* Named arguments: arguments passed as an object, using a builder that
-  ensures all required arguments are given, or manually constructed using
-  [`binrw::args`]
+* Named arguments: arguments passed as an object
 * Raw arguments: arguments passed as a type of your choice
 
 ### Tuple-style arguments
@@ -287,6 +285,84 @@ struct Parent {
 
     #[bw(args { count: 3 })]
     test2: Child,
+}
+```
+</div>
+
+When nesting named arguments, you can use the [`binrw::args!`] macro to
+construct the nested object:
+
+<div class="br">
+
+```
+# use binrw::prelude::*;
+#[derive(BinRead)]
+#[br(import {
+    more_extra_stuff: u32
+})]
+struct Inner {
+    // ...
+}
+
+#[derive(BinRead)]
+#[br(import {
+    extra_stuff: u32,
+    inner_stuff: <Inner as BinRead>::Args<'_>
+})]
+struct Middle {
+    #[br(args_raw = inner_stuff)]
+    inner: Inner
+}
+
+#[derive(BinRead)]
+struct Outer {
+    extra_stuff: u32,
+    inner_extra_stuff: u32,
+
+    #[br(args { // ← Middle::Args<'_>
+        extra_stuff,
+        inner_stuff: binrw::args! { // ← Inner::Args<'_>
+            more_extra_stuff: inner_extra_stuff
+        }
+    })]
+    middle: Middle,
+}
+```
+</div>
+<div class="bw">
+
+```
+# use binrw::prelude::*;
+#[derive(BinWrite)]
+#[bw(import {
+    more_extra_stuff: u32
+})]
+struct Inner {
+    // ...
+}
+
+#[derive(BinWrite)]
+#[bw(import {
+    extra_stuff: u32,
+    inner_stuff: <Inner as BinWrite>::Args<'_>
+})]
+struct Middle {
+    #[bw(args_raw = inner_stuff)]
+    inner: Inner
+}
+
+#[derive(BinWrite)]
+struct Outer {
+    extra_stuff: u32,
+    inner_extra_stuff: u32,
+
+    #[bw(args { // ← Middle::Args<'_>
+        extra_stuff: *extra_stuff,
+        inner_stuff: binrw::args! { // ← Inner::Args<'_>
+            more_extra_stuff: *inner_extra_stuff
+        }
+    })]
+    middle: Middle,
 }
 ```
 </div>
