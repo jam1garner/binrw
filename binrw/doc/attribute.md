@@ -367,6 +367,14 @@ struct Outer {
 ```
 </div>
 
+Named arguments can also be used with types that manually implement
+<span class="br">`BinRead`</span><span class="bw">`BinWrite`</span> by creating
+a separate type for its arguments that implements [`binrw::NamedArgs`].
+
+The [`count`](#count) and [`offset`](#offset) directives are sugar for setting
+the `count` and `offset` arguments on any named arguments object; see those
+directives’ documentation for more information.
+
 ### Raw arguments
 
 Raw arguments allow the
@@ -456,15 +464,6 @@ struct Parent {
 }
 ```
 </div>
-
-## Limitations
-
-### Named arguments conflicting with `count` directive
-
-The [`count`](#count) directive may conflict with `args`. To pass arguments
-to a type inside a [`Vec`], manually specify the count via named arguments
-instead of using the `count` directive. See [`VecArgs`](crate::VecArgs) for
-details.
 
 # Assert
 
