@@ -46,11 +46,11 @@ error[E0277]: the trait bound `usize: From<Option<{integer}>>` is not satisfied
    |                                    ^^^^^^^ the trait `From<Option<{integer}>>` is not implemented for `usize`
    |
    = help: the following other types implement trait `From<T>`:
-             <usize as From<NonZeroUsize>>
              <usize as From<bool>>
-             <usize as From<std::ptr::Alignment>>
-             <usize as From<u16>>
              <usize as From<u8>>
+             <usize as From<u16>>
+             <usize as From<NonZeroUsize>>
+             <usize as From<std::ptr::Alignment>>
    = note: required for `Option<{integer}>` to implement `Into<usize>`
    = note: required for `usize` to implement `TryFrom<Option<{integer}>>`
 
