@@ -8,7 +8,8 @@ use crate::{
         codegen::{
             get_endian,
             sanitization::{
-                ARGS, ASSERT_MAGIC, MAP_READER_TYPE_HINT, OPT, POS, READER, SEEK_FROM, SEEK_TRAIT,
+                ARGS, ASSERT_MAGIC, MAP_READER_TYPE_HINT, OPT, POS, READER, RESTORE_POSITION,
+                SEEK_TRAIT,
             },
         },
         parser::{Input, Magic, Map},
@@ -23,36 +24,45 @@ use syn::{spanned::Spanned, Ident};
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);
-    let inner = match input.map() {
+    let (inner, needs_rewind) = match input.map() {
         Map::None => match input {
-            Input::UnitStruct(_) => generate_unit_struct(input, name, None),
-            Input::Struct(s) => generate_struct(input, name, s),
-            Input::Enum(e) => generate_data_enum(input, name, e),
-            Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
+            Input::UnitStruct(_) => (generate_unit_struct(input, name, None), false),
+            Input::Struct(s) => (generate_struct(input, name, s), true),
+            Input::Enum(e) => (generate_data_enum(input, name, e), false),
+            Input::UnitOnlyEnum(e) => (
+                generate_unit_enum(input, name, e),
+                e.map.as_repr().is_some(),
+            ),
         },
-        Map::Try(map) => map::generate_try_map(input, name, map),
-        Map::Map(map) => map::generate_map(input, name, map),
+        Map::Try(map) => (map::generate_try_map(input, name, map), true),
+        Map::Map(map) => (map::generate_map(input, name, map), true),
         Map::Repr(ty) => match input {
-            Input::UnitOnlyEnum(e) => generate_unit_enum(input, name, e),
-            _ => map::generate_try_map(
-                input,
-                name,
-                &quote! { <#ty as core::convert::TryInto<_>>::try_into },
+            Input::UnitOnlyEnum(e) => (generate_unit_enum(input, name, e), true),
+            _ => (
+                map::generate_try_map(
+                    input,
+                    name,
+                    &quote! { <#ty as core::convert::TryInto<_>>::try_into },
+                ),
+                true,
             ),
         },
     };
 
     let reader_var = input.stream_ident_or(READER);
 
+    let rewind = (needs_rewind || input.magic().is_some()).then(|| {
+        quote! {
+            .or_else(#RESTORE_POSITION::<binrw::Error, _, _>(#reader_var, #POS))
+        }
+    });
+
     quote! {
         let #reader_var = #READER;
         let #POS = #SEEK_TRAIT::stream_position(#reader_var)?;
         (|| {
             #inner
-        })().or_else(|error| {
-            #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Start(#POS))?;
-            Err(error)
-        })
+        })()#rewind
     }
 }
 

@@ -57,6 +57,8 @@ ident_str! {
     pub(crate) WRITE_MAP_INPUT_TYPE_HINT = from_crate!(__private::write_map_fn_input_type_hint);
     pub(crate) WRITE_FN_MAP_OUTPUT_TYPE_HINT = from_crate!(__private::write_fn_map_output_type_hint);
     pub(crate) WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT = from_crate!(__private::write_fn_try_map_output_type_hint);
+    pub(crate) RESTORE_POSITION = from_crate!(__private::restore_position);
+    pub(crate) RESTORE_POSITION_VARIANT = from_crate!(__private::restore_position_variant);
     pub(crate) WRITE_ZEROES = from_crate!(__private::write_zeroes);
     pub(crate) ARGS_MACRO = from_crate!(args);
     pub(crate) META_ENDIAN_KIND = from_crate!(meta::EndianKind);

@@ -1,6 +1,6 @@
 use crate::{
-    error::CustomError,
-    io::{Read, Seek, Write},
+    error::{Backtrace, BacktraceFrame, CustomError},
+    io::{Read, Seek, SeekFrom, Write},
     BinRead, BinResult, BinWrite, Endian, Error,
 };
 use alloc::{boxed::Box, string::String};
@@ -164,6 +164,43 @@ where
     Output: for<'a> BinWrite<Args<'a> = Args>,
 {
     args
+}
+
+pub fn restore_position<E: Into<Error>, S: Seek, T>(
+    stream: &mut S,
+    pos: u64,
+) -> impl FnOnce(E) -> BinResult<T> + '_ {
+    move |error| match stream.seek(SeekFrom::Start(pos)) {
+        Ok(_) => Err(error.into()),
+        Err(seek_error) => Err(restore_position_err(error.into(), seek_error.into())),
+    }
+}
+
+fn restore_position_err(error: Error, mut seek_error: Error) -> Error {
+    let reason = BacktraceFrame::Message("rewinding after a failure".into());
+    match error {
+        Error::Backtrace(mut bt) => {
+            core::mem::swap(&mut seek_error, &mut *bt.error);
+            bt.frames.insert(0, seek_error.into());
+            bt.frames.insert(0, reason);
+            Error::Backtrace(bt)
+        }
+        error => Error::Backtrace(Backtrace::new(
+            seek_error,
+            alloc::vec![reason, error.into()],
+        )),
+    }
+}
+
+pub fn restore_position_variant<S: Seek>(
+    stream: &mut S,
+    pos: u64,
+    error: Error,
+) -> BinResult<Error> {
+    match stream.seek(SeekFrom::Start(pos)) {
+        Ok(_) => Ok(error),
+        Err(seek_error) => Err(restore_position_err(error, seek_error.into())),
+    }
 }
 
 pub fn write_try_map_args_type_hint<Input, Output, Error, MapFn, Args>(

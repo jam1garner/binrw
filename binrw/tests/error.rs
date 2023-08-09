@@ -159,6 +159,117 @@ fn not_custom_error() {
 }
 
 #[test]
+fn no_seek_struct() {
+    use binrw::{
+        error::BacktraceFrame,
+        io::{Cursor, NoSeek},
+        BinRead,
+    };
+
+    #[derive(BinRead, Debug)]
+    struct Test {
+        #[br(assert(_a == 1))]
+        _a: u32,
+    }
+
+    let mut data = NoSeek::new(Cursor::new(b"\0\0\0\0"));
+    let error = Test::read_le(&mut data).expect_err("accepted bad data");
+    match error {
+        Error::Backtrace(bt) => {
+            assert!(matches!(*bt.error, Error::Io(..)));
+
+            match (&bt.frames[0], &bt.frames[1]) {
+                (BacktraceFrame::Message(m), BacktraceFrame::Custom(e)) => {
+                    assert_eq!(m, "rewinding after a failure");
+                    match e.downcast_ref::<binrw::Error>() {
+                        Some(binrw::Error::AssertFail { pos, .. }) => assert_eq!(*pos, 0),
+                        _ => panic!("unexpected error"),
+                    }
+                }
+                _ => panic!("unexpected error frame layout"),
+            }
+        }
+        _ => panic!("expected backtrace"),
+    }
+}
+
+#[test]
+fn no_seek_data_enum() {
+    use binrw::{
+        error::BacktraceFrame,
+        io::{Cursor, NoSeek},
+        BinRead,
+    };
+
+    #[derive(BinRead, Debug)]
+    enum Test {
+        #[br(magic(0u8))]
+        A(#[br(assert(self_0 == 1))] u32),
+        #[br(magic(1u8))]
+        B(#[br(assert(self_0 == 2))] u32),
+    }
+
+    let mut data = NoSeek::new(Cursor::new(b"\0\0\0\0\0"));
+    let error = Test::read_le(&mut data).expect_err("accepted bad data");
+
+    match error {
+        Error::Backtrace(bt) => {
+            assert!(matches!(*bt.error, Error::Io(..)));
+
+            match (&bt.frames[0], &bt.frames[1]) {
+                (BacktraceFrame::Message(m), BacktraceFrame::Custom(e)) => {
+                    assert_eq!(m, "rewinding after a failure");
+                    match e.downcast_ref::<binrw::Error>() {
+                        Some(binrw::Error::AssertFail { pos, .. }) => assert_eq!(*pos, 0),
+                        e => panic!("unexpected error {:?}", e),
+                    }
+                }
+                _ => panic!("unexpected error frame layout"),
+            }
+        }
+        _ => panic!("expected backtrace"),
+    }
+}
+
+#[test]
+fn no_seek_unit_enum() {
+    use binrw::{
+        error::BacktraceFrame,
+        io::{Cursor, NoSeek},
+        BinRead,
+    };
+
+    #[derive(BinRead, Debug)]
+    #[br(big, repr = u32)]
+    enum Test {
+        A = 1,
+        B = 2,
+        C = 3,
+    }
+
+    let mut data = NoSeek::new(Cursor::new(b"\0\0\0\0"));
+    let error = Test::read_le(&mut data).expect_err("accepted bad data");
+
+    match error {
+        Error::Backtrace(bt) => {
+            assert!(matches!(*bt.error, Error::Io(..)));
+
+            match (&bt.frames[0], &bt.frames[1]) {
+                (BacktraceFrame::Message(m), BacktraceFrame::Custom(e)) => {
+                    assert_eq!(m, "rewinding after a failure");
+                    match e.downcast_ref::<binrw::Error>() {
+                        Some(binrw::Error::NoVariantMatch { pos }) => assert_eq!(*pos, 0),
+                        e => panic!("unexpected error {:?}", e),
+                    }
+                }
+                _ => panic!("unexpected error frame layout"),
+            }
+        }
+        _ => panic!("expected backtrace"),
+    }
+}
+
+#[test]
 fn show_backtrace() {
     use alloc::borrow::Cow;
     use binrw::{io::Cursor, BinReaderExt};

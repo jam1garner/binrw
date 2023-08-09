@@ -6,8 +6,8 @@ use crate::binrw::{
     codegen::{
         get_assertions,
         sanitization::{
-            BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD, SEEK_FROM,
-            SEEK_TRAIT, TEMP, WITH_CONTEXT,
+            BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD,
+            RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
         },
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
@@ -128,22 +128,19 @@ fn generate_unit_enum_magic(reader_var: &TokenStream, variants: &[UnitEnumField]
         };
 
         quote! {
-            let #TEMP = (|| {
+            match (|| {
                 #body
-            })();
-
-            if #TEMP.is_ok() {
-                return #TEMP;
+            })() {
+                v @ Ok(_) => return v,
+                Err(#TEMP) => { #RESTORE_POSITION_VARIANT(#reader_var, #POS, #TEMP)?; }
             }
-
-            #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Start(#POS))?;
         }
     });
 
     let return_error = quote! {
         Err(#BIN_ERROR::NoVariantMatch {
-               pos: #POS
-           })
+            pos: #POS
+        })
     };
 
     quote! {
@@ -194,22 +191,22 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
         let handle_error = if return_all_errors {
             let name = variant.ident().to_string();
             quote! {
-                #ERROR_BASKET.push((#name, #TEMP.err().unwrap()));
+                #ERROR_BASKET.push((#name, #TEMP));
             }
         } else {
             TokenStream::new()
         };
 
         quote! {
-            let #TEMP = (|| {
+            match (|| {
                 #body
-            })();
-
-            if #TEMP.is_ok() {
-                return #TEMP;
-            } else {
-                #handle_error
-                #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Start(#POS))?;
+            })() {
+                ok @ Ok(_) => return ok,
+                Err(error) => {
+                    #RESTORE_POSITION_VARIANT(#reader_var, #POS, error).map(|#TEMP| {
+                        #handle_error
+                    })?;
+                }
             }
         }
     });
