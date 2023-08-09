@@ -329,7 +329,7 @@ fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     let pad_size_to = field.pad_size_to.as_ref().map(|size| {
         quote! {{
             let pad_to_size = (#size) as u64;
-            let after_pos = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
+            let after_pos = #SEEK_TRAIT::stream_position(#writer_var)?;
             if let Some(size) = after_pos.checked_sub(#BEFORE_POS) {
                 if let Some(padding) = pad_to_size.checked_sub(size) {
                     #WRITE_ZEROES(#writer_var, padding)?;
@@ -344,7 +344,7 @@ fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     });
     let align_after = field.align_after.as_ref().map(|alignment| {
         quote! {{
-            let pos = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
+            let pos = #SEEK_TRAIT::stream_position(#writer_var)?;
             let align = ((#alignment) as u64);
             let rem = pos % align;
             if rem != 0 {
@@ -382,7 +382,7 @@ fn pad_before(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     });
     let align_before = field.align_before.as_ref().map(|alignment| {
         quote! {{
-            let pos = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
+            let pos = #SEEK_TRAIT::stream_position(#writer_var)?;
             let align = ((#alignment) as u64);
             let rem = pos % align;
             if rem != 0 {
@@ -392,12 +392,12 @@ fn pad_before(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     });
     let pad_size_to_before = field.pad_size_to.as_ref().map(|_| {
         quote! {
-            let #BEFORE_POS = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
+            let #BEFORE_POS = #SEEK_TRAIT::stream_position(#writer_var)?;
         }
     });
     let store_position = field.restore_position.map(|_| {
         quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Current(0))?;
+            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#writer_var)?;
         }
     });
 

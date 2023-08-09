@@ -277,7 +277,7 @@ impl<'field> FieldGenerator<'field> {
             };
 
             self.out = quote! {{
-                let #SAVED_POSITION = #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(0))?;
+                let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#reader_var)?;
                 let #TEMP = #head;
                 #DBG_EPRINTLN!(
                     "[{}:{} | offset {:#x}] {} = {:#x?}",
