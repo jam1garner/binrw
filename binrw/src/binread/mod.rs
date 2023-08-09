@@ -18,18 +18,27 @@ pub use impls::VecArgs;
 ///
 /// # Examples
 ///
-/// Creating a parser for a relative offset with an optional base offset specified using `#[br(offset = ...)]`:
+/// Create a parser for a relative offset with an optional base offset.
 ///
 /// ```
-/// # use binrw::{BinRead, BinResult, file_ptr::FilePtrArgs};
+/// # use binrw::{BinRead, BinResult, NamedArgs};
 /// # use binrw::io::{Read, Seek, SeekFrom};
+/// #[derive(Clone, Default, NamedArgs)]
+/// struct CustomPtr32Args<Inner: Default> {
+///     #[named_args(default = 0)]
+///     offset: u64,
+///     #[named_args(default = Default::default())]
+///     inner: Inner,
+/// }
+///
 /// struct CustomPtr32<T>(T);
 ///
 /// impl<T, TArgs> BinRead for CustomPtr32<T>
 /// where
 ///     for<'a> T: BinRead<Args<'a> = TArgs>,
+///     TArgs: Default
 /// {
-///     type Args<'a> = FilePtrArgs<TArgs>;
+///     type Args<'a> = CustomPtr32Args<TArgs>;
 ///
 ///     fn read_options<R: Read + Seek>(
 ///         reader: &mut R,
