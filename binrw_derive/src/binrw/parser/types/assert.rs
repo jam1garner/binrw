@@ -1,6 +1,7 @@
 use crate::{binrw::parser::attrs, meta_types::KeywordToken};
-use proc_macro2::{Ident, Span, TokenStream, TokenTree};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
+use syn::fold::Fold;
 use syn::{parse::Parse, spanned::Spanned, token::Token, Expr, ExprLit, Lit};
 
 #[derive(Debug, Clone)]
@@ -26,9 +27,7 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
         let kw_span = value.keyword_span();
         let mut args = value.fields.iter();
 
-        let condition = if let Some(cond) = args.next() {
-            cond.into_token_stream()
-        } else {
+        let Some(cond_expr) = args.next() else {
             return Err(Self::Error::new(
                 kw_span,
                 format!(
@@ -40,17 +39,8 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
 
         // ignores any alternative declaration of `self` in the condition, but asserts should be
         // simple so that shouldn't be a problem
-        let mut condition_uses_self = false;
-        let condition: TokenStream = condition
-            .into_iter()
-            .map(|tt| match tt {
-                TokenTree::Ident(ref i) if i == "self" => {
-                    condition_uses_self = true;
-                    TokenTree::Ident(Ident::new("this", i.span()))
-                }
-                other => other,
-            })
-            .collect();
+        let mut self_replacer = ReplaceSelfWithThis { uses_self: false };
+        let cond_expr = self_replacer.fold_expr(cond_expr.clone());
 
         let consequent = match args.next() {
             Some(Expr::Lit(ExprLit {
@@ -69,9 +59,24 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
 
         Ok(Self {
             kw_span,
-            condition,
-            condition_uses_self,
+            condition: cond_expr.into_token_stream(),
+            condition_uses_self: self_replacer.uses_self,
             consequent,
         })
+    }
+}
+
+struct ReplaceSelfWithThis {
+    uses_self: bool,
+}
+
+impl Fold for ReplaceSelfWithThis {
+    fn fold_ident(&mut self, i: Ident) -> Ident {
+        if i == "self" {
+            self.uses_self = true;
+            Ident::new("this", i.span())
+        } else {
+            i
+        }
     }
 }
