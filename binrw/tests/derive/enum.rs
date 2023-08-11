@@ -29,6 +29,43 @@ fn enum_assert() {
 }
 
 #[test]
+fn enum_assert_with_self() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(assert(self.verify()))]
+    enum Test {
+        A {
+            a: u8,
+            b: u8,
+        },
+        #[br(assert(self.verify_only_b()))]
+        B {
+            a: i16,
+            b: u8,
+        },
+    }
+
+    impl Test {
+        fn verify(&self) -> bool {
+            match self {
+                Test::A { b, .. } => *b == 1,
+                Test::B { a, b } => *a == -1 && *b == 1,
+            }
+        }
+
+        fn verify_only_b(&self) -> bool {
+            matches!(self, Test::B { .. })
+        }
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"\xff\xff\x01")).unwrap(),
+        Test::B { a: -1, b: 1 }
+    );
+    Test::read_le(&mut Cursor::new(b"\xff\xff\0")).expect_err("accepted bad data");
+    Test::read_le(&mut Cursor::new(b"\0\0\x01")).expect_err("accepted bad data");
+}
+
+#[test]
 fn enum_non_copy_args() {
     #[derive(BinRead, Debug)]
     #[br(import(a: NonCopyArg))]

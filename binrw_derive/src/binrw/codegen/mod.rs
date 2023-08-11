@@ -204,6 +204,7 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
              kw_span,
              condition,
              consequent,
+             ..
          }| {
             let error_fn = match &consequent {
                 Some(AssertionError::Message(message)) => {

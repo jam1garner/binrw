@@ -20,6 +20,7 @@ use alloc::borrow::Cow;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{spanned::Spanned, Ident};
+use crate::binrw::parser::Assert;
 
 pub(super) fn generate_unit_struct(
     input: &Input,
@@ -37,8 +38,8 @@ pub(super) fn generate_unit_struct(
 pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(input, st)
         .read_fields(name, None)
-        .add_assertions(core::iter::empty())
-        .return_value(None)
+        .initialize_value_with_assertions(None, &[])
+        .return_value()
         .finish()
 }
 
@@ -61,11 +62,31 @@ impl<'input> StructGenerator<'input> {
         self.out
     }
 
-    pub(super) fn add_assertions(
-        mut self,
-        extra_assertions: impl Iterator<Item = TokenStream>,
+    pub(super) fn initialize_value_with_assertions(
+        self,
+        variant_ident: Option<&Ident>,
+        extra_assertions: &[Assert],
     ) -> Self {
-        let assertions = get_assertions(&self.st.assertions).chain(extra_assertions);
+        if self.has_self_assertions(extra_assertions) {
+            self.init_value(variant_ident)
+                .add_assertions(extra_assertions)
+        } else {
+            self.add_assertions(extra_assertions)
+                .init_value(variant_ident)
+        }
+    }
+
+    fn has_self_assertions(&self, extra_assertions: &[Assert]) -> bool {
+        self.st
+            .assertions
+            .iter()
+            .chain(extra_assertions)
+            .any(|assert| assert.condition_uses_self)
+    }
+
+    fn add_assertions(mut self, extra_assertions: &[Assert]) -> Self {
+        let assertions = get_assertions(&self.st.assertions)
+            .chain(get_assertions(extra_assertions));
         let head = self.out;
         self.out = quote! {
             #head
@@ -102,7 +123,7 @@ impl<'input> StructGenerator<'input> {
         self
     }
 
-    pub(super) fn return_value(mut self, variant_ident: Option<&Ident>) -> Self {
+    fn init_value(mut self, variant_ident: Option<&Ident>) -> Self {
         let out_names = self.st.iter_permanent_idents();
         let return_type = get_return_type(variant_ident);
         let return_value = if self.st.is_tuple() {
@@ -114,7 +135,18 @@ impl<'input> StructGenerator<'input> {
         let head = self.out;
         self.out = quote! {
             #head
-            Ok(#return_value)
+            let this = #return_value;
+        };
+
+        self
+    }
+
+    pub(super) fn return_value(mut self) -> Self {
+        let head = self.out;
+
+        self.out = quote! {
+            #head
+            Ok(this)
         };
 
         self

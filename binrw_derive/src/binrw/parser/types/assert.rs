@@ -1,5 +1,5 @@
 use crate::{binrw::parser::attrs, meta_types::KeywordToken};
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream, TokenTree};
 use quote::{quote, ToTokens};
 use syn::{parse::Parse, spanned::Spanned, token::Token, Expr, ExprLit, Lit};
 
@@ -13,6 +13,9 @@ pub(crate) enum Error {
 pub(crate) struct Assert {
     pub(crate) kw_span: Span,
     pub(crate) condition: TokenStream,
+    /// `true` if the condition was written with `self`, in the [`condition`] it is replaced with
+    /// `this`. This enables backwards compatibility with asserts that did not use `self`.
+    pub(crate) condition_uses_self: bool,
     pub(crate) consequent: Option<Error>,
 }
 
@@ -35,6 +38,19 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
             ));
         };
 
+        // ignores any alternative declaration of `self` in the condition, but asserts should be
+        // simple so that shouldn't be a problem
+        let mut condition_uses_self = false;
+        let condition: TokenStream = condition.into_iter().map(|tt| {
+            match tt {
+                TokenTree::Ident(ref i) if i == "self" => {
+                    condition_uses_self = true;
+                    TokenTree::Ident(Ident::new("this", i.span()))
+                }
+                other => other,
+            }
+        }).collect();
+
         let consequent = match args.next() {
             Some(Expr::Lit(ExprLit {
                 lit: Lit::Str(message),
@@ -53,6 +69,7 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
         Ok(Self {
             kw_span,
             condition,
+            condition_uses_self,
             consequent,
         })
     }

@@ -3,12 +3,9 @@ use super::{
     PreludeGenerator,
 };
 use crate::binrw::{
-    codegen::{
-        get_assertions,
-        sanitization::{
-            BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD,
-            RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
-        },
+    codegen::sanitization::{
+        BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD,
+        RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };
@@ -228,8 +225,8 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
                 None,
                 Some(&format!("{}::{}", en.ident.as_ref().unwrap(), &ident)),
             )
-            .add_assertions(get_assertions(&en.assertions))
-            .return_value(Some(ident))
+            .initialize_value_with_assertions(Some(ident), &en.assertions)
+            .return_value()
             .finish(),
 
         EnumVariant::Unit(options) => generate_unit_struct(&input, None, Some(&options.ident)),
