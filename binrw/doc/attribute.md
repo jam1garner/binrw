@@ -499,6 +499,15 @@ Any <span class="brw">(earlier only, when reading)</span><span class="br">earlie
 field or [import](#arguments) can be referenced by expressions
 in the directive.
 
+<div class="br">
+
+For `#[br]`, when using `map`, a non-unit `struct`, or an `enum`, a special variable
+named `self` can be referenced by expressions in the directive. It contains the result
+of the `map` function or the result of constructing the `struct` or `enum`. Note that
+you cannot refer to the `enum` fields directly, as an `enum` variant is not its own type.
+
+</div>
+
 ## Examples
 
 ### Formatted error
