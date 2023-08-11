@@ -1,6 +1,7 @@
 use super::{get_magic, PreludeGenerator};
 #[cfg(feature = "verbose-backtrace")]
 use crate::binrw::backtrace::BacktraceFrame;
+use crate::binrw::parser::Assert;
 use crate::{
     binrw::{
         codegen::{
@@ -20,7 +21,6 @@ use alloc::borrow::Cow;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{spanned::Spanned, Ident};
-use crate::binrw::parser::Assert;
 
 pub(super) fn generate_unit_struct(
     input: &Input,
@@ -85,8 +85,8 @@ impl<'input> StructGenerator<'input> {
     }
 
     fn add_assertions(mut self, extra_assertions: &[Assert]) -> Self {
-        let assertions = get_assertions(&self.st.assertions)
-            .chain(get_assertions(extra_assertions));
+        let assertions =
+            get_assertions(&self.st.assertions).chain(get_assertions(extra_assertions));
         let head = self.out;
         self.out = quote! {
             #head
