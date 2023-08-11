@@ -41,15 +41,16 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
         // ignores any alternative declaration of `self` in the condition, but asserts should be
         // simple so that shouldn't be a problem
         let mut condition_uses_self = false;
-        let condition: TokenStream = condition.into_iter().map(|tt| {
-            match tt {
+        let condition: TokenStream = condition
+            .into_iter()
+            .map(|tt| match tt {
                 TokenTree::Ident(ref i) if i == "self" => {
                     condition_uses_self = true;
                     TokenTree::Ident(Ident::new("this", i.span()))
                 }
                 other => other,
-            }
-        }).collect();
+            })
+            .collect();
 
         let consequent = match args.next() {
             Some(Expr::Lit(ExprLit {
