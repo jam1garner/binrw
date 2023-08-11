@@ -751,6 +751,32 @@ fn reader_var() {
 }
 
 #[test]
+fn top_level_assert_has_self() {
+    #[allow(dead_code)]
+    #[derive(BinRead, Debug)]
+    #[br(assert(self.verify(), "verify failed"))]
+    struct Test {
+        a: u8,
+        b: u8,
+    }
+
+    impl Test {
+        fn verify(&self) -> bool {
+            self.a == self.b
+        }
+    }
+
+    let mut data = Cursor::new(b"\x01\x01");
+    Test::read_le(&mut data).expect("a == b passed");
+    let mut data = Cursor::new(b"\x01\x02");
+    let err = Test::read_le(&mut data).expect_err("a == b failed");
+    assert!(matches!(err, binrw::Error::AssertFail {
+        message,
+        ..
+    } if message == "verify failed"));
+}
+
+#[test]
 fn rewind_on_assert() {
     #[allow(dead_code)]
     #[derive(BinRead, Debug)]
