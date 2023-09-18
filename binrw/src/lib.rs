@@ -1,6 +1,6 @@
 #![doc = include_str!("../doc/index.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(coverage_nightly, feature(no_coverage))]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![cfg_attr(all(doc, nightly), feature(doc_cfg))]
 #![warn(clippy::pedantic)]
 #![warn(missing_docs)]

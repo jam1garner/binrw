@@ -73,7 +73,7 @@ mod tests {
     struct Error;
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn err() {
         assert_eq!(PartialResult::<_, Error>::Ok(Pass).err(), None);
         assert_eq!(PartialResult::Partial(Pass, Error).err(), Some(Error));
@@ -81,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn map() {
         assert_eq!(
             PartialResult::<_, Error>::Ok(()).map(|()| Pass),
@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn ok() {
         assert_eq!(PartialResult::<_, Error>::Ok(Pass).ok(), Some(Pass));
         assert_eq!(PartialResult::Partial(Pass, Error).ok(), Some(Pass));
@@ -111,21 +111,21 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[should_panic(expected = "called `PartialResult::unwrap()` on an `Err` value")]
     fn unwrap_err() {
         PartialResult::<Pass, _>::Err(Error).unwrap();
     }
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[should_panic(expected = "called `PartialResult::unwrap()` on a `Partial` value")]
     fn unwrap_partial() {
         PartialResult::Partial(Pass, Error).unwrap();
     }
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn unwrap_tuple() {
         assert_eq!(
             PartialResult::<_, Error>::Ok(Pass).unwrap_tuple(),
@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[should_panic(expected = "called `PartialResult::unwrap_tuple()` on an `Err` value")]
     fn unwrap_tuple_err() {
         PartialResult::<Pass, _>::Err(Error).unwrap_tuple();

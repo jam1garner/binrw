@@ -128,7 +128,7 @@ mod tests {
     use proc_macro2::TokenStream;
     use syn::DeriveInput;
 
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn try_input(input: TokenStream) -> ParseResult<Input> {
         Input::from_input(
             &syn::parse2::<DeriveInput>(input).unwrap(),
@@ -142,7 +142,7 @@ mod tests {
     macro_rules! try_error (
         ($name:ident: $message:literal $tt:tt) => {
             #[test]
-            #[cfg_attr(coverage_nightly, no_coverage)]
+            #[cfg_attr(coverage_nightly, coverage(off))]
             #[should_panic(expected = $message)]
             fn $name() {
                 try_input(quote::quote! $tt).unwrap();
@@ -357,7 +357,7 @@ mod tests {
     // Errors on one field should not prevent the parser from surfacing errors
     // on other fields
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn non_blocking_errors() {
         let error = try_input(quote::quote! {
             #[br(invalid_keyword_struct)]

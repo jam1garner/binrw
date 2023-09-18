@@ -47,7 +47,7 @@ pub(crate) fn derive_from_imports(
     .generate(true)
 }
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub(crate) fn derive_from_input(input: DeriveInput) -> TokenStream {
     from_input(input).unwrap_or_else(syn::Error::into_compile_error)
 }
@@ -146,7 +146,7 @@ mod kw {
 }
 
 #[cfg(coverage)]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[test]
 fn derive_named_args_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
@@ -158,7 +158,7 @@ fn derive_named_args_code_coverage_for_tool() {
 mod tests {
     use super::*;
 
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn try_input(input: TokenStream) {
         from_input(syn::parse2::<DeriveInput>(input).unwrap()).unwrap();
     }
@@ -166,7 +166,7 @@ mod tests {
     macro_rules! try_error (
         ($name:ident: $message:literal $tt:tt) => {
             #[test]
-            #[cfg_attr(coverage_nightly, no_coverage)]
+            #[cfg_attr(coverage_nightly, coverage(off))]
             #[should_panic(expected = $message)]
             fn $name() {
                 try_input(quote::quote! $tt);

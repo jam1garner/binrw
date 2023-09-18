@@ -20,7 +20,7 @@ pub(super) struct Options {
     pub(super) write: bool,
 }
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 fn clean_attr(derive_input: &mut DeriveInput, binrw_input: &Option<Input>) {
     clean_struct_attrs(&mut derive_input.attrs);
 
@@ -42,7 +42,7 @@ fn clean_attr(derive_input: &mut DeriveInput, binrw_input: &Option<Input>) {
     }
 }
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 fn clean_field_attrs(input: &Option<Input>, variant_index: usize, fields: &mut syn::Fields) {
     if let Some(input) = input {
         let fields = match fields {
@@ -67,12 +67,12 @@ fn clean_field_attrs(input: &Option<Input>, variant_index: usize, fields: &mut s
     }
 }
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 fn clean_struct_attrs(attrs: &mut Vec<syn::Attribute>) {
     attrs.retain(|attr| !is_binwrite_attr(attr) && !is_binread_attr(attr));
 }
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub(super) fn derive_from_attribute(
     attr: &TokenStream,
     input: TokenStream,
@@ -113,7 +113,7 @@ pub(super) fn derive_from_attribute(
     .into()
 }
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub(super) fn derive_from_input(
     mut derive_input: DeriveInput,
     options: Options,
@@ -172,7 +172,7 @@ fn parse(
 }
 
 #[cfg(coverage)]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[test]
 fn derive_binread_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;
@@ -211,7 +211,7 @@ fn derive_binread_code_coverage_for_tool() {
 }
 
 #[cfg(coverage)]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[test]
 fn derive_binwrite_code_coverage_for_tool() {
     use runtime_macros_derive::emulate_derive_expansion_fallible;

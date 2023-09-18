@@ -1,7 +1,7 @@
 #![warn(clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 #![cfg_attr(nightly, feature(proc_macro_span))]
-#![cfg_attr(coverage_nightly, feature(no_coverage))]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 extern crate alloc;
 
@@ -16,13 +16,13 @@ use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_attribute]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn binread(attr: TokenStream, input: TokenStream) -> TokenStream {
     binrw::derive_from_attribute(&attr, input, false)
 }
 
 #[proc_macro_derive(BinRead, attributes(br, brw))]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn binread_derive(input: TokenStream) -> TokenStream {
     binrw::derive_from_input(
         parse_macro_input!(input as DeriveInput),
@@ -35,7 +35,7 @@ pub fn binread_derive(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn binrw(attr: TokenStream, input: TokenStream) -> TokenStream {
     if attr.to_string() == "ignore" {
         input
@@ -45,7 +45,7 @@ pub fn binrw(attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(BinWrite, attributes(bw, brw))]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn binwrite_derive(input: TokenStream) -> TokenStream {
     binrw::derive_from_input(
         parse_macro_input!(input as DeriveInput),
@@ -58,25 +58,25 @@ pub fn binwrite_derive(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn binwrite(attr: TokenStream, input: TokenStream) -> TokenStream {
     binrw::derive_from_attribute(&attr, input, true)
 }
 
 #[proc_macro_derive(NamedArgs, attributes(named_args))]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn named_args_derive(input: TokenStream) -> TokenStream {
     named_args::derive_from_input(parse_macro_input!(input as DeriveInput)).into()
 }
 
 #[proc_macro_attribute]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn parser(attr: TokenStream, input: TokenStream) -> TokenStream {
     fn_helper::derive_from_attribute::<false>(attr, input)
 }
 
 #[proc_macro_attribute]
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub fn writer(attr: TokenStream, input: TokenStream) -> TokenStream {
     fn_helper::derive_from_attribute::<true>(attr, input)
 }

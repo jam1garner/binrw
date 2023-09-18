@@ -39,7 +39,7 @@ impl<T: ToTokens> ToSpannedTokens for &T {
 pub(crate) struct IdentStr(&'static str);
 
 impl IdentStr {
-    #[cfg_attr(coverage_nightly, no_coverage)] // const-only function
+    #[cfg_attr(coverage_nightly, coverage(off))] // const-only function
     pub(crate) const fn new(str: &'static str) -> Self {
         IdentStr(str)
     }

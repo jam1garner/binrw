@@ -261,7 +261,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn backtrace() {
         const ERR0: &str = "assert_failed";
         const ERR1: &str = "while doing something";

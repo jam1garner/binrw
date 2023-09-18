@@ -13,7 +13,7 @@ use syn::{
     Error, FnArg, Ident, ItemFn, Pat, Token,
 };
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 pub(crate) fn derive_from_attribute<const WRITE: bool>(
     attr: TokenStream,
     input: TokenStream,
@@ -220,7 +220,7 @@ mod tests {
     use super::*;
     use proc_macro2::TokenStream;
 
-    #[cfg_attr(coverage_nightly, no_coverage)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn try_input<const WRITE: bool>(attr: TokenStream, params: &TokenStream) {
         let options = syn::parse2::<Options<WRITE>>(attr).unwrap();
         let func = syn::parse2::<ItemFn>(quote::quote! {
@@ -233,7 +233,7 @@ mod tests {
     macro_rules! try_error (
         (read $name:ident: $message:literal $opts:tt $params:tt) => {
             #[test]
-            #[cfg_attr(coverage_nightly, no_coverage)]
+            #[cfg_attr(coverage_nightly, coverage(off))]
             #[should_panic(expected = $message)]
             fn $name() {
                 try_input::<false>(quote::quote! $opts, &quote::quote! $params);
@@ -242,7 +242,7 @@ mod tests {
 
         (write $name:ident: $message:literal $opts:tt $params:tt) => {
             #[test]
-            #[cfg_attr(coverage_nightly, no_coverage)]
+            #[cfg_attr(coverage_nightly, coverage(off))]
             #[should_panic(expected = $message)]
             fn $name() {
                 try_input::<true>(quote::quote! $opts, &quote::quote! $params);
