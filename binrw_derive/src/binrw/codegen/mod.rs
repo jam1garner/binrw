@@ -347,8 +347,7 @@ fn directives_to_args(field: &StructField, stream: IdentStr) -> TokenStream {
             field
                 .offset
                 .as_ref()
-                .map(|offset| quote_spanned! { offset.span()=> offset: #offset })
-                .into_iter(),
+                .map(|offset| quote_spanned! { offset.span()=> offset: #offset }),
         );
     quote! { #(#args,)* }
 }

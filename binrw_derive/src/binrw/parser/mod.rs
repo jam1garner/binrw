@@ -148,14 +148,6 @@ mod tests {
                 try_input(quote::quote! $tt).unwrap();
             }
         };
-        ($name:ident $tt:tt) => {
-            #[test]
-            #[cfg_attr(coverage_nightly, no_coverage)]
-            #[should_panic]
-            fn $name() {
-                try_input(quote::quote! $tt).unwrap();
-            }
-        };
     );
 
     try_error!(args_calc_conflict: "`args` is incompatible" {
@@ -245,7 +237,7 @@ mod tests {
         }
     });
 
-    try_error!(enum_missing_magic_repr {
+    try_error!(enum_missing_magic_repr: "requires either" {
         enum UnitEnum {
             A,
         }

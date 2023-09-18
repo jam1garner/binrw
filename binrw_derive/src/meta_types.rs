@@ -296,10 +296,10 @@ mod tests {
     }
 
     macro_rules! try_parse_fail {
-        ($name:ident, $ty:ty, $tt:tt) => {
+        ($name:ident, $message:literal, $ty:ty, $tt:tt) => {
             #[test]
             #[cfg_attr(coverage_nightly, no_coverage)]
-            #[should_panic]
+            #[should_panic = $message]
             fn $name() {
                 syn::parse2::<$ty>(quote::quote! $tt).unwrap();
             }
@@ -310,13 +310,28 @@ mod tests {
 
     try_parse!(meta_value_assign, MetaValueTest, { test = 3u8 });
     try_parse!(meta_value_paren, MetaValueTest, { test(b"TEST") });
-    try_parse_fail!(meta_value_missing_keyword, MetaValueTest, { = 3u8 });
-    try_parse_fail!(meta_value_missing_value, MetaValueTest, { test });
-    try_parse_fail!(meta_value_wrong_keyword, MetaValueTest, { wrong = 3u8 });
-    try_parse_fail!(meta_value_wrong_value_type, MetaValueTest, { test = u8 });
-    try_parse_fail!(meta_value_confused_as_list, MetaValueTest, {
-        test(3u8, 3u8)
+    try_parse_fail!(meta_value_missing_keyword, "expected `test`", MetaValueTest, { = 3u8 });
+    try_parse_fail!(meta_value_missing_value, "expected `=`", MetaValueTest, {
+        test
     });
+    try_parse_fail!(
+        meta_value_wrong_keyword,
+        "expected `test`",
+        MetaValueTest,
+        { wrong = 3u8 }
+    );
+    try_parse_fail!(
+        meta_value_wrong_value_type,
+        "expected literal",
+        MetaValueTest,
+        { test = u8 }
+    );
+    try_parse_fail!(
+        meta_value_confused_as_list,
+        "unexpected token",
+        MetaValueTest,
+        { test(3u8, 3u8) }
+    );
 
     #[test]
     #[cfg_attr(coverage_nightly, no_coverage)]
@@ -350,13 +365,36 @@ mod tests {
 
     try_parse!(meta_list, MetaListTest, { test_list(3u8, 3u8) });
     try_parse!(meta_list_empty, MetaListTest, { test_list() });
-    try_parse_fail!(meta_list_missing_keyword, MetaListTest, { (3u8, 3u8) });
-    try_parse_fail!(meta_list_missing_value, MetaListTest, { test_list });
-    try_parse_fail!(meta_list_wrong_delimiter, MetaListTest, {
-        test_list = (3u8, 3u8)
-    });
-    try_parse_fail!(meta_list_wrong_keyword, MetaListTest, { wrong });
-    try_parse_fail!(meta_list_wrong_item_type, MetaListTest, { test_list(i32) });
+    try_parse_fail!(
+        meta_list_missing_keyword,
+        "expected `test_list`",
+        MetaListTest,
+        { (3u8, 3u8) }
+    );
+    try_parse_fail!(
+        meta_list_missing_value,
+        "unexpected end of input",
+        MetaListTest,
+        { test_list }
+    );
+    try_parse_fail!(
+        meta_list_wrong_delimiter,
+        "expected parentheses",
+        MetaListTest,
+        { test_list = (3u8, 3u8) }
+    );
+    try_parse_fail!(
+        meta_list_wrong_keyword,
+        "expected `test_list`",
+        MetaListTest,
+        { wrong }
+    );
+    try_parse_fail!(
+        meta_list_wrong_item_type,
+        "expected literal",
+        MetaListTest,
+        { test_list(i32) }
+    );
 
     try_parse!(meta_enclosed_list_paren, MetaEnclosedListTest, {
         test_enclosed_list(3u8, 3u8)
@@ -368,16 +406,30 @@ mod tests {
     try_parse!(meta_enclosed_list_brace_empty, MetaEnclosedListTest, {
         test_enclosed_list {}
     });
-    try_parse_fail!(meta_enclosed_list_wrong_keyword, MetaEnclosedListTest, {
-        wrong
-    });
-    try_parse_fail!(meta_enclosed_list_wrong_delimiter, MetaEnclosedListTest, {
-        test_enclosed_list = (3u8, 3u8)
-    });
-    try_parse_fail!(meta_enclosed_list_wrong_bracket_kind, MetaEnclosedListTest, { test_enclosed_list [] });
-    try_parse_fail!(meta_enclosed_list_wrong_item_type, MetaEnclosedListTest, {
-        test_enclosed_list(i32)
-    });
+    try_parse_fail!(
+        meta_enclosed_list_wrong_keyword,
+        "expected `test_enclosed_list`",
+        MetaEnclosedListTest,
+        { wrong }
+    );
+    try_parse_fail!(
+        meta_enclosed_list_wrong_delimiter,
+        "expected parentheses or curly braces",
+        MetaEnclosedListTest,
+        { test_enclosed_list = (3u8, 3u8) }
+    );
+    try_parse_fail!(
+        meta_enclosed_list_wrong_bracket_kind,
+        "expected parentheses or curly braces",
+        MetaEnclosedListTest,
+        { test_enclosed_list [] }
+    );
+    try_parse_fail!(
+        meta_enclosed_list_wrong_item_type,
+        "expected literal",
+        MetaEnclosedListTest,
+        { test_enclosed_list(i32) }
+    );
 
     #[test]
     #[cfg_attr(coverage_nightly, no_coverage)]
@@ -392,22 +444,30 @@ mod tests {
     }
 
     try_parse!(ident_pat_type, IdentPatType, { foo: u8 });
-    try_parse_fail!(ident_pat_type_missing_ident, IdentPatType, { : 3u8 });
-    try_parse_fail!(ident_pat_type_missing_ty, IdentPatType, { foo: });
-    try_parse_fail!(ident_pat_type_wrong_ty_type, IdentPatType, { foo: 3u8 });
+    try_parse_fail!(ident_pat_type_missing_ident, "expected identifier", IdentPatType, { : 3u8 });
+    try_parse_fail!(ident_pat_type_missing_ty, "unexpected end of input", IdentPatType, { foo: });
+    try_parse_fail!(ident_pat_type_wrong_ty_type, "expected one of", IdentPatType, { foo: 3u8 });
 
     try_parse!(ident_type_default, IdentTypeMaybeDefault, { foo: u8 = 1 });
     try_parse!(ident_type_no_default, IdentTypeMaybeDefault, { foo: u8 });
-    try_parse_fail!(ident_type_missing_type, IdentTypeMaybeDefault, { foo: });
-    try_parse_fail!(ident_type_missing_colon, IdentTypeMaybeDefault, { foo u8 });
-    try_parse_fail!(ident_type_missing_ident, IdentTypeMaybeDefault, { :u8 });
+    try_parse_fail!(ident_type_missing_type, "unexpected end of input", IdentTypeMaybeDefault, { foo: });
+    try_parse_fail!(ident_type_missing_colon, "expected `:`", IdentTypeMaybeDefault, { foo u8 });
+    try_parse_fail!(ident_type_missing_ident, "expected identifier", IdentTypeMaybeDefault, { :u8 });
 
     try_parse!(meta_attr_list, MetaAttrListTest, { (1u8, 2u8, 3u8) });
     try_parse!(meta_attr_list_empty, MetaAttrListTest, { () });
-    try_parse_fail!(meta_attr_list_wrong_type, MetaAttrListTest, { (i32) });
-    try_parse_fail!(meta_attr_list_confused_as_list, MetaAttrListTest, {
-        wrong(i32)
-    });
+    try_parse_fail!(
+        meta_attr_list_wrong_type,
+        "expected literal",
+        MetaAttrListTest,
+        { (i32) }
+    );
+    try_parse_fail!(
+        meta_attr_list_confused_as_list,
+        "expected parentheses",
+        MetaAttrListTest,
+        { wrong(i32) }
+    );
 
     #[test]
     #[cfg_attr(coverage_nightly, no_coverage)]

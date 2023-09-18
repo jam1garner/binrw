@@ -22,7 +22,7 @@ macro_rules! binwrite_num_impl {
                     &self,
                     writer: &mut W,
                     endian: Endian,
-                    _: Self::Args<'_>,
+                    (): Self::Args<'_>,
                 ) -> BinResult<()> {
                     writer.write_all(&match endian {
                         Endian::Big => self.to_be_bytes(),
@@ -46,7 +46,7 @@ macro_rules! binwrite_nonzero_num_impl {
                     &self,
                     writer: &mut W,
                     endian: Endian,
-                    _: Self::Args<'_>,
+                    (): Self::Args<'_>,
                 ) -> BinResult<()> {
                     let num = <$type_name>::from(*self);
 
@@ -214,7 +214,7 @@ impl BinWrite for () {
         &self,
         _: &mut W,
         _: Endian,
-        _: Self::Args<'_>,
+        (): Self::Args<'_>,
     ) -> BinResult<()> {
         Ok(())
     }

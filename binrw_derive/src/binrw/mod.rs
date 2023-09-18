@@ -35,7 +35,7 @@ fn clean_attr(derive_input: &mut DeriveInput, binrw_input: &Option<Input>) {
             }
         }
         syn::Data::Union(union) => {
-            for field in union.fields.named.iter_mut() {
+            for field in &mut union.fields.named {
                 clean_struct_attrs(&mut field.attrs);
             }
         }
@@ -137,7 +137,7 @@ pub(super) fn derive_from_input(
                 }
             }
             syn::Data::Union(union) => {
-                for field in union.fields.named.iter_mut() {
+                for field in &mut union.fields.named {
                     clean_struct_attrs(&mut field.attrs);
                 }
             }

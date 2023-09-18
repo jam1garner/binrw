@@ -54,6 +54,10 @@ impl<T: Seek> TakeSeek<T> {
     /// return EOF. This is the same as constructing a new `TakeSeek` instance,
     /// so the amount of bytes read and the previous limit value don’t matter
     /// when calling this method.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the inner stream returns an error from `stream_position`.
     pub fn set_limit(&mut self, limit: u64) {
         let pos = self
             .inner

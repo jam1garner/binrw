@@ -28,11 +28,11 @@ fn calc_visibility() {
     struct Test {
         x: u8,
 
-        #[bw(calc = Some(2))]
-        y: Option<u16>,
+        #[bw(calc = 2)]
+        y: u16,
 
         // `y` should be visible here even though it is calculated
-        #[bw(calc = y.unwrap() + 1)]
+        #[bw(calc = y + 1)]
         z: u16,
     }
 

@@ -14,7 +14,7 @@ macro_rules! binread_impl {
             impl BinRead for $type_name {
                 type Args<'a> = ();
 
-                fn read_options<R: Read + Seek>(reader: &mut R, endian: Endian, _: Self::Args<'_>) -> BinResult<Self> {
+                fn read_options<R: Read + Seek>(reader: &mut R, endian: Endian, (): Self::Args<'_>) -> BinResult<Self> {
                     let mut val = [0; core::mem::size_of::<$type_name>()];
                     let pos = reader.stream_position()?;
 
@@ -51,7 +51,7 @@ macro_rules! binread_nonzero_impl {
                 fn read_options<R: Read + Seek>(
                     reader: &mut R,
                     endian: Endian,
-                    _: Self::Args<'_>,
+                    (): Self::Args<'_>,
                 ) -> BinResult<Self> {
                     match <$Ty>::new(<$Int>::read_options(reader, endian, ())?) {
                         Some(x) => Ok(x),
@@ -237,7 +237,7 @@ binread_tuple_impl!(
 impl BinRead for () {
     type Args<'a> = ();
 
-    fn read_options<R: Read + Seek>(_: &mut R, _: Endian, _: Self::Args<'_>) -> BinResult<Self> {
+    fn read_options<R: Read + Seek>(_: &mut R, _: Endian, (): Self::Args<'_>) -> BinResult<Self> {
         Ok(())
     }
 }
@@ -284,7 +284,7 @@ impl<T: BinRead> BinRead for Option<T> {
 impl<T> BinRead for core::marker::PhantomData<T> {
     type Args<'a> = ();
 
-    fn read_options<R: Read + Seek>(_: &mut R, _: Endian, _: Self::Args<'_>) -> BinResult<Self> {
+    fn read_options<R: Read + Seek>(_: &mut R, _: Endian, (): Self::Args<'_>) -> BinResult<Self> {
         Ok(core::marker::PhantomData)
     }
 }

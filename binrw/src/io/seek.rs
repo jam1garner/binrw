@@ -42,7 +42,7 @@ impl<T> super::Seek for NoSeek<T> {
     fn seek(&mut self, pos: SeekFrom) -> super::Result<u64> {
         match pos {
             SeekFrom::Start(n) if self.pos == n => Ok(n),
-            SeekFrom::Current(n) if n == 0 => Ok(self.pos),
+            SeekFrom::Current(0) => Ok(self.pos),
             // https://github.com/rust-lang/rust/issues/86442
             _ => Err(Error::new(ErrorKind::Other, "seek on unseekable file")),
         }

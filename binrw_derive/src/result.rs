@@ -84,15 +84,15 @@ mod tests {
     #[cfg_attr(coverage_nightly, no_coverage)]
     fn map() {
         assert_eq!(
-            PartialResult::<_, Error>::Ok(()).map(|_| Pass),
+            PartialResult::<_, Error>::Ok(()).map(|()| Pass),
             PartialResult::Ok(Pass)
         );
         assert_eq!(
-            PartialResult::Partial((), Error).map(|_| Pass),
+            PartialResult::Partial((), Error).map(|()| Pass),
             PartialResult::Partial(Pass, Error)
         );
         assert_eq!(
-            PartialResult::<(), _>::Err(Error).map(|_| Pass),
+            PartialResult::<(), _>::Err(Error).map(|()| Pass),
             PartialResult::Err(Error)
         );
     }

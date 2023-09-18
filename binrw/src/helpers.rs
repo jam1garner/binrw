@@ -369,7 +369,7 @@ where
     It: IntoIterator<Item = Arg>,
     ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
 {
-    move |reader, options, _| {
+    move |reader, options, ()| {
         it.into_iter()
             .map(|arg| read(reader, options, arg))
             .collect()

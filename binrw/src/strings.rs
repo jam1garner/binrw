@@ -39,7 +39,7 @@ impl BinRead for NullString {
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args<'_>,
+        (): Self::Args<'_>,
     ) -> BinResult<Self> {
         let mut values = vec![];
 
@@ -161,7 +161,7 @@ impl BinRead for NullWideString {
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args<'_>,
+        (): Self::Args<'_>,
     ) -> BinResult<Self> {
         let mut values = vec![];
 

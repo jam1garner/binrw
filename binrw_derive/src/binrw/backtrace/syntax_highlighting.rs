@@ -85,10 +85,7 @@ impl SyntaxInfo {
         let start = start(span);
         let end = end(span);
 
-        let line = self
-            .lines
-            .entry(start.line())
-            .or_insert_with(LineSyntax::default);
+        let line = self.lines.entry(start.line()).or_default();
 
         assert_eq!(start.line(), end.line());
         line.highlights.push((start.column()..end.column(), color));
@@ -148,10 +145,7 @@ fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
         let start = start(span);
         let end = end(span);
 
-        let line = syntax_info
-            .lines
-            .entry(start.line())
-            .or_insert_with(LineSyntax::default);
+        let line = syntax_info.lines.entry(start.line()).or_default();
 
         line.highlights.push((
             start.column()..start.column().saturating_add(1),
@@ -296,11 +290,7 @@ impl<'ast> Visit<'ast> for Visitor {
 
         // syntax highlighting for multi-line spans isn't supported yet (sorry)
         if start.line() == end.line() {
-            let lines = self
-                .syntax_info
-                .lines
-                .entry(start.line())
-                .or_insert_with(LineSyntax::default);
+            let lines = self.syntax_info.lines.entry(start.line()).or_default();
 
             lines.highlights.push((
                 start.column()..end.column(),
@@ -322,7 +312,7 @@ impl<'ast> Visit<'ast> for Visitor {
             self.syntax_info
                 .lines
                 .entry(start.line())
-                .or_insert_with(LineSyntax::default)
+                .or_default()
                 .highlights
                 .push((start.column()..end.column(), Color::Keyword));
         }
@@ -336,7 +326,7 @@ impl<'ast> Visit<'ast> for Visitor {
         self.syntax_info
             .lines
             .entry(start.line())
-            .or_insert_with(LineSyntax::default)
+            .or_default()
             .highlights
             .push((start.column()..end.column(), Color::Function));
 
@@ -354,7 +344,7 @@ impl<'ast> Visit<'ast> for Visitor {
                 self.syntax_info
                     .lines
                     .entry(start.line())
-                    .or_insert_with(LineSyntax::default)
+                    .or_default()
                     .highlights
                     .push((start.column()..end.column(), Color::Function));
             }

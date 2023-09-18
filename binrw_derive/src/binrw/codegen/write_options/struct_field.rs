@@ -352,7 +352,7 @@ fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
             }
         }}
     });
-    let restore_position = field.restore_position.map(|_| {
+    let restore_position = field.restore_position.map(|()| {
         quote! {
             #SEEK_TRAIT::seek(#writer_var, #SEEK_FROM::Start(#SAVED_POSITION))?;
         }
@@ -395,7 +395,7 @@ fn pad_before(writer_var: &TokenStream, field: &StructField) -> TokenStream {
             let #BEFORE_POS = #SEEK_TRAIT::stream_position(#writer_var)?;
         }
     });
-    let store_position = field.restore_position.map(|_| {
+    let store_position = field.restore_position.map(|()| {
         quote! {
             let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#writer_var)?;
         }

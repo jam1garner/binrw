@@ -172,14 +172,6 @@ mod tests {
                 try_input(quote::quote! $tt);
             }
         };
-        ($name:ident $tt:tt) => {
-            #[test]
-            #[cfg_attr(coverage_nightly, no_coverage)]
-            #[should_panic]
-            fn $name() {
-                try_input(quote::quote! $tt);
-            }
-        };
     );
 
     try_error!(invalid_attr_name: "expected `try_optional` or `default`" {
