@@ -185,7 +185,10 @@ where
     }
 }
 
-impl<Ptr: IntoSeekFrom, Value: BinRead> Deref for FilePtr<Ptr, Value> {
+impl<Ptr, Value> Deref for FilePtr<Ptr, Value>
+where
+    Ptr: IntoSeekFrom,
+{
     type Target = Value;
 
     fn deref(&self) -> &Self::Target {
@@ -193,7 +196,10 @@ impl<Ptr: IntoSeekFrom, Value: BinRead> Deref for FilePtr<Ptr, Value> {
     }
 }
 
-impl<Ptr: IntoSeekFrom, Value: BinRead> DerefMut for FilePtr<Ptr, Value> {
+impl<Ptr, Value> DerefMut for FilePtr<Ptr, Value>
+where
+    Ptr: IntoSeekFrom,
+{
     fn deref_mut(&mut self) -> &mut Value {
         &mut self.value
     }
@@ -201,7 +207,7 @@ impl<Ptr: IntoSeekFrom, Value: BinRead> DerefMut for FilePtr<Ptr, Value> {
 
 impl<Ptr, Value> PartialEq<FilePtr<Ptr, Value>> for FilePtr<Ptr, Value>
 where
-    Ptr: PartialEq + IntoSeekFrom,
+    Ptr: IntoSeekFrom,
     Value: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
