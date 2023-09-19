@@ -57,3 +57,11 @@ types:
 | `Vec<i128>`          | yes  | no    |
 | `[u8; N]`            | no   | yes   |
 | `Box<[u8]>`          | no   | yes   |
+
+# Avoid random access patterns
+
+Reading data non-sequentially may reduce the effectiveness of hardware
+prefetching and cause read buffers to be flushed prematurely and excessively.
+
+See the [`file_ptr`](binrw::file_ptr) documentation for details on how to
+improve performance by avoiding extra seeking when parsing offset tables.

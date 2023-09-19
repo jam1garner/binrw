@@ -1,4 +1,130 @@
-//! Types definitions and helpers for handling indirection within a file.
+//! Type definitions and helpers for handling indirection within a file.
+//!
+//! # Best practices
+//!
+//! Indirections that are not collections (e.g. a single offset to a global file
+//! header) can use `FilePtr` to immediately read the offset and then parse the
+//! pointed-to value. However, using `FilePtr` inside a collection is
+//! inefficient because it seeks to and reads each pointed-to value immediately
+//! after the offset is read. In these cases, it is faster to read the offset
+//! table into a collection (e.g. `Vec<u32>`) and then either pass it to
+//! [`parse_from_iter`] or write a function that is called to lazily load values
+//! as needed.
+//!
+//! ## Using `parse_from_iter` to read an offset table
+//!
+//! ### With relative offsets
+//!
+//! In this example, the offsets in the offset table start counting from the
+//! beginning of the values section, and are in a random order.
+//!
+//! Since the values section exists immediately after the offset table, no
+//! seeking is required before reading the values.
+//!
+//! Since the offsets are in a random order, the position of the stream must be
+//! returned to a known state using `restore_position` on the values field.
+//! Then, `seek_before` is used on the next field to skip past the values data
+//! and continue reading the rest of the object.
+//!
+//! ```
+//! # use binrw::{args, BinRead, BinReaderExt, io::{Cursor, SeekFrom}};
+//! use binrw::file_ptr::parse_from_iter;
+//!
+//! #[derive(BinRead)]
+//! #[br(big)]
+//! struct Object {
+//!     count: u16,
+//!     #[br(args { count: count.into() })]
+//!     offsets: Vec<u16>,
+//!     #[br(parse_with = parse_from_iter(offsets.iter().copied()), restore_position)]
+//!     values: Vec<u8>,
+//!     #[br(seek_before(SeekFrom::Current(count.into())))]
+//!     extra: u16,
+//! }
+//!
+//! # let mut x = Cursor::new(b"\0\x02\0\x01\0\0\x03\x04\xff\xff");
+//! # let x = Object::read(&mut x).unwrap();
+//! # assert_eq!(x.values, &[4, 3]);
+//! # assert_eq!(x.extra, 0xffff);
+//! ```
+//!
+//! ### With absolute offsets
+//!
+//! In this example, the offsets in the offset table start from the beginning of
+//! the file, and are in sequential order.
+//!
+//! Since the offsets start from the beginning of the file, it is necessary to
+//! use `seek_before` to reposition the stream to the beginning of the file
+//! before reading the values.
+//!
+//! Since the offsets are in order, no seeking is required after the values are
+//! read, since the stream will already be pointed at the end of the values
+//! section.
+//!
+//! ```
+//! # use binrw::{args, BinRead, BinReaderExt, io::{Cursor, SeekFrom}};
+//! use binrw::file_ptr::parse_from_iter;
+//!
+//! #[derive(BinRead)]
+//! #[br(big)]
+//! struct Object {
+//!     count: u16,
+//!     #[br(args { count: count.into() })]
+//!     offsets: Vec<u16>,
+//!     #[br(
+//!         parse_with = parse_from_iter(offsets.iter().copied()),
+//!         seek_before(SeekFrom::Start(0))
+//!     )]
+//!     values: Vec<u8>,
+//!     extra: u16,
+//! }
+//!
+//! # let mut x = Cursor::new(b"\0\x02\0\x06\0\x07\x04\x03\xff\xff");
+//! # let x = Object::read(&mut x).unwrap();
+//! # assert_eq!(x.values, &[4, 3]);
+//! # assert_eq!(x.extra, 0xffff);
+//! ```
+//!
+//! ## Using a function to lazily load values
+//!
+//! In this example, only the offset table is parsed. Values pointed to by the
+//! offset table are loaded on demand by calling `Object::get` as needed at
+//! runtime.
+//!
+//! ```
+//! # use binrw::{args, BinRead, BinResult, BinReaderExt, helpers::until_eof, io::{Cursor, Read, Seek, SeekFrom}};
+//!
+//! #[derive(BinRead)]
+//! # #[derive(Debug, Eq, PartialEq)]
+//! #[br(big)]
+//! struct Item(u8);
+//!
+//! #[derive(BinRead)]
+//! #[br(big, stream = s)]
+//! struct Object {
+//!     count: u16,
+//!     #[br(args { count: count.into() })]
+//!     offsets: Vec<u16>,
+//!     #[br(try_calc = s.stream_position())]
+//!     data_offset: u64,
+//! }
+//!
+//! impl Object {
+//!     pub fn get<R: Read + Seek>(&self, source: &mut R, index: usize) -> Option<BinResult<Item>> {
+//!         self.offsets.get(index).map(|offset| {
+//!             let offset = self.data_offset + u64::from(*offset);
+//!             source.seek(SeekFrom::Start(offset))?;
+//!             Item::read(source)
+//!         })
+//!     }
+//! }
+//!
+//! # let mut s = Cursor::new(b"\0\x02\0\x01\0\0\x03\x04");
+//! # let x = Object::read(&mut s).unwrap();
+//! # assert!(matches!(x.get(&mut s, 0), Some(Ok(Item(4)))));
+//! # assert!(matches!(x.get(&mut s, 1), Some(Ok(Item(3)))));
+//! # assert!(matches!(x.get(&mut s, 2), None));
+//! ```
 
 use crate::NamedArgs;
 use crate::{
@@ -36,67 +162,15 @@ pub type NonZeroFilePtr128<T> = FilePtr<NonZeroU128, T>;
 /// A wrapper type which represents a layer of indirection within a file.
 ///
 /// The pointer type `Ptr` is an offset to a value within the data stream, and
-/// the value type `T` is the value at that offset.
+/// the value type `T` is the value at that offset. [Dereferencing] a `FilePtr`
+/// yields the pointed-to value. When deriving `BinRead`, the
+/// [offset](crate::docs::attribute#offset) directive can be used to adjust the
+/// offset before the pointed-to value is read.
 ///
-/// [Dereferencing] a `FilePtr` yields the pointed-to value.
-///
-/// When deriving `BinRead`, the [offset](crate::docs::attribute#offset)
-/// directive can be used to adjust the offset before the pointed-to value is
-/// read.
+/// `FilePtr` is not efficient when reading offset tables; see the
+/// [module documentation](binrw::file_ptr) for more information.
 ///
 /// [Dereferencing]: core::ops::Deref
-///
-/// # Performance
-///
-/// Using `FilePtr` directly is not efficient when reading offset tables because
-/// it immediately seeks to read the pointed-to value. Instead:
-///
-/// 1. Read the offset table as a `Vec<{integer}>`, then use
-///   [`parse_from_iter`] to create a collection of `Vec<T>`.
-///
-/// 2. Read the offset table as a `Vec<{integer}>`, then add a function
-///    to your type that lazily reads the pointed-to value:
-///
-/// ```
-/// # use binrw::{args, BinRead, BinResult, BinReaderExt, helpers::until_eof, io::{Cursor, Read, Seek, SeekFrom}};
-/// #[derive(BinRead)]
-/// #[br(big)]
-/// struct Header {
-///     count: u16,
-///
-///     #[br(args { count: count.into() })]
-///     offsets: Vec<u16>,
-/// }
-///
-/// #[derive(BinRead)]
-/// # #[derive(Debug, Eq, PartialEq)]
-/// #[br(big)]
-/// struct Item(u8);
-///
-/// #[derive(BinRead)]
-/// #[br(big, stream = s)]
-/// struct Object {
-///     header: Header,
-///     #[br(try_calc = s.stream_position())]
-///     data_offset: u64,
-/// }
-///
-/// impl Object {
-///     pub fn get<R: Read + Seek>(&self, source: &mut R, index: usize) -> Option<BinResult<Item>> {
-///         self.header.offsets.get(index).map(|offset| {
-///             let offset = self.data_offset + u64::from(*offset);
-///             source.seek(SeekFrom::Start(offset))?;
-///             Item::read(source)
-///         })
-///     }
-/// }
-///
-/// # let mut s = Cursor::new(b"\0\x02\0\x01\0\0\x03\x04");
-/// # let x = Object::read(&mut s).unwrap();
-/// # assert!(matches!(x.get(&mut s, 0), Some(Ok(Item(4)))));
-/// # assert!(matches!(x.get(&mut s, 1), Some(Ok(Item(3)))));
-/// # assert!(matches!(x.get(&mut s, 2), None));
-/// ```
 ///
 /// # Examples
 ///
@@ -269,6 +343,9 @@ where
 /// parsing begins. Use the [`seek_before`] directive to reposition the
 /// stream in this case.
 ///
+/// See the [module documentation](binrw::file_ptr) for more information on how
+/// use `parse_from_iter`.
+///
 /// [`seek_before`]: crate::docs::attribute#padding-and-alignment
 ///
 /// # Examples
@@ -316,6 +393,9 @@ where
 /// Offsets are treated as relative to the position of the reader when
 /// parsing begins. Use the [`seek_before`] directive to reposition the
 /// stream in this case.
+///
+/// See the [module documentation](binrw::file_ptr) for more information on how
+/// to use `parse_from_iter_with`.
 ///
 /// [`seek_before`]: crate::docs::attribute#padding-and-alignment
 ///
