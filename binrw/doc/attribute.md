@@ -75,12 +75,12 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 
 # List of directives
 
-| r/w | Directive | Supports | Description
+| r/w | Directive | Supports[*] | Description
 |-----|-----------|----------|------------
 | rw  | [`align_after`](#padding-and-alignment) | field | Aligns the <span class="br">reader</span><span class="bw">writer</span> to the Nth byte after a field.
 | rw  | [`align_before`](#padding-and-alignment) | field | Aligns the <span class="br">reader</span><span class="bw">writer</span> to the Nth byte before a field.
-| rw  | [`args`](#arguments) | struct field, data variant | Passes arguments to another binrw object.
-| rw  | [`args_raw`](#arguments) | struct field, data variant | Like `args`, but specifies a single variable containing the arguments.
+| rw  | [`args`](#arguments) | field, data variant | Passes arguments to another binrw object.
+| rw  | [`args_raw`](#arguments) | field, data variant | Like `args`, but specifies a single variable containing the arguments.
 | rw  | [`assert`](#assert) | struct, field, non-unit enum, data variant | Asserts that a condition is true. Can be used multiple times.
 | rw  | [`big`](#byte-order) | all except unit variant | Sets the byte order to big-endian.
 | rw  | [`calc`](#calculations) | field | Computes the value of a field instead of <span class="br">reading data</span><span class="bw">using a field</span>.
@@ -115,6 +115,58 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`try_calc`](#calculations) | field | Like `calc`, but returns a [`Result`](Result).
 | rw  | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`Result`](Result).
 |  w  | [`write_with`](#custom-parserswriters) | field | Specifies a custom function for writing a field.
+
+[*]: #terminology
+
+# Terminology
+
+Each binrw attribute contains a comma-separated list of directives. The
+following terms are used when describing where particular directives are
+supported:
+
+```text
+#[brw(…)]               // ← struct
+struct NamedStruct {
+    #[brw(…)]           // ← field
+    field: Type
+}
+
+#[brw(…)]               // ← struct
+struct TupleStruct(
+    #[brw(…)]           // ← field
+    Type,
+);
+
+#[brw(…)]               // ← struct
+struct UnitStruct;
+
+#[brw(…)]               // ← non-unit enum
+enum NonUnitEnum {
+    #[brw(…)]           // ← data variant
+    StructDataVariant {
+        #[brw(…)]       // ← field
+        field: Type
+    },
+
+    #[brw(…)]           // ← data variant
+    TupleDataVariant(
+        #[brw(…)]       // ← field
+        Type
+    ),
+
+    #[brw(…)]           // ← unit variant
+    UnitVariant
+}
+
+#[brw(…)]               // ← unit-like enum
+enum UnitLikeEnum {
+    #[brw(…)]           // ← unit variant
+    UnitVariantA,
+    …
+    #[brw(…)]           // ← unit variant
+    UnitVariantN
+}
+```
 
 # Arguments
 
