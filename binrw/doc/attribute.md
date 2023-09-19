@@ -1746,11 +1746,10 @@ When using `try_map`, the same rules apply, except that the function must
 return a [`Result<T, E>`](Result) instead.
 
 When using `map` or `try_map` on a struct or enum, the map function
-<span class="brw">must return `Self` or `Result<Self, E>` for `BinRead`, and
-will receive an immutable reference to the entire object
-and must return a type that implements [`BinWrite`](crate::BinWrite) for
-`BinWrite`.</span>
-<span class="br">must return `Self` or `Result<Self, E>`.</span>
+<span class="brw">must return `Self` (`map`) or `Result<Self, E>` (`try_map`)
+for `BinRead`. For `BinWrite`, it will receive an immutable reference to the
+entire object and must return a type that implements [`BinWrite`](crate::BinWrite).</span>
+<span class="br">must return `Self` (`map`) or `Result<Self, E>` (`try_map`).</span>
 <span class="bw">will receive an immutable reference to the entire object
 and must return a type that implements [`BinWrite`](crate::BinWrite).</span>
 
