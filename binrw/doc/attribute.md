@@ -549,16 +549,9 @@ in the enum.
 
 Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
 field or [import](#arguments) can be referenced by expressions
-in the directive.
-
-<div class="br">
-
-For `#[br]`, when using `map`, a non-unit `struct`, or an `enum`, a special variable
-named `self` can be referenced by expressions in the directive. It contains the result
-of the `map` function or the result of constructing the `struct` or `enum`. Note that
-you cannot refer to the `enum` fields directly, as an `enum` variant is not its own type.
-
-</div>
+in the directive. <span class="brw">When reading, an</span><span class="br">An</span>
+`assert` directive on a struct, non-unit enum, or data variant can access the
+constructed object using the `self` keyword.
 
 ## Examples
 
@@ -655,6 +648,29 @@ let error = object.write_le(&mut Cursor::new(vec![]));
 assert!(error.is_err());
 let error = error.unwrap_err();
 assert_eq!(error.custom_err(), Some(&NotSmallerError(0x1, 0xFF)));
+```
+</div>
+
+<div class="br">
+
+### In combination with `map` or `try_map`
+
+```
+# use binrw::{prelude::*, io::Cursor};
+use modular_bitfield::prelude::*;
+
+#[bitfield]
+#[derive(BinRead)]
+#[br(assert(self.is_fast()), map = Self::from_bytes)]
+pub struct PackedData {
+    status: B4,
+    is_fast: bool,
+    is_static: bool,
+    is_alive: bool,
+    is_good: bool,
+}
+
+let data = Cursor::new(b"\x53").read_le::<PackedData>().unwrap();
 ```
 </div>
 
