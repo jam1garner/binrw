@@ -29,6 +29,8 @@ readers and writers using ✨macro magic✨.
 [`BinReaderExt`]
 
 [`BinWriterExt`]
+
+[`helpers`]
 </div>
 </nav>
 
