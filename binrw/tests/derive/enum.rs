@@ -66,6 +66,25 @@ fn enum_assert_with_self() {
 }
 
 #[test]
+fn enum_field_args() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(a: u8))]
+    struct Foo(#[br(calc(a))] u8);
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(a: u8))]
+    enum Test {
+        A {
+            #[br(args(a))]
+            field: Foo,
+        },
+    }
+
+    let result = Test::read_le_args(&mut Cursor::new(b""), (42,)).unwrap();
+    assert_eq!(result, Test::A { field: Foo(42) });
+}
+
+#[test]
 fn enum_non_copy_args() {
     #[derive(BinRead, Debug)]
     #[br(import(a: NonCopyArg))]
