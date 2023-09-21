@@ -1,4 +1,7 @@
-use crate::{binrw::parser::attrs, meta_types::KeywordToken};
+use crate::{
+    binrw::{codegen::sanitization::THIS, parser::attrs},
+    meta_types::KeywordToken,
+};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::fold::Fold;
@@ -80,7 +83,7 @@ impl Fold for ReplaceSelfWithThis {
     fn fold_ident(&mut self, i: Ident) -> Ident {
         if i == "self" {
             self.uses_self = true;
-            Ident::new("this", i.span())
+            THIS.to_ident(i.span())
         } else {
             i
         }

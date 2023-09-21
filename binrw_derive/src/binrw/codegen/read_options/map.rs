@@ -2,7 +2,7 @@ use super::PreludeGenerator;
 use crate::binrw::{
     codegen::{
         get_assertions, get_map_err,
-        sanitization::{ARGS, OPT, POS, READER, READ_METHOD},
+        sanitization::{ARGS, OPT, POS, READER, READ_METHOD, THIS},
     },
     parser::Input,
 };
@@ -28,7 +28,7 @@ pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStrea
 
         #READ_METHOD(#reader_var, #OPT, ())
             .map(#map)
-                .and_then(|this| {
+                .and_then(|#THIS| {
                     #destructure_ref
 
                     (|| {
@@ -37,7 +37,7 @@ pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStrea
                         )*
 
                         Ok(())
-                    })().map(|_: ()| this)
+                    })().map(|_: ()| #THIS)
                 })
     }
 }
@@ -66,7 +66,7 @@ pub(crate) fn generate_try_map(
         #READ_METHOD(#reader_var, #OPT, #ARGS).and_then(|value| {
             (#map)(value)#map_err
         })
-        .and_then(|this| {
+        .and_then(|#THIS| {
             #destructure_ref
 
             (|| {
@@ -75,7 +75,7 @@ pub(crate) fn generate_try_map(
                 )*
 
                 Ok(())
-            })().map(|_: ()| this)
+            })().map(|_: ()| #THIS)
         })
     }
 }
@@ -87,11 +87,11 @@ fn destructure_ref(input: &Input) -> Option<TokenStream> {
 
             if input.is_tuple() {
                 Some(quote! {
-                    let Self ( #( ref #fields ),* ) = &this;
+                    let Self ( #( ref #fields ),* ) = &#THIS;
                 })
             } else {
                 Some(quote! {
-                    let Self { #( ref #fields ),* } = &this;
+                    let Self { #( ref #fields ),* } = &#THIS;
                 })
             }
         }

@@ -47,6 +47,10 @@ impl IdentStr {
     pub(crate) fn iter(&self, span: Span) -> impl Iterator<Item = Ident> + '_ {
         self.0.split("::").map(move |ident| Ident::new(ident, span))
     }
+
+    pub(crate) fn to_ident(self, span: Span) -> Ident {
+        Ident::new(self.0, span)
+    }
 }
 
 impl ToTokens for IdentStr {

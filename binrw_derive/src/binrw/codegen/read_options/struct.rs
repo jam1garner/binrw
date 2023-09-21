@@ -10,7 +10,7 @@ use crate::{
                 make_ident, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT, COERCE_FN,
                 DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, MAP_READER_TYPE_HINT, OPT, PARSE_FN_TYPE_HINT,
                 POS, READER, READ_FUNCTION, READ_METHOD, REQUIRED_ARG_TRAIT, SAVED_POSITION,
-                SEEK_FROM, SEEK_TRAIT, TEMP, WITH_CONTEXT,
+                SEEK_FROM, SEEK_TRAIT, TEMP, THIS, WITH_CONTEXT,
             },
         },
         parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
@@ -123,7 +123,7 @@ impl<'input> StructGenerator<'input> {
         let head = self.out;
         self.out = quote! {
             #head
-            let this = #return_value;
+            let #THIS = #return_value;
         };
 
         self
@@ -134,7 +134,7 @@ impl<'input> StructGenerator<'input> {
 
         self.out = quote! {
             #head
-            Ok(this)
+            Ok(#THIS)
         };
 
         self

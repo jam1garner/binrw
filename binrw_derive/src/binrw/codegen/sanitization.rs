@@ -68,6 +68,7 @@ ident_str! {
     pub(crate) WITH_CONTEXT = from_crate!(error::ContextExt::with_context);
     pub(crate) BACKTRACE_FRAME = from_crate!(error::BacktraceFrame);
     pub(crate) TEMP = "__binrw_temp";
+    pub(crate) THIS = "__binrw_this";
     pub(crate) POS = "__binrw_generated_position_temp";
     pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";
     pub(crate) READ_FUNCTION = "__binrw_generated_read_function";

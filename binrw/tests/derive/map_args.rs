@@ -46,19 +46,7 @@ fn map_field_assert_access_fields() {
         x: u8,
     }
 
-    Test::read(&mut Cursor::new(b"a")).unwrap();
-}
-
-#[test]
-#[should_panic]
-fn map_top_assert_legacy_this() {
-    #[derive(BinRead, Debug, Eq, PartialEq)]
-    #[br(assert(this.x == 2), map(|_: u8| Test { x: 3 }))]
-    struct Test {
-        x: u8,
-    }
-
-    Test::read(&mut Cursor::new(b"a")).unwrap();
+    Test::read(&mut Cursor::new(b"a")).expect_err("should fail assertion");
 }
 
 #[test]
