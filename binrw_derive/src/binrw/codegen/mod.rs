@@ -207,18 +207,11 @@ fn get_assertions(assertions: &[Assert]) -> impl Iterator<Item = TokenStream> + 
              ..
          }| {
             let error_fn = match &consequent {
-                Some(AssertionError::Message(message)) => {
+                AssertionError::Message(message) => {
                     quote! { #ASSERT_ERROR_FN::<_, fn() -> !>::Message(|| { #message }) }
                 }
-                Some(AssertionError::Error(error)) => {
+                AssertionError::Error(error) => {
                     quote! { #ASSERT_ERROR_FN::Error::<fn() -> &'static str, _>(|| { #error }) }
-                }
-                None => {
-                    let condition = condition.to_string();
-                    quote! { #ASSERT_ERROR_FN::Message::<_, fn() -> !>(|| {
-                        extern crate alloc;
-                        alloc::format!("assertion failed: `{}`", #condition)
-                    }) }
                 }
             };
 

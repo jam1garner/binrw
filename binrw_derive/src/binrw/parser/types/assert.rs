@@ -17,7 +17,7 @@ pub(crate) struct Assert {
     /// `true` if the condition was written with `self`, in the [`condition`] it is replaced with
     /// `this`. This enables backwards compatibility with asserts that did not use `self`.
     pub(crate) condition_uses_self: bool,
-    pub(crate) consequent: Option<Error>,
+    pub(crate) consequent: Error,
 }
 
 impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
@@ -27,7 +27,7 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
         let kw_span = value.keyword_span();
         let mut args = value.fields.iter();
 
-        let Some(cond_expr) = args.next() else {
+        let Some(condition) = args.next() else {
             return Err(Self::Error::new(
                 kw_span,
                 format!(
@@ -37,29 +37,35 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
             ));
         };
 
-        // ignores any alternative declaration of `self` in the condition, but asserts should be
-        // simple so that shouldn't be a problem
-        let mut self_replacer = ReplaceSelfWithThis { uses_self: false };
-        let cond_expr = self_replacer.fold_expr(cond_expr.clone());
-
         let consequent = match args.next() {
             Some(Expr::Lit(ExprLit {
                 lit: Lit::Str(message),
                 ..
-            })) => Some(Error::Message(quote! {
+            })) => Error::Message(quote! {
                 extern crate alloc;
                 alloc::format!(#message #(, #args)*)
-            })),
+            }),
             Some(error) => {
                 super::assert_all_args_consumed(args, value.keyword_span())?;
-                Some(Error::Error(error.to_token_stream()))
+                Error::Error(error.to_token_stream())
             }
-            None => None,
+            None => Error::Message({
+                let condition = condition.to_token_stream().to_string();
+                quote! {
+                    extern crate alloc;
+                    alloc::format!("assertion failed: `{}`", #condition)
+                }
+            }),
         };
+
+        // ignores any alternative declaration of `self` in the condition, but
+        // asserts should be simple so that shouldn't be a problem
+        let mut self_replacer = ReplaceSelfWithThis { uses_self: false };
+        let condition = self_replacer.fold_expr(condition.clone());
 
         Ok(Self {
             kw_span,
-            condition: cond_expr.into_token_stream(),
+            condition: condition.into_token_stream(),
             condition_uses_self: self_replacer.uses_self,
             consequent,
         })

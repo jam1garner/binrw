@@ -251,11 +251,8 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
     for assert in &field.assertions {
         visit!(assert.condition.clone());
 
-        if let Some(AssertionError::Message(err) | AssertionError::Error(err)) =
-            assert.consequent.clone()
-        {
-            visit!(err);
-        }
+        let (AssertionError::Message(err) | AssertionError::Error(err)) = assert.consequent.clone();
+        visit!(err);
     }
 
     for context_expr in &field.err_context {
