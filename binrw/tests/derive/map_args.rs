@@ -15,17 +15,15 @@ fn map_args() {
 }
 
 #[test]
-#[should_panic]
 fn map_assert() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(assert(false), map(|_: u8| Test {}))]
     struct Test {}
 
-    Test::read(&mut Cursor::new(b"a")).unwrap();
+    Test::read(&mut Cursor::new(b"a")).expect_err("should fail assertion");
 }
 
 #[test]
-#[should_panic]
 fn map_top_assert_access_fields() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(assert(*x == 2), map(|_: u8| Test { x: 3 }))]
@@ -33,11 +31,10 @@ fn map_top_assert_access_fields() {
         x: u8,
     }
 
-    Test::read(&mut Cursor::new(b"a")).unwrap();
+    Test::read(&mut Cursor::new(b"a")).expect_err("should fail assertion");
 }
 
 #[test]
-#[should_panic]
 fn map_field_assert_access_fields() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(map(|_: u8| Test { x: 3 }))]
@@ -50,7 +47,6 @@ fn map_field_assert_access_fields() {
 }
 
 #[test]
-#[should_panic]
 fn map_top_assert_via_self() {
     #[derive(BinRead, Debug, Eq, PartialEq)]
     #[br(assert(self.x == 2), map(|_: u8| Test { x: 3 }))]
@@ -58,5 +54,5 @@ fn map_top_assert_via_self() {
         x: u8,
     }
 
-    Test::read(&mut Cursor::new(b"a")).unwrap();
+    Test::read(&mut Cursor::new(b"a")).expect_err("should fail assertion");
 }
