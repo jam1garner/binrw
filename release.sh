@@ -48,6 +48,11 @@ fi
 
 if [ -n "${2-}" ]; then
 	VERSION=$2
+	if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+		echo "Invalid version '$VERSION'; versions must be in the form"
+		echo "\`major.minor.patch[-extra]\`."
+		exit 1
+	fi
 else
 	VERSION=
 fi
@@ -167,7 +172,7 @@ if [ "$MAKE_BRANCH" != "" ]; then
 	git checkout -b "$MAKE_BRANCH" "$TAG_VERSION"
 	set_package_version "$BRANCH_VERSION"
 
-	git commit -m "Updating source version to $BRANCH_VERSION" -m "[ci skip]" Cargo.toml
+	git commit -m "Updating source version to $BRANCH_VERSION" -m "[ci skip]" Cargo.toml binrw/Cargo.toml
 	PUSH_BRANCHES="$PUSH_BRANCHES $MAKE_BRANCH"
 	PUSH_BRANCHES_MSG=" and branches ${PUSH_BRANCHES}"
 fi
