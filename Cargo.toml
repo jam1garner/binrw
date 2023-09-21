@@ -18,4 +18,4 @@ homepage = "https://binrw.rs"
 license = "MIT"
 publish = true
 repository = "https://github.com/jam1garner/binrw"
-version = "0.12.0"
+version = "0.12.1-pre"
