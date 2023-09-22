@@ -23,14 +23,16 @@ use syn::{spanned::Spanned, Ident};
 pub(crate) fn write_field(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field, writer_var)
         .write_field()
+        .wrap_map_stream()
+        .prefix_map_value()
+        .prefix_calc_value()
         .wrap_padding()
-        .prefix_args()
-        .prefix_write_fn()
-        .prefix_map_fn()
         .prefix_magic()
         .wrap_condition()
         .prefix_assertions()
-        .prefix_map_stream()
+        .prefix_args()
+        .prefix_write_function()
+        .prefix_map_function()
         .finish()
 }
 
@@ -67,21 +69,21 @@ impl<'a> StructFieldGenerator<'a> {
         self
     }
 
-    fn prefix_map_stream(mut self) -> Self {
+    fn wrap_map_stream(mut self) -> Self {
         if let Some(map_stream) = &self.field.map_stream {
             let rest = self.out;
             let writer_var = &self.writer_var;
             let outer_writer_var = &self.outer_writer_var;
-            self.out = quote_spanned_any! { map_stream.span()=>
+            self.out = quote_spanned_any! { map_stream.span()=> {
                 let #writer_var = &mut #MAP_WRITER_TYPE_HINT::<W, _, _>(#map_stream)(#outer_writer_var);
                 #rest
-            };
+            }};
         }
 
         self
     }
 
-    fn prefix_write_fn(mut self) -> Self {
+    fn prefix_write_function(mut self) -> Self {
         if !self.field.is_written() {
             return self;
         }
@@ -95,7 +97,7 @@ impl<'a> StructFieldGenerator<'a> {
         };
 
         let write_fn = if self.field.map.is_some() {
-            let map_fn = map_fn_ident(&self.field.ident);
+            let map_fn = map_func_ident(&self.field.ident);
             if self.field.map.is_try() {
                 quote! { #WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT(&#map_fn, #write_fn) }
             } else {
@@ -114,60 +116,83 @@ impl<'a> StructFieldGenerator<'a> {
         self
     }
 
-    fn prefix_map_fn(mut self) -> Self {
-        let map_fn = field_mapping(&self.field.map).map(|map_fn| {
-            let fn_ident = map_fn_ident(&self.field.ident);
+    fn prefix_map_function(mut self) -> Self {
+        let map_func = field_mapping(&self.field.map).map(|map_fn| {
+            let map_func = map_func_ident(&self.field.ident);
 
             let ty = &self.field.ty;
             let ty_ref = self.field.generated_value().not().then(|| quote! { & });
             quote! {
-                let #fn_ident = #WRITE_MAP_INPUT_TYPE_HINT::<#ty_ref #ty, _, _>(#map_fn);
+                let #map_func = #WRITE_MAP_INPUT_TYPE_HINT::<#ty_ref #ty, _, _>(#map_fn);
             }
         });
 
         let out = self.out;
         self.out = quote! {
-            #map_fn
+            #map_func
             #out
         };
 
         self
     }
 
+    fn prefix_calc_value(mut self) -> Self {
+        let name = &self.field.ident;
+        let ty = &self.field.ty;
+        let expr = match &self.field.field_mode {
+            FieldMode::Calc(expr) => expr.clone(),
+            FieldMode::TryCalc(expr) => get_try_calc(POS, &self.field.ty, expr),
+            _ => return self,
+        };
+
+        let rest = self.out;
+        self.out = quote! {
+            let #name: #ty = #expr;
+            #rest
+        };
+
+        self
+    }
+
+    fn prefix_map_value(mut self) -> Self {
+        let name = &self.field.ident;
+        let map_func = self.field.map.is_some().then(|| map_func_ident(name));
+
+        self.out = match &self.field.map {
+            Map::None => return self,
+            Map::Map(_) => {
+                let rest = self.out;
+                quote! {
+                    let #name = #map_func(#name);
+                    #rest
+                }
+            }
+            Map::Try(t) | Map::Repr(t) => {
+                let rest = self.out;
+                let map_err = get_map_err(SAVED_POSITION, t.span());
+                let outer_writer_var = &self.outer_writer_var;
+                quote! {
+                    let #name = {
+                        let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#outer_writer_var)?;
+                        #map_func(#name)#map_err?
+                    };
+                    #rest
+                }
+            }
+        };
+
+        self
+    }
+
     fn write_field(mut self) -> Self {
+        if !self.field.is_written() {
+            return self;
+        }
+
         let name = &self.field.ident;
         let args = args_ident(name);
         let endian = get_endian(&self.field.endian);
         let writer_var = &self.writer_var;
-
-        let initialize = match &self.field.field_mode {
-            FieldMode::Calc(expr) => Some({
-                let ty = &self.field.ty;
-                quote! {
-                    let #name: #ty = #expr;
-                }
-            }),
-            FieldMode::TryCalc(expr) => Some({
-                let ty = &self.field.ty;
-                let expr = get_try_calc(POS, &self.field.ty, expr);
-                quote! {
-                    let #name: #ty = #expr;
-                }
-            }),
-            // If ignored, just skip this now
-            FieldMode::Default => return self,
-            _ => None,
-        };
-
-        let map_fn = self.field.map.is_some().then(|| map_fn_ident(name));
-        let map_try = self.field.map.is_try().then(|| {
-            let map_err = get_map_err(SAVED_POSITION, name.span());
-            quote! { #map_err? }
-        });
-
-        let store_position = quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#writer_var)?;
-        };
 
         let name = self
             .field
@@ -188,10 +213,8 @@ impl<'a> StructFieldGenerator<'a> {
             .unwrap_or_else(|| quote::ToTokens::to_token_stream(name));
 
         self.out = quote! {
-            #initialize
-
-            #WRITE_FUNCTION (
-                { #store_position &(#map_fn (#name) #map_try) },
+            #WRITE_FUNCTION(
+                &#name,
                 #writer_var,
                 #endian,
                 #args
@@ -220,8 +243,8 @@ impl<'a> StructFieldGenerator<'a> {
     fn wrap_padding(mut self) -> Self {
         let out = self.out;
 
-        let pad_before = pad_before(&self.writer_var, self.field);
-        let pad_after = pad_after(&self.writer_var, self.field);
+        let pad_before = pad_before(self.outer_writer_var, self.field);
+        let pad_after = pad_after(self.outer_writer_var, self.field);
         self.out = quote! {
             #pad_before
             #out
@@ -244,7 +267,7 @@ impl<'a> StructFieldGenerator<'a> {
             quote! { () }
         };
 
-        let map_fn = map_fn_ident(&self.field.ident);
+        let map_fn = map_func_ident(&self.field.ident);
         let out = self.out;
         self.out = match &self.field.field_mode {
             FieldMode::Normal => match &self.field.map {
@@ -287,7 +310,7 @@ impl<'a> StructFieldGenerator<'a> {
         if let Some(magic) = &self.field.magic {
             let magic = magic.match_value();
             let endian = get_endian(&self.field.endian);
-            let writer_var = &self.writer_var;
+            let writer_var = &self.outer_writer_var;
             let out = self.out;
             self.out = quote! {
                 #WRITE_METHOD (
@@ -321,8 +344,8 @@ fn field_mapping(map: &Map) -> Option<TokenStream> {
     }
 }
 
-fn map_fn_ident(ident: &Ident) -> Ident {
-    make_ident(ident, "map_fn")
+fn map_func_ident(ident: &Ident) -> Ident {
+    make_ident(ident, "map_func")
 }
 
 fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {

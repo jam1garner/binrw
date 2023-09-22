@@ -42,10 +42,10 @@ impl<'input> StructGenerator<'input> {
 
     pub(crate) fn prefix_prelude(mut self) -> Self {
         self.out = PreludeGenerator::new(self.out, self.input, self.name, self.writer_var)
+            .prefix_map_stream()
             .prefix_magic(&self.st.magic)
             .prefix_endian(&self.st.endian)
             .prefix_imports()
-            .prefix_map_stream()
             .finish();
 
         self

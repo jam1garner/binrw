@@ -38,13 +38,16 @@ impl<T: Seek> Seek for BadCrypt<T> {
 #[test]
 fn map_stream() {
     #[derive(BinWrite, Debug, PartialEq)]
-    #[bw(big, map_stream = |inner| BadCrypt { inner, key: 0x80 })]
+    #[bw(big, magic = b"magic", map_stream = |inner| BadCrypt { inner, key: 0x80 })]
     struct Test(Vec<u8>);
 
     let mut out = Cursor::new(vec![]);
     Test(vec![0, 1, 2, 3]).write(&mut out).unwrap();
 
-    assert_eq!(out.into_inner(), &[0x80, 0x81, 0x83, 0x80],);
+    assert_eq!(
+        out.into_inner(),
+        &[b'm', b'a', b'g', b'i', b'c', 0x80, 0x81, 0x83, 0x80],
+    );
 }
 
 #[test]
@@ -54,7 +57,7 @@ fn map_stream_field() {
     struct Test {
         #[bw(map_stream = BadCrypt::new)]
         a: Vec<u8>,
-        #[bw(map_stream = |inner| BadCrypt { inner, key: 0x80 })]
+        #[bw(magic = b"magic", map_stream = |inner| BadCrypt { inner, key: 0x80 })]
         b: Vec<u8>,
     }
 
@@ -66,5 +69,8 @@ fn map_stream_field() {
     .write(&mut out)
     .unwrap();
 
-    assert_eq!(out.into_inner(), &[0, 1, 3, 0, 132, 129, 135, 128],);
+    assert_eq!(
+        out.into_inner(),
+        &[0, 1, 3, 0, b'm', b'a', b'g', b'i', b'c', 132, 129, 135, 128],
+    );
 }

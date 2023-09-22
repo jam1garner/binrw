@@ -270,6 +270,21 @@ fn move_stream() {
     );
 }
 
+#[test]
+fn move_stream_with_count() {
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    struct Test {
+        #[br(count = 1, map_stream = |r| r)]
+        flags: Vec<u32>,
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"\x01\0\0\0")).unwrap(),
+        Test { flags: vec![1] }
+    );
+}
+
 // See https://github.com/jam1garner/binrw/issues/118
 #[test]
 fn move_temp_field() {
@@ -481,14 +496,14 @@ fn map_stream() {
     use binrw::io::TakeSeekExt;
 
     #[derive(BinRead, Debug, PartialEq)]
-    #[br(map_stream = |reader| reader.take_seek(4))]
+    #[br(magic = b"magic", map_stream = |reader| reader.take_seek(4))]
     struct Test {
         #[br(parse_with = binrw::helpers::until_eof)]
         a: Vec<u8>,
     }
 
     assert_eq!(
-        Test::read_le(&mut Cursor::new(b"hello world")).unwrap(),
+        Test::read_le(&mut Cursor::new(b"magichello world")).unwrap(),
         Test {
             a: b"hell".to_vec()
         }
@@ -501,15 +516,15 @@ fn map_stream_field() {
 
     #[derive(BinRead, Debug, PartialEq)]
     struct Test {
-        #[br(map_stream = |reader| reader.take_seek(5), parse_with = binrw::helpers::until_eof)]
+        #[br(magic = b"magic", map_stream = |reader| reader.take_seek(5), parse_with = binrw::helpers::until_eof)]
         a: Vec<u8>,
         b: u8,
-        #[br(map_stream = |reader| reader.take_seek(5), parse_with = binrw::helpers::until_eof)]
+        #[br(magic = b"magic", map_stream = |reader| reader.take_seek(5), parse_with = binrw::helpers::until_eof)]
         c: Vec<u8>,
     }
 
     assert_eq!(
-        Test::read_le(&mut Cursor::new(b"hello world")).unwrap(),
+        Test::read_le(&mut Cursor::new(b"magichello magicworldx")).unwrap(),
         Test {
             a: b"hello".to_vec(),
             b: b' ',

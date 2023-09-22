@@ -18,10 +18,10 @@ pub(crate) fn generate_unit_enum(
     };
 
     PreludeGenerator::new(write, Some(input), name, &writer_var)
+        .prefix_map_stream()
         .prefix_magic(&en.magic)
         .prefix_endian(&en.endian)
         .prefix_imports()
-        .prefix_map_stream()
         .finish()
 }
 
@@ -109,10 +109,10 @@ impl<'a> EnumGenerator<'a> {
         let out = self.out;
 
         self.out = PreludeGenerator::new(out, Some(self.input), self.name, &self.writer_var)
+            .prefix_map_stream()
             .prefix_magic(&self.en.magic)
             .prefix_endian(&self.en.endian)
             .prefix_imports()
-            .prefix_map_stream()
             .finish();
 
         self

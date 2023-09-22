@@ -125,10 +125,10 @@ impl<'input> PreludeGenerator<'input> {
         if let Some(map_stream) = self.input.map_stream() {
             let outer_reader = self.input.stream_ident_or(READER);
             let inner_reader = &self.reader_var;
-            let tail = self.out;
+            let head = self.out;
             self.out = quote_spanned_any! { map_stream.span()=>
+                #head
                 let #inner_reader = &mut #MAP_READER_TYPE_HINT::<R, _, _>(#map_stream)(#outer_reader);
-                #tail
             }
         }
 

@@ -154,6 +154,7 @@ fn generate_field(
 
     FieldGenerator::new(input, field)
         .read_value()
+        .wrap_map_stream()
         .try_conversion(name, variant_name)
         .map_value()
         .wrap_debug()
@@ -166,7 +167,6 @@ fn generate_field(
         .prefix_args_and_options()
         .prefix_map_function()
         .prefix_read_function()
-        .prefix_map_stream()
         .finish()
 }
 
@@ -224,7 +224,7 @@ impl<'field> FieldGenerator<'field> {
             }
 
             let head = self.out;
-            let reader_var = &self.reader_var;
+            let reader_var = &self.outer_reader_var;
             let ident = &self.field.ident;
             let start_line = start_line(ident.span());
             let at = if start_line == 0 {
@@ -295,7 +295,7 @@ impl<'field> FieldGenerator<'field> {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
                 let map_err = get_map_err(SAVED_POSITION, t.span());
-                let reader_var = &self.reader_var;
+                let reader_var = &self.outer_reader_var;
                 quote! {{
                     let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#reader_var)?;
 
@@ -343,15 +343,15 @@ impl<'field> FieldGenerator<'field> {
         self
     }
 
-    fn prefix_map_stream(mut self) -> Self {
+    fn wrap_map_stream(mut self) -> Self {
         if let Some(map_stream) = &self.field.map_stream {
             let rest = self.out;
             let reader_var = &self.reader_var;
             let outer_reader_var = &self.outer_reader_var;
-            self.out = quote_spanned_any! { map_stream.span()=>
+            self.out = quote_spanned_any! { map_stream.span()=> {
                 let #reader_var = &mut #MAP_READER_TYPE_HINT::<R, _, _>(#map_stream)(#outer_reader_var);
                 #rest
-            };
+            }};
         }
 
         self
@@ -423,7 +423,8 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn prefix_magic(mut self) -> Self {
-        if let Some(magic) = get_magic(&self.field.magic, &self.reader_var, &self.endian_var) {
+        if let Some(magic) = get_magic(&self.field.magic, &self.outer_reader_var, &self.endian_var)
+        {
             let tail = self.out;
             self.out = quote! {
                 #magic
@@ -505,15 +506,15 @@ impl<'field> FieldGenerator<'field> {
 
     fn wrap_restore_position(mut self) -> Self {
         if self.field.restore_position.is_some() {
-            self.out = wrap_save_restore(&self.reader_var, self.out);
+            self.out = wrap_save_restore(&self.outer_reader_var, self.out);
         }
 
         self
     }
 
     fn wrap_seek(mut self) -> Self {
-        let seek_before = generate_seek_before(&self.reader_var, self.field);
-        let seek_after = generate_seek_after(&self.reader_var, self.field);
+        let seek_before = generate_seek_before(&self.outer_reader_var, self.field);
+        let seek_after = generate_seek_after(&self.outer_reader_var, self.field);
         if !seek_before.is_empty() || !seek_after.is_empty() {
             let value = self.out;
             self.out = quote! {{

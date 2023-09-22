@@ -2360,8 +2360,68 @@ an object or field:
 </div>
 
 The map function can be a plain function, closure, or call expression which
-returns a plain function or closure. The returned object must implement
-[`Read`](crate::io::Read) + [`Seek`](crate::io::Seek).
+returns a plain function or closure. The returned object must
+implement <span class="br">[`Read`](crate::io::Read) + [`Seek`](crate::io::Seek)</span><span class="brw"> (for reading)
+or </span><span class="bw">[`Write`](crate::io::Write) + [`Seek`](crate::io::Seek)</span><span class="brw"> (for writing)</span>.
+
+The mapped stream is used to <span class="br">read</span><span class="bw">write</span>
+the *contents* of the field or object it is applied to:
+
+<div class="br">
+
+```
+# use binrw::{prelude::*, io::{TakeSeek, TakeSeekExt}};
+fn make_stream<S: binrw::io::Read + binrw::io::Seek>(s: S) -> /* … */
+    /* … */
+# S {
+#     s
+}
+
+#[derive(BinRead)]
+// `magic` does not use the mapped stream
+#[br(magic = b"foo", map_stream = make_stream)]
+struct Foo {
+    // everything inside the struct uses the mapped stream
+    a: u32,
+    /* … */
+}
+
+#[derive(BinRead)]
+struct Bar {
+    // `pad_before` and `pad_after` do not use the mapped stream
+    #[br(pad_before(4), pad_after(4), map_stream = make_stream)]
+    b: u64 // reading `u64` uses the mapped stream
+}
+```
+</div>
+
+<div class="bw">
+
+```
+# use binrw::{prelude::*, io::{TakeSeek, TakeSeekExt}};
+fn make_stream<S: binrw::io::Write + binrw::io::Seek>(s: S) -> /* … */
+    /* … */
+# S {
+#     s
+}
+
+#[derive(BinWrite)]
+// `magic` does not use the mapped stream
+#[bw(magic = b"foo", map_stream = make_stream)]
+struct Foo {
+    // everything inside the struct uses the mapped stream
+    a: u32,
+    /* … */
+}
+
+#[derive(BinWrite)]
+struct Bar {
+    // `pad_before` and `pad_after` do not use the mapped stream
+    #[bw(pad_before(4), pad_after(4), map_stream = make_stream)]
+    b: u64 // writing `u64` uses the mapped stream
+}
+```
+</div>
 
 ## Examples
 
