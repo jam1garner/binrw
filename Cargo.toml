@@ -18,4 +18,5 @@ homepage = "https://binrw.rs"
 license = "MIT"
 publish = false # Use `release.sh`
 repository = "https://github.com/jam1garner/binrw"
+rust-version = "1.66"
 version = "0.13.0-pre"

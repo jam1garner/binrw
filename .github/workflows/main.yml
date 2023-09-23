@@ -23,32 +23,21 @@ jobs:
             value: --no-default-features --manifest-path binrw/Cargo.toml
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: stable
-          override: true
           components: clippy, rustfmt
       - name: Check formatting
         # There is no reason to check formatting more than once since it is
         # a syntax check that does not change depending upon compiler features
         if: matrix.features.check_formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+        run: cargo fmt -- --check
       - name: Run clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets ${{ matrix.features.value }} -- -D warnings
+        run: cargo clippy --all-targets ${{ matrix.features.value }} -- -D warnings
       - name: Build documentation
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustdoc
-          args: ${{ matrix.features.value }} -- -D warnings
+        run: cargo rustdoc ${{ matrix.features.value }} -- -D warnings
 
   test:
     name: Test ${{ matrix.features.name }} on Rust ${{ matrix.rust }}
@@ -58,6 +47,7 @@ jobs:
         rust:
           - stable
           - nightly
+          - 1.66 # rust-version, msrv
         features:
           - name: all features
             value: --all-features
@@ -65,25 +55,17 @@ jobs:
             value: --no-default-features --manifest-path binrw/Cargo.toml
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
       - name: Build workspace
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: ${{ matrix.features.value }}
+        run: cargo build ${{ matrix.features.value }}
       # Testing is separated just to more clearly differentiate in the CI
       # whether the build failed or a test failed
       - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: ${{ matrix.features.value }}
+        run: cargo test ${{ matrix.features.value }}
 
   coverage:
     name: Code coverage
@@ -92,13 +74,11 @@ jobs:
       RUST_BACKTRACE: 1
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: nightly
-          override: true
           components: llvm-tools-preview
       - name: Install llvm-cov
         uses: taiki-e/install-action@v1
