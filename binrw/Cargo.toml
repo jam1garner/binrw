@@ -15,13 +15,13 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-array-init = "2.0"
+array-init = "2.0.0"
 binrw_derive = { path = "../binrw_derive", version = "0.13.0-pre" }
-bytemuck = "1.12"
+bytemuck = "1.0.0"
 
 [dev-dependencies]
-modular-bitfield = "0.11"
-trybuild = "1.0"
+modular-bitfield = "0.11.0"
+trybuild = "1.0.0"
 
 [features]
 default = ["std", "verbose-backtrace"]
