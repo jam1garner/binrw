@@ -1,4 +1,13 @@
-//! Traits representing basic properties of types.
+//! Traits that expose information about the way types are parsed or serialised.
+//!
+//! The traits in this module *describe* how a [`BinRead`] or [`BinWrite`]
+//! implementation works; they do not *control* the implementation. They are
+//! automatically implemented for derived `BinRead` or `BinWrite`
+//! implementations, but can also be manually implemented if needed for types
+//! that manually implement `BinRead` and `BinWrite`.
+//!
+//! [`BinRead`]: crate::BinRead
+//! [`BinWrite`]: crate::BinWrite
 
 use crate::Endian;
 use alloc::{boxed::Box, vec::Vec};
