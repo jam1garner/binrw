@@ -171,6 +171,7 @@ git commit -m "Updating source version to $PRE_VERSION" -m "[ci skip]" Cargo.tom
 if [ "$MAKE_BRANCH" != "" ]; then
 	git checkout -b "$MAKE_BRANCH" "$TAG_VERSION"
 	set_package_version "$BRANCH_VERSION"
+	set_package_publish "false # Use \`release.sh\`"
 
 	git commit -m "Updating source version to $BRANCH_VERSION" -m "[ci skip]" Cargo.toml binrw/Cargo.toml
 	PUSH_BRANCHES="$PUSH_BRANCHES $MAKE_BRANCH"
