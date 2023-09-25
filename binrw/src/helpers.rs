@@ -1,4 +1,4 @@
-//! Helper functions for reading data.
+//! Helper functions for reading and writing data.
 
 use crate::{
     io::{self, Read, Seek},
@@ -475,6 +475,77 @@ where
             }
         })
     }
+}
+
+/// Reads a 24-bit unsigned integer.
+///
+/// # Examples
+///
+/// ```
+/// # use binrw::{prelude::*, io::Cursor};
+/// #[derive(BinRead)]
+/// # #[derive(Debug, PartialEq)]
+/// struct Test {
+///     flags: u8,
+///     #[br(parse_with = binrw::helpers::read_u24)]
+///     value: u32,
+/// }
+/// #
+/// # assert_eq!(
+/// #     Test::read_be(&mut Cursor::new(b"\x01\x02\x03\x04")).unwrap(),
+/// #     Test { flags: 1, value: 0x20304 }
+/// # );
+/// # assert_eq!(
+/// #     Test::read_le(&mut Cursor::new(b"\x01\x04\x03\x02")).unwrap(),
+/// #     Test { flags: 1, value: 0x20304 }
+/// # );
+/// ```
+#[binrw::parser(reader, endian)]
+pub fn read_u24() -> binrw::BinResult<u32> {
+    type ConvFn = fn([u8; 4]) -> u32;
+    let mut buf = [0u8; 4];
+    let (conv, out): (ConvFn, &mut [u8]) = match endian {
+        Endian::Little => (u32::from_le_bytes, &mut buf[..3]),
+        Endian::Big => (u32::from_be_bytes, &mut buf[1..]),
+    };
+    reader.read_exact(out)?;
+    Ok(conv(buf))
+}
+
+/// Writes a 24-bit unsigned integer.
+///
+/// # Examples
+///
+/// ```
+/// # use binrw::{prelude::*, io::Cursor};
+/// #[derive(BinWrite)]
+/// # #[derive(Debug, PartialEq)]
+/// struct Test {
+///     flags: u8,
+///     #[bw(write_with = binrw::helpers::write_u24)]
+///     value: u32,
+/// }
+/// #
+/// # let mut data = Cursor::new(vec![]);
+/// # Test { flags: 1, value: 0x20304 }.write_be(&mut data).unwrap();
+/// # assert_eq!(
+/// #     data.get_ref(),
+/// #     &[1, 2, 3, 4]
+/// # );
+/// # let mut data = Cursor::new(vec![]);
+/// # Test { flags: 1, value: 0x20304 }.write_le(&mut data).unwrap();
+/// # assert_eq!(
+/// #     data.get_ref(),
+/// #     &[1, 4, 3, 2]
+/// # );
+/// ```
+#[binrw::writer(writer, endian)]
+pub fn write_u24(value: &u32) -> binrw::BinResult<()> {
+    let (buf, range) = match endian {
+        Endian::Little => (value.to_le_bytes(), 0..3),
+        Endian::Big => (value.to_be_bytes(), 1..4),
+    };
+    writer.write_all(&buf[range]).map_err(Into::into)
 }
 
 fn not_enough_bytes<T>(_: T) -> Error {
