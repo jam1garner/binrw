@@ -246,6 +246,23 @@ where
     /// # Errors
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use binrw::{helpers::read_u24, prelude::*};
+    /// use binrw::FilePtr16;
+    ///
+    /// #[derive(BinRead)]
+    /// struct Test {
+    ///     #[br(parse_with = FilePtr16::parse_with(read_u24))]
+    ///     value: u32
+    /// }
+    ///
+    /// let mut data = binrw::io::Cursor::new(b"\x02\x00\x07\x0f\x10");
+    /// let result = Test::read_le(&mut data).unwrap();
+    /// assert_eq!(result.value, 0x100f07);
+    /// ```
     pub fn parse_with<R, F, Args>(
         parser: F,
     ) -> impl Fn(&mut R, Endian, FilePtrArgs<Args>) -> BinResult<Value>
@@ -265,6 +282,24 @@ where
     /// # Errors
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use binrw::{helpers::read_u24, prelude::*};
+    /// use binrw::FilePtr16;
+    ///
+    /// #[derive(BinRead)]
+    /// struct Test {
+    ///     #[br(parse_with = FilePtr16::with(read_u24))]
+    ///     value: FilePtr16<u32>
+    /// }
+    ///
+    /// let mut data = binrw::io::Cursor::new(b"\x02\x00\x07\x0f\x10");
+    /// let result = Test::read_le(&mut data).unwrap();
+    /// assert_eq!(result.value.ptr, 2);
+    /// assert_eq!(result.value.value, 0x100f07);
+    /// ```
     pub fn with<R, F, Args>(
         parser: F,
     ) -> impl Fn(&mut R, Endian, FilePtrArgs<Args>) -> BinResult<Self>
@@ -312,6 +347,25 @@ where
 {
     type Target = Value;
 
+    /// Dereferences the value stored by `FilePtr`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use binrw::{prelude::*};
+    /// use binrw::FilePtr16;
+    ///
+    /// #[derive(BinRead)]
+    /// struct Test {
+    ///     value: FilePtr16<u16>
+    /// }
+    ///
+    /// let mut data = binrw::io::Cursor::new(b"\x02\x00\x01\x00");
+    /// let result = Test::read_le(&mut data).unwrap();
+    /// assert_eq!(result.value.ptr, 2);
+    /// assert_eq!(result.value.value, 1);
+    /// assert_eq!(*result.value, 1);
+    /// ```
     fn deref(&self) -> &Self::Target {
         &self.value
     }
@@ -321,6 +375,26 @@ impl<Ptr, Value> DerefMut for FilePtr<Ptr, Value>
 where
     Ptr: IntoSeekFrom,
 {
+    /// Mutably dereferences the value stored by `FilePtr`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use binrw::{prelude::*};
+    /// use binrw::FilePtr16;
+    ///
+    /// #[derive(BinRead)]
+    /// struct Test {
+    ///     value: FilePtr16<u16>
+    /// }
+    ///
+    /// let mut data = binrw::io::Cursor::new(b"\x02\x00\x01\x00");
+    /// let mut result = Test::read_le(&mut data).unwrap();
+    /// assert_eq!(result.value.ptr, 2);
+    /// assert_eq!(result.value.value, 1);
+    /// *result.value = 42;
+    /// assert_eq!(result.value.value, 42);
+    /// ```
     fn deref_mut(&mut self) -> &mut Value {
         &mut self.value
     }
