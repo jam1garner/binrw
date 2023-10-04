@@ -3,8 +3,9 @@ use crate::{
         codegen::{
             get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
-                make_ident, BEFORE_POS, BINWRITE_TRAIT, MAP_WRITER_TYPE_HINT, POS, SAVED_POSITION,
-                SEEK_FROM, SEEK_TRAIT, WRITER, WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
+                make_ident, BEFORE_POS, BINWRITE_TRAIT, MAP_WRITER_TYPE_HINT, POS,
+                REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, WRITER,
+                WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
                 WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
                 WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
                 WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
@@ -17,7 +18,7 @@ use crate::{
 use alloc::borrow::Cow;
 use core::ops::Not;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{spanned::Spanned, Ident};
 
 pub(crate) fn write_field(writer_var: &TokenStream, field: &StructField) -> TokenStream {
@@ -264,7 +265,7 @@ impl<'a> StructFieldGenerator<'a> {
         let args_val = if let Some(args) = get_passed_args(self.field, WRITER) {
             args
         } else {
-            quote! { () }
+            quote_spanned! { self.field.ty.span() => <_ as #REQUIRED_ARG_TRAIT>::args() }
         };
 
         let map_fn = map_func_ident(&self.field.ident);

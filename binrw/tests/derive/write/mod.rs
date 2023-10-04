@@ -16,4 +16,5 @@ mod padding;
 mod restore_position;
 mod simple;
 mod stream;
+mod struct_generic;
 mod top_level_map;
