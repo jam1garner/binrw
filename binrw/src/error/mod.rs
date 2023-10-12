@@ -274,7 +274,7 @@ impl Error {
     /// custom error of type `T`, or `None` if it isn’t.
     #[must_use]
     pub fn custom_err<T: CustomError + 'static>(&self) -> Option<&T> {
-        if let Error::Custom { err, .. } = self {
+        if let Error::Custom { err, .. } = self.root_cause() {
             err.downcast_ref()
         } else {
             None

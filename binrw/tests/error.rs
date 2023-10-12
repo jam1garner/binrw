@@ -8,6 +8,27 @@ mod backtrace_2;
 use binrw::Error;
 
 #[test]
+fn custom_err_context() {
+    use binrw::error::ContextExt;
+
+    #[derive(Debug, Eq, PartialEq)]
+    struct Oops;
+    impl core::fmt::Display for Oops {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Oops")
+        }
+    }
+
+    let err = Error::Custom {
+        pos: 0,
+        err: Box::new(Oops),
+    }
+    .with_message("nested oops");
+
+    assert_eq!(err.custom_err::<Oops>(), Some(&Oops));
+}
+
+#[test]
 fn custom_error_trait() {
     #[derive(Debug)]
     struct Oops;
