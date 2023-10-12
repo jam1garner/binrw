@@ -547,8 +547,7 @@ where
     }
 }
 
-/// A trait to convert from an integer into
-/// [`SeekFrom::Current`](crate::io::SeekFrom::Current).
+/// A trait to convert from an integer into [`SeekFrom::Current`].
 pub trait IntoSeekFrom: Copy {
     /// Converts the value.
     fn into_seek_from(self) -> SeekFrom;
