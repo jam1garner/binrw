@@ -194,8 +194,8 @@ impl<T: BinWrite> BinWrite for Option<T> {
     }
 }
 
-impl<T: BinWrite> BinWrite for PhantomData<T> {
-    type Args<'a> = T::Args<'a>;
+impl<T> BinWrite for PhantomData<T> {
+    type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
         &self,
