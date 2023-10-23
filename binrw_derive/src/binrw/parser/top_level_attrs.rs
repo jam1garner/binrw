@@ -225,7 +225,7 @@ attr_struct! {
 impl Struct {
     pub(crate) fn is_tuple(&self) -> bool {
         self.fields
-            .get(0)
+            .first()
             .map_or(false, |field| field.generated_ident)
     }
 

@@ -201,7 +201,7 @@ impl<T> BinWrite for PhantomData<T> {
         &self,
         _: &mut W,
         _: Endian,
-        _: Self::Args<'_>,
+        (): Self::Args<'_>,
     ) -> BinResult<()> {
         Ok(())
     }

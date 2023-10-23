@@ -14,9 +14,9 @@ pub(crate) struct BacktraceFrame {
 }
 
 struct Line {
-    line_num: usize,
+    num: usize,
     start_col: usize,
-    line: String,
+    text: String,
 }
 
 impl BacktraceFrame {
@@ -58,9 +58,9 @@ impl BacktraceFrame {
                         (min_whitespace + 1, line)
                     }))
                     .map(|(line_num, (start_col, line))| Line {
-                        line_num,
+                        num: line_num,
                         start_col,
-                        line,
+                        text: line,
                     })
                     .collect::<Vec<_>>()
                     .into_iter(),
@@ -73,9 +73,9 @@ impl BacktraceFrame {
     fn write_line(
         &self,
         Line {
-            line_num,
+            num: line_num,
             start_col,
-            line,
+            text: line,
         }: Line,
         max_digits: usize,
         f: &mut Formatter<'_>,
@@ -120,7 +120,7 @@ impl BacktraceFrame {
                 .map(|x| x.0.start)
                 .chain(core::iter::once(start_col + line.len()));
 
-            if let Some((first_range, _)) = line_highlights.highlights.get(0) {
+            if let Some((first_range, _)) = line_highlights.highlights.first() {
                 let component = &line[..first_range.start - start_col];
 
                 write!(f, "{}", conditional_bold(&component, should_highlight))?;

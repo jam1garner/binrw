@@ -14,6 +14,8 @@ ident_str! {
     NAMED_ARGS = from_crate!(NamedArgs);
 }
 
+// Lint: Describing which field name is which prevents confusion.
+#[cfg_attr(nightly, allow(clippy::struct_field_names))]
 pub(super) struct Builder<'a> {
     pub(super) owner_name: Option<&'a Ident>,
     pub(super) builder_name: &'a Ident,
@@ -297,8 +299,12 @@ impl<'a> Builder<'a> {
             quote! { #(#unwraps,)* }
         };
 
-        let finalizers = self.fields.iter().enumerate().filter_map(|(i, field)| {
-            matches!(field.kind, BuilderFieldKind::TryOptional).then(|| {
+        let finalizers = self
+            .fields
+            .iter()
+            .enumerate()
+            .filter(|(_, field)| matches!(field.kind, BuilderFieldKind::TryOptional))
+            .map(|(i, field)| {
                 let current_field_ty = &field.ty;
                 let satisfied_generics = generics.iter().enumerate().map(|(n, generic)| {
                     if i == n {
@@ -342,8 +348,7 @@ impl<'a> Builder<'a> {
                         }
                     }
                 }
-            })
-        });
+            });
 
         quote! { #(#finalizers)* }
     }

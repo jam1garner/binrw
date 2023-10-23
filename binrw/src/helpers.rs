@@ -479,6 +479,10 @@ where
 
 /// Reads a 24-bit unsigned integer.
 ///
+/// # Errors
+///
+/// If reading fails, an [`Error`](crate::Error) variant will be returned.
+///
 /// # Examples
 ///
 /// ```
@@ -513,6 +517,10 @@ pub fn read_u24() -> binrw::BinResult<u32> {
 }
 
 /// Writes a 24-bit unsigned integer.
+///
+/// # Errors
+///
+/// If writing fails, an [`Error`](crate::Error) variant will be returned.
 ///
 /// # Examples
 ///
