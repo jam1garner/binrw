@@ -387,7 +387,7 @@ impl<'field> FieldGenerator<'field> {
 
             if let FieldMode::Function(_) = &self.field.field_mode {
                 quote_spanned! {ty.span()=>
-                    let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(#READ_FUNCTION, #args);
+                    let #args_var = #ARGS_TYPE_HINT::<R, #ty, _, _>(&#READ_FUNCTION, #args);
                 }
             } else {
                 match &self.field.map {

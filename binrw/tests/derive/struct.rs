@@ -632,6 +632,27 @@ fn parse_with_default_args() {
 }
 
 #[test]
+fn args_type_hint_borrowck() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(a: u8))]
+    struct NeedsArgs(#[br(map = |x: u8| x + a)] u8);
+
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        #[br(args(4), parse_with = binrw::helpers::until(|x| x == &NeedsArgs(4)))]
+        a: Vec<NeedsArgs>,
+    }
+
+    let result = Test::read_le(&mut Cursor::new(b"\x01\x00\x02")).unwrap();
+    assert_eq!(
+        result,
+        Test {
+            a: vec![NeedsArgs(5), NeedsArgs(4)]
+        }
+    );
+}
+
+#[test]
 fn args_same_name() {
     #[allow(dead_code)]
     #[derive(BinRead, Debug)]
