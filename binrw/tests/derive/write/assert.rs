@@ -33,6 +33,40 @@ fn top_level_assert_fail() {
 }
 
 #[test]
+fn top_level_assert_self_enum() {
+    #[binwrite]
+    #[bw(assert(!matches!(self, Test::A(1))))]
+    #[derive(PartialEq)]
+    enum Test {
+        A(u32),
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    if let Err(err) = x.write_be(&Test::A(1)) {
+        assert!(matches!(err, binrw::Error::AssertFail { .. }));
+    } else {
+        panic!("Assert error expected");
+    }
+}
+
+#[test]
+fn assert_enum_variant() {
+    #[binwrite]
+    #[derive(PartialEq)]
+    enum Test {
+        #[bw(assert(self_0 != &1))]
+        A(u32),
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    if let Err(err) = x.write_be(&Test::A(1)) {
+        assert!(matches!(err, binrw::Error::AssertFail { .. }));
+    } else {
+        panic!("Assert error expected");
+    }
+}
+
+#[test]
 fn top_level_assert_self_struct() {
     #[binwrite]
     #[bw(assert(self != &Test(1)))]

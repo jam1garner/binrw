@@ -1,7 +1,7 @@
 use crate::{
     binrw::{
         codegen::{
-            get_destructured_imports, get_endian,
+            get_assertions, get_destructured_imports, get_endian,
             sanitization::{ARGS, MAP_WRITER_TYPE_HINT, OPT, WRITER, WRITE_METHOD},
         },
         parser::{CondEndian, Input, Magic},
@@ -14,7 +14,7 @@ use syn::spanned::Spanned;
 
 pub(crate) struct PreludeGenerator<'a> {
     out: TokenStream,
-    input: Option<&'a Input>,
+    input: &'a Input,
     name: Option<&'a Ident>,
     writer_var: &'a TokenStream,
 }
@@ -22,7 +22,7 @@ pub(crate) struct PreludeGenerator<'a> {
 impl<'a> PreludeGenerator<'a> {
     pub(crate) fn new(
         out: TokenStream,
-        input: Option<&'a Input>,
+        input: &'a Input,
         name: Option<&'a Ident>,
         writer_var: &'a TokenStream,
     ) -> Self {
@@ -34,11 +34,19 @@ impl<'a> PreludeGenerator<'a> {
         }
     }
 
+    pub(super) fn prefix_assertions(mut self) -> Self {
+        let assertions = get_assertions(self.input.assertions());
+        let out = self.out;
+        self.out = quote! {
+            #(#assertions)*
+            #out
+        };
+
+        self
+    }
+
     pub(crate) fn prefix_imports(mut self) -> Self {
-        if let Some(imports) = self
-            .input
-            .and_then(|input| get_destructured_imports(input.imports(), self.name, true))
-        {
+        if let Some(imports) = get_destructured_imports(self.input.imports(), self.name, true) {
             let out = self.out;
             self.out = quote! {
                 let #imports = #ARGS;
@@ -81,16 +89,14 @@ impl<'a> PreludeGenerator<'a> {
     }
 
     pub(crate) fn prefix_map_stream(mut self) -> Self {
-        if let Some(input) = self.input {
-            if let Some(map_stream) = input.map_stream() {
-                let outer_writer = input.stream_ident_or(WRITER);
-                let inner_writer = &self.writer_var;
-                let tail = self.out;
-                self.out = quote_spanned_any! { map_stream.span()=>
-                    let #inner_writer = &mut #MAP_WRITER_TYPE_HINT::<W, _, _>(#map_stream)(#outer_writer);
-                    #tail
-                };
-            }
+        if let Some(map_stream) = self.input.map_stream() {
+            let outer_writer = self.input.stream_ident_or(WRITER);
+            let inner_writer = &self.writer_var;
+            let tail = self.out;
+            self.out = quote_spanned_any! { map_stream.span()=>
+                let #inner_writer = &mut #MAP_WRITER_TYPE_HINT::<W, _, _>(#map_stream)(#outer_writer);
+                #tail
+            };
         }
 
         self

@@ -320,11 +320,6 @@ attr_struct! {
         pub(crate) magic: Magic,
         #[from(RW:Import, RW:ImportRaw)]
         pub(crate) imports: Imports,
-        // TODO: Does this make sense? It is not known what properties will
-        // exist in order to construct a valid variant. The assertions all get
-        // copied and used as if they were applied to each variant in the enum,
-        // so the only way this ever works is if every variant contains the same
-        // properties being checked by the assertion.
         #[from(RW:Assert)]
         pub(crate) assertions: Vec<Assert>,
         #[from(RO:PreAssert)]

@@ -17,9 +17,10 @@ pub(crate) fn generate_unit_enum(
         None => generate_unit_enum_magic(&writer_var, &en.fields),
     };
 
-    PreludeGenerator::new(write, Some(input), name, &writer_var)
+    PreludeGenerator::new(write, input, name, &writer_var)
         .prefix_map_stream()
         .prefix_magic(&en.magic)
+        .prefix_assertions()
         .prefix_endian(&en.endian)
         .prefix_imports()
         .finish()
@@ -67,7 +68,9 @@ impl<'a> EnumGenerator<'a> {
             let writer_var = &self.writer_var;
             let writing = match variant {
                 EnumVariant::Variant { options, .. } => {
-                    StructGenerator::new(None, options, None, &self.writer_var)
+                    let input = Input::Struct(variant.clone().into());
+
+                    StructGenerator::new(&input, options, None, &self.writer_var)
                         .write_fields()
                         .prefix_prelude()
                         .finish()
@@ -108,9 +111,10 @@ impl<'a> EnumGenerator<'a> {
     fn prefix_prelude(mut self) -> Self {
         let out = self.out;
 
-        self.out = PreludeGenerator::new(out, Some(self.input), self.name, &self.writer_var)
+        self.out = PreludeGenerator::new(out, self.input, self.name, &self.writer_var)
             .prefix_map_stream()
             .prefix_magic(&self.en.magic)
+            .prefix_assertions()
             .prefix_endian(&self.en.endian)
             .prefix_imports()
             .finish();

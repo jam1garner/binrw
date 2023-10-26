@@ -62,8 +62,9 @@ fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> Token
 
     let magic = input.magic();
     let endian = input.endian();
-    prelude::PreludeGenerator::new(write_data, Some(input), name, &writer_var)
+    prelude::PreludeGenerator::new(write_data, input, name, &writer_var)
         .prefix_magic(magic)
+        .prefix_assertions()
         .prefix_endian(endian)
         .prefix_imports()
         .finish()
