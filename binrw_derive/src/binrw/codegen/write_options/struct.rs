@@ -88,6 +88,7 @@ impl<'input> StructGenerator<'input> {
 
         let out = self.out;
         self.out = quote! {
+            let #THIS = self;
             #borrow_fields
             #out
         };

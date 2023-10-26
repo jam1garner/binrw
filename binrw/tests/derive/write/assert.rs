@@ -31,3 +31,18 @@ fn top_level_assert_fail() {
         panic!("Assert error expected");
     }
 }
+
+#[test]
+fn top_level_assert_self_struct() {
+    #[binwrite]
+    #[bw(assert(self != &Test(1)))]
+    #[derive(PartialEq)]
+    struct Test(u32);
+
+    let mut x = Cursor::new(Vec::new());
+    if let Err(err) = x.write_be(&Test(1)) {
+        assert!(matches!(err, binrw::Error::AssertFail { .. }));
+    } else {
+        panic!("Assert error expected");
+    }
+}
