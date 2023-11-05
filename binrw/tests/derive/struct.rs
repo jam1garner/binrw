@@ -285,6 +285,22 @@ fn move_stream_with_count() {
     );
 }
 
+#[test]
+fn move_named_stream_with_count() {
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    #[br(stream = s, map_stream = |r| r)]
+    struct Test {
+        #[br(count = 1)]
+        flags: Vec<u32>,
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"\x01\0\0\0")).unwrap(),
+        Test { flags: vec![1] }
+    );
+}
+
 // See https://github.com/jam1garner/binrw/issues/118
 #[test]
 fn move_temp_field() {

@@ -382,7 +382,7 @@ impl<'field> FieldGenerator<'field> {
     fn prefix_args_and_options(mut self) -> Self {
         let args = self.args_var.as_ref().map(|args_var| {
             let map_func = make_ident(&self.field.ident, "map_func");
-            let args = get_passed_args(self.field, READER);
+            let args = get_passed_args(self.field, &self.outer_reader_var);
             let ty = &self.field.ty;
 
             if let FieldMode::Function(_) = &self.field.field_mode {

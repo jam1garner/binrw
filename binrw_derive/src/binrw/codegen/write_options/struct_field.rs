@@ -4,11 +4,11 @@ use crate::{
             get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
                 make_ident, BEFORE_POS, BINWRITE_TRAIT, MAP_WRITER_TYPE_HINT, POS,
-                REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, WRITER,
-                WRITE_ARGS_TYPE_HINT, WRITE_FN_MAP_OUTPUT_TYPE_HINT,
-                WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TYPE_HINT, WRITE_FUNCTION,
-                WRITE_MAP_ARGS_TYPE_HINT, WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD,
-                WRITE_TRY_MAP_ARGS_TYPE_HINT, WRITE_ZEROES,
+                REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, WRITE_ARGS_TYPE_HINT,
+                WRITE_FN_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT,
+                WRITE_FN_TYPE_HINT, WRITE_FUNCTION, WRITE_MAP_ARGS_TYPE_HINT,
+                WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD, WRITE_TRY_MAP_ARGS_TYPE_HINT,
+                WRITE_ZEROES,
             },
         },
         parser::{FieldMode, Map, StructField},
@@ -262,7 +262,7 @@ impl<'a> StructFieldGenerator<'a> {
 
         let args = args_ident(&self.field.ident);
 
-        let args_val = if let Some(args) = get_passed_args(self.field, WRITER) {
+        let args_val = if let Some(args) = get_passed_args(self.field, self.outer_writer_var) {
             args
         } else {
             quote_spanned! { self.field.ty.span() => <_ as #REQUIRED_ARG_TRAIT>::args() }
