@@ -4,11 +4,11 @@ error[E0425]: cannot find value `missing` in this scope
 18 |     #[br(parse_with = missing)]
    |                       ^^^^^^^ not found in this scope
 
-error[E0277]: expected a `FnOnce<(&mut _, binrw::Endian, _)>` closure, found `{integer}`
+error[E0277]: expected a `FnOnce(&mut _, binrw::Endian, _)` closure, found `{integer}`
   --> tests/ui/bad_parse_with_fn.rs:10:23
    |
 10 |     #[br(parse_with = 56)]
-   |                       ^^ expected an `FnOnce<(&mut _, binrw::Endian, _)>` closure, found `{integer}`
+   |                       ^^ expected an `FnOnce(&mut _, binrw::Endian, _)` closure, found `{integer}`
    |
    = help: the trait `for<'a> FnOnce<(&'a mut _, binrw::Endian, _)>` is not implemented for `{integer}`
 note: required by a bound in `parse_fn_type_hint`
