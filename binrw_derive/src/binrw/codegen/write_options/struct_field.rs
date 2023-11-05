@@ -74,7 +74,7 @@ impl<'a> StructFieldGenerator<'a> {
         if let Some(map_stream) = &self.field.map_stream {
             let rest = self.out;
             let writer_var = &self.writer_var;
-            let outer_writer_var = &self.outer_writer_var;
+            let outer_writer_var = self.outer_writer_var;
             self.out = quote_spanned_any! { map_stream.span()=> {
                 let #writer_var = &mut #MAP_WRITER_TYPE_HINT::<W, _, _>(#map_stream)(#outer_writer_var);
                 #rest
@@ -171,7 +171,7 @@ impl<'a> StructFieldGenerator<'a> {
             Map::Try(t) | Map::Repr(t) => {
                 let rest = self.out;
                 let map_err = get_map_err(SAVED_POSITION, t.span());
-                let outer_writer_var = &self.outer_writer_var;
+                let outer_writer_var = self.outer_writer_var;
                 quote! {
                     let #name = {
                         let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#outer_writer_var)?;
@@ -311,7 +311,7 @@ impl<'a> StructFieldGenerator<'a> {
         if let Some(magic) = &self.field.magic {
             let magic = magic.match_value();
             let endian = get_endian(&self.field.endian);
-            let writer_var = &self.outer_writer_var;
+            let writer_var = self.outer_writer_var;
             let out = self.out;
             self.out = quote! {
                 #WRITE_METHOD (
