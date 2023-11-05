@@ -282,7 +282,7 @@ fn get_map_err(pos: IdentStr, span: Span) -> TokenStream {
     }
 }
 
-fn get_passed_args(field: &StructField, stream: IdentStr) -> Option<TokenStream> {
+fn get_passed_args(field: &StructField, stream: &TokenStream) -> Option<TokenStream> {
     let args = &field.args;
     let span = args.span().unwrap_or_else(|| field.ty.span());
     match args {
@@ -311,7 +311,7 @@ fn get_try_calc(pos: IdentStr, ty: &Type, calc: &TokenStream) -> TokenStream {
     }}
 }
 
-fn directives_to_args(field: &StructField, stream: IdentStr) -> TokenStream {
+fn directives_to_args(field: &StructField, stream: &TokenStream) -> TokenStream {
     let args = field
         .count
         .as_ref()
