@@ -34,6 +34,21 @@ fn map_expr() {
 }
 
 #[test]
+fn map_field_parse_with() {
+    #[derive(BinRead, Debug)]
+    #[br(big)]
+    pub struct Test {
+        #[br(parse_with = binrw::helpers::until_eof, map = |v: Vec<u8>| String::from_utf8_lossy(&v).to_string())]
+        a: String,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"debug\xe2\x98\xba")).unwrap();
+    assert_eq!(result.a, "debug☺");
+    let result = Test::read(&mut Cursor::new(b"bad \xfe utf8 \xfe")).unwrap();
+    assert_eq!(result.a, "bad \u{FFFD} utf8 \u{FFFD}");
+}
+
+#[test]
 fn map_repr_enum() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(repr = u8)]
@@ -169,6 +184,21 @@ fn try_map_field() {
     error
         .custom_err::<<i32 as TryInto<i16>>::Error>()
         .expect("wrong error type");
+}
+
+#[test]
+fn try_map_field_parse_with() {
+    #[derive(BinRead, Debug)]
+    #[br(big)]
+    pub struct Test {
+        #[br(parse_with = binrw::helpers::until_eof, try_map = String::from_utf8)]
+        a: String,
+    }
+
+    let result = Test::read(&mut Cursor::new(b"debug\xe2\x98\xba")).unwrap();
+    assert_eq!(result.a, "debug☺");
+    let error = Test::read(&mut Cursor::new(b"bad \xfe utf8 \xfe")).expect_err("accepted bad data");
+    error.custom_err::<std::string::FromUtf8Error>().unwrap();
 }
 
 #[test]

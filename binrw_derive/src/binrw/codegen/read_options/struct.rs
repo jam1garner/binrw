@@ -450,14 +450,20 @@ impl<'field> FieldGenerator<'field> {
 
                 if let FieldMode::Function(f) = read_mode {
                     let ty = &self.field.ty;
+                    // Mapping the value with an explicit type ensures the
+                    // incompatible type is warned here as a mismatched type
+                    // instead of later as a try-conversion error
+                    let map = self.field.map.is_none().then(|| {
+                        quote_spanned! { f.span()=>
+                            .map(|v| -> #ty { v })
+                        }
+                    });
+
                     // Adding a closure suppresses mentions of the generated
-                    // READ_FUNCTION variable in errors; mapping the value with
-                    // an explicit type ensures the incompatible type is warned
-                    // here as a mismatched type instead of later as a
-                    // try-conversion error
+                    // READ_FUNCTION variable in errors
                     quote_spanned_any! { f.span()=>
                         (|| #READ_FUNCTION)()(#reader_var, #endian_var, #args_arg)
-                            .map(|v| -> #ty { v })
+                        #map
                     }
                 } else {
                     quote! {
