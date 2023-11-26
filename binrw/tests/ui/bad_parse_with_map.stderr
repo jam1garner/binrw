@@ -1,0 +1,52 @@
+error[E0271]: expected `from_utf8_lossy` to be a fn item that returns `String`, but it returns `Cow<'_, str>`
+ --> tests/ui/bad_parse_with_map.rs:5:60
+  |
+3 | #[derive(BinRead)]
+  |          ------- required by a bound introduced by this call
+4 | struct Foo {
+5 |     #[br(parse_with = until_eof::<_, _, _, Vec<u8>>, map = String::from_utf8_lossy)]
+  |                                                            ^^^^^^^^^^^^^^^^^^^^^^^ expected `String`, found `Cow<'_, str>`
+  |
+  = note: expected struct `String`
+               found enum `Cow<'_, str>`
+note: required by a bound in `coerce_fn`
+ --> src/private.rs
+  |
+  | pub fn coerce_fn<R, T, F>(f: F) -> F
+  |        --------- required by a bound in this function
+  | where
+  |     F: FnMut(T) -> R,
+  |                    ^ required by this bound in `coerce_fn`
+
+error[E0308]: `?` operator has incompatible types
+ --> tests/ui/bad_parse_with_map.rs:5:23
+  |
+5 |     #[br(parse_with = until_eof::<_, _, _, Vec<u8>>, map = String::from_utf8_lossy)]
+  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `&[u8]`, found `Vec<u8>`
+  |
+  = note: `?` operator cannot convert from `Vec<u8>` to `&[u8]`
+  = note: expected reference `&[u8]`
+                found struct `Vec<u8>`
+note: return type inferred to be `&[u8]` here
+ --> tests/ui/bad_parse_with_map.rs:5:23
+  |
+5 |     #[br(parse_with = until_eof::<_, _, _, Vec<u8>>, map = String::from_utf8_lossy)]
+  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: consider borrowing here
+  |
+5 |     #[br(parse_with = &until_eof::<_, _, _, Vec<u8>>, map = String::from_utf8_lossy)]
+  |                       +
+
+error[E0308]: mismatched types
+ --> tests/ui/bad_parse_with_map.rs:5:60
+  |
+5 |       #[br(parse_with = until_eof::<_, _, _, Vec<u8>>, map = String::from_utf8_lossy)]
+  |  ____________________________________________________________^
+6 | |     a: String,
+  | |     ^- ------ expected due to this
+  | |     ||
+  | |_____|help: try using a conversion method: `.to_string()`
+  |       expected `String`, found `Cow<'_, str>`
+  |
+  = note: expected struct `String`
+               found enum `Cow<'_, str>`

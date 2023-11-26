@@ -287,16 +287,16 @@ impl<'field> FieldGenerator<'field> {
 
         self.out = match &self.field.map {
             Map::None => return self,
-            Map::Map(_) => {
+            Map::Map(m) => {
                 let value = self.out;
-                quote! { #map_func(#value) }
+                quote_spanned! {m.span()=> #map_func(#value) }
             }
             Map::Try(t) | Map::Repr(t) => {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
                 let map_err = get_map_err(SAVED_POSITION, t.span());
                 let reader_var = &self.outer_reader_var;
-                quote! {{
+                quote_spanned! {t.span()=> {
                     let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#reader_var)?;
 
                     #map_func(#value)#map_err?
@@ -482,8 +482,13 @@ impl<'field> FieldGenerator<'field> {
             self.out = if self.field.do_try.is_some() {
                 quote! { #result.unwrap_or_default() }
             } else {
+                let span = match &self.field.field_mode {
+                    FieldMode::Function(f) => f.span(),
+                    _ => result.span(),
+                };
+
                 let map_err = get_err_context(self.field, name, variant_name);
-                quote! { #result #map_err ? }
+                quote_spanned! {span=> #result #map_err ? }
             };
         }
 
