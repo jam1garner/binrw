@@ -21,24 +21,15 @@ pub use impls::VecArgs;
 /// Create a parser for a relative offset with an optional base offset.
 ///
 /// ```
-/// # use binrw::{BinRead, BinResult, NamedArgs};
+/// # use binrw::{BinRead, BinResult};
 /// # use binrw::io::{Read, Seek, SeekFrom};
-/// #[derive(Clone, Default, NamedArgs)]
-/// struct CustomPtr32Args<Inner: Default> {
-///     #[named_args(default = 0)]
-///     offset: u64,
-///     #[named_args(default = Default::default())]
-///     inner: Inner,
-/// }
-///
 /// struct CustomPtr32<T>(T);
 ///
-/// impl<T, TArgs> BinRead for CustomPtr32<T>
+/// impl<T> BinRead for CustomPtr32<T>
 /// where
-///     for<'a> T: BinRead<Args<'a> = TArgs>,
-///     TArgs: Default
+///     for<'a> T: BinRead<Args<'a> = ()>,
 /// {
-///     type Args<'a> = CustomPtr32Args<TArgs>;
+///     type Args<'a> = u64;
 ///
 ///     fn read_options<R: Read + Seek>(
 ///         reader: &mut R,
@@ -48,8 +39,8 @@ pub use impls::VecArgs;
 ///         let offset = u32::read_options(reader, endian, ())?;
 ///         let position = reader.stream_position()?;
 ///
-///         reader.seek(SeekFrom::Start(args.offset + offset as u64))?;
-///         let value = T::read_options(reader, endian, args.inner)?;
+///         reader.seek(SeekFrom::Start(args + offset as u64))?;
+///         let value = T::read_options(reader, endian, ())?;
 ///         reader.seek(SeekFrom::Start(position))?;
 ///
 ///         Ok(CustomPtr32(value))
