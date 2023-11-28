@@ -550,6 +550,31 @@ fn map_stream_field() {
 }
 
 #[test]
+fn map_stream_parse_with_args() {
+    use binrw::{helpers::until_eof, io::TakeSeekExt};
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import(extra: u8))]
+    struct Inner(#[br(map = |v: u8| v + extra)] u8);
+
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        a: u8,
+        #[br(map_stream = |s| s.take_seek(4), parse_with = until_eof, args(a))]
+        b: Vec<Inner>,
+        c: u8,
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"\x0a\x00\x01\x02\x03\x04")).unwrap(),
+        Test {
+            a: 10,
+            b: vec![Inner(10), Inner(11), Inner(12), Inner(13)],
+            c: 4
+        }
+    );
+}
+
+#[test]
 fn named_args_trailing_commas() {
     #[rustfmt::skip]
     #[derive(BinRead, Debug, PartialEq)]
