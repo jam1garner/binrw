@@ -185,7 +185,7 @@ fn generate_trait_impl<const WRITE: bool>(
     let args_lifetime = get_args_lifetime(Span::call_site());
     quote! {
         #[automatically_derived]
-        #[allow(non_snake_case)]
+        #[allow(non_snake_case, unknown_lints)]
         #[allow(clippy::redundant_closure_call)]
         impl #impl_generics #trait_name for #name #ty_generics #where_clause {
             type Args<#args_lifetime> = #arg_type;
@@ -322,7 +322,7 @@ fn directives_to_args(field: &StructField, stream: &TokenStream) -> TokenStream 
             quote_spanned_any! {count.span()=>
                 count: {
                     let #TEMP = #count;
-                    #[allow(clippy::useless_conversion)]
+                    #[allow(clippy::useless_conversion, clippy::unnecessary_fallible_conversions)]
                     usize::try_from(#TEMP).map_err(|_| {
                         extern crate alloc;
                         #BIN_ERROR::AssertFail {

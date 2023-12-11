@@ -5,6 +5,8 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
+// Lint: Makes code less clear
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug)]
 pub(crate) enum Map {
     None,
