@@ -8,12 +8,13 @@ fn derive_allows_default() {
         T: BinWrite,
         for<'a> T::Args<'a>: Default,
     {
-        a: T,
+        a: u16,
+        b: T,
     }
 
     let mut result = Vec::new();
-    Test::<u8> { a: 0 }
+    Test::<u8> { a: 0, b: 1 }
         .write_be(&mut Cursor::new(&mut result))
         .unwrap();
-    assert_eq!(b"\0", &result[..]);
+    assert_eq!(b"\0\0\x01", &result[..]);
 }

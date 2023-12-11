@@ -1,16 +1,16 @@
 use binrw::{io::Cursor, BinWrite, Endian};
 
-#[derive(BinWrite)]
-struct Test {
-    x: u8,
-    #[bw(if(*x > 1, 10))]
-    y: u16,
-    #[bw(if(*x > 2))]
-    z: u32,
-}
-
 #[test]
 fn if_cond() {
+    #[derive(BinWrite)]
+    struct Test {
+        x: u8,
+        #[bw(if(*x > 1, 10))]
+        y: u16,
+        #[bw(if(*x > 2))]
+        z: u32,
+    }
+
     let mut x = Cursor::new(Vec::new());
 
     Test { x: 1, y: 2, z: 3 }

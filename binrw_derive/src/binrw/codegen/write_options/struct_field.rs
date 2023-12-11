@@ -105,7 +105,8 @@ impl<'a> StructFieldGenerator<'a> {
                 quote! { #WRITE_FN_MAP_OUTPUT_TYPE_HINT(&#map_fn, #write_fn) }
             }
         } else {
-            quote! { #WRITE_FN_TYPE_HINT(#write_fn) }
+            let ty = &self.field.ty;
+            quote! { #WRITE_FN_TYPE_HINT::<#ty, _, _, _>(#write_fn) }
         };
 
         let out = self.out;
@@ -211,11 +212,11 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 })
             })
-            .unwrap_or_else(|| quote::ToTokens::to_token_stream(name));
+            .unwrap_or_else(|| quote_spanned! { name.span()=> &#name });
 
         self.out = quote! {
             #WRITE_FUNCTION(
-                &#name,
+                #name,
                 #writer_var,
                 #endian,
                 #args
