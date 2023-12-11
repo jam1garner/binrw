@@ -84,9 +84,12 @@ fn generate_imports(
         }
 
         fn fold_type_reference(&mut self, mut i: syn::TypeReference) -> syn::TypeReference {
-            if i.lifetime.is_none() {
+            if i.lifetime.is_none()
+                || matches!(&i.lifetime, Some(lifetime) if lifetime.ident == "_")
+            {
                 i.lifetime = Some(get_args_lifetime(i.and_token.span()));
             }
+            i.elem = Box::new(ExpandLifetimes.fold_type(*i.elem));
             i
         }
     }

@@ -376,6 +376,39 @@ fn all_default_imports() {
 }
 
 #[test]
+fn recursive_lifetime_imports() {
+    #[derive(Default)]
+    struct InnerArgs<'a> {
+        inner: &'a str,
+    }
+    #[derive(Default)]
+    struct OuterArgs<'a, Extra> {
+        outer: &'a str,
+        extra: Extra,
+    }
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(import_raw(args: OuterArgs<'_, &'_ InnerArgs<'_>>))]
+    struct Test {
+        #[br(calc(String::from(args.outer) + args.extra.inner))]
+        a: String,
+    }
+
+    assert_eq!(
+        Test::read_le_args(
+            &mut Cursor::new(""),
+            OuterArgs {
+                outer: "hello",
+                extra: &InnerArgs { inner: " world" }
+            }
+        )
+        .unwrap(),
+        Test {
+            a: String::from("hello world")
+        }
+    );
+}
+
+#[test]
 fn gat_list() {
     #[derive(BinRead, Debug, PartialEq)]
     #[br(little, import(borrowed: &u8))]
