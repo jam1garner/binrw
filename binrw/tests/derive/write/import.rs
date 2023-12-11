@@ -61,6 +61,21 @@ fn gat_raw() {
 }
 
 #[test]
+fn shadowed_imports() {
+    #[derive(BinWrite)]
+    #[bw(import { x: u32 })]
+    struct Test {
+        x: u8,
+    }
+
+    let mut out = Cursor::new(Vec::new());
+    Test { x: 1 }
+        .write_le_args(&mut out, binrw::args! { x: 2 })
+        .unwrap();
+    assert_eq!(out.into_inner(), b"\x01");
+}
+
+#[test]
 fn usable_args() {
     #[binrw]
     #[bw(import { x: u32, _y: u8 })]

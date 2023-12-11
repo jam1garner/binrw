@@ -12,6 +12,7 @@ pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) 
         .write_fields()
         .prefix_prelude()
         .prefix_borrow_fields()
+        .prefix_imports()
         .finish()
 }
 
@@ -39,13 +40,20 @@ impl<'input> StructGenerator<'input> {
         }
     }
 
+    pub(super) fn prefix_imports(mut self) -> Self {
+        self.out = PreludeGenerator::new(self.out, self.input, self.name, self.writer_var)
+            .prefix_imports()
+            .finish();
+
+        self
+    }
+
     pub(super) fn prefix_prelude(mut self) -> Self {
         self.out = PreludeGenerator::new(self.out, self.input, self.name, self.writer_var)
             .prefix_map_stream()
             .prefix_magic(&self.st.magic)
             .prefix_endian(&self.st.endian)
             .prefix_assertions()
-            .prefix_imports()
             .finish();
 
         self
