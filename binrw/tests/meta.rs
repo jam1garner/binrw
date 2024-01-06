@@ -5,14 +5,17 @@ fn read_endian() {
         BinRead, Endian,
     };
 
+    #[allow(dead_code)]
     #[derive(BinRead)]
     #[br(big)]
     struct Big(u16);
 
+    #[allow(dead_code)]
     #[derive(BinRead)]
     #[br(little)]
     struct Little(u16);
 
+    #[allow(dead_code)]
     #[derive(BinRead)]
     #[br(is_little = true)]
     struct Runtime(u8);

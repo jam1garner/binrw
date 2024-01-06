@@ -134,6 +134,7 @@ fn display() {
 fn enum_is_eol() {
     use binrw::{io::Cursor, BinRead};
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     #[br(return_all_errors)]
     enum Test {
@@ -154,6 +155,7 @@ fn enum_is_eol() {
 fn is_eof() {
     use binrw::{io::Cursor, BinRead};
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     enum A {
         A([u8; 2]),
@@ -222,6 +224,7 @@ fn no_seek_data_enum() {
         BinRead,
     };
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     enum Test {
         #[br(magic(0u8))]

@@ -15,7 +15,7 @@ ident_str! {
 }
 
 // Lint: Describing which field name is which prevents confusion.
-#[cfg_attr(nightly, allow(clippy::struct_field_names))]
+#[allow(clippy::struct_field_names)]
 pub(super) struct Builder<'a> {
     pub(super) owner_name: Option<&'a Ident>,
     pub(super) builder_name: &'a Ident,

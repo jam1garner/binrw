@@ -3,6 +3,7 @@
 fn dbg() {
     use binrw::{io::Cursor, BinRead};
 
+    #[allow(dead_code)]
     #[derive(BinRead, Debug)]
     struct Inner(u32);
 
@@ -56,10 +57,10 @@ fn dbg() {
                     "[{file}:{offset_3} | offset 0x14] terminator = 0x69\n",
                 ),
                 file = core::file!(),
-                offset_0 = if cfg!(nightly) { 15 } else { 10 },
-                offset_1 = if cfg!(nightly) { 17 } else { 10 },
-                offset_2 = if cfg!(nightly) { 19 } else { 10 },
-                offset_3 = if cfg!(nightly) { 21 } else { 10 },
+                offset_0 = if cfg!(nightly) { 16 } else { 11 },
+                offset_1 = if cfg!(nightly) { 18 } else { 11 },
+                offset_2 = if cfg!(nightly) { 20 } else { 11 },
+                offset_3 = if cfg!(nightly) { 22 } else { 11 },
             )
         );
     }
