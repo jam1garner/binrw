@@ -949,6 +949,11 @@ object.write(&mut output)
 
 **These directives can only be used with [`binwrite`](macro@crate::binwrite).
 They will not work with `#[derive(BinWrite)]`.**
+
+**When using these directives, the `#[binwrite]` attribute must be placed
+*before* other attributes like `#[derive(Debug)]`. Otherwise, the other
+attributes will generate code that references non-existent fields, and
+compilation will fail.**
 </div>
 
 The `calc` and `try_calc` directives compute the value of a field instead of
@@ -1005,7 +1010,7 @@ struct MyType {
 
 ```
 # use binrw::{prelude::*, io::Cursor};
-#[binwrite]
+#[binwrite] // ← must be before other attributes that use struct fields
 #[bw(big)]
 struct MyType {
     var: u32,
@@ -1041,7 +1046,7 @@ struct MyType {
 
 ```
 # use binrw::{prelude::*, io::Cursor};
-#[binwrite]
+#[binwrite] // ← must be before other attributes that use struct fields
 #[bw(big)]
 struct MyType {
     var: u32,
@@ -2658,8 +2663,12 @@ assert_eq!(out.into_inner(), b"\x01\x03\0\x04\x01");
 
 # Temp
 
-**This directive can only be used with [`binread`](macro@crate::binread). It will not work
-with `#[derive(BinRead)]`.**
+**This directive can only be used with [`binread`](macro@crate::binread). It
+will not work with `#[derive(BinRead)]`.**
+
+**When using `#[br(temp)]`, the `#[binread]` attribute must be placed *before*
+other attributes like `#[derive(Debug)]`. Otherwise, the other attributes will
+generate code that references non-existent fields, and compilation will fail.**
 
 The `temp` directive causes a field to be treated as a temporary variable
 instead of an actual field. The field will be removed from the struct
@@ -2677,7 +2686,7 @@ use an [alignment directive](#padding-and-alignment) instead.
 
 ```
 # use binrw::{BinRead, io::Cursor, binread};
-#[binread]
+#[binread] // ← must be before other attributes that use struct fields
 # #[derive(Debug, PartialEq)]
 #[br(big)]
 struct Test {
