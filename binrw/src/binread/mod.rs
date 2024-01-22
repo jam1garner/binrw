@@ -155,6 +155,38 @@ pub trait BinRead: Sized {
     /// # Errors
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use binrw::{BinRead, BinResult};
+    /// # use binrw::io::{Read, Seek, SeekFrom};
+    /// struct CustomPtr32<T>(T);
+    ///
+    /// impl<T> BinRead for CustomPtr32<T>
+    /// where
+    ///     for<'a> T: BinRead<Args<'a> = ()>,
+    /// {
+    ///     type Args<'a> = u64;
+    ///
+    ///     fn read_options<R: Read + Seek>(
+    ///         reader: &mut R,
+    ///         endian: binrw::Endian,
+    ///         args: Self::Args<'_>,
+    ///     ) -> BinResult<Self> {
+    ///         let offset = u32::read_options(reader, endian, ())?;
+    ///         let saved_position = reader.stream_position()?;
+    ///
+    ///         // Read from an offset with a provided base offset.
+    ///         reader.seek(SeekFrom::Start(args + offset as u64))?;
+    ///         let value = T::read_options(reader, endian, ())?;
+    ///
+    ///         reader.seek(SeekFrom::Start(saved_position))?;
+    ///
+    ///         Ok(CustomPtr32(value))
+    ///     }
+    /// }
+    /// ```
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
