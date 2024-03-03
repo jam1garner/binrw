@@ -108,6 +108,21 @@ impl<'input> StructGenerator<'input> {
             #(#read_fields)*
         };
 
+        if let Some(padding) = &self.st.pad_size_to {
+            let head: TokenStream = self.out;
+            let reader_var = self.input.stream_ident_or(READER);
+
+            self.out = quote! {
+                let __binrw_pad_struct_cursor = #SEEK_TRAIT::stream_position(#reader_var)?;
+                #head
+                let __binrw_pad_struct_size = (#SEEK_TRAIT::stream_position(#reader_var)? - __binrw_pad_struct_cursor) as i64;
+                let __binrw_pad_struct_padding = (#padding) as i64;
+                if __binrw_pad_struct_size < __binrw_pad_struct_padding {
+                    #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(__binrw_pad_struct_padding - __binrw_pad_struct_size))?;
+                }
+            };
+        }
+
         self
     }
 

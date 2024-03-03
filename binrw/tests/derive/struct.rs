@@ -661,6 +661,76 @@ fn pad_size_to() {
 }
 
 #[test]
+fn padding_struct() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[brw(pad_size_to = 4)]
+    struct Test {
+        x: u16,
+        y: u8,
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    struct TestOuter {
+        x: Test,
+        y: u8,
+    }
+
+    let result = TestOuter::read_le(&mut Cursor::new(b"\xcd\xab\x42\xff\x17")).unwrap();
+    assert_eq!(
+        result,
+        TestOuter {
+            x: Test { x: 0xabcd, y: 0x42 },
+            y: 0x17
+        }
+    );
+}
+
+#[test]
+fn padding_struct_from_stream() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[brw(import(s: u8))]
+    #[brw(pad_size_to = s)]
+    #[brw(assert((s as usize) >= std::mem::size_of::<Test>()))]
+    struct Test {
+        x: u16,
+        y: u8,
+    }
+
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    struct TestList {
+        #[br(temp)]
+        n: u8,
+        #[br(temp)]
+        s: u8,
+        #[br(args { count : n as usize, inner : (s,) } )]
+        l: Vec<Test>,
+    }
+
+    let data: &[u8] = &[
+        3, 5, // Count and padding
+        2, 1, 3, 0xff, 0xff, // Element 0
+        2, 1, 3, 0xff, 0xff, // Element 1
+        2, 1, 3, 0xff, 0xff, // Element 2
+        0xef, 0xbe, 0xad, 0xde, // deadbeef
+        0xef, 0xbe, 0xad, 0xde, // deadbeef
+        0xef, 0xbe, 0xad, 0xde, // deadbeef
+    ];
+
+    let result = TestList::read_le(&mut Cursor::new(data)).unwrap();
+    assert_eq!(
+        result,
+        TestList {
+            l: vec![
+                Test { x: 258, y: 3 },
+                Test { x: 258, y: 3 },
+                Test { x: 258, y: 3 }
+            ]
+        }
+    );
+}
+
+#[test]
 fn parse_with_default_args() {
     #[derive(Clone)]
     struct Args(u8);
