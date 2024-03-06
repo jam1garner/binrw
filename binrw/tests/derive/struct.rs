@@ -1,7 +1,7 @@
 use binrw::{
     args, binread,
     io::{Cursor, Seek, SeekFrom},
-    BinRead, BinResult, FilePtr, NullString,
+    BinRead, BinReaderExt, BinResult, FilePtr, NullString,
 };
 
 #[test]
@@ -692,6 +692,7 @@ fn padding_struct_from_stream() {
     #[brw(pad_size_to = s)]
     #[brw(assert((s as usize) >= std::mem::size_of::<Test>()))]
     struct Test {
+        #[brw(pad_size_to = 3)]
         x: u16,
         y: u8,
     }
@@ -709,9 +710,9 @@ fn padding_struct_from_stream() {
 
     let data: &[u8] = &[
         3, 5, // Count and padding
-        2, 1, 3, 0xff, 0xff, // Element 0
-        2, 1, 3, 0xff, 0xff, // Element 1
-        2, 1, 3, 0xff, 0xff, // Element 2
+        2, 1, 0xff, 3, 0xff, // Element 0
+        2, 1, 0xff, 3, 0xff, // Element 1
+        2, 1, 0xff, 3, 0xff, // Element 2
         0xef, 0xbe, 0xad, 0xde, // deadbeef
         0xef, 0xbe, 0xad, 0xde, // deadbeef
         0xef, 0xbe, 0xad, 0xde, // deadbeef
@@ -728,6 +729,34 @@ fn padding_struct_from_stream() {
             ]
         }
     );
+}
+
+#[test]
+fn padding_struct_self_referential() {
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    #[brw(pad_size_to = skip_padding)]
+    struct Test {
+        #[br(temp)]
+        skip_padding: u8,
+        x: u8,
+        y: u8,
+    }
+
+    let data: &[u8] = &[
+        7,   // Padding
+        17,  // X
+        117, // Y
+        0, 0, 0, 0, // Empty
+        // Extra bytes
+        0x1a, 0xc0, 0xca, 0xc0,
+    ];
+
+    let mut cursor = Cursor::new(data);
+    let result = Test::read_le(&mut cursor).unwrap();
+    assert_eq!(result, Test { x: 17, y: 117 });
+    let rest = cursor.read_le::<u32>().unwrap();
+    assert_eq!(rest, 0xc0cac01a);
 }
 
 #[test]
