@@ -39,6 +39,7 @@ pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) 
     StructGenerator::new(input, st)
         .read_fields(name, None)
         .initialize_value_with_assertions(None, &[])
+        .wrap_pad_size()
         .return_value()
         .finish()
 }
@@ -96,6 +97,26 @@ impl<'input> StructGenerator<'input> {
         self
     }
 
+    fn wrap_pad_size(mut self) -> Self {
+        if let Some(pad) = &self.st.pad_size_to {
+            let reader_var = self.input.stream_ident_or(READER);
+            let value = self.out;
+            self.out = quote! {
+                let #POS = #SEEK_TRAIT::stream_position(#reader_var)?;
+                #value
+                {
+                    let pad = (#pad) as i64;
+                    let size = (#SEEK_TRAIT::stream_position(#reader_var)? - #POS) as i64;
+                    if size < pad {
+                        #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(pad - size))?;
+                    }
+                }
+            };
+        }
+
+        self
+    }
+
     pub(super) fn read_fields(mut self, name: Option<&Ident>, variant_name: Option<&str>) -> Self {
         let prelude = get_prelude(self.input, name);
         let read_fields = self
@@ -107,21 +128,6 @@ impl<'input> StructGenerator<'input> {
             #prelude
             #(#read_fields)*
         };
-
-        if let Some(padding) = &self.st.pad_size_to {
-            let head: TokenStream = self.out;
-            let reader_var = self.input.stream_ident_or(READER);
-
-            self.out = quote! {
-                let __binrw_pad_struct_cursor = #SEEK_TRAIT::stream_position(#reader_var)?;
-                #head
-                let __binrw_pad_struct_size = (#SEEK_TRAIT::stream_position(#reader_var)? - __binrw_pad_struct_cursor) as i64;
-                let __binrw_pad_struct_padding = (#padding) as i64;
-                if __binrw_pad_struct_size < __binrw_pad_struct_padding {
-                    #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(__binrw_pad_struct_padding - __binrw_pad_struct_size))?;
-                }
-            };
-        }
 
         self
     }
