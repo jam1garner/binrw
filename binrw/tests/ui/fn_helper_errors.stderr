@@ -61,19 +61,19 @@ error: missing raw arguments parameter
    |                                  ^^^
 
 error: unexpected extra parameter after raw arguments
-  --> tests/ui/fn_helper_errors.rs:57:42
+  --> tests/ui/fn_helper_errors.rs:57:43
    |
-57 | fn fn_helper_extra_args_reader(arg0: (), arg1: (), ...) -> BinResult<()> {
-   |                                          ^^^^^^^^
+57 | fn fn_helper_extra_args_reader(_arg0: (), _arg1: (), ...) -> BinResult<()> {
+   |                                           ^^^^^^^^^
 
 error: unexpected extra parameter after raw arguments
-  --> tests/ui/fn_helper_errors.rs:62:53
+  --> tests/ui/fn_helper_errors.rs:62:55
    |
-62 | fn fn_helper_extra_args_writer(arg0: &(), arg1: (), arg2: (), ...) -> BinResult<()> {
-   |                                                     ^^^^^^^^
+62 | fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: (), ...) -> BinResult<()> {
+   |                                                       ^^^^^^^^^
 
 error: missing raw arguments parameter
-  --> tests/ui/fn_helper_errors.rs:67:44
+  --> tests/ui/fn_helper_errors.rs:67:45
    |
-67 | fn fn_helper_missing_args_writer(obj: &(), ...) -> BinResult<()> {
-   |                                            ^^^
+67 | fn fn_helper_missing_args_writer(_obj: &(), ...) -> BinResult<()> {
+   |                                             ^^^

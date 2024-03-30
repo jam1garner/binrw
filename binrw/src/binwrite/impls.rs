@@ -2,6 +2,7 @@ use crate::{
     io::{Seek, Write},
     BinResult, BinWrite, Endian,
 };
+#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
 use core::{
     any::Any,

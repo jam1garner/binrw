@@ -54,17 +54,17 @@ fn fn_helper_missing_args_reader(...) -> BinResult<()> {
 }
 
 #[parser]
-fn fn_helper_extra_args_reader(arg0: (), arg1: (), ...) -> BinResult<()> {
+fn fn_helper_extra_args_reader(_arg0: (), _arg1: (), ...) -> BinResult<()> {
     Ok(())
 }
 
 #[writer]
-fn fn_helper_extra_args_writer(arg0: &(), arg1: (), arg2: (), ...) -> BinResult<()> {
+fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: (), ...) -> BinResult<()> {
     Ok(())
 }
 
 #[writer]
-fn fn_helper_missing_args_writer(obj: &(), ...) -> BinResult<()> {
+fn fn_helper_missing_args_writer(_obj: &(), ...) -> BinResult<()> {
     Ok(())
 }
 

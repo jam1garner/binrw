@@ -3,6 +3,7 @@ use crate::{
     io::{Read, Seek, SeekFrom, Write},
     BinRead, BinResult, BinWrite, Endian, Error,
 };
+#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String};
 
 pub use crate::named_args::{

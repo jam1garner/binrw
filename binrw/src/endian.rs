@@ -1,6 +1,7 @@
 //! Type definitions for byte order handling.
 
 use crate::BinResult;
+#[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
 pub use Endian::{Big as BE, Little as LE};
 

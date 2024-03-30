@@ -1,6 +1,7 @@
 //! Type definitions for wrappers which parse interleaved data.
 
 use crate::{BinRead, BinResult, VecArgs};
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::fmt;
 

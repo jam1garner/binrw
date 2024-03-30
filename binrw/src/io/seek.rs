@@ -1,6 +1,7 @@
 //! Wrapper type that provides a fake [`Seek`](crate::io::Seek) implementation.
 
 use super::{Error, ErrorKind, SeekFrom};
+#[cfg(not(feature = "std"))]
 use alloc::{string::String, vec::Vec};
 
 /// A wrapper that provides a limited implementation of

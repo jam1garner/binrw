@@ -1,7 +1,7 @@
 use binrw::BinRead;
 
 #[derive(BinRead)]
-#[br(import(a: u8))]
+#[br(import(_a: u8))]
 struct Item;
 
 #[derive(BinRead)]

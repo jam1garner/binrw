@@ -5,6 +5,7 @@ use crate::{
     io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
 };
+#[cfg(not(feature = "std"))]
 use alloc::{string::String, vec, vec::Vec};
 use core::fmt::{self, Write as _};
 

@@ -2,5 +2,5 @@ error: `#[br(temp)]` is invalid without a corresponding `#[bw(ignore)]`, `#[bw(c
  --> tests/ui/binrw_br_temp_no_bw_ignore.rs:5:5
   |
 5 | /     #[br(temp)]
-6 | |     len: u32,
-  | |____________^
+6 | |     _len: u32,
+  | |_____________^

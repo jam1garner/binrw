@@ -2,10 +2,10 @@
 
 mod backtrace;
 
-use crate::{
-    alloc::{borrow::Cow, boxed::Box, string::String, vec, vec::Vec},
-    io, BinResult,
-};
+use crate::{io, BinResult};
+use alloc::borrow::Cow;
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub use backtrace::*;
 use core::{any::Any, fmt};
 

@@ -1,5 +1,7 @@
 use super::{ContextExt, CustomError, Error};
-use alloc::{borrow::Cow, boxed::Box, format, string::ToString, vec::Vec};
+use alloc::borrow::Cow;
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, format, string::ToString, vec::Vec};
 use core::fmt::{self, Write};
 
 #[cfg(feature = "verbose-backtrace")]

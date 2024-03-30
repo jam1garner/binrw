@@ -2,6 +2,7 @@ use crate::{
     io::{self, Read, Seek},
     BinRead, BinResult, Endian, Error, NamedArgs,
 };
+#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
 use core::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,

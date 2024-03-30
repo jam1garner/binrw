@@ -4,6 +4,7 @@ use crate::{
     io::{self, Read, Seek},
     BinRead, BinResult, Endian, Error,
 };
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::iter::from_fn;
 

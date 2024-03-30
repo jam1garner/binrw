@@ -1,7 +1,7 @@
 use binrw::binrw;
 
 #[binrw]
-#[br(import { a: u8 })]
+#[br(import { _a: u8 })]
 struct Item;
 
 #[binrw]

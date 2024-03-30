@@ -10,6 +10,7 @@
 //! [`BinWrite`]: crate::BinWrite
 
 use crate::Endian;
+#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
 

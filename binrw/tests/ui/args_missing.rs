@@ -4,7 +4,7 @@ use binrw::BinRead;
 struct NoDefault;
 
 #[derive(BinRead)]
-#[br(import(a: NoDefault))]
+#[br(import(_a: NoDefault))]
 struct Foo;
 
 #[derive(BinRead)]

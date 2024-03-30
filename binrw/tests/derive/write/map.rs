@@ -29,6 +29,7 @@ fn map_field() {
 
 #[test]
 fn map_field_code_coverage() {
+    #[allow(dead_code)]
     #[derive(BinWrite)]
     struct Test {
         #[bw(map = |&x| x as u64)]
@@ -92,6 +93,7 @@ fn map_repr_struct() {
 
 #[test]
 fn map_repr_struct_field() {
+    #[allow(dead_code)]
     #[derive(BinWrite, Debug)]
     #[bw(big)]
     struct Test {
@@ -117,7 +119,14 @@ fn try_map() {
 
     #[derive(BinWrite)]
     struct MyType {
-        #[bw(try_map = |&x| -> BinResult<i8> { x.try_into().map_err(|_| todo!()) })]
+        #[bw(try_map = |&x| { i8::try_from(x) })]
         value: u8,
     }
+
+    let mut x = Cursor::new(Vec::new());
+    MyType { value: 127 }.write_le(&mut x).unwrap();
+    assert_eq!(x.into_inner(), b"\x7f");
+
+    let mut x = Cursor::new(Vec::new());
+    MyType { value: 128 }.write_le(&mut x).unwrap_err();
 }
