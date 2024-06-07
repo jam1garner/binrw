@@ -30,12 +30,12 @@ usage() {
 }
 
 set_package_publish() {
-	sed -i '' -e "s/^\\(publish[[:space:]]*=[[:space:]]*\\).*$/\\1$1/" Cargo.toml
+	sed -i'' -e "s/^\\(publish[[:space:]]*=[[:space:]]*\\).*$/\\1$1/" Cargo.toml
 }
 
 set_package_version() {
-	sed -i '' -e "s/^\\(version[[:space:]]*=[[:space:]]*\\)\"[^\"]*\"/\\1\"$1\"/" Cargo.toml
-	sed -i '' -e "s/^\\(binrw_derive[[:space:]]*=.*version[[:space:]]*=[[:space:]]*\\)\"[^\"]*\"/\\1\"$1\"/" binrw/Cargo.toml
+	sed -i'' -e "s/^\\(version[[:space:]]*=[[:space:]]*\\)\"[^\"]*\"/\\1\"$1\"/" Cargo.toml
+	sed -i'' -e "s/^\\(binrw_derive[[:space:]]*=.*version[[:space:]]*=[[:space:]]*\\)\"[^\"]*\"/\\1\"$1\"/" binrw/Cargo.toml
 }
 
 if [ "${1-}" == "--help" ]; then
