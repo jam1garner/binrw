@@ -117,8 +117,8 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 | rw  | [`stream`](#stream-access-and-manipulation) | struct, non-unit enum, unit-like enum | Exposes the underlying <span class="br">read</span><span class="bw">write</span> stream.
 | r   | [`temp`](#temp) | field | Uses a field as a temporary variable. Only usable with the [`binread`](macro@crate::binread) attribute macro.
 | r   | [`try`](#try) | field | Tries to parse and stores the [`default`](core::default::Default) value for the type if parsing fails instead of returning an error.
-| rw  | [`try_calc`](#calculations) | field | Like `calc`, but returns a [`Result`](Result).
-| rw  | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`Result`](Result).
+| rw  | [`try_calc`](#calculations) | field | Like `calc`, but returns a [`Result`].
+| rw  | [`try_map`](#map) | all except unit variant | Like `map`, but returns a [`Result`].
 |  w  | [`write_with`](#custom-parserswriters) | field | Specifies a custom function for writing a field.
 
 [*]: #terminology
@@ -947,6 +947,8 @@ object.write(&mut output)
 
 <div class="bw">
 
+<div class="warning">
+
 **These directives can only be used with [`binwrite`](macro@crate::binwrite).
 They will not work with `#[derive(BinWrite)]`.**
 
@@ -954,6 +956,8 @@ They will not work with `#[derive(BinWrite)]`.**
 *before* other attributes like `#[derive(Debug)]`. Otherwise, the other
 attributes will generate code that references non-existent fields, and
 compilation will fail.**
+
+</div>
 </div>
 
 The `calc` and `try_calc` directives compute the value of a field instead of
@@ -1517,7 +1521,7 @@ if let binrw::Error::NoVariantMatch { pos } = error {
 
 For [`BinRead`](crate::BinRead), the `ignore` directive, and its alias
 `default`, sets the value of the field to its
-[`Default`](core::default::Default) instead of reading data from the reader:
+[`Default`] instead of reading data from the reader:
 
 ```text
 #[br(default)] or #[br(ignore)]
@@ -2663,12 +2667,16 @@ assert_eq!(out.into_inner(), b"\x01\x03\0\x04\x01");
 
 # Temp
 
+<div class="warning">
+
 **This directive can only be used with [`binread`](macro@crate::binread). It
 will not work with `#[derive(BinRead)]`.**
 
 **When using `#[br(temp)]`, the `#[binread]` attribute must be placed *before*
 other attributes like `#[derive(Debug)]`. Otherwise, the other attributes will
 generate code that references non-existent fields, and compilation will fail.**
+
+</div>
 
 The `temp` directive causes a field to be treated as a temporary variable
 instead of an actual field. The field will be removed from the struct
