@@ -1708,6 +1708,9 @@ object.write_le(&mut output)
 ```
 </div>
 
+Note the alternative approach for the enum variant selection is [`pre_assert`](#pre-assert) directive
+(where the [`argument`](#arguments)-based variant selection is supported).
+
 <div class="br">
 
 ## Errors
