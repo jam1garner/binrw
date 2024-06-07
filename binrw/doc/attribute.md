@@ -1597,6 +1597,9 @@ a magic number is matched, parsing begins with the first byte after the
 magic number in the data. When a magic number is not matched, an error is
 returned.
 
+To match enum variants based on more complex conditions, or from a magic value
+supplied as an [argument](#arguments), use [`pre_assert`](#pre-assert).
+
 ## Examples
 
 ### Using byte strings
