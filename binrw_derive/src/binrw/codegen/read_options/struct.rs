@@ -39,6 +39,7 @@ pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) 
     StructGenerator::new(input, st)
         .read_fields(name, None)
         .initialize_value_with_assertions(None, &[])
+        .wrap_pad_size()
         .return_value()
         .finish()
 }
@@ -92,6 +93,26 @@ impl<'input> StructGenerator<'input> {
             #head
             #(#assertions)*
         };
+
+        self
+    }
+
+    fn wrap_pad_size(mut self) -> Self {
+        if let Some(pad) = &self.st.pad_size_to {
+            let reader_var = self.input.stream_ident_or(READER);
+            let value = self.out;
+            self.out = quote! {
+                let #POS = #SEEK_TRAIT::stream_position(#reader_var)?;
+                #value
+                {
+                    let pad = (#pad) as i64;
+                    let size = (#SEEK_TRAIT::stream_position(#reader_var)? - #POS) as i64;
+                    if size < pad {
+                        #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(pad - size))?;
+                    }
+                }
+            };
+        }
 
         self
     }
