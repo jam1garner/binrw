@@ -52,7 +52,7 @@ impl BacktraceFrame {
                                 format!("{}{}", " ".repeat(spaces_to_add), line)
                             }
                         } else {
-                            line[min_whitespace..].to_owned()
+                            line.get(min_whitespace..).unwrap_or_default().to_owned()
                         };
 
                         (min_whitespace + 1, line)

@@ -294,6 +294,18 @@ fn no_seek_unit_enum() {
 }
 
 #[test]
+fn parse_backtrace_with_empty_comment_lines() {
+    #[derive(binrw::BinRead)]
+    pub struct Test {
+        /// Blank next line has no whitespace…
+
+        /// …but it is part of the same span, and needs to not crash the
+        /// backtrace formatter
+        _a: u32,
+    }
+}
+
+#[test]
 fn show_backtrace() {
     use alloc::borrow::Cow;
     use binrw::{io::Cursor, BinReaderExt};
