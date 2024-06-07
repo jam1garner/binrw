@@ -702,18 +702,18 @@ started.
 
 # Backtrace
 
-When an error is raised during parsing, BinRead forms a backtrace, bubbling the
+When an error is raised during parsing, `BinRead` forms a backtrace, bubbling the
 error upwards and attaching additional information (surrounding code, line numbers,
 messages, etc.) in order to aid in debugging.
 
 The `#[br(err_context(...))]` attribute can work in one of two ways:
 
 1. If the first (or only) item is a string literal, it will be a message format string,
-with any other arguments being used as arguments. This uses the same formatting as `format!`,
-`println!`, and other standard library formatters.
+   with any other arguments being used as arguments. This uses the same formatting as `format!`,
+   `println!`, and other standard library formatters.
 
 2. Otherwise, only a single argument is allowed, which will then be attached as a context
-type. This type must implement [`Display`](std::fmt::Display), [`Debug`], [`Send`], and [`Sync`].
+   type. This type must implement [`Display`](std::fmt::Display), [`Debug`], [`Send`], and [`Sync`].
 
 ## Example
 

@@ -255,7 +255,7 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         visit!(err);
     }
 
-    for context_expr in &field.err_context {
+    if let Some(context_expr) = &field.err_context {
         match context_expr {
             ErrContext::Context(expr) => visit!(expr.to_token_stream()),
             ErrContext::Format(fmt, exprs) => {

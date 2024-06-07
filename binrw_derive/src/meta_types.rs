@@ -29,6 +29,7 @@ type Fields<T> = Punctuated<T, Token![,]>;
 /// Takes two forms:
 /// * ident(expr)
 /// * ident = expr
+///
 /// both are always allowed
 pub(crate) type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
 
@@ -36,6 +37,7 @@ pub(crate) type MetaExpr<Keyword> = MetaValue<Keyword, Expr>;
 /// Takes two forms:
 /// * ident(ty)
 /// * ident = ty
+///
 /// both are always allowed
 pub(crate) type MetaType<Keyword> = MetaValue<Keyword, Type>;
 
@@ -43,6 +45,7 @@ pub(crate) type MetaType<Keyword> = MetaValue<Keyword, Type>;
 /// Takes two forms:
 /// * ident(ident)
 /// * ident = ident
+///
 /// both are always allowed
 pub(crate) type MetaIdent<Keyword> = MetaValue<Keyword, Ident>;
 
@@ -50,6 +53,7 @@ pub(crate) type MetaIdent<Keyword> = MetaValue<Keyword, Ident>;
 /// Takes two forms:
 /// * ident(lit)
 /// * ident = lit
+///
 /// both are always allowed
 pub(crate) type MetaLit<Keyword> = MetaValue<Keyword, Lit>;
 

@@ -194,7 +194,7 @@ See the [`BinRead`](BinRead#foreign-impls) and
 [`BinWrite`](BinWrite#foreign-impls) traits for the full list of built-in
 implementations.
 
-# no_std support
+# `no_std` support
 
-binrw supports no_std and includes a compatible subset of [`io`]
+binrw supports `no_std` and includes a compatible subset of [`io`]
 functionality. The [`alloc`] crate is required.
