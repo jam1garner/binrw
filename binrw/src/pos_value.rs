@@ -94,3 +94,21 @@ impl<U, T: PartialEq<U>> PartialEq<U> for PosValue<T> {
         self.val == *other
     }
 }
+
+impl<T: Default> Default for PosValue<T> {
+    fn default() -> Self {
+        Self {
+            val: Default::default(),
+            pos: Default::default(),
+        }
+    }
+}
+
+impl<T> From<T> for PosValue<T> {
+    fn from(val: T) -> Self {
+        Self {
+            val,
+            pos: Default::default(),
+        }
+    }
+}
