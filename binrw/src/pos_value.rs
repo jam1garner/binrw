@@ -1,10 +1,11 @@
 use crate::{
-    io::{Read, Seek},
-    BinRead, BinResult, Endian,
+    io::{Read, Seek, Write},
+    BinRead, BinResult, BinWrite, Endian,
 };
 use core::fmt;
 
 /// A wrapper that stores a value’s position alongside the value.
+/// Serializing a `PosValue` will ignore the `pos` field.
 ///
 /// # Examples
 ///
@@ -43,6 +44,19 @@ impl<T: BinRead> BinRead for PosValue<T> {
             pos,
             val: T::read_options(reader, endian, args)?,
         })
+    }
+}
+
+impl<T: BinWrite> BinWrite for PosValue<T> {
+    type Args<'a> = T::Args<'a>;
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        self.val.write_options(writer, endian, args)
     }
 }
 

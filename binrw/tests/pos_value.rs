@@ -1,17 +1,17 @@
 extern crate alloc;
 
 use alloc::format;
-use binrw::{io::Cursor, BinRead, BinReaderExt, PosValue};
+use binrw::{io::Cursor, BinRead, BinReaderExt, BinWrite, PosValue};
 
 #[test]
 fn pos_value() {
-    #[derive(BinRead)]
+    #[derive(BinRead, BinWrite)]
     struct MyType {
         a: u16,
         b: PosValue<u8>,
     }
 
-    let mut val = Cursor::new(b"\xFF\xFE\xFD").read_be::<MyType>().unwrap();
+    let mut val: MyType = Cursor::new(b"\xFF\xFE\xFD").read_be::<MyType>().unwrap();
     assert_eq!(val.a, 0xFFFE);
     assert_eq!(val.b.pos, 2);
     assert_eq!(*val.b, 0xFD);
@@ -23,4 +23,9 @@ fn pos_value() {
     let clone = val.b.clone();
     assert_eq!(*clone, *val.b);
     assert_eq!(clone.pos, val.b.pos);
+
+    let mut output = Vec::new();
+    val.write_be(&mut Cursor::new(&mut output)).unwrap();
+
+    assert_eq!(output, b"\xFF\xFE\x01");
 }
