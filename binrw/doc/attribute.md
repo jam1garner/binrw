@@ -2,9 +2,9 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 
 <style>
     .show-rw {
-        background: var(--color-background, #fff);
+        background: var(--main-background-color, #fff);
         border: thin solid #ddd;
-        box-shadow: -0.25rem 0.25rem 0 var(--color-background, #fff);
+        box-shadow: -0.25rem 0.25rem 0 var(--main-background-color, #fff);
         display: flex;
         list-style: none;
         margin: 0 0 -2.25rem auto;
@@ -16,12 +16,12 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
         z-index: 1;
     }
     .show-rw > legend {
-        background: var(--color-background, #fff);
+        background: var(--main-background-color, #fff);
         padding: 0 0.15rem;
     }
     .show-rw [for]::before {
         background-clip: content-box;
-        border: thin solid var(--color-standard, #000);
+        border: thin solid var(--main-color, #000);
         border-radius: 0.5em;
         content: '';
         display: inline-block;
@@ -41,7 +41,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
     #show_read:checked ~ .show-rw [for=show_read]::before,
     #show_write:checked ~ .show-rw [for=show_write]::before,
     #show_both:checked ~ .show-rw [for=show_both]::before {
-        background-color: var(--color-standard, #000);
+        background-color: var(--main-color, #000);
     }
     .br, .bw, .brw {
         display: contents;
@@ -52,9 +52,9 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
     .brw .example-wrap:last-child {
         margin-bottom: 10px;
     }
-    .br p:last-child,
-    .bw p:last-child,
-    .brw p:last-child {
+    .br > p:last-child,
+    .bw > p:last-child,
+    .brw > p:last-child {
         margin-bottom: .75em;
     }
     #show_both:checked ~ span.brw + span.br,
