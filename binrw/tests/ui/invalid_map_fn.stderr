@@ -1,5 +1,5 @@
 error[E0425]: cannot find value `does_not_exist` in this scope
- --> $DIR/invalid_map_fn.rs:5:16
+ --> tests/ui/invalid_map_fn.rs:6:16
   |
-5 |     #[br(map = does_not_exist)]
+6 |     #[br(map = does_not_exist)]
   |                ^^^^^^^^^^^^^^ not found in this scope
