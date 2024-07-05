@@ -54,7 +54,10 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
     }
     .br > p:last-child,
     .bw > p:last-child,
-    .brw > p:last-child {
+    .brw > p:last-child,
+    .br .warning,
+    .bw .warning,
+    .brw .warning {
         margin-bottom: .75em;
     }
     .docblock hr {
@@ -952,13 +955,16 @@ object.write(&mut output)
 
 <div class="bw">
 
-**These directives can only be used with [`binwrite`](macro@crate::binwrite).
-They will not work with `#[derive(BinWrite)]`.**
+<div class="warning">
 
-**When using these directives, the `#[binwrite]` attribute must be placed
+These directives can only be used with [`binwrite`](macro@crate::binwrite).
+They will not work with `#[derive(BinWrite)]`.
+
+When using these directives, the `#[binwrite]` attribute must be placed
 *before* other attributes like `#[derive(Debug)]`. Otherwise, the other
 attributes will generate code that references non-existent fields, and
-compilation will fail.**
+compilation will fail.
+</div>
 </div>
 
 The `calc` and `try_calc` directives compute the value of a field instead of
@@ -2671,12 +2677,15 @@ assert_eq!(out.into_inner(), b"\x01\x03\0\x04\x01");
 
 # Temp
 
-**This directive can only be used with [`binread`](macro@crate::binread). It
-will not work with `#[derive(BinRead)]`.**
+<div class="warning">
 
-**When using `#[br(temp)]`, the `#[binread]` attribute must be placed *before*
+This directive can only be used with [`binread`](macro@crate::binread). It
+will not work with `#[derive(BinRead)]`.
+
+When using `#[br(temp)]`, the `#[binread]` attribute must be placed *before*
 other attributes like `#[derive(Debug)]`. Otherwise, the other attributes will
-generate code that references non-existent fields, and compilation will fail.**
+generate code that references non-existent fields, and compilation will fail.
+</div>
 
 The `temp` directive causes a field to be treated as a temporary variable
 instead of an actual field. The field will be removed from the struct
