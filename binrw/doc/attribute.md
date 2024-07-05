@@ -57,6 +57,11 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
     .brw > p:last-child {
         margin-bottom: .75em;
     }
+    .docblock hr {
+        margin: 1em auto;
+        border: 0 solid;
+        border-top-width: thin;
+    }
     #show_both:checked ~ span.brw + span.br,
     #show_both:checked ~ span.brw + span.br + span.bw,
     #show_both:checked ~ * span.brw + span.br,
