@@ -86,12 +86,12 @@ fn enum_field_args() {
 
 #[test]
 fn enum_non_copy_args() {
-    #[derive(BinRead, Debug)]
+    #[derive(BinRead, Debug, PartialEq)]
     #[br(import(a: NonCopyArg))]
     enum Test {
         A {
             #[br(calc = a.0)]
-            _a: u8,
+            a: u8,
         },
         B {
             #[br(calc = a.0)]
@@ -101,6 +101,9 @@ fn enum_non_copy_args() {
 
     #[derive(Clone)]
     struct NonCopyArg(u8);
+
+    let result = Test::read_le_args(&mut Cursor::new(b""), (NonCopyArg(1),)).unwrap();
+    assert_eq!(result, Test::A { a: 1 });
 }
 
 #[test]
