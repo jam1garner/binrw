@@ -24,3 +24,17 @@ fn custom_writer() {
 
     assert_eq!(x.into_inner(), b"\x01abcd");
 }
+
+#[test]
+fn write_with_fn_once_closure_args() {
+    #[derive(BinWrite)]
+    #[bw(little)]
+    struct Test {
+        #[bw(args(1), write_with = |_, s, e, (a,): (u8,)| a.write_options(s, e, ()))]
+        a: u8,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    Test { a: 0 }.write(&mut x).unwrap();
+    assert_eq!(x.into_inner(), b"\x01");
+}

@@ -1042,6 +1042,18 @@ fn tuple_calc_temp_field() {
 }
 
 #[test]
+fn parse_with_fn_once_closure_args() {
+    #[derive(BinRead)]
+    #[br(little)]
+    struct Test {
+        #[br(args(1), parse_with = |_, _, (a,)| Ok(a))]
+        a: u8,
+    }
+    let result = Test::read(&mut Cursor::new(b"")).unwrap();
+    assert_eq!(result.a, 1);
+}
+
+#[test]
 fn no_clone_needed_for_parse_with() {
     #[binread]
     #[derive(Debug, Eq, PartialEq)]

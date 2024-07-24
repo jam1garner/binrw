@@ -297,7 +297,7 @@ impl<'a> StructFieldGenerator<'a> {
                 let ty = &self.field.ty;
                 quote! {
                     let #args = #WRITE_ARGS_TYPE_HINT::<#ty, _, _, _>(
-                        #WRITE_FUNCTION, #args_val
+                        &#WRITE_FUNCTION, #args_val
                     );
                     #out
                 }
