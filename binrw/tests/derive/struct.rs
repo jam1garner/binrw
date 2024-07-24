@@ -1057,7 +1057,7 @@ fn parse_with_fn_once_closure_args() {
 fn no_clone_needed_for_parse_with() {
     #[binread]
     #[derive(Debug, Eq, PartialEq)]
-    pub struct Test {
+    struct Test {
         foo: u8,
         #[br(parse_with = files_parser, args(&mut foo))]
         files: u8,
