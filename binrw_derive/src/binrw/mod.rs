@@ -21,7 +21,7 @@ pub(super) struct Options {
 }
 
 #[cfg_attr(coverage_nightly, coverage(off))]
-fn clean_attr(derive_input: &mut DeriveInput, binrw_input: &Option<Input>) {
+fn clean_attr(derive_input: &mut DeriveInput, binrw_input: Option<&Input>) {
     clean_struct_attrs(&mut derive_input.attrs);
 
     match &mut derive_input.data {
@@ -43,7 +43,7 @@ fn clean_attr(derive_input: &mut DeriveInput, binrw_input: &Option<Input>) {
 }
 
 #[cfg_attr(coverage_nightly, coverage(off))]
-fn clean_field_attrs(input: &Option<Input>, variant_index: usize, fields: &mut syn::Fields) {
+fn clean_field_attrs(input: Option<&Input>, variant_index: usize, fields: &mut syn::Fields) {
     if let Some(input) = input {
         let fields = match fields {
             syn::Fields::Named(fields) => &mut fields.named,
@@ -128,12 +128,12 @@ pub(super) fn derive_from_input(
 
         match &mut derive_input.data {
             syn::Data::Struct(st) => {
-                clean_field_attrs(&binrw_input, 0, &mut st.fields);
+                clean_field_attrs(binrw_input.as_ref(), 0, &mut st.fields);
             }
             syn::Data::Enum(en) => {
                 for (index, variant) in en.variants.iter_mut().enumerate() {
                     clean_struct_attrs(&mut variant.attrs);
-                    clean_field_attrs(&binrw_input, index, &mut variant.fields);
+                    clean_field_attrs(binrw_input.as_ref(), index, &mut variant.fields);
                 }
             }
             syn::Data::Union(union) => {
