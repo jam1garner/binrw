@@ -16,7 +16,7 @@ version.workspace = true
 
 [dependencies]
 array-init = "2.0.0"
-binrw_derive = { path = "../binrw_derive", version = "0.14.1-pre" }
+binrw_derive = { path = "../binrw_derive", version = "0.14.1" }
 bytemuck = "1.0.0"
 
 [dev-dependencies]
