@@ -90,6 +90,18 @@ impl<T: Read> Read for TakeSeek<T> {
 
 impl<T: Seek> Seek for TakeSeek<T> {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
+        let pos = match pos {
+            SeekFrom::End(end) => match self.end.checked_add_signed(end) {
+                Some(pos) => SeekFrom::Start(pos),
+                None => {
+                    return Err(super::Error::new(
+                        super::ErrorKind::InvalidInput,
+                        "invalid seek to a negative or overflowing position",
+                    ))
+                }
+            },
+            pos => pos,
+        };
         self.pos = self.inner.seek(pos)?;
         Ok(self.pos)
     }
