@@ -36,7 +36,7 @@ pub(crate) fn derive(mut derive_input: DeriveInput) -> proc_macro2::TokenStream 
 
     // Since temporary fields must be synchronised between binread and binwrite,
     // the same cleaning mechanism can be used as-if there was only one input
-    super::clean_attr(&mut derive_input, &binread_input.ok());
+    super::clean_attr(&mut derive_input, binread_input.ok().as_ref());
 
     quote!(
         #derive_input

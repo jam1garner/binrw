@@ -26,7 +26,7 @@ pub(super) struct Builder<'a> {
     pub(super) is_write: bool,
 }
 
-impl<'a> Builder<'a> {
+impl Builder<'_> {
     pub(super) fn generate(&self, define_result: bool) -> TokenStream {
         let builder_name = self.builder_name;
         let name = self.result_name;
