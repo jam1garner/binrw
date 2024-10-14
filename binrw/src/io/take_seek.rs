@@ -2,6 +2,7 @@
 //! the underlying reader.
 
 use super::{Read, Result, Seek, SeekFrom};
+use core::ops::Range;
 
 /// Read adapter which limits the bytes read from an underlying reader, with
 /// seek support.
@@ -13,8 +14,9 @@ use super::{Read, Result, Seek, SeekFrom};
 #[derive(Debug)]
 pub struct TakeSeek<T> {
     inner: T,
-    pos: u64,
-    end: u64,
+
+    /// The range that is allowed to read from inner.
+    inner_range: Range<u64>,
 }
 
 impl<T> TakeSeek<T> {
@@ -36,7 +38,9 @@ impl<T> TakeSeek<T> {
     pub fn into_inner(self) -> T {
         self.inner
     }
+}
 
+impl<T: Seek> TakeSeek<T> {
     /// Returns the number of bytes that can be read before this instance will
     /// return EOF.
     ///
@@ -44,12 +48,31 @@ impl<T> TakeSeek<T> {
     ///
     /// This instance may reach EOF after reading fewer bytes than indicated by
     /// this method if the underlying [`Read`] instance reaches EOF.
-    pub fn limit(&self) -> u64 {
-        self.end.saturating_sub(self.pos)
-    }
-}
+    ///
+    /// # Panics
+    ///
+    /// Panics if the inner stream returns an error from `stream_position`.
+    pub fn limit(&mut self) -> u64 {
+        let pos = self
+            .stream_position()
+            .expect("cannot get position for `limit`");
 
-impl<T: Seek> TakeSeek<T> {
+        let inner_pos = self
+            .inner_range
+            .start
+            .checked_add(pos)
+            .expect("start + pos to not overflow");
+
+        if self.inner_range.end <= inner_pos {
+            0
+        } else {
+            self.inner_range
+                .end
+                .checked_sub(inner_pos)
+                .expect("end - pos to not overflow")
+        }
+    }
+
     /// Sets the number of bytes that can be read before this instance will
     /// return EOF. This is the same as constructing a new `TakeSeek` instance,
     /// so the amount of bytes read and the previous limit value don’t matter
@@ -59,16 +82,15 @@ impl<T: Seek> TakeSeek<T> {
     ///
     /// Panics if the inner stream returns an error from `stream_position`.
     pub fn set_limit(&mut self, limit: u64) {
-        let pos = self
+        let inner_pos = self
             .inner
             .stream_position()
             .expect("cannot get position for `set_limit`");
-        self.pos = pos;
-        self.end = pos + limit;
+        self.inner_range = inner_pos..inner_pos + limit;
     }
 }
 
-impl<T: Read> Read for TakeSeek<T> {
+impl<T: Read + Seek> Read for TakeSeek<T> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         let limit = self.limit();
 
@@ -83,31 +105,49 @@ impl<T: Read> Read for TakeSeek<T> {
         #[allow(clippy::cast_possible_truncation)]
         let max = (buf.len() as u64).min(limit) as usize;
         let n = self.inner.read(&mut buf[0..max])?;
-        self.pos += n as u64;
         Ok(n)
     }
 }
 
 impl<T: Seek> Seek for TakeSeek<T> {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
-        let pos = match pos {
-            SeekFrom::End(end) => match self.end.checked_add_signed(end) {
-                Some(pos) => SeekFrom::Start(pos),
-                None => {
-                    return Err(super::Error::new(
-                        super::ErrorKind::InvalidInput,
-                        "invalid seek to a negative or overflowing position",
-                    ))
-                }
-            },
-            pos => pos,
+        let inner_pos = match pos {
+            SeekFrom::Start(offset) => self.inner_range.start.checked_add(offset),
+            SeekFrom::End(offset) => self.inner_range.end.checked_add_signed(offset),
+            SeekFrom::Current(offset) => self.inner.stream_position()?.checked_add_signed(offset),
         };
-        self.pos = self.inner.seek(pos)?;
-        Ok(self.pos)
+
+        let Some(inner_pos) = inner_pos else {
+            return Err(super::Error::new(
+                super::ErrorKind::InvalidData,
+                "invalid seek to a negative or overflowing position",
+            ));
+        };
+
+        if inner_pos < self.inner_range.start {
+            return Err(super::Error::new(
+                super::ErrorKind::InvalidData,
+                "invalid seek to a negative position",
+            ));
+        }
+
+        let inner_pos = self.inner.seek(SeekFrom::Start(inner_pos))?;
+
+        Ok(inner_pos
+            .checked_sub(self.inner_range.start)
+            .expect("Can't happen"))
     }
 
     fn stream_position(&mut self) -> Result<u64> {
-        Ok(self.pos)
+        let inner_pos = self.inner.stream_position()?;
+
+        match inner_pos.checked_sub(self.inner_range.start) {
+            Some(pos) => Ok(pos),
+            None => Err(super::Error::new(
+                super::ErrorKind::InvalidData,
+                "cursor is out of bounds",
+            )),
+        }
     }
 }
 
@@ -125,14 +165,13 @@ impl<T: Read + Seek> TakeSeekExt for T {
     where
         Self: Sized,
     {
-        let pos = self
+        let start = self
             .stream_position()
             .expect("cannot get position for `take_seek`");
 
         TakeSeek {
             inner: self,
-            pos,
-            end: pos + limit,
+            inner_range: start..start + limit,
         }
     }
 }
