@@ -383,7 +383,7 @@ impl<const WRITE: bool> FromInput<UnitEnumAttr<WRITE>> for UnitOnlyEnum {
 
     fn push_field(&mut self, field: Self::Field) -> syn::Result<()> {
         if let (Some(repr), Some(magic)) = (self.map.as_repr(), field.magic.as_ref()) {
-            let magic_span = magic.span();
+            let magic_span = magic.span;
             let span = magic_span.join(repr.span()).unwrap_or(magic_span);
             Err(syn::Error::new(
                 span,

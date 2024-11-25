@@ -39,7 +39,11 @@ pub(crate) fn derive_from_imports(
         result_name,
         fields: &args.map(Into::into).collect::<Vec<_>>(),
         generics: lifetime
-            .map(|lifetime| [syn::GenericParam::Lifetime(syn::LifetimeDef::new(lifetime))])
+            .map(|lifetime| {
+                [syn::GenericParam::Lifetime(syn::LifetimeParam::new(
+                    lifetime,
+                ))]
+            })
             .as_ref()
             .map_or(&[], |generics| generics.as_slice()),
         vis,
@@ -60,7 +64,7 @@ fn from_input(input: DeriveInput) -> syn::Result<TokenStream> {
             .into_iter()
             .map(|field| {
                 let attrs = field.attrs.iter().filter_map(|attr| {
-                    attr.path
+                    attr.path()
                         .get_ident()
                         .filter(|ident| *ident == "named_args")
                         .map(|_| attr.parse_args::<NamedArgAttr>())
@@ -207,7 +211,7 @@ mod tests {
         }
     });
 
-    try_error!(missing_default_value: "expected expression" {
+    try_error!(missing_default_value: "unexpected end of input, expected an expression" {
         struct Foo<A> {
             #[named_args(default = )]
             a: A,

@@ -24,8 +24,8 @@ impl PassedArgs {
     pub(crate) fn span(&self) -> Option<Span> {
         match self {
             PassedArgs::None => None,
-            PassedArgs::Tuple(s) => Some(s.span()),
-            PassedArgs::List(s) | PassedArgs::Named(s) => Some(s.span()),
+            PassedArgs::Tuple(s) => Some(s.span),
+            PassedArgs::List(s) | PassedArgs::Named(s) => Some(s.span),
         }
     }
 }

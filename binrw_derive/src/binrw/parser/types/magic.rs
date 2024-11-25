@@ -93,6 +93,7 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
                     "expected byte string, byte, float, or int",
                 ))
             }
+            _ => return Err(syn::Error::new(value.span(), "unexpected literal")),
         };
 
         Ok(Self::new(

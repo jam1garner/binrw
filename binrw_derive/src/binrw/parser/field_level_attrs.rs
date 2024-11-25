@@ -147,7 +147,7 @@ impl StructField {
 
         if self.do_try.is_some() && self.generated_value() {
             //TODO: join with span of read mode somehow
-            let span = self.do_try.as_ref().unwrap().span();
+            let span = self.do_try.as_ref().unwrap().span;
             combine_error(
                 &mut all_errors,
                 syn::Error::new(
@@ -176,14 +176,14 @@ impl StructField {
             let (span, repr) = match &self.args {
                 PassedArgs::Named(_) | PassedArgs::None => unreachable!(),
                 PassedArgs::List(list) => (
-                    list.span(),
+                    list.span,
                     format!(
                         "({},{})",
                         list.first().map_or_else(<_>::default, ToString::to_string),
                         if list.len() > 1 { " ..." } else { "" }
                     ),
                 ),
-                PassedArgs::Tuple(raw) => (raw.span(), raw.to_string()),
+                PassedArgs::Tuple(raw) => (raw.span, raw.to_string()),
             };
 
             for (used, name) in [

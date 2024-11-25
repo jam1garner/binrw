@@ -87,14 +87,19 @@ pub(super) fn derive_from_attribute(
     let mut mixed_rw = false;
     let opposite_attr = if write { "binread" } else { "binwrite" };
     for attr in &mut derive_input.attrs {
-        if let Some(seg) = attr.path.segments.last() {
+        if let Some(seg) = attr.path().segments.last() {
             let ident = &seg.ident;
             if ident == "binrw" || ident == "binread" || ident == "binwrite" {
-                attr.tokens = quote! { (ignore) };
-
                 if ident == "binrw" || ident == opposite_attr {
                     mixed_rw = true;
                 }
+
+                let meta = syn::Meta::List(syn::MetaList {
+                    path: attr.path().clone(),
+                    delimiter: syn::MacroDelimiter::Paren(syn::token::Paren::default()),
+                    tokens: quote! { ignore },
+                });
+                attr.meta = meta;
             }
         }
     }
@@ -151,11 +156,11 @@ pub(super) fn derive_from_input(
 }
 
 fn is_binread_attr(attr: &syn::Attribute) -> bool {
-    attr.path.is_ident("br") || attr.path.is_ident("brw")
+    attr.path().is_ident("br") || attr.path().is_ident("brw")
 }
 
 fn is_binwrite_attr(attr: &syn::Attribute) -> bool {
-    attr.path.is_ident("bw") || attr.path.is_ident("brw")
+    attr.path().is_ident("bw") || attr.path().is_ident("brw")
 }
 
 fn parse(

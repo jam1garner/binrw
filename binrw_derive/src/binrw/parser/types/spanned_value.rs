@@ -4,7 +4,7 @@ use proc_macro2::Span;
 #[derive(Debug, Clone)]
 pub(crate) struct SpannedValue<T> {
     value: T,
-    span: Span,
+    pub span: Span,
 }
 
 impl<T> SpannedValue<T> {
@@ -29,14 +29,6 @@ impl<T> core::ops::Deref for SpannedValue<T> {
 
     fn deref(&self) -> &T {
         &self.value
-    }
-}
-
-// It is not possible to implement this *and* ToTokens because syn has a generic
-// implementation of Spanned for all ToTokens
-impl<T> syn::spanned::Spanned for SpannedValue<T> {
-    fn span(&self) -> Span {
-        self.span
     }
 }
 

@@ -7,7 +7,7 @@ use core::{
     ops::Range,
 };
 use owo_colors::{styles::BoldDisplay, XtermColors};
-use proc_macro2::{Span, TokenTree};
+use proc_macro2::Span;
 use quote::ToTokens;
 use std::collections::HashMap;
 use syn::{
@@ -135,13 +135,13 @@ fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
         // |____|______ path and pound_token
         //
         syntax_info.highlight_color(attr.pound_token.span(), Color::Keyword);
-        syntax_info.highlight_color(attr.path.span(), Color::Keyword);
+        syntax_info.highlight_color(attr.path().span(), Color::Keyword);
 
         // #[...]
         //  ^   ^
         //  |___|___ brackets
         //
-        let span = attr.bracket_token.span;
+        let span = attr.bracket_token.span.join();
         let start = start(span);
         let end = end(span);
 
@@ -158,9 +158,9 @@ fn highlight_attributes(attrs: &[syn::Attribute], visit: &mut Visitor) {
         //       ^   ^
         //       |___|___ parens
         //
-        if let Some(TokenTree::Group(group)) = attr.tokens.clone().into_iter().next() {
-            syntax_info.highlight_color(group.span_open(), Color::Keyword);
-            syntax_info.highlight_color(group.span_close(), Color::Keyword);
+        if let syn::Meta::List(l) = &attr.meta {
+            syntax_info.highlight_color(l.delimiter.span().open(), Color::Keyword);
+            syntax_info.highlight_color(l.delimiter.span().close(), Color::Keyword);
         }
     }
 }
@@ -291,7 +291,7 @@ impl<'ast> Visit<'ast> for Visitor {
                     Lit::Str(_) | Lit::ByteStr(_) => Color::String,
                     Lit::Byte(_) | Lit::Char(_) => Color::Char,
                     Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) => Color::Number,
-                    Lit::Verbatim(_) => return,
+                    _ => return,
                 },
             ));
         }
