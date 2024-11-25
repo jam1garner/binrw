@@ -16,6 +16,10 @@ impl<T> SpannedValue<T> {
     pub(crate) fn into_value(self) -> T {
         self.value
     }
+
+    pub(crate) fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl<T> AsRef<T> for SpannedValue<T> {
@@ -29,14 +33,6 @@ impl<T> core::ops::Deref for SpannedValue<T> {
 
     fn deref(&self) -> &T {
         &self.value
-    }
-}
-
-// It is not possible to implement this *and* ToTokens because syn has a generic
-// implementation of Spanned for all ToTokens
-impl<T> syn::spanned::Spanned for SpannedValue<T> {
-    fn span(&self) -> Span {
-        self.span
     }
 }
 

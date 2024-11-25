@@ -143,7 +143,7 @@ impl<Keyword: Parse, ItemType: Parse> Parse for MetaList<Keyword, ItemType> {
         parenthesized!(content in input);
         Ok(MetaList {
             ident,
-            fields: content.parse_terminated::<_, Token![,]>(ItemType::parse)?,
+            fields: content.parse_terminated(ItemType::parse, Token![,])?,
         })
     }
 }
@@ -184,7 +184,7 @@ where
             Ok(Self {
                 ident,
                 list: Enclosure::Paren {
-                    fields: content.parse_terminated::<_, Token![,]>(ParenItemType::parse)?,
+                    fields: content.parse_terminated(ParenItemType::parse, Token![,])?,
                 },
             })
         } else if lookahead.peek(token::Brace) {
@@ -192,7 +192,7 @@ where
             Ok(Self {
                 ident,
                 list: Enclosure::Brace {
-                    fields: content.parse_terminated::<_, Token![,]>(BraceItemType::parse)?,
+                    fields: content.parse_terminated(BraceItemType::parse, Token![,])?,
                 },
             })
         } else {
@@ -268,9 +268,7 @@ impl<P> MetaAttrList<P> {
 
 impl<P: Parse> Parse for MetaAttrList<P> {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let content;
-        parenthesized!(content in input);
-        Ok(MetaAttrList(Fields::parse_terminated(&content)?))
+        Ok(MetaAttrList(Fields::parse_terminated(input)?))
     }
 }
 
@@ -458,19 +456,13 @@ mod tests {
     try_parse_fail!(ident_type_missing_colon, "expected `:`", IdentTypeMaybeDefault, { foo u8 });
     try_parse_fail!(ident_type_missing_ident, "expected identifier", IdentTypeMaybeDefault, { :u8 });
 
-    try_parse!(meta_attr_list, MetaAttrListTest, { (1u8, 2u8, 3u8) });
-    try_parse!(meta_attr_list_empty, MetaAttrListTest, { () });
+    try_parse!(meta_attr_list, MetaAttrListTest, { 1u8, 2u8, 3u8 });
+    try_parse!(meta_attr_list_empty, MetaAttrListTest, {});
     try_parse_fail!(
         meta_attr_list_wrong_type,
         "expected literal",
         MetaAttrListTest,
-        { (i32) }
-    );
-    try_parse_fail!(
-        meta_attr_list_confused_as_list,
-        "expected parentheses",
-        MetaAttrListTest,
-        { wrong(i32) }
+        { i32 }
     );
 
     #[test]
@@ -482,7 +474,7 @@ mod tests {
             Lit::new(proc_macro2::Literal::u8_suffixed(3)),
         ];
 
-        let value = syn::parse2::<MetaAttrListTest>(quote::quote! { (1u8, 2u8, 3u8) }).unwrap();
+        let value = syn::parse2::<MetaAttrListTest>(quote::quote! { 1u8, 2u8, 3u8 }).unwrap();
         assert_eq!(expected, value.into_iter().collect::<Vec<_>>()[..]);
     }
 }
