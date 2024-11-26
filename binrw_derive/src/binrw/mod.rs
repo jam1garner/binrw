@@ -180,7 +180,7 @@ fn parse(
 #[cfg_attr(coverage_nightly, coverage(off))]
 #[test]
 fn derive_binread_code_coverage_for_tool() {
-    use runtime_macros_derive::emulate_derive_expansion_fallible;
+    use runtime_macros::emulate_derive_macro_expansion;
     use std::{env, fs};
 
     let derive_tests_folder = env::current_dir()
@@ -195,16 +195,19 @@ fn derive_binread_code_coverage_for_tool() {
         let entry = entry.unwrap();
         if entry.file_type().unwrap().is_file() {
             let file = fs::File::open(entry.path()).unwrap();
-            if emulate_derive_expansion_fallible(file, "BinRead", |input| {
-                parse(
-                    &input,
-                    Options {
-                        derive: true,
-                        write: false,
-                    },
-                )
-                .1
-            })
+            if emulate_derive_macro_expansion(
+                file,
+                &[("BinRead", |input| {
+                    parse(
+                        &syn::parse2::<syn::DeriveInput>(input).unwrap(),
+                        Options {
+                            derive: true,
+                            write: false,
+                        },
+                    )
+                    .1
+                })],
+            )
             .is_err()
             {
                 run_success = false;
@@ -219,7 +222,7 @@ fn derive_binread_code_coverage_for_tool() {
 #[cfg_attr(coverage_nightly, coverage(off))]
 #[test]
 fn derive_binwrite_code_coverage_for_tool() {
-    use runtime_macros_derive::emulate_derive_expansion_fallible;
+    use runtime_macros::emulate_derive_macro_expansion;
     use std::{env, fs};
 
     let derive_tests_folder = env::current_dir()
@@ -235,16 +238,19 @@ fn derive_binwrite_code_coverage_for_tool() {
         let entry = entry.unwrap();
         if entry.file_type().unwrap().is_file() {
             let file = fs::File::open(entry.path()).unwrap();
-            if emulate_derive_expansion_fallible(file, "BinWrite", |input| {
-                parse(
-                    &input,
-                    Options {
-                        derive: true,
-                        write: true,
-                    },
-                )
-                .1
-            })
+            if emulate_derive_macro_expansion(
+                file,
+                &[("BinWrite", |input| {
+                    parse(
+                        &syn::parse2::<syn::DeriveInput>(input).unwrap(),
+                        Options {
+                            derive: true,
+                            write: true,
+                        },
+                    )
+                    .1
+                })],
+            )
             .is_err()
             {
                 run_success = false;

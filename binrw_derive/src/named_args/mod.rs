@@ -153,9 +153,15 @@ mod kw {
 #[cfg_attr(coverage_nightly, coverage(off))]
 #[test]
 fn derive_named_args_code_coverage_for_tool() {
-    use runtime_macros_derive::emulate_derive_expansion_fallible;
+    use runtime_macros::emulate_derive_macro_expansion;
     let file = std::fs::File::open("../binrw/tests/named_args.rs").unwrap();
-    emulate_derive_expansion_fallible(file, "NamedArgs", |input| derive_from_input(input)).unwrap();
+    emulate_derive_macro_expansion(
+        file,
+        &[("NamedArgs", |input| {
+            derive_from_input(syn::parse2::<syn::DeriveInput>(input).unwrap())
+        })],
+    )
+    .unwrap();
 }
 
 #[cfg(test)]
