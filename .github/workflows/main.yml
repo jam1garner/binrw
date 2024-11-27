@@ -99,18 +99,16 @@ jobs:
           --no-report
       - name: Show coverage results
         run: >
-          cargo llvm-cov --doctests
+          cargo llvm-cov report --doctests
           --ignore-filename-regex 'binrw/(tests|src/docs)'
-          --no-run
       # https://github.com/actions/runner/issues/520
       - name: Determine whether codecov.io secret is available
         id: has_codecov
         run: echo 'result=${{ secrets.CODECOV_TOKEN }}' >> $GITHUB_OUTPUT
       - name: Generate coverage file
         run: >
-          cargo llvm-cov --doctests
+          cargo llvm-cov report --doctests
           --ignore-filename-regex 'binrw/(tests|src/docs)'
-          --no-run
           --lcov --output-path lcov.info
         if: steps.has_codecov.outputs.result != 0
       - name: Upload to codecov.io
