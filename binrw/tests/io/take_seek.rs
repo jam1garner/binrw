@@ -4,6 +4,7 @@ use binrw::io::{Cursor, Read, Seek, SeekFrom, TakeSeekExt};
 #[test]
 fn take_seek() {
     let data = &mut Cursor::new(b"hello world".to_vec());
+    let data_size = u64::try_from(data.get_ref().len()).unwrap();
     let mut buf = [0; 5];
     let mut take = data.take_seek(6);
 
@@ -98,6 +99,14 @@ fn take_seek() {
 
     take.seek(SeekFrom::End(-5))
         .expect_err("out-of-range `SeekFrom::End` backward seek should fail");
+
+    take.set_limit(data_size + 1);
+    take.seek(SeekFrom::End(-1)).unwrap();
+    assert_eq!(
+        take.read(&mut buf).unwrap(),
+        1,
+        "`SeekFrom::End` did not bound to the true end of the stream"
+    );
 
     take.seek(SeekFrom::Start(0)).unwrap();
     take.set_limit(10);
