@@ -294,6 +294,7 @@ fn no_seek_unit_enum() {
 }
 
 #[test]
+#[allow(clippy::empty_line_after_doc_comments)]
 fn parse_backtrace_with_empty_comment_lines() {
     #[derive(binrw::BinRead)]
     pub struct Test {
