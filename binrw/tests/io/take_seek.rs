@@ -71,12 +71,12 @@ fn take_seek() {
     assert_eq!(
         take.read(&mut buf).unwrap(),
         5,
-        "`read` did not read enough after `SeemFrom::Start`"
+        "`read` did not read enough after `SeekFrom::Start`"
     );
     assert_eq!(
         take.read(&mut buf).unwrap(),
         5,
-        "`read` did not read enough after `SeemFrom::Start`"
+        "`read` did not read enough after `SeekFrom::Start`"
     );
     assert_eq!(
         take.read(&mut buf).unwrap(),
