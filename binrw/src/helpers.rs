@@ -287,6 +287,45 @@ where
 /// Reading an object containing header data followed by body data:
 ///
 /// ```
+/// # // This test is checking to make sure that borrowed arguments work.
+/// #
+/// # use binrw::{args, BinRead, BinReaderExt, helpers::args_iter, io::Cursor};
+/// #[derive(BinRead)]
+/// #[br(big)]
+/// struct Header {
+///     count: u16,
+///
+///     #[br(args { count: count.into() })]
+///     sizes: Vec<u16>,
+/// }
+///
+/// #[derive(BinRead)]
+/// # #[derive(Debug, Eq, PartialEq)]
+/// #[br(big, import_raw(size: &u16))]
+/// struct Segment(
+///     #[br(count = *size)]
+///     Vec<u8>
+/// );
+///
+/// #[derive(BinRead)]
+/// #[br(big)]
+/// struct Object {
+///     header: Header,
+///     #[br(parse_with = args_iter(&header.sizes))]
+///     segments: Vec<Segment>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\0\x02\0\x01\0\x02\x03\x04\x05");
+/// # let x = Object::read(&mut x).unwrap();
+/// # assert_eq!(x.segments, &[Segment(vec![3]), Segment(vec![4, 5])]);
+/// ```
+///
+/// The same, but mapping the arguments:
+///
+/// ```
+/// # // This test is making sure that mapping arguments works and demonstrates
+/// # // the required way to annotate a closure with the `args` helper.
+/// #
 /// # use binrw::{args, BinRead, BinReaderExt, helpers::args_iter, io::Cursor};
 /// #[derive(BinRead)]
 /// #[br(big)]
@@ -311,15 +350,22 @@ where
 /// # let x = Object::read(&mut x).unwrap();
 /// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
 /// ```
-pub fn args_iter<R, T, Arg, Ret, It>(it: It) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Ret>
+pub fn args_iter<'a, R, T, Arg, Ret, It>(
+    it: It,
+) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Ret>
 where
-    T: for<'a> BinRead<Args<'a> = Arg>,
+    T: BinRead<Args<'a> = Arg>,
     R: Read + Seek,
-    Arg: Clone,
     Ret: FromIterator<T>,
     It: IntoIterator<Item = Arg>,
 {
-    args_iter_with(it, T::read_options)
+    // For an unknown reason (possibly related to the note in the compiler error
+    // that says “due to current limitations in the borrow checker”), trying to
+    // pass `T::read_options` directly does not work, but passing a closure like
+    // this works just fine
+    args_iter_with(it, |reader, options, arg| {
+        T::read_options(reader, options, arg)
+    })
 }
 
 /// Creates a parser that uses a given function to build a collection, using
@@ -365,7 +411,6 @@ pub fn args_iter_with<Reader, T, Arg, Ret, It, ReadFn>(
 ) -> impl FnOnce(&mut Reader, Endian, ()) -> BinResult<Ret>
 where
     Reader: Read + Seek,
-    Arg: Clone,
     Ret: FromIterator<T>,
     It: IntoIterator<Item = Arg>,
     ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
