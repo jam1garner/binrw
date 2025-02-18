@@ -195,7 +195,7 @@ where
 /// # Errors
 ///
 /// If reading fails for a reason other than reaching the end of the input, an
-/// [`Error`] variant will be returned.
+/// [`crate::Error`] variant will be returned.
 ///
 /// # Examples
 ///
@@ -236,7 +236,7 @@ where
 /// # Errors
 ///
 /// If reading fails for a reason other than reaching the end of the input, an
-/// [`Error`] variant will be returned.
+/// [`crate::Error`] variant will be returned.
 ///
 /// # Examples
 ///
