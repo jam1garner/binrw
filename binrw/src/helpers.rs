@@ -450,9 +450,11 @@ where
     T: for<'a> BinRead<Args<'a> = Arg>,
     R: Read + Seek,
     Arg: Clone,
-    Ret: FromIterator<T> + 'static,
+    Ret: FromIterator<T>,
 {
-    count_with(n, T::read_options)
+    move |reader, endian, arg| {
+        T::read_options_count(reader, endian, arg, n).map(|v| v.into_iter().collect())
+    }
 }
 
 /// Creates a parser that uses a given function to read N items into a
@@ -492,34 +494,12 @@ where
     R: Read + Seek,
     Arg: Clone,
     ReadFn: Fn(&mut R, Endian, Arg) -> BinResult<T>,
-    Ret: FromIterator<T> + 'static,
+    Ret: FromIterator<T>,
 {
     move |reader, endian, args| {
-        let mut container = core::iter::empty::<T>().collect::<Ret>();
-
-        vec_fast_int!(try (i8 i16 u16 i32 u32 i64 u64 i128 u128) using (container, reader, endian, n) else {
-            // This extra branch for `Vec<u8>` makes it faster than
-            // `vec_fast_int`, but *only* because `vec_fast_int` is not allowed
-            // to use unsafe code to eliminate the unnecessary zero-fill.
-            // Otherwise, performance would be identical and it could be
-            // deleted.
-            if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
-                bytes.reserve_exact(n);
-                let byte_count = reader
-                    .take(n.try_into().map_err(not_enough_bytes)?)
-                    .read_to_end(bytes)?;
-
-                if byte_count == n {
-                    Ok(container)
-                } else {
-                    Err(not_enough_bytes(()))
-                }
-            } else {
-                core::iter::repeat_with(|| read(reader, endian, args.clone()))
-                .take(n)
-                .collect()
-            }
-        })
+        core::iter::repeat_with(|| read(reader, endian, args.clone()))
+            .take(n)
+            .collect()
     }
 }
 
@@ -602,58 +582,9 @@ pub fn write_u24(value: &u32) -> binrw::BinResult<()> {
     writer.write_all(&buf[range]).map_err(Into::into)
 }
 
-fn not_enough_bytes<T>(_: T) -> Error {
+pub(crate) fn not_enough_bytes<T>(_: T) -> Error {
     Error::Io(io::Error::new(
         io::ErrorKind::UnexpectedEof,
         "not enough bytes in reader",
     ))
 }
-
-macro_rules! vec_fast_int {
-    (try ($($Ty:ty)+) using ($list:expr, $reader:expr, $endian:expr, $count:expr) else { $($else:tt)* }) => {
-        $(if let Some(list) = <dyn core::any::Any>::downcast_mut::<Vec<$Ty>>(&mut $list) {
-            let mut start = 0;
-            let mut remaining = $count;
-            // Allocating and reading from the source in chunks is done to keep
-            // a bad `count` from causing huge memory allocations that are
-            // doomed to fail
-            while remaining != 0 {
-                // Using a similar strategy as std `default_read_to_end` to
-                // leverage the memory growth strategy of the underlying Vec
-                // implementation (in std this will be exponential) using a
-                // minimum byte allocation
-                const GROWTH: usize = 32 / core::mem::size_of::<$Ty>();
-                list.reserve(remaining.min(GROWTH.max(1)));
-
-                let items_to_read = remaining.min(list.capacity() - start);
-                let end = start + items_to_read;
-
-                // In benchmarks, this resize decreases performance by 27–40%
-                // relative to using `unsafe` to write directly to uninitialised
-                // memory, but nobody ever got fired for buying IBM
-                list.resize(end, 0);
-                $reader.read_exact(&mut bytemuck::cast_slice_mut::<_, u8>(&mut list[start..end]))?;
-
-                remaining -= items_to_read;
-                start += items_to_read;
-            }
-
-            if
-                core::mem::size_of::<$Ty>() != 1
-                && (
-                    (cfg!(target_endian = "big") && $endian == crate::Endian::Little)
-                    || (cfg!(target_endian = "little") && $endian == crate::Endian::Big)
-                )
-            {
-                for value in list.iter_mut() {
-                    *value = value.swap_bytes();
-                }
-            }
-            Ok($list)
-        } else)* {
-            $($else)*
-        }
-    }
-}
-
-use vec_fast_int;

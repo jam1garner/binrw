@@ -192,6 +192,61 @@ pub trait BinRead: Sized {
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self>;
+
+    /// Read `count` items of `Self` from the reader using the given [`Endian`] and arguments
+    ///
+    /// A vehicle for optimizations of types that can easily be read many-at-a-time.
+    /// For example, the integral types {i,u}{8,16,32,64,128}.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use binrw::{io::{Read, Seek}, BinRead, BinResult, Endian};
+    /// struct CustomU8(u8);
+    ///
+    /// impl BinRead for CustomU8 {
+    ///     type Args<'a> = <u8 as BinRead>::Args<'a>;
+    ///
+    ///     fn read_options<R: Read + Seek>(
+    ///         reader: &mut R,
+    ///         endian: binrw::Endian,
+    ///         args: Self::Args<'_>,
+    ///     ) -> BinResult<Self> {
+    ///         u8::read_options(reader, endian, args).map(CustomU8)
+    ///     }
+    ///
+    ///     fn read_options_count<'a, R>(
+    ///         reader: &mut R,
+    ///         endian: Endian,
+    ///         args: Self::Args<'a>,
+    ///         count: usize,
+    ///     ) -> BinResult<Vec<Self>>
+    ///     where
+    ///         R: Read + Seek,
+    ///         Self::Args<'a>: Clone,
+    ///     {
+    ///         u8::read_options_count(reader, endian, args, count).map(|c| c.into_iter().map(CustomU8).collect())
+    ///     }
+    /// }
+    /// ```
+    fn read_options_count<'a, R>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args<'a>,
+        count: usize,
+    ) -> BinResult<Vec<Self>>
+    where
+        R: Read + Seek,
+        Self::Args<'a>: Clone,
+    {
+        core::iter::repeat_with(|| Self::read_options(reader, endian, args.clone()))
+            .take(count)
+            .collect()
+    }
 }
 
 /// Extension methods for reading [`BinRead`] objects directly from a reader.
