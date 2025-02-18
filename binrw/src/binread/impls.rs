@@ -263,7 +263,6 @@ impl<B, const N: usize> BinRead for [B; N]
 where
     B: BinRead,
     for<'a> B::Args<'a>: Clone,
-    [B; N]: for<'b> TryFrom<&'b [B]>,
 {
     type Args<'a> = B::Args<'a>;
 
@@ -272,17 +271,16 @@ where
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        // Not a fan of this. Is there a better signature for read_options_count
+        // Is there a better signature for read_options_count
         // that could handle arrays in a nicer fashion, without compromising
         // ergonomics too much?
         let pos = reader.stream_position()?;
         BinRead::read_options_count(reader, endian, args, N).and_then(|v| {
-            Self::try_from(&v).map_err(|_e| Error::AssertFail {
+            array_init::from_iter(v).ok_or_else(|| Error::AssertFail {
                 pos,
-                message: "Unable to turn slice into array".to_string(),
+                message: "Unable to turn vec into array".to_string(),
             })
         })
-        //array_init::try_array_init(|_| BinRead::read_options(reader, endian, args.clone()))
     }
 }
 
