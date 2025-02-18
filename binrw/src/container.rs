@@ -8,11 +8,19 @@ pub trait Container: Sized + IntoIterator {
     type Count;
 
     /// naive
+    ///
+    /// # Errors
+    ///
+    /// If `f` returns an error, the error will be returned
     fn new_naive<Fun, Error>(count: Self::Count, f: Fun) -> Result<Self, Error>
     where
         Fun: FnMut() -> Result<Self::Item, Error>;
 
     /// smart
+    ///
+    /// # Errors
+    ///
+    /// If `f` returns an error, the error will be returned
     fn new_smart<Fun, Error>(count: Self::Count, f: Fun) -> Result<Self, Error>
     where
         Fun: FnMut(&mut [Self::Item]) -> Result<(), Error>,
