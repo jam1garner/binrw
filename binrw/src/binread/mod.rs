@@ -205,7 +205,7 @@ pub trait BinRead: Sized {
     /// # Examples
     ///
     /// ```
-    /// # use binrw::{io::{Read, Seek}, BinRead, BinResult, Endian};
+    /// # use binrw::{io::{Read, Seek}, BinRead, BinResult, Endian, container::Container};
     /// struct CustomU8(u8);
     ///
     /// impl BinRead for CustomU8 {
@@ -219,33 +219,34 @@ pub trait BinRead: Sized {
     ///         u8::read_options(reader, endian, args).map(CustomU8)
     ///     }
     ///
-    ///     fn read_options_count<'a, R>(
+    ///     fn read_options_count<'a, R, C>(
     ///         reader: &mut R,
     ///         endian: Endian,
     ///         args: Self::Args<'a>,
-    ///         count: usize,
-    ///     ) -> BinResult<Vec<Self>>
+    ///         count: C::Count,
+    ///     ) -> BinResult<C>
     ///     where
     ///         R: Read + Seek,
     ///         Self::Args<'a>: Clone,
+    ///         C: Container<Item=Self>
     ///     {
-    ///         u8::read_options_count(reader, endian, args, count).map(|c| c.into_iter().map(CustomU8).collect())
+    ///         let c: C::HigherSelf<u8> = u8::read_options_count(reader, endian, args, count)?;
+    ///         Ok(c.map(CustomU8))
     ///     }
     /// }
     /// ```
-    fn read_options_count<'a, R>(
+    fn read_options_count<'a, R, C>(
         reader: &mut R,
         endian: Endian,
         args: Self::Args<'a>,
-        count: usize,
-    ) -> BinResult<Vec<Self>>
+        count: C::Count,
+    ) -> BinResult<C>
     where
         R: Read + Seek,
         Self::Args<'a>: Clone,
+        C: crate::container::Container<Item = Self>,
     {
-        core::iter::repeat_with(|| Self::read_options(reader, endian, args.clone()))
-            .take(count)
-            .collect()
+        C::new_naive(count, || Self::read_options(reader, endian, args.clone()))
     }
 }
 

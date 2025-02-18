@@ -34,54 +34,32 @@ macro_rules! binread_impl {
 
                 $(
                     $($is_int)?
-                    fn read_options_count<'a, R>(
+                    fn read_options_count<'a, R, C>(
                         reader: &mut R,
                         endian: Endian,
                         _args: Self::Args<'a>,
-                        count: usize,
-                    ) -> BinResult<Vec<Self>>
+                        count: C::Count,
+                    ) -> BinResult<C>
                     where
                         R: Read + Seek,
                         Self::Args<'a>: Clone,
+                        C: crate::container::Container<Item=Self>,
                     {
-                        let mut list = Vec::<Self>::new();
-                        let mut start = 0;
-                        let mut remaining = count;
-                        // Allocating and reading from the source in chunks is done to keep
-                        // a bad `count` from causing huge memory allocations that are
-                        // doomed to fail
-                        while remaining != 0 {
-                            // Using a similar strategy as std `default_read_to_end` to
-                            // leverage the memory growth strategy of the underlying Vec
-                            // implementation (in std this will be exponential) using a
-                            // minimum byte allocation
-                            let growth: usize = 32 / core::mem::size_of::<Self>();
-                            list.reserve(remaining.min(growth.max(1)));
-
-                            let items_to_read = remaining.min(list.capacity() - start);
-                            let end = start + items_to_read;
-
-                            // In benchmarks, this resize decreases performance by 27–40%
-                            // relative to using `unsafe` to write directly to uninitialised
-                            // memory, but nobody ever got fired for buying IBM
-                            list.resize(end, 0);
+                        C::new_smart(count, |mut buf| {
                             reader.read_exact(&mut bytemuck::cast_slice_mut::<_, u8>(
-                                &mut list[start..end],
+                                &mut buf,
                             ))?;
 
-                            remaining -= items_to_read;
-                            start += items_to_read;
-                        }
-
-                        if core::mem::size_of::<Self>() != 1
-                            && ((cfg!(target_endian = "big") && endian == crate::Endian::Little)
-                                || (cfg!(target_endian = "little") && endian == crate::Endian::Big))
-                        {
-                            for value in list.iter_mut() {
-                                *value = value.swap_bytes();
+                            if core::mem::size_of::<Self>() != 1
+                                && ((cfg!(target_endian = "big") && endian == crate::Endian::Little)
+                                    || (cfg!(target_endian = "little") && endian == crate::Endian::Big))
+                            {
+                                for value in buf.iter_mut() {
+                                    *value = value.swap_bytes();
+                                }
                             }
-                        }
-                        Ok(list)
+                            Ok(())
+                        })
                     }
                 )?
             }
@@ -124,27 +102,18 @@ impl BinRead for u8 {
     // to use unsafe code to eliminate the unnecessary zero-fill.
     // Otherwise, performance would be identical and it could be
     // deleted.
-    fn read_options_count<'a, R>(
+    fn read_options_count<'a, R, C>(
         reader: &mut R,
         _endian: Endian,
         _args: Self::Args<'a>,
-        count: usize,
-    ) -> BinResult<Vec<Self>>
+        count: C::Count,
+    ) -> BinResult<C>
     where
         R: Read + Seek,
         Self::Args<'a>: Clone,
+        C: crate::container::Container<Item = Self>,
     {
-        let mut container = Vec::<u8>::new();
-        container.reserve_exact(count);
-        let byte_count = reader
-            .take(count.try_into().map_err(crate::helpers::not_enough_bytes)?)
-            .read_to_end(&mut container)?;
-
-        if byte_count == count {
-            Ok(container)
-        } else {
-            Err(crate::helpers::not_enough_bytes(()))
-        }
+        C::new_smart(count, |buf| reader.read_exact(buf).map_err(Into::into))
     }
 }
 
@@ -271,16 +240,7 @@ where
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        // Is there a better signature for read_options_count
-        // that could handle arrays in a nicer fashion, without compromising
-        // ergonomics too much?
-        let pos = reader.stream_position()?;
-        BinRead::read_options_count(reader, endian, args, N).and_then(|v| {
-            array_init::from_iter(v).ok_or_else(|| Error::AssertFail {
-                pos,
-                message: "Unable to turn vec into array".to_string(),
-            })
-        })
+        BinRead::read_options_count(reader, endian, args, ())
     }
 }
 

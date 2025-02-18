@@ -1,8 +1,8 @@
 //! Helper functions for reading and writing data.
 
 use crate::{
-    io::{self, Read, Seek},
-    BinRead, BinResult, Endian, Error,
+    io::{Read, Seek},
+    BinRead, BinResult, Endian,
 };
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -453,7 +453,8 @@ where
     Ret: FromIterator<T>,
 {
     move |reader, endian, arg| {
-        T::read_options_count(reader, endian, arg, n).map(|v| v.into_iter().collect())
+        let res: Vec<_> = T::read_options_count(reader, endian, arg, n)?;
+        Ok(res.into_iter().collect())
     }
 }
 
@@ -582,9 +583,9 @@ pub fn write_u24(value: &u32) -> binrw::BinResult<()> {
     writer.write_all(&buf[range]).map_err(Into::into)
 }
 
-pub(crate) fn not_enough_bytes<T>(_: T) -> Error {
-    Error::Io(io::Error::new(
-        io::ErrorKind::UnexpectedEof,
-        "not enough bytes in reader",
-    ))
-}
+// pub(crate) fn not_enough_bytes<T>(_: T) -> Error {
+//     Error::Io(io::Error::new(
+//         io::ErrorKind::UnexpectedEof,
+//         "not enough bytes in reader",
+//     ))
+// }
