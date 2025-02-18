@@ -116,7 +116,7 @@ fn vec_u8() {
 fn count_with_correctness() {
     // This doesn't work for some reason, complains about specific lifetime versus any lifetime
     //let read = |reader, _, _| u8::read(reader).map(|v| v & 0x0F);
-    fn weird_u8_read<R>(reader: &mut R, endian: binrw::Endian, args: ()) -> binrw::BinResult<u8>
+    fn weird_u8_read<R>(reader: &mut R, _endian: binrw::Endian, _args: ()) -> binrw::BinResult<u8>
     where
         R: binrw::io::Read + binrw::io::Seek,
     {
