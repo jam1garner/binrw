@@ -445,9 +445,9 @@ where
 /// # let x: CountBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3]);
 /// ```
-pub fn count<R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, Endian, Arg) -> BinResult<Ret>
+pub fn count<'a, R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, Endian, Arg) -> BinResult<Ret>
 where
-    T: for<'a> BinRead<Args<'a> = Arg>,
+    T: BinRead<Args<'a> = Arg>,
     R: Read + Seek,
     Arg: Clone,
     Ret: FromIterator<T> + 'static,
