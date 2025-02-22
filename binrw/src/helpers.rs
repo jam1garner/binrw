@@ -452,7 +452,33 @@ where
     Arg: Clone,
     Ret: FromIterator<T> + 'static,
 {
-    count_with(n, T::read_options)
+    move |reader, endian, args| {
+        let mut container = core::iter::empty::<T>().collect::<Ret>();
+
+        vec_fast_int!(try (i8 i16 u16 i32 u32 i64 u64 i128 u128) using (container, reader, endian, n) else {
+            // This extra branch for `Vec<u8>` makes it faster than
+            // `vec_fast_int`, but *only* because `vec_fast_int` is not allowed
+            // to use unsafe code to eliminate the unnecessary zero-fill.
+            // Otherwise, performance would be identical and it could be
+            // deleted.
+            if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
+                bytes.reserve_exact(n);
+                let byte_count = reader
+                    .take(n.try_into().map_err(not_enough_bytes)?)
+                    .read_to_end(bytes)?;
+
+                if byte_count == n {
+                    Ok(container)
+                } else {
+                    Err(not_enough_bytes(()))
+                }
+            } else {
+                core::iter::repeat_with(|| T::read_options(reader, endian, args.clone()))
+                .take(n)
+                .collect()
+            }
+        })
+    }
 }
 
 /// Creates a parser that uses a given function to read N items into a
@@ -495,31 +521,9 @@ where
     Ret: FromIterator<T> + 'static,
 {
     move |reader, endian, args| {
-        let mut container = core::iter::empty::<T>().collect::<Ret>();
-
-        vec_fast_int!(try (i8 i16 u16 i32 u32 i64 u64 i128 u128) using (container, reader, endian, n) else {
-            // This extra branch for `Vec<u8>` makes it faster than
-            // `vec_fast_int`, but *only* because `vec_fast_int` is not allowed
-            // to use unsafe code to eliminate the unnecessary zero-fill.
-            // Otherwise, performance would be identical and it could be
-            // deleted.
-            if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
-                bytes.reserve_exact(n);
-                let byte_count = reader
-                    .take(n.try_into().map_err(not_enough_bytes)?)
-                    .read_to_end(bytes)?;
-
-                if byte_count == n {
-                    Ok(container)
-                } else {
-                    Err(not_enough_bytes(()))
-                }
-            } else {
-                core::iter::repeat_with(|| read(reader, endian, args.clone()))
-                .take(n)
-                .collect()
-            }
-        })
+        core::iter::repeat_with(|| read(reader, endian, args.clone()))
+            .take(n)
+            .collect()
     }
 }
 
