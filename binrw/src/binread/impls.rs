@@ -143,7 +143,7 @@ where
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        crate::helpers::count_with(args.count, B::read_options)(reader, endian, args.inner)
+        crate::helpers::count(args.count)(reader, endian, args.inner)
     }
 }
 
