@@ -1,4 +1,4 @@
-error[E0271]: expected `from_utf8_lossy` to be a fn item that returns `String`, but it returns `Cow<'_, str>`
+error[E0271]: expected `from_utf8_lossy` to return `String`, but it returns `Cow<'_, str>`
  --> tests/ui/bad_parse_with_map.rs:5:60
   |
 3 | #[derive(BinRead)]
