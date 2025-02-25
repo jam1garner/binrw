@@ -22,6 +22,7 @@ extern crate std;
 pub mod __private;
 mod binread;
 mod binwrite;
+pub mod container;
 pub mod docs;
 pub mod endian;
 pub mod error;

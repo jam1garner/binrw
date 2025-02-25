@@ -111,3 +111,23 @@ fn vec_u8() {
         binrw::Error::Io(..)
     ));
 }
+
+#[test]
+fn count_with_correctness() {
+    // This doesn't work for some reason, complains about specific lifetime versus any lifetime
+    //let read = |reader, _, _| u8::read(reader).map(|v| v & 0x0F);
+    fn weird_u8_read<R>(reader: &mut R, _endian: binrw::Endian, _args: ()) -> binrw::BinResult<u8>
+    where
+        R: binrw::io::Read + binrw::io::Seek,
+    {
+        u8::read(reader).map(|v| v & 0x0F)
+    }
+    let read = weird_u8_read;
+
+    let read = binrw::helpers::count_with(1, read);
+    let val: Vec<u8> = read(&mut Cursor::new(&[0xF3u8]), binrw::Endian::Little, ()).unwrap();
+    assert_eq!(
+        val[0], 0x03,
+        "binrw::helpers::count_with ignored the passed read function!"
+    )
+}
