@@ -1,7 +1,7 @@
 use binrw::{
     args, binread,
     io::{Cursor, Seek, SeekFrom},
-    BinRead, BinResult, FilePtr, NullString,
+    BinRead, BinReaderExt, BinResult, FilePtr, NullString,
 };
 
 #[test]
@@ -658,6 +658,105 @@ fn pad_size_to() {
 
     let result = Test::read_le(&mut Cursor::new(b"\0\x01\0\x02")).unwrap();
     assert_eq!(result, Test { a: 1, b: 2 });
+}
+
+#[test]
+fn padding_struct() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[brw(pad_size_to = 4)]
+    struct Test {
+        x: u16,
+        y: u8,
+    }
+
+    #[derive(BinRead, Debug, PartialEq)]
+    struct TestOuter {
+        x: Test,
+        y: u8,
+    }
+
+    let result = TestOuter::read_le(&mut Cursor::new(b"\xcd\xab\x42\xff\x17")).unwrap();
+    assert_eq!(
+        result,
+        TestOuter {
+            x: Test { x: 0xabcd, y: 0x42 },
+            y: 0x17
+        }
+    );
+}
+
+#[test]
+fn padding_struct_from_stream() {
+    #[derive(BinRead, Debug, PartialEq)]
+    #[brw(import(s: u8))]
+    #[brw(pad_size_to = s)]
+    #[brw(assert((s as usize) >= std::mem::size_of::<Test>()))]
+    struct Test {
+        #[brw(pad_size_to = 3)]
+        x: u16,
+        y: u8,
+    }
+
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    struct TestList {
+        #[br(temp)]
+        n: u8,
+        #[br(temp)]
+        s: u8,
+        #[br(args { count : n as usize, inner : (s,) } )]
+        l: Vec<Test>,
+    }
+
+    let data: &[u8] = &[
+        3, 5, // Count and padding
+        2, 1, 0xff, 3, 0xff, // Element 0
+        2, 1, 0xff, 3, 0xff, // Element 1
+        2, 1, 0xff, 3, 0xff, // Element 2
+        0xef, 0xbe, 0xad, 0xde, // deadbeef
+        0xef, 0xbe, 0xad, 0xde, // deadbeef
+        0xef, 0xbe, 0xad, 0xde, // deadbeef
+    ];
+
+    let result = TestList::read_le(&mut Cursor::new(data)).unwrap();
+    assert_eq!(
+        result,
+        TestList {
+            l: vec![
+                Test { x: 258, y: 3 },
+                Test { x: 258, y: 3 },
+                Test { x: 258, y: 3 }
+            ]
+        }
+    );
+}
+
+#[test]
+fn padding_struct_self_referential() {
+    #[binread]
+    #[derive(Debug, PartialEq)]
+    #[brw(pad_size_to = skip_padding)]
+    struct Test {
+        #[br(temp)]
+        skip_padding: u8,
+        x: u8,
+        y: u8,
+    }
+
+    let data: &[u8] = &[
+        7,   // Padding
+        17,  // X
+        117, // Y
+        0, 0, 0, 0, // Empty
+        // Extra bytes
+        0x1a, 0xc0, 0xca, 0xc0,
+    ];
+
+    let mut cursor = Cursor::new(data);
+    let result = Test::read_le(&mut cursor).unwrap();
+    assert_eq!(result, Test { x: 17, y: 117 });
+    let rest = cursor.read_le::<u32>().unwrap();
+    assert_eq!(rest, 0xc0cac01a);
 }
 
 #[test]

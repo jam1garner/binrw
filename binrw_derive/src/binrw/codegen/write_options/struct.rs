@@ -1,6 +1,6 @@
 use super::{prelude::PreludeGenerator, struct_field::write_field};
 use crate::binrw::{
-    codegen::sanitization::{THIS, WRITER},
+    codegen::sanitization::{SEEK_TRAIT, STRUCT_POS, THIS, WRITER, WRITE_ZEROES},
     parser::{Input, Struct},
 };
 use proc_macro2::TokenStream;
@@ -10,6 +10,7 @@ use syn::Ident;
 pub(super) fn generate_struct(input: &Input, name: Option<&Ident>, st: &Struct) -> TokenStream {
     StructGenerator::new(input, st, name, &input.stream_ident_or(WRITER))
         .write_fields()
+        .wrap_pad_size()
         .prefix_prelude()
         .prefix_borrow_fields()
         .prefix_imports()
@@ -55,6 +56,28 @@ impl<'input> StructGenerator<'input> {
             .prefix_endian(&self.st.endian)
             .prefix_assertions()
             .finish();
+
+        self
+    }
+
+    fn wrap_pad_size(mut self) -> Self {
+        if let Some(size) = &self.st.pad_size_to {
+            let writer_var = self.writer_var;
+            let out = self.out;
+            self.out = quote! {
+                let #STRUCT_POS = #SEEK_TRAIT::stream_position(#writer_var)?;
+                #out
+                {
+                    let pad_to_size = (#size) as u64;
+                    let after_pos = #SEEK_TRAIT::stream_position(#writer_var)?;
+                    if let Some(size) = after_pos.checked_sub(#STRUCT_POS) {
+                        if let Some(padding) = pad_to_size.checked_sub(size) {
+                            #WRITE_ZEROES(#writer_var, padding)?;
+                        }
+                    }
+                }
+            };
+        }
 
         self
     }

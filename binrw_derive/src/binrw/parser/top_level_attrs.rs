@@ -205,6 +205,8 @@ attr_struct! {
         pub(crate) stream_ident: Option<Ident>,
         #[from(RW:Big, RW:Little, RW:IsBig, RW:IsLittle)]
         pub(crate) endian: CondEndian,
+        #[from(RW:PadSizeTo)]
+        pub(crate) pad_size_to: Option<TokenStream>,
         #[from(RW:Map, RW:TryMap, RW:Repr)]
         pub(crate) map: Map,
         #[from(RW:MapStream)]
