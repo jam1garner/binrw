@@ -167,13 +167,13 @@ where
     args
 }
 
-pub fn restore_position<E: Into<Error>, S: Seek, T>(
+pub fn restore_position<E: Into<Error>, S: Seek>(
     stream: &mut S,
     pos: u64,
-) -> impl FnOnce(E) -> BinResult<T> + '_ {
+) -> impl FnOnce(E) -> Error + '_ {
     move |error| match stream.seek(SeekFrom::Start(pos)) {
-        Ok(_) => Err(error.into()),
-        Err(seek_error) => Err(restore_position_err(error.into(), seek_error.into())),
+        Ok(_) => error.into(),
+        Err(seek_error) => restore_position_err(error.into(), seek_error.into()),
     }
 }
 

@@ -53,7 +53,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
 
     let rewind = (needs_rewind || input.magic().is_some()).then(|| {
         quote! {
-            .or_else(#RESTORE_POSITION::<binrw::Error, _, _>(#reader_var, #POS))
+            .map_err(#RESTORE_POSITION::<binrw::Error, _>(#reader_var, #POS))
         }
     });
 
