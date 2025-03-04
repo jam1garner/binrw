@@ -669,9 +669,7 @@ where
         // relative to using `unsafe` to write directly to uninitialised
         // memory, but nobody ever got fired for buying IBM
         list.resize(end, T::default());
-        reader.read_exact(&mut bytemuck::cast_slice_mut::<_, u8>(
-            &mut list[start..end],
-        ))?;
+        reader.read_exact(bytemuck::cast_slice_mut::<_, u8>(&mut list[start..end]))?;
 
         remaining -= items_to_read;
         start += items_to_read;
