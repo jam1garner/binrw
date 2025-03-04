@@ -19,7 +19,7 @@ macro_rules! binread_impl {
                     let mut val = [0; core::mem::size_of::<$type_name>()];
                     let pos = reader.stream_position()?;
 
-                    reader.read_exact(&mut val).or_else(|e| Err(crate::__private::restore_position(reader, pos)(e)))?;
+                    reader.read_exact(&mut val).map_err(crate::__private::restore_position(reader, pos))?;
                     Ok(match endian {
                         Endian::Big => {
                             <$type_name>::from_be_bytes(val)
