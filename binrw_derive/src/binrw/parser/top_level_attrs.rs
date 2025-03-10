@@ -128,13 +128,13 @@ impl Input {
             Input::Struct(s) => s
                 .fields
                 .get(index)
-                .map_or(false, |field| field.is_temp(s.for_write)),
-            Input::Enum(e) => e.variants.get(variant_index).map_or(false, |variant| {
+                .is_some_and(|field| field.is_temp(s.for_write)),
+            Input::Enum(e) => e.variants.get(variant_index).is_some_and(|variant| {
                 if let EnumVariant::Variant { options, .. } = variant {
                     options
                         .fields
                         .get(index)
-                        .map_or(false, |field| field.is_temp(options.for_write))
+                        .is_some_and(|field| field.is_temp(options.for_write))
                 } else {
                     false
                 }
@@ -226,7 +226,7 @@ impl Struct {
     pub(crate) fn is_tuple(&self) -> bool {
         self.fields
             .first()
-            .map_or(false, |field| field.generated_ident)
+            .is_some_and(|field| field.generated_ident)
     }
 
     pub(crate) fn iter_permanent_idents(&self) -> impl Iterator<Item = &syn::Ident> + '_ {

@@ -48,7 +48,7 @@ jobs:
         rust:
           - stable
           - nightly
-          - 1.66 # rust-version, msrv
+          - "1.70" # rust-version, msrv
         features:
           - name: all features
             value: --all-features
