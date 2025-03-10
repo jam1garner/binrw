@@ -2,31 +2,12 @@
 use binrw::io::{BufReader, Cursor, Read, Seek, SeekFrom};
 use std::io::BufRead;
 
+#[path = "../test_helpers/mod.rs"]
+mod test_helpers;
+
 #[test]
 fn bufreader() {
-    struct Counter<T> {
-        inner: T,
-        reads: usize,
-    }
-
-    impl<T> Counter<T> {
-        fn new(inner: T) -> Self {
-            Counter { inner, reads: 0 }
-        }
-    }
-
-    impl<T: Read> Read for Counter<T> {
-        fn read(&mut self, buf: &mut [u8]) -> binrw::io::Result<usize> {
-            self.reads += 1;
-            self.inner.read(buf)
-        }
-    }
-
-    impl<T: Seek> Seek for Counter<T> {
-        fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
-            self.inner.seek(pos)
-        }
-    }
+    use test_helpers::Counter;
 
     let mut stream = Cursor::new(b"helloworld".to_vec());
     // Give wrapped stream a non-zero position first to ensure it is adopted
