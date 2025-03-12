@@ -16,6 +16,8 @@ use core::iter::from_fn;
 ///
 /// # Examples
 ///
+/// Reading null-terminated data:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::until, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
@@ -28,17 +30,53 @@ use core::iter::from_fn;
 /// # let x: NullTerminated = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4, 0]);
 /// ```
-pub fn until<Ret, T, Arg, CondFn, Reader>(
+///
+/// Reading byte-terminated data with a header that is used to read entries:
+///
+/// ```
+/// # // This test is checking to make sure that borrowed arguments work.
+/// #
+/// # use binrw::{BinRead, helpers::until, io::Cursor, BinReaderExt};
+/// #[derive(BinRead)]
+/// struct Header {
+///     terminator: u8,
+///     extra: u8,
+/// };
+///
+/// #[derive(BinRead)]
+/// # #[derive(Debug, Eq, PartialEq)]
+/// #[br(import(header: &Header))]
+/// struct Entry(
+///     #[br(map = |value: u8| value + header.extra)]
+///     u8
+/// );
+///
+/// #[derive(BinRead)]
+/// struct ByteTerminated {
+///     header: Header,
+///
+///     #[br(
+///         parse_with = until(|entry: &Entry| entry.0 == header.terminator),
+///         args(&header)
+///     )]
+///     data: Vec<Entry>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\xff\x01\x02\x03\x04\xfe");
+/// # let x: ByteTerminated = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[Entry(3), Entry(4), Entry(5), Entry(255)]);
+/// ```
+pub fn until<'a, Ret, T, Arg, CondFn, Reader>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
     Ret: FromIterator<T>,
-    T: for<'a> BinRead<Args<'a> = Arg>,
+    T: BinRead<Args<'a> = Arg>,
     Arg: Clone,
     CondFn: Fn(&T) -> bool,
     Reader: Read + Seek,
 {
-    until_with(cond, T::read_options)
+    use_with!(until_with, T, cond)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -108,6 +146,8 @@ where
 ///
 /// # Examples
 ///
+/// Reading null-terminated data:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::until_exclusive, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
@@ -120,17 +160,52 @@ where
 /// # let x: NullTerminated = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4]);
 /// ```
-pub fn until_exclusive<Ret, T, Arg, CondFn, Reader>(
+///
+/// Reading byte-terminated data with a header that is required to read entries:
+///
+/// ```
+/// # // This test is checking to make sure that borrowed arguments work.
+/// #
+/// # use binrw::{BinRead, helpers::until_exclusive, io::Cursor, BinReaderExt};
+/// #[derive(BinRead)]
+/// struct Header {
+///     terminator: u8,
+///     extra: u8,
+/// };
+///
+/// #[derive(BinRead)]
+/// # #[derive(Debug, Eq, PartialEq)]
+/// #[br(import(header: &Header))]
+/// struct Entry(
+///     #[br(map = |value: u8| value + header.extra)]
+///     u8
+/// );
+///
+/// #[derive(BinRead)]
+/// struct ByteTerminated {
+///     header: Header,
+///
+///     #[br(parse_with = until_exclusive(|entry: &Entry| {
+///         entry.0 == header.terminator
+///     }), args(&header))]
+///     data: Vec<Entry>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\xff\x01\x02\x03\x04\xfe");
+/// # let x: ByteTerminated = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[Entry(3), Entry(4), Entry(5)]);
+/// ```
+pub fn until_exclusive<'a, Ret, T, Arg, CondFn, Reader>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
     Ret: FromIterator<T>,
-    T: for<'a> BinRead<Args<'a> = Arg>,
+    T: BinRead<Args<'a> = Arg>,
     Arg: Clone,
     CondFn: Fn(&T) -> bool,
     Reader: Read + Seek,
 {
-    until_exclusive_with(cond, T::read_options)
+    use_with!(until_exclusive_with, T, cond)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -199,6 +274,8 @@ where
 ///
 /// # Examples
 ///
+/// Reading an entire file at once:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::until_eof, io::Cursor, BinReaderExt};
 /// #[derive(BinRead)]
@@ -211,18 +288,50 @@ where
 /// # let x: EntireFile = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4]);
 /// ```
-pub fn until_eof<Ret, T, Arg, Reader>(
+///
+/// Reading an entire file with a header that is used to read entries:
+///
+/// ```
+/// # // This test is checking to make sure that borrowed arguments work.
+/// #
+/// # use binrw::{BinRead, helpers::until_eof, io::Cursor, BinReaderExt};
+/// #[derive(BinRead)]
+/// struct Header {
+///     extra: u8,
+/// };
+///
+/// #[derive(BinRead)]
+/// # #[derive(Debug, Eq, PartialEq)]
+/// #[br(import(header: &Header))]
+/// struct Entry(
+///     #[br(map = |value: u8| value + header.extra)]
+///     u8
+/// );
+///
+/// #[derive(BinRead)]
+/// struct EntireFile {
+///     header: Header,
+///
+///     #[br(parse_with = until_eof, args(&header))]
+///     data: Vec<Entry>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x01\x02\x03\x04");
+/// # let x: EntireFile = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[Entry(3), Entry(4), Entry(5)]);
+/// ```
+pub fn until_eof<'a, Ret, T, Arg, Reader>(
     reader: &mut Reader,
     endian: Endian,
     args: Arg,
 ) -> BinResult<Ret>
 where
     Ret: FromIterator<T>,
-    T: for<'a> BinRead<Args<'a> = Arg>,
+    T: BinRead<Args<'a> = Arg>,
     Arg: Clone,
     Reader: Read + Seek,
 {
-    until_eof_with(T::read_options)(reader, endian, args)
+    use_with!(until_eof_with, T)(reader, endian, args)
 }
 
 /// Creates a parser that uses a given function to read items into a collection
@@ -359,13 +468,7 @@ where
     It: IntoIterator<Item = Arg>,
     Reader: Read + Seek,
 {
-    // For an unknown reason (possibly related to the note in the compiler error
-    // that says “due to current limitations in the borrow checker”), trying to
-    // pass `T::read_options` directly does not work, but passing a closure like
-    // this works just fine
-    args_iter_with(it, |reader, options, arg| {
-        T::read_options(reader, options, arg)
-    })
+    use_with!(args_iter_with, T, it)
 }
 
 /// Creates a parser that uses a given function to build a collection, using
@@ -430,6 +533,8 @@ where
 ///
 /// # Examples
 ///
+/// Reading data of a fixed size:
+///
 /// ```
 /// # use binrw::{BinRead, helpers::count, io::Cursor, BinReaderExt};
 /// # use std::collections::VecDeque;
@@ -444,6 +549,40 @@ where
 /// # let mut x = Cursor::new(b"\x03\x01\x02\x03");
 /// # let x: CountBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3]);
+/// ```
+///
+/// Reading fixed-size data with a header that is used to read entries:
+///
+/// ```
+/// # // This test is checking to make sure that borrowed arguments work.
+/// #
+/// # use binrw::{BinRead, helpers::count, io::Cursor, BinReaderExt};
+/// # use std::collections::VecDeque;
+/// #[derive(BinRead)]
+/// struct Header {
+///     len: u8,
+///     extra: u8,
+/// };
+///
+/// #[derive(BinRead)]
+/// # #[derive(Debug, Eq, PartialEq)]
+/// #[br(import(header: &Header))]
+/// struct Entry(
+///     #[br(map = |value: u8| value + header.extra)]
+///     u8
+/// );
+///
+/// #[derive(BinRead)]
+/// struct CountBytes {
+///     header: Header,
+///
+///     #[br(parse_with = count(header.len.into()), args(&header))]
+///     data: VecDeque<Entry>,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x02\x01\x02\x03");
+/// # let x: CountBytes = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[Entry(3), Entry(4)]);
 /// ```
 pub fn count<'a, Ret, T, Arg, Reader>(
     n: usize,
@@ -614,6 +753,22 @@ fn not_enough_bytes<T>(_: T) -> Error {
         "not enough bytes in reader",
     ))
 }
+
+// For an unknown reason (possibly related to the note in the compiler error
+// that says “due to current limitations in the borrow checker”), passing
+// `T::read_options` directly to any of the `with` helper functions does
+// not work (“requires that `'a` must outlive `'static`” and “one type is more
+// general than the other”), but passing a closure that calls `T::read_options`
+// itself works fine
+macro_rules! use_with {
+    ($fn:ident, $Ty:ty $(, $args:tt)* $(,)?) => {
+        $fn($($args,)* |reader, options, args| {
+            <$Ty>::read_options(reader, options, args)
+        })
+    }
+}
+
+use use_with;
 
 macro_rules! vec_fast_int {
     (try ($($Ty:ty)+) using ($list:expr, $reader:expr, $endian:expr, $count:expr) else { $($else:tt)* }) => {
