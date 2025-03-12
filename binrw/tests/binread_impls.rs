@@ -114,11 +114,14 @@ fn vec_u8() {
 
 #[test]
 fn count_with_correctness() {
-    let read = binrw::helpers::count_with(2, binrw::helpers::read_u24);
-    let _: Vec<u32> = read(
-        &mut Cursor::new(&[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF]),
-        binrw::Endian::Little,
-        (),
-    )
-    .expect("more than 3 bytes per u24 should not be required");
+    let read = binrw::helpers::count_with::<Vec<u32>, _, _, _, _>(2, binrw::helpers::read_u24);
+    assert_eq!(
+        read(
+            &mut Cursor::new(&[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF]),
+            binrw::Endian::Little,
+            (),
+        )
+        .expect("Vec fake-specialisation should not ignore reader function"),
+        vec![0, 0xffffff]
+    );
 }

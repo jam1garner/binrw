@@ -28,15 +28,15 @@ use core::iter::from_fn;
 /// # let x: NullTerminated = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4, 0]);
 /// ```
-pub fn until<Reader, T, CondFn, Arg, Ret>(
+pub fn until<Ret, T, Arg, CondFn, Reader>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    T: for<'a> BinRead<Args<'a> = Arg>,
-    Reader: Read + Seek,
-    CondFn: Fn(&T) -> bool,
-    Arg: Clone,
     Ret: FromIterator<T>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
+    Arg: Clone,
+    CondFn: Fn(&T) -> bool,
+    Reader: Read + Seek,
 {
     until_with(cond, T::read_options)
 }
@@ -67,16 +67,16 @@ where
 /// # let x: NullTerminated = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[[1, 2], [3, 4], [0, 0]]);
 /// ```
-pub fn until_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
+pub fn until_with<Ret, T, Arg, CondFn, ReadFn, Reader>(
     cond: CondFn,
     read: ReadFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    Reader: Read + Seek,
-    CondFn: Fn(&T) -> bool,
-    Arg: Clone,
-    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
     Ret: FromIterator<T>,
+    Arg: Clone,
+    CondFn: Fn(&T) -> bool,
+    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
+    Reader: Read + Seek,
 {
     move |reader, endian, args| {
         let mut last = false;
@@ -120,15 +120,15 @@ where
 /// # let x: NullTerminated = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4]);
 /// ```
-pub fn until_exclusive<Reader, T, CondFn, Arg, Ret>(
+pub fn until_exclusive<Ret, T, Arg, CondFn, Reader>(
     cond: CondFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    T: for<'a> BinRead<Args<'a> = Arg>,
-    Reader: Read + Seek,
-    CondFn: Fn(&T) -> bool,
-    Arg: Clone,
     Ret: FromIterator<T>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
+    Arg: Clone,
+    CondFn: Fn(&T) -> bool,
+    Reader: Read + Seek,
 {
     until_exclusive_with(cond, T::read_options)
 }
@@ -159,16 +159,16 @@ where
 /// # let x: NullTerminated = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
 /// ```
-pub fn until_exclusive_with<Reader, T, CondFn, Arg, ReadFn, Ret>(
+pub fn until_exclusive_with<Ret, T, Arg, CondFn, ReadFn, Reader>(
     cond: CondFn,
     read: ReadFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    Reader: Read + Seek,
-    CondFn: Fn(&T) -> bool,
-    Arg: Clone,
-    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
     Ret: FromIterator<T>,
+    Arg: Clone,
+    CondFn: Fn(&T) -> bool,
+    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
+    Reader: Read + Seek,
 {
     move |reader, endian, args| {
         from_fn(|| match read(reader, endian, args.clone()) {
@@ -211,16 +211,16 @@ where
 /// # let x: EntireFile = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3, 4]);
 /// ```
-pub fn until_eof<Reader, T, Arg, Ret>(
+pub fn until_eof<Ret, T, Arg, Reader>(
     reader: &mut Reader,
     endian: Endian,
     args: Arg,
 ) -> BinResult<Ret>
 where
-    T: for<'a> BinRead<Args<'a> = Arg>,
-    Reader: Read + Seek,
-    Arg: Clone,
     Ret: FromIterator<T>,
+    T: for<'a> BinRead<Args<'a> = Arg>,
+    Arg: Clone,
+    Reader: Read + Seek,
 {
     until_eof_with(T::read_options)(reader, endian, args)
 }
@@ -256,14 +256,14 @@ where
 /// # let x: EntireFile = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
 /// ```
-pub fn until_eof_with<Reader, T, Arg, ReadFn, Ret>(
+pub fn until_eof_with<Ret, T, Arg, ReadFn, Reader>(
     read: ReadFn,
 ) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    Reader: Read + Seek,
+    Ret: FromIterator<T>,
     Arg: Clone,
     ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
-    Ret: FromIterator<T>,
+    Reader: Read + Seek,
 {
     move |reader, endian, args| {
         from_fn(|| match read(reader, endian, args.clone()) {
@@ -350,14 +350,14 @@ where
 /// # let x = Object::read(&mut x).unwrap();
 /// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
 /// ```
-pub fn args_iter<'a, R, T, Arg, Ret, It>(
+pub fn args_iter<'a, Ret, T, Arg, It, Reader>(
     it: It,
-) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Ret>
+) -> impl FnOnce(&mut Reader, Endian, ()) -> BinResult<Ret>
 where
-    T: BinRead<Args<'a> = Arg>,
-    R: Read + Seek,
     Ret: FromIterator<T>,
+    T: BinRead<Args<'a> = Arg>,
     It: IntoIterator<Item = Arg>,
+    Reader: Read + Seek,
 {
     // For an unknown reason (possibly related to the note in the compiler error
     // that says “due to current limitations in the borrow checker”), trying to
@@ -405,15 +405,15 @@ where
 /// # let x = Object::read(&mut x).unwrap();
 /// # assert_eq!(x.segments, &[vec![3], vec![4, 5]]);
 /// ```
-pub fn args_iter_with<Reader, T, Arg, Ret, It, ReadFn>(
+pub fn args_iter_with<Ret, T, Arg, It, ReadFn, Reader>(
     it: It,
     read: ReadFn,
 ) -> impl FnOnce(&mut Reader, Endian, ()) -> BinResult<Ret>
 where
-    Reader: Read + Seek,
     Ret: FromIterator<T>,
     It: IntoIterator<Item = Arg>,
     ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
+    Reader: Read + Seek,
 {
     move |reader, options, ()| {
         it.into_iter()
@@ -445,12 +445,14 @@ where
 /// # let x: CountBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[1, 2, 3]);
 /// ```
-pub fn count<'a, R, T, Arg, Ret>(n: usize) -> impl Fn(&mut R, Endian, Arg) -> BinResult<Ret>
+pub fn count<'a, Ret, T, Arg, Reader>(
+    n: usize,
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    T: BinRead<Args<'a> = Arg>,
-    R: Read + Seek,
-    Arg: Clone,
     Ret: FromIterator<T> + 'static,
+    T: BinRead<Args<'a> = Arg>,
+    Arg: Clone,
+    Reader: Read + Seek,
 {
     move |reader, endian, args| {
         let mut container = core::iter::empty::<T>().collect::<Ret>();
@@ -510,15 +512,15 @@ where
 /// # let x: CountBytes = x.read_be().unwrap();
 /// # assert_eq!(x.data, &[[1, 2], [3, 4]]);
 /// ```
-pub fn count_with<R, T, Arg, ReadFn, Ret>(
+pub fn count_with<Ret, T, Arg, ReadFn, Reader>(
     n: usize,
     read: ReadFn,
-) -> impl Fn(&mut R, Endian, Arg) -> BinResult<Ret>
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
 where
-    R: Read + Seek,
-    Arg: Clone,
-    ReadFn: Fn(&mut R, Endian, Arg) -> BinResult<T>,
     Ret: FromIterator<T> + 'static,
+    Arg: Clone,
+    ReadFn: Fn(&mut Reader, Endian, Arg) -> BinResult<T>,
+    Reader: Read + Seek,
 {
     move |reader, endian, args| {
         core::iter::repeat_with(|| read(reader, endian, args.clone()))
