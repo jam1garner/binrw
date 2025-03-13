@@ -87,9 +87,9 @@
 //!
 //! ## Using a function to lazily load values
 //!
-//! In this example, only the offset table is parsed. Values pointed to by the
-//! offset table are loaded on demand by calling `Object::get` as needed at
-//! runtime.
+//! In this example, only the offset table is parsed. Items pointed to by the
+//! offset table are loaded on demand from the original stream by passing it to
+//! `Object::get` along with the index of the desired item.
 //!
 //! ```
 //! # use binrw::{args, BinRead, BinResult, BinReaderExt, helpers::until_eof, io::{Cursor, Read, Seek, SeekFrom}};
@@ -110,7 +110,9 @@
 //! }
 //!
 //! impl Object {
-//!     pub fn get<R: Read + Seek>(&self, source: &mut R, index: usize) -> Option<BinResult<Item>> {
+//!     pub fn get<Reader>(&self, source: &mut Reader, index: usize) -> Option<BinResult<Item>>
+//!     where Reader: Read + Seek
+//!     {
 //!         self.offsets.get(index).map(|offset| {
 //!             let offset = self.data_offset + u64::from(*offset);
 //!             source.seek(SeekFrom::Start(offset))?;
