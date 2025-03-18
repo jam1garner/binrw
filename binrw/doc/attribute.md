@@ -1605,11 +1605,34 @@ in data:
 
 The magic number can be a byte literal, byte string, float, or integer. When
 a magic number is matched, parsing begins with the first byte after the
-magic number in the data. When a magic number is not matched, an error is
-returned.
+magic number in the data.
 
 To match enum variants based on more complex conditions, or from a magic value
 supplied as an [argument](#arguments), use [`pre_assert`](#pre-assert).
+
+<div class="br">
+
+## Fallback handling
+
+To handle an unmatched magic value instead of failing to parse, omit the `magic`
+directive from a later variant:
+
+```
+# use binrw::{prelude::*, io::Cursor};
+#[derive(BinRead)]
+# #[derive(Debug, PartialEq)]
+enum Command {
+    #[br(magic = 0u8)] Start,
+    #[br(magic = 1u8)] End,
+    Unknown(u8)
+}
+
+assert_eq!(Command::read_le(
+    &mut Cursor::new(b"\x02")).unwrap(),
+    Command::Unknown(2)
+);
+```
+</div>
 
 ## Examples
 
@@ -1849,8 +1872,9 @@ assert_eq!(writer.into_inner(), b"\x03")
 
 ### Using `map` on a struct to create a bit field
 
-The [`modular-bitfield`](https://docs.rs/modular-bitfield) crate can be used
-along with `map` to create a struct out of raw bits.
+Either the [bilge](https://docs.rs/bilge/) or the
+[modular-bitfield](https://docs.rs/modular-bitfield/) crate can be used along
+with `map` to create a struct out of raw bits.
 
 <div class="br">
 
