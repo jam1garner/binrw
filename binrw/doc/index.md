@@ -186,9 +186,10 @@ Implementations for all primitive data types, arrays, tuples, and standard
 Rust types like [`Vec`] are included, along with parsers for other
 frequently used binary data patterns like
 [null-terminated strings](NullString) and
-[indirect addressing using offsets](FilePtr). Convenient access into
-bitfields is possible using crates like
-[modular-bitfield](docs::attribute#using-map-on-a-struct-to-create-a-bit-field).
+[indirect addressing using offsets](file_ptr). Convenient
+[access into bitfields](docs::attribute#using-map-on-a-struct-to-create-a-bit-field)
+is possible using crates like [bilge](https://docs.rs/bilge/) or
+[modular-bitfield](https://docs.rs/modular-bitfield/).
 
 See the [`BinRead`](BinRead#foreign-impls) and
 [`BinWrite`](BinWrite#foreign-impls) traits for the full list of built-in
