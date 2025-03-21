@@ -39,6 +39,7 @@ ident_str! {
     pub(crate) OPT = "__binrw_generated_var_endian";
     pub(crate) ARGS = "__binrw_generated_var_arguments";
     pub(crate) SAVED_POSITION = "__binrw_generated_saved_position";
+    pub(crate) NOT_ENOUGH_BYTES = from_crate!(__private::not_enough_bytes);
     pub(crate) ASSERT_MAGIC = from_crate!(__private::magic);
     pub(crate) ASSERT = from_crate!(__private::assert);
     pub(crate) ASSERT_ERROR_FN = from_crate!(__private::AssertErrorFn);
@@ -74,6 +75,7 @@ ident_str! {
     pub(crate) READ_FUNCTION = "__binrw_generated_read_function";
     pub(crate) WRITE_FUNCTION = "__binrw_generated_write_function";
     pub(crate) BEFORE_POS = "__binrw_generated_before_pos";
+    pub(crate) ALL_EOF = "__binrw_generated_all_eof";
     pub(crate) DBG_EPRINTLN = from_crate!(__private::eprintln);
 }
 

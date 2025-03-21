@@ -4,8 +4,8 @@ use super::{
 };
 use crate::binrw::{
     codegen::sanitization::{
-        BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD,
-        RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
+        ALL_EOF, BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, NOT_ENOUGH_BYTES, OPT, POS, READER,
+        READ_METHOD, RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };
@@ -129,18 +129,26 @@ fn generate_unit_enum_magic(reader_var: &TokenStream, variants: &[UnitEnumField]
                 #body
             })() {
                 v @ Ok(_) => return v,
-                Err(#TEMP) => { #RESTORE_POSITION_VARIANT(#reader_var, #POS, #TEMP)?; }
+                Err(#TEMP) => {
+                    #ALL_EOF &= #TEMP.is_eof();
+                    #RESTORE_POSITION_VARIANT(#reader_var, #POS, #TEMP)?;
+                }
             }
         }
     });
 
     let return_error = quote! {
-        Err(#BIN_ERROR::NoVariantMatch {
-            pos: #POS
-        })
+        if #ALL_EOF {
+            Err(#NOT_ENOUGH_BYTES())
+        } else {
+            Err(#BIN_ERROR::NoVariantMatch {
+                pos: #POS
+            })
+        }
     };
 
     quote! {
+        let mut #ALL_EOF = true;
         #(#try_each_magic_type)*
         #return_error
     }

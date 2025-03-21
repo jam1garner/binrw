@@ -1,8 +1,9 @@
 //! Helper functions for reading and writing data.
 
 use crate::{
-    io::{self, Read, Seek},
-    BinRead, BinResult, Endian, Error,
+    __private::not_enough_bytes,
+    io::{Read, Seek},
+    BinRead, BinResult, Endian,
 };
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -270,7 +271,7 @@ where
 /// # Errors
 ///
 /// If reading fails for a reason other than reaching the end of the input, an
-/// [`Error`] variant will be returned.
+/// [`Error`](crate::Error) variant will be returned.
 ///
 /// # Examples
 ///
@@ -345,7 +346,7 @@ where
 /// # Errors
 ///
 /// If reading fails for a reason other than reaching the end of the input, an
-/// [`Error`] variant will be returned.
+/// [`Error`](crate::Error) variant will be returned.
 ///
 /// # Examples
 ///
@@ -605,13 +606,13 @@ where
             if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
                 bytes.reserve_exact(n);
                 let byte_count = reader
-                    .take(n.try_into().map_err(not_enough_bytes)?)
+                    .take(n.try_into().map_err(|_| not_enough_bytes())?)
                     .read_to_end(bytes)?;
 
                 if byte_count == n {
                     Ok(container)
                 } else {
-                    Err(not_enough_bytes(()))
+                    Err(not_enough_bytes())
                 }
             } else {
                 core::iter::repeat_with(|| T::read_options(reader, endian, args.clone()))
@@ -745,13 +746,6 @@ pub fn write_u24(value: &u32) -> binrw::BinResult<()> {
         Endian::Big => (value.to_be_bytes(), 1..4),
     };
     writer.write_all(&buf[range]).map_err(Into::into)
-}
-
-fn not_enough_bytes<T>(_: T) -> Error {
-    Error::Io(io::Error::new(
-        io::ErrorKind::UnexpectedEof,
-        "not enough bytes in reader",
-    ))
 }
 
 // For an unknown reason (possibly related to the note in the compiler error

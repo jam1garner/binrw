@@ -1,6 +1,6 @@
 use crate::{
     error::{Backtrace, BacktraceFrame, CustomError},
-    io::{Read, Seek, SeekFrom, Write},
+    io::{self, Read, Seek, SeekFrom, Write},
     BinRead, BinResult, BinWrite, Endian, Error,
 };
 #[cfg(not(feature = "std"))]
@@ -99,6 +99,14 @@ where
             found: Box::new(val) as _,
         })
     }
+}
+
+#[must_use]
+pub fn not_enough_bytes() -> Error {
+    Error::Io(io::Error::new(
+        io::ErrorKind::UnexpectedEof,
+        "not enough bytes in reader",
+    ))
 }
 
 pub fn parse_fn_type_hint<Ret, ParseFn, R, Args>(f: ParseFn) -> ParseFn
