@@ -215,3 +215,40 @@ fn unit_enum_rewind_on_no_variant() {
     Test::read(&mut data).expect_err("accepted bad data");
     assert_eq!(expected, data.stream_position().unwrap());
 }
+
+#[test]
+fn unit_enum_eof_when_all_magic_eof() {
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(big)]
+    enum TestHomogenous {
+        #[br(magic(b"ONE"))]
+        One,
+
+        #[br(magic(b"TWO"))]
+        Two,
+
+        #[br(magic(b"ZER"))]
+        Zero,
+    }
+
+    assert!(TestHomogenous::read(&mut Cursor::new(&[]))
+        .unwrap_err()
+        .is_eof());
+
+    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[br(big)]
+    enum TestHeterogenous {
+        #[br(magic(b"O"))]
+        One,
+
+        #[br(magic(b"TW"))]
+        Two,
+
+        #[br(magic(b"ZERO"))]
+        Zero,
+    }
+
+    assert!(TestHeterogenous::read(&mut Cursor::new(&[]))
+        .unwrap_err()
+        .is_eof());
+}
