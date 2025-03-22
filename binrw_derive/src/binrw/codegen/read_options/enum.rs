@@ -4,8 +4,8 @@ use super::{
 };
 use crate::binrw::{
     codegen::sanitization::{
-        BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, OPT, POS, READER, READ_METHOD,
-        RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
+        ALL_EOF, BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, IO_ERROR, IO_ERROR_KIND, OPT, POS,
+        READER, READ_METHOD, RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };
@@ -129,18 +129,30 @@ fn generate_unit_enum_magic(reader_var: &TokenStream, variants: &[UnitEnumField]
                 #body
             })() {
                 v @ Ok(_) => return v,
-                Err(#TEMP) => { #RESTORE_POSITION_VARIANT(#reader_var, #POS, #TEMP)?; }
+                Err(#TEMP) => {
+                    if !#RESTORE_POSITION_VARIANT(#reader_var, #POS, #TEMP)?.is_eof() {
+                        #ALL_EOF = false;
+                    }
+                }
             }
         }
     });
 
     let return_error = quote! {
-        Err(#BIN_ERROR::NoVariantMatch {
-            pos: #POS
-        })
+        if #ALL_EOF {
+            Err(#BIN_ERROR::Io(#IO_ERROR::new(
+                #IO_ERROR_KIND::UnexpectedEof,
+                "not enough bytes in reader",
+            )))
+        } else {
+            Err(#BIN_ERROR::NoVariantMatch {
+                pos: #POS
+            })
+        }
     };
 
     quote! {
+        let mut #ALL_EOF = true;
         #(#try_each_magic_type)*
         #return_error
     }

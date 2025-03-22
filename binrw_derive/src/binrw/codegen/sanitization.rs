@@ -26,6 +26,8 @@ ident_str! {
     pub(crate) BINREAD_TRAIT = from_read_trait!();
     pub(crate) BINWRITE_TRAIT = from_write_trait!();
     pub(crate) BIN_ERROR = from_crate!(Error);
+    pub(crate) IO_ERROR = from_crate!(io::Error);
+    pub(crate) IO_ERROR_KIND = from_crate!(io::ErrorKind);
     pub(crate) READ_TRAIT = from_crate!(io::Read);
     pub(crate) WRITE_TRAIT = from_crate!(io::Write);
     pub(crate) SEEK_TRAIT = from_crate!(io::Seek);
@@ -74,6 +76,7 @@ ident_str! {
     pub(crate) READ_FUNCTION = "__binrw_generated_read_function";
     pub(crate) WRITE_FUNCTION = "__binrw_generated_write_function";
     pub(crate) BEFORE_POS = "__binrw_generated_before_pos";
+    pub(crate) ALL_EOF = "__binrw_generated_all_eof";
     pub(crate) DBG_EPRINTLN = from_crate!(__private::eprintln);
 }
 
