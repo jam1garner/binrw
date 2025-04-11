@@ -86,6 +86,19 @@ pub trait BinWrite {
         self.write_le_args(writer, Self::Args::args())
     }
 
+    /// Write `Self` to the writer assuming native-endian byte order.
+    ///
+    /// # Errors
+    ///
+    /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_ne<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()>
+    where
+        for<'a> Self::Args<'a>: Required,
+    {
+        self.write_ne_args(writer, Self::Args::args())
+    }
+
     /// Write `Self` to the writer using the given arguments.
     ///
     /// # Errors
@@ -127,6 +140,21 @@ pub trait BinWrite {
         args: Self::Args<'_>,
     ) -> BinResult<()> {
         self.write_options(writer, Endian::Little, args)
+    }
+
+    /// Write `Self` to the writer, assuming native-endian byte order, using the
+    /// given arguments.
+    ///
+    /// # Errors
+    ///
+    /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
+    fn write_ne_args<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        self.write_options(writer, Endian::NATIVE, args)
     }
 
     /// Write `Self` to the writer using the given [`Endian`] and

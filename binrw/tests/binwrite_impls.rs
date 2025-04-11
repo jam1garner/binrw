@@ -76,6 +76,30 @@ fn non_zero() {
 }
 
 #[test]
+fn native_endian() {
+    #[derive(BinWrite)]
+    struct Test(u16);
+
+    #[derive(BinWrite)]
+    #[bw(import(mul: u16))]
+    struct TestArgs(#[bw(map = |val| mul * *val)] u16);
+
+    let mut output = binrw::io::Cursor::new(vec![]);
+    Test(1).write_ne(&mut output).unwrap();
+    #[cfg(target_endian = "big")]
+    assert_eq!(output.into_inner(), b"\0\x01");
+    #[cfg(target_endian = "little")]
+    assert_eq!(output.into_inner(), b"\x01\0");
+
+    let mut output = binrw::io::Cursor::new(vec![]);
+    TestArgs(2).write_ne_args(&mut output, (2,)).unwrap();
+    #[cfg(target_endian = "big")]
+    assert_eq!(output.into_inner(), b"\0\x04");
+    #[cfg(target_endian = "little")]
+    assert_eq!(output.into_inner(), b"\x04\0");
+}
+
+#[test]
 fn option() {
     compare!(Some(1_i32), Endian::Big, b"\0\0\0\x01");
     compare!(None::<i32>, Endian::Big, b"");
