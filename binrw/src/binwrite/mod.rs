@@ -193,6 +193,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_type<T: BinWrite>(&mut self, value: &T, endian: Endian) -> BinResult<()>
     where
         for<'a> T::Args<'a>: Required,
@@ -205,6 +206,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_be<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
         for<'a> T::Args<'a>: Required,
@@ -217,6 +219,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_le<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
         for<'a> T::Args<'a>: Required,
@@ -229,6 +232,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_ne<T: BinWrite>(&mut self, value: &T) -> BinResult<()>
     where
         for<'a> T::Args<'a>: Required,
@@ -241,15 +245,14 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_type_args<T: BinWrite>(
         &mut self,
         value: &T,
         endian: Endian,
         args: T::Args<'_>,
     ) -> BinResult<()> {
-        T::write_options(value, self, endian, args)?;
-
-        Ok(())
+        T::write_options(value, self, endian, args)
     }
 
     /// Write `T` to the writer, assuming big-endian byte order, using the
@@ -258,6 +261,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_be_args<T: BinWrite>(&mut self, value: &T, args: T::Args<'_>) -> BinResult<()> {
         self.write_type_args(value, Endian::Big, args)
     }
@@ -268,6 +272,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_le_args<T: BinWrite>(&mut self, value: &T, args: T::Args<'_>) -> BinResult<()> {
         self.write_type_args(value, Endian::Little, args)
     }
@@ -278,6 +283,7 @@ pub trait BinWriterExt: Write + Seek + Sized {
     /// # Errors
     ///
     /// If writing fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn write_ne_args<T: BinWrite>(&mut self, value: &T, args: T::Args<'_>) -> BinResult<()> {
         self.write_type_args(value, Endian::NATIVE, args)
     }

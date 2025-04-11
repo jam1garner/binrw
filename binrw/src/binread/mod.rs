@@ -270,6 +270,7 @@ pub trait BinReaderExt: Read + Seek + Sized {
     /// # Errors
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
+    #[inline]
     fn read_type_args<T>(&mut self, endian: Endian, args: T::Args<'_>) -> BinResult<T>
     where
         T: BinRead,
