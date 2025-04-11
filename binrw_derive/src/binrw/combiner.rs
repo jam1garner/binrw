@@ -96,9 +96,9 @@ fn apply_temp_crossover_enum(
                     combine_error(&mut all_errors, error);
                 }
             }
-            (EnumVariant::Unit(_), EnumVariant::Unit(_)) => continue,
+            (EnumVariant::Unit(_), EnumVariant::Unit(_)) => {}
             _ => unreachable!("read and write input should always be the same kind"),
-        };
+        }
     }
     all_errors
 }
