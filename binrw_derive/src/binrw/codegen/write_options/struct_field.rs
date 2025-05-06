@@ -290,7 +290,7 @@ impl<'a> StructFieldGenerator<'a> {
                 }
             },
             FieldMode::Calc(_) | FieldMode::TryCalc(_) => quote! {
-                let #args = ();
+                let #args = <_ as #REQUIRED_ARG_TRAIT>::args();
                 #out
             },
             FieldMode::Function(_) => {
