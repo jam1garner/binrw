@@ -272,7 +272,8 @@ impl<'a> StructFieldGenerator<'a> {
         let map_fn = map_func_ident(&self.field.ident);
         let out = self.out;
         self.out = match &self.field.field_mode {
-            FieldMode::Normal => match &self.field.map {
+            FieldMode::Calc(_) | FieldMode::TryCalc(_) | FieldMode::Normal => match &self.field.map
+            {
                 Map::Map(_) => quote! {
                     let #args = #WRITE_MAP_ARGS_TYPE_HINT(&#map_fn, #args_val);
                     #out
@@ -288,10 +289,6 @@ impl<'a> StructFieldGenerator<'a> {
                         #out
                     }
                 }
-            },
-            FieldMode::Calc(_) | FieldMode::TryCalc(_) => quote! {
-                let #args = ();
-                #out
             },
             FieldMode::Function(_) => {
                 let ty = &self.field.ty;

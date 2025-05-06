@@ -142,7 +142,7 @@ impl StructField {
         self.temp = Some(());
     }
 
-    fn validate(&self, _: Options) -> syn::Result<()> {
+    fn validate(&self, options: Options) -> syn::Result<()> {
         let mut all_errors = None::<syn::Error>;
 
         if self.do_try.is_some() && self.generated_value() {
@@ -157,7 +157,8 @@ impl StructField {
             );
         }
 
-        if matches!(self.field_mode, FieldMode::TryCalc(_) | FieldMode::Calc(_))
+        if !options.write
+            && matches!(self.field_mode, FieldMode::TryCalc(_) | FieldMode::Calc(_))
             && self.args.is_some()
         {
             // TODO: Correct span (args + calc keywords)
