@@ -17,7 +17,7 @@ use sanitization::{
     BIN_ERROR, BIN_RESULT, ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, TEMP, WRITER,
     WRITE_TRAIT,
 };
-use syn::{spanned::Spanned, DeriveInput, Ident, Type};
+use syn::{spanned::Spanned, DeriveInput, Ident, Token, Type, WhereClause};
 
 pub(crate) fn generate_impl<const WRITE: bool>(
     derive_input: &DeriveInput,
@@ -164,23 +164,31 @@ fn generate_trait_impl<const WRITE: bool>(
         )
     };
 
-    let fn_impl = match binrw_input {
+    let name = &derive_input.ident;
+    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
+
+    let (fn_impl, where_clause) = match binrw_input {
         ParseResult::Ok(binrw_input) => {
             if WRITE {
-                write_options::generate(binrw_input, derive_input)
+                (
+                    write_options::generate(binrw_input, derive_input),
+                    get_where_clause(binrw_input, where_clause),
+                )
             } else {
-                read_options::generate(binrw_input, derive_input)
+                (
+                    read_options::generate(binrw_input, derive_input),
+                    get_where_clause(binrw_input, where_clause),
+                )
             }
         }
         // If there is a parsing error, an impl for the trait still needs to be
         // generated to avoid misleading errors at all call sites that use the
         // trait, so emit the trait and just stick the errors inside the generated
         // function
-        ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
+        ParseResult::Partial(_, error) | ParseResult::Err(error) => {
+            (error.to_compile_error(), where_clause.cloned())
+        }
     };
-
-    let name = &derive_input.ident;
-    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
 
     let args_lifetime = get_args_lifetime(Span::call_site());
     quote! {
@@ -193,6 +201,25 @@ fn generate_trait_impl<const WRITE: bool>(
             #fn_sig {
                 #fn_impl
             }
+        }
+    }
+}
+
+fn get_where_clause(
+    binrw_input: &Input,
+    where_clause: Option<&WhereClause>,
+) -> Option<WhereClause> {
+    match (binrw_input.bound(), where_clause) {
+        (None, where_clause) => where_clause.cloned(),
+        (Some(bound), where_clause) if bound.predicates().is_empty() => where_clause.cloned(),
+        (Some(bound), None) => Some(WhereClause {
+            where_token: Token![where](Span::call_site()),
+            predicates: bound.predicates().clone(),
+        }),
+        (Some(bound), Some(where_clause)) => {
+            let mut where_clause = where_clause.clone();
+            where_clause.predicates.extend(bound.predicates().clone());
+            Some(where_clause)
         }
     }
 }
