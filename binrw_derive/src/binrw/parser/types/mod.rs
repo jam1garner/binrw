@@ -1,4 +1,5 @@
 mod assert;
+mod bound;
 mod cond_endian;
 mod condition;
 mod enum_error_mode;
@@ -11,6 +12,7 @@ mod passed_args;
 mod spanned_value;
 
 pub(crate) use assert::{Assert, Error as AssertionError};
+pub(crate) use bound::Bound;
 pub(crate) use cond_endian::CondEndian;
 pub(crate) use condition::Condition;
 pub(crate) use enum_error_mode::EnumErrorMode;
