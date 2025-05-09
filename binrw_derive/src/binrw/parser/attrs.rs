@@ -3,7 +3,7 @@ use crate::meta_types::{
     IdentPatType, IdentTypeMaybeDefault, MetaEnclosedList, MetaExpr, MetaIdent, MetaList, MetaLit,
     MetaType, MetaValue, MetaVoid,
 };
-use syn::{Expr, FieldValue, Token};
+use syn::{Expr, FieldValue, Token, WherePredicate};
 
 pub(super) type AlignAfter = MetaExpr<kw::align_after>;
 pub(super) type AlignBefore = MetaExpr<kw::align_before>;
@@ -12,6 +12,7 @@ pub(super) type ArgsRaw = MetaExpr<kw::args_raw>;
 pub(super) type AssertLike<Keyword> = MetaList<Keyword, Expr>;
 pub(super) type Assert = AssertLike<kw::assert>;
 pub(super) type Big = MetaVoid<kw::big>;
+pub(super) type Bound = MetaList<kw::bound, WherePredicate>;
 pub(super) type Calc = MetaExpr<kw::calc>;
 pub(super) type Count = MetaExpr<kw::count>;
 pub(super) type Debug = MetaVoid<kw::dbg>;

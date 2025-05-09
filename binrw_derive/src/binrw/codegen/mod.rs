@@ -164,23 +164,26 @@ fn generate_trait_impl<const WRITE: bool>(
         )
     };
 
-    let fn_impl = match binrw_input {
-        ParseResult::Ok(binrw_input) => {
+    let (fn_impl, generics) = match binrw_input {
+        ParseResult::Ok(binrw_input) => (
             if WRITE {
                 write_options::generate(binrw_input, derive_input)
             } else {
                 read_options::generate(binrw_input, derive_input)
-            }
-        }
+            },
+            get_generics(binrw_input, derive_input),
+        ),
         // If there is a parsing error, an impl for the trait still needs to be
         // generated to avoid misleading errors at all call sites that use the
         // trait, so emit the trait and just stick the errors inside the generated
         // function
-        ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
+        ParseResult::Partial(_, error) | ParseResult::Err(error) => {
+            (error.to_compile_error(), derive_input.generics.clone())
+        }
     };
 
     let name = &derive_input.ident;
-    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let args_lifetime = get_args_lifetime(Span::call_site());
     quote! {
@@ -193,6 +196,21 @@ fn generate_trait_impl<const WRITE: bool>(
             #fn_sig {
                 #fn_impl
             }
+        }
+    }
+}
+
+fn get_generics(binrw_input: &Input, derive_input: &DeriveInput) -> syn::Generics {
+    let mut generics = derive_input.generics.clone();
+
+    match binrw_input.bound() {
+        None => generics,
+        Some(bound) => {
+            generics
+                .make_where_clause()
+                .predicates
+                .extend(bound.predicates().iter().cloned());
+            generics
         }
     }
 }
