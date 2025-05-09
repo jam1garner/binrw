@@ -17,7 +17,7 @@ use sanitization::{
     BIN_ERROR, BIN_RESULT, ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, TEMP, WRITER,
     WRITE_TRAIT,
 };
-use syn::{spanned::Spanned, DeriveInput, Ident, Token, Type, WhereClause};
+use syn::{spanned::Spanned, DeriveInput, Ident, Type};
 
 pub(crate) fn generate_impl<const WRITE: bool>(
     derive_input: &DeriveInput,
@@ -164,31 +164,26 @@ fn generate_trait_impl<const WRITE: bool>(
         )
     };
 
-    let name = &derive_input.ident;
-    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
-
-    let (fn_impl, where_clause) = match binrw_input {
-        ParseResult::Ok(binrw_input) => {
+    let (fn_impl, generics) = match binrw_input {
+        ParseResult::Ok(binrw_input) => (
             if WRITE {
-                (
-                    write_options::generate(binrw_input, derive_input),
-                    get_where_clause(binrw_input, where_clause),
-                )
+                write_options::generate(binrw_input, derive_input)
             } else {
-                (
-                    read_options::generate(binrw_input, derive_input),
-                    get_where_clause(binrw_input, where_clause),
-                )
-            }
-        }
+                read_options::generate(binrw_input, derive_input)
+            },
+            get_generics(binrw_input, derive_input),
+        ),
         // If there is a parsing error, an impl for the trait still needs to be
         // generated to avoid misleading errors at all call sites that use the
         // trait, so emit the trait and just stick the errors inside the generated
         // function
         ParseResult::Partial(_, error) | ParseResult::Err(error) => {
-            (error.to_compile_error(), where_clause.cloned())
+            (error.to_compile_error(), derive_input.generics.clone())
         }
     };
+
+    let name = &derive_input.ident;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let args_lifetime = get_args_lifetime(Span::call_site());
     quote! {
@@ -205,21 +200,17 @@ fn generate_trait_impl<const WRITE: bool>(
     }
 }
 
-fn get_where_clause(
-    binrw_input: &Input,
-    where_clause: Option<&WhereClause>,
-) -> Option<WhereClause> {
-    match (binrw_input.bound(), where_clause) {
-        (None, where_clause) => where_clause.cloned(),
-        (Some(bound), where_clause) if bound.predicates().is_empty() => where_clause.cloned(),
-        (Some(bound), None) => Some(WhereClause {
-            where_token: Token![where](Span::call_site()),
-            predicates: bound.predicates().clone(),
-        }),
-        (Some(bound), Some(where_clause)) => {
-            let mut where_clause = where_clause.clone();
-            where_clause.predicates.extend(bound.predicates().clone());
-            Some(where_clause)
+fn get_generics(binrw_input: &Input, derive_input: &DeriveInput) -> syn::Generics {
+    let mut generics = derive_input.generics.clone();
+
+    match binrw_input.bound() {
+        None => generics,
+        Some(bound) => {
+            generics
+                .make_where_clause()
+                .predicates
+                .extend(bound.predicates().iter().cloned());
+            generics
         }
     }
 }
