@@ -1,7 +1,7 @@
 use super::{
     attr_struct,
-    types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    Bound, EnumVariant, FromInput, ParseResult, StructField, TrySet, UnitEnumField,
+    types::{Assert, Bound, CondEndian, EnumErrorMode, Imports, Magic, Map},
+    EnumVariant, FromInput, ParseResult, StructField, TrySet, UnitEnumField,
 };
 use crate::binrw::Options;
 use proc_macro2::TokenStream;

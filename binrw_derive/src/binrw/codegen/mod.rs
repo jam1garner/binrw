@@ -22,7 +22,7 @@ use sanitization::{
 };
 use syn::{parse_quote, spanned::Spanned, DeriveInput, Ident, Type};
 
-use super::parser::{EnumVariant, FieldMode};
+use super::parser::{Enum, EnumVariant, FieldMode};
 
 pub(crate) fn generate_impl<const WRITE: bool>(
     derive_input: &DeriveInput,
@@ -206,24 +206,59 @@ fn generate_trait_impl<const WRITE: bool>(
 }
 
 fn get_generics<const WRITE: bool>(binrw_input: &Input, generics: &syn::Generics) -> syn::Generics {
-    match binrw_input.bound() {
-        None => get_inferred_generics::<WRITE>(binrw_input, generics),
-        Some(bound) => {
-            let mut generics = generics.clone();
+    let mut generics = generics.clone();
+
+    match binrw_input {
+        Input::Struct(s) => add_explicit_struct_predicates(s, &mut generics),
+        Input::Enum(e) => add_explicit_enum_predicates(e, &mut generics),
+        Input::UnitStruct(_) | Input::UnitOnlyEnum(_) => {}
+    }
+
+    if binrw_input.bound().is_none() {
+        add_implicit_predicates::<WRITE>(binrw_input, &mut generics);
+    }
+
+    generics
+}
+
+fn add_explicit_struct_predicates(s: &Struct, generics: &mut syn::Generics) {
+    if let Some(bound) = &s.bound {
+        generics
+            .make_where_clause()
+            .predicates
+            .extend(bound.predicates().iter().cloned());
+    }
+
+    for f in &s.fields {
+        if let Some(bound) = &f.bound {
             generics
                 .make_where_clause()
                 .predicates
                 .extend(bound.predicates().iter().cloned());
-            generics
+        }
+    }
+}
+
+fn add_explicit_enum_predicates(e: &Enum, generics: &mut syn::Generics) {
+    if let Some(bound) = &e.bound {
+        generics
+            .make_where_clause()
+            .predicates
+            .extend(bound.predicates().iter().cloned());
+    }
+
+    for variant in &e.variants {
+        match variant {
+            EnumVariant::Variant { options, .. } => {
+                add_explicit_struct_predicates(options, generics);
+            }
+            EnumVariant::Unit(_) => {}
         }
     }
 }
 
 #[allow(clippy::too_many_lines)]
-fn get_inferred_generics<const WRITE: bool>(
-    binrw_input: &Input,
-    generics: &syn::Generics,
-) -> syn::Generics {
+fn add_implicit_predicates<const WRITE: bool>(binrw_input: &Input, generics: &mut syn::Generics) {
     // AST visitor adapted from serde
     // https://github.com/serde-rs/serde/blob/b9de3658ad9ca7850c496e0f990d5241b943eefb/serde_derive/src/bound.rs#L91
     struct FindTyParams<'ast> {
@@ -364,15 +399,23 @@ fn get_inferred_generics<const WRITE: bool>(
     let mut visitor = FindTyParams::new(generics);
 
     let should_visit = if WRITE {
-        |_: &Struct, f: &StructField| !matches!(&f.field_mode, FieldMode::Function(_))
+        |s: &Struct, f: &StructField| {
+            !matches!(&f.field_mode, FieldMode::Function(_))
+                && f.bound.is_none()
+                && s.bound.is_none()
+        }
     } else {
         |s: &Struct, f: &StructField| {
-            matches!(&f.field_mode, FieldMode::Normal) && f.map.is_none() && s.map.is_none()
+            matches!(&f.field_mode, FieldMode::Normal)
+                && f.map.is_none()
+                && s.map.is_none()
+                && f.bound.is_none()
+                && s.bound.is_none()
         }
     };
 
     match binrw_input {
-        Input::Struct(s) | Input::UnitStruct(s) => {
+        Input::Struct(s) => {
             for field in s.fields.iter().filter(|f| should_visit(s, f)) {
                 visitor.visit_field(&field.field);
             }
@@ -391,14 +434,16 @@ fn get_inferred_generics<const WRITE: bool>(
                 }
             }
         }
-        Input::UnitOnlyEnum(_) => {}
+        Input::UnitStruct(_) | Input::UnitOnlyEnum(_) => {}
     }
 
     let relevant_type_params = visitor.relevant_type_params;
     let associated_type_usage = visitor.associated_type_usage;
-    let new_predicates =
-        generics
-            .type_params()
+    let type_params = generics.type_params().cloned().collect::<Vec<_>>();
+
+    generics.make_where_clause().predicates.extend(
+        type_params
+            .into_iter()
             .map(|param| param.ident.clone())
             .filter(|ident| relevant_type_params.contains(ident))
             .map(|ident| syn::TypePath {
@@ -420,14 +465,8 @@ fn get_inferred_generics<const WRITE: bool>(
                 };
 
                 where_predicates
-            });
-
-    let mut generics = generics.clone();
-    generics
-        .make_where_clause()
-        .predicates
-        .extend(new_predicates);
-    generics
+            }),
+    );
 }
 
 fn get_args_lifetime(span: proc_macro2::Span) -> syn::Lifetime {
