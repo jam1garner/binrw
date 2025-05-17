@@ -101,7 +101,7 @@ impl StructField {
         self.count.is_some() || self.offset.is_some()
     }
 
-    /// Returns true if the only field-level attributes are asserts
+    /// Returns true if the only field-level attributes are asserts and bounds
     pub(crate) fn has_no_attrs(&self) -> bool {
         macro_rules! all_fields_none {
             ($($field:ident),*) => {
