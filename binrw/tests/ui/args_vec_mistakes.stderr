@@ -24,11 +24,11 @@ error[E0308]: mismatched types
    = note: expected struct `VecArgs<()>`
                found tuple `((),)`
 
-error[E0599]: the method `finalize` exists for struct `VecArgsBuilder<(), Needed, Satisfied>`, but its trait bounds were not satisfied
+error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::VecArgsBuilder<(), Needed, Satisfied>`, but its trait bounds were not satisfied
   --> tests/ui/args_vec_mistakes.rs:13:26
    |
 13 | struct MissingCount(#[br(args { inner: () })] Vec<u8>);
-   |                          ^^^^ method cannot be called on `VecArgsBuilder<(), Needed, Satisfied>` due to unsatisfied trait bounds
+   |                          ^^^^ method cannot be called due to unsatisfied trait bounds
    |
   ::: src/named_args.rs
    |
@@ -53,14 +53,14 @@ error[E0277]: the trait bound `usize: TryFrom<Option<{integer}>>` is not satisfi
    = note: required for `Option<{integer}>` to implement `Into<usize>`
    = note: required for `usize` to implement `TryFrom<Option<{integer}>>`
 
-error[E0599]: the method `finalize` exists for struct `VecArgsBuilder<(NoDefault,), Satisfied, Needed>`, but its trait bounds were not satisfied
+error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::VecArgsBuilder<(NoDefault,), Satisfied, Needed>`, but its trait bounds were not satisfied
   --> tests/ui/args_vec_mistakes.rs:25:42
    |
 4  | struct NoDefault;
    | ---------------- doesn't satisfy `NoDefault: Default`
 ...
 25 | struct MissingInnerArgs(#[br(count = 1)] Vec<Inner>);
-   |                                          ^^^^^^^^^^ method cannot be called on `VecArgsBuilder<(NoDefault,), Satisfied, Needed>` due to unsatisfied trait bounds
+   |                                          ^^^^^^^^^^ method cannot be called due to unsatisfied trait bounds
    |
   ::: src/named_args.rs
    |
