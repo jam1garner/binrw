@@ -125,10 +125,10 @@ where
     a
 }
 
-pub fn write_function_args_type_hint<T, W, Args, F>(_: &F, a: Args) -> Args
+pub fn write_function_args_type_hint<'a, T, W, Args, F>(_: &F, a: Args) -> Args
 where
     W: Write + Seek,
-    F: FnOnce(&T, &mut W, Endian, Args) -> BinResult<()>,
+    F: FnOnce(&'a T, &mut W, Endian, Args) -> BinResult<()>,
 {
     a
 }
@@ -159,10 +159,10 @@ where
     x
 }
 
-pub fn write_fn_type_hint<T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
+pub fn write_fn_type_hint<'a, T, WriterFn, Writer, Args>(x: WriterFn) -> WriterFn
 where
     Writer: Write + Seek,
-    WriterFn: FnOnce(&T, &mut Writer, Endian, Args) -> BinResult<()>,
+    WriterFn: FnOnce(&'a T, &mut Writer, Endian, Args) -> BinResult<()>,
 {
     x
 }

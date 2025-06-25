@@ -38,3 +38,29 @@ fn write_with_fn_once_closure_args() {
     Test { a: 0 }.write(&mut x).unwrap();
     assert_eq!(x.into_inner(), b"\x01");
 }
+
+#[binrw::writer(writer)]
+fn write_as_ref_str<S: AsRef<str>>(value: S) -> binrw::BinResult<()> {
+    let bytes = value.as_ref().as_bytes();
+    writer.write_all(bytes)?;
+    Ok(())
+}
+
+#[test]
+fn write_with_as_ref_str() {
+    use binrw::prelude::*;
+
+    #[derive(BinWrite)]
+    struct MyType {
+        #[bw(write_with = write_as_ref_str)]
+        value: String,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    MyType {
+        value: "Hello, World!".to_string(),
+    }
+    .write_le(&mut x)
+    .unwrap();
+    assert_eq!(x.into_inner(), b"Hello, World!");
+}
