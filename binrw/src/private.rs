@@ -212,14 +212,14 @@ pub fn restore_position_variant<S: Seek>(
     }
 }
 
-pub fn write_try_map_args_type_hint<Input, Output, Error, MapFn, Args>(
+pub fn write_try_map_args_type_hint<'a, Input, Output, Error, MapFn, Args>(
     _: &MapFn,
     args: Args,
 ) -> Args
 where
     Error: CustomError,
     MapFn: FnOnce(Input) -> Result<Output, Error>,
-    Output: for<'a> BinWrite<Args<'a> = Args>,
+    Output: BinWrite<Args<'a> = Args>,
 {
     args
 }

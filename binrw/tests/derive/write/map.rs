@@ -164,3 +164,26 @@ fn map_lifetime_args() {
 
     assert_eq!(x.into_inner(), b"\x02");
 }
+
+#[test]
+fn try_map_lifetime_args() {
+    #[derive(BinWrite)]
+    #[bw(import(borrowed: &u8))]
+    struct Wrapper(#[bw(map = |&x| x + *borrowed)] u8);
+
+    fn try_map_wrapper(x: &u8) -> binrw::BinResult<Wrapper> {
+        Ok(Wrapper(*x))
+    }
+
+    #[derive(BinWrite, Debug, PartialEq)]
+    #[bw(little, import(borrowed: &u8))]
+    struct Test {
+        #[bw(try_map = try_map_wrapper, args(borrowed))]
+        a: u8,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    Test { a: 1 }.write_args(&mut x, (&1_u8,)).unwrap();
+
+    assert_eq!(x.into_inner(), b"\x02");
+}
