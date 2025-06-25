@@ -290,15 +290,10 @@ impl<'a> StructFieldGenerator<'a> {
                     }
                 }
             },
-            FieldMode::Function(_) => {
-                let ty = &self.field.ty;
-                quote! {
-                    let #args = #WRITE_ARGS_TYPE_HINT::<#ty, _, _, _>(
-                        &#WRITE_FUNCTION, #args_val
-                    );
-                    #out
-                }
-            }
+            FieldMode::Function(_) => quote! {
+                let #args = #WRITE_ARGS_TYPE_HINT(&#WRITE_FUNCTION, #args_val);
+                #out
+            },
             FieldMode::Default => unreachable!("Ignored fields are not written"),
         };
 

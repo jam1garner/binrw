@@ -130,3 +130,18 @@ fn try_map() {
     let mut x = Cursor::new(Vec::new());
     MyType { value: 128 }.write_le(&mut x).unwrap_err();
 }
+
+#[test]
+fn map_write_with() {
+    use binrw::prelude::*;
+
+    #[derive(BinWrite)]
+    struct MyType {
+        #[bw(map = |&x| x as u16, write_with = <u16 as BinWrite>::write_options)]
+        value: u8,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    MyType { value: 127 }.write_le(&mut x).unwrap();
+    assert_eq!(x.into_inner(), b"\x7f\0");
+}
