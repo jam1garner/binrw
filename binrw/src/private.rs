@@ -231,7 +231,7 @@ where
     func
 }
 
-pub fn write_fn_map_output_type_hint<Input, Output, MapFn, Writer, WriteFn, Args>(
+pub fn write_fn_map_output_type_hint<'a, Input, Output, MapFn, Writer, WriteFn, Args>(
     _: &MapFn,
     func: WriteFn,
 ) -> WriteFn
@@ -239,7 +239,7 @@ where
     MapFn: FnOnce(Input) -> Output,
     Args: Clone,
     Writer: Write + Seek,
-    WriteFn: Fn(&Output, &mut Writer, Endian, Args) -> BinResult<()>,
+    WriteFn: Fn(&'a Output, &mut Writer, Endian, Args) -> BinResult<()>,
 {
     func
 }

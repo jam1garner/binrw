@@ -64,3 +64,18 @@ fn write_with_as_ref_str() {
     .unwrap();
     assert_eq!(x.into_inner(), b"Hello, World!");
 }
+
+#[test]
+fn map_write_with_as_ref_str() {
+    use binrw::prelude::*;
+
+    #[derive(BinWrite)]
+    struct MyType {
+        #[bw(map = |x| x.to_string(), write_with = write_as_ref_str)]
+        value: u32,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    MyType { value: 42 }.write_le(&mut x).unwrap();
+    assert_eq!(x.into_inner(), b"42");
+}
