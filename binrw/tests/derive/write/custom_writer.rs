@@ -79,3 +79,22 @@ fn map_write_with_as_ref_str() {
     MyType { value: 42 }.write_le(&mut x).unwrap();
     assert_eq!(x.into_inner(), b"42");
 }
+
+#[test]
+fn try_map_write_with_as_ref_str() {
+    use binrw::prelude::*;
+
+    #[derive(BinWrite)]
+    struct MyType<'a> {
+        #[bw(try_map = |x| x.ok_or("Option was None"), write_with = write_as_ref_str)]
+        value: Option<&'a str>,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    MyType {
+        value: Some("Hello, World!"),
+    }
+    .write_le(&mut x)
+    .unwrap();
+    assert_eq!(x.into_inner(), b"Hello, World!");
+}
