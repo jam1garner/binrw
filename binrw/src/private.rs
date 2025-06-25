@@ -167,10 +167,10 @@ where
     x
 }
 
-pub fn write_map_args_type_hint<Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
+pub fn write_map_args_type_hint<'a, Input, Output, MapFn, Args>(_: &MapFn, args: Args) -> Args
 where
     MapFn: FnOnce(Input) -> Output,
-    Output: for<'a> BinWrite<Args<'a> = Args>,
+    Output: BinWrite<Args<'a> = Args>,
 {
     args
 }

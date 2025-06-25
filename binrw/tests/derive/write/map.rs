@@ -145,3 +145,22 @@ fn map_write_with() {
     MyType { value: 127 }.write_le(&mut x).unwrap();
     assert_eq!(x.into_inner(), b"\x7f\0");
 }
+
+#[test]
+fn map_lifetime_args() {
+    #[derive(BinWrite)]
+    #[bw(import(borrowed: &u8))]
+    struct Wrapper(#[bw(map = |&x| x + *borrowed)] u8);
+
+    #[derive(BinWrite, Debug, PartialEq)]
+    #[bw(little, import(borrowed: &u8))]
+    struct Test {
+        #[bw(map = |&x| Wrapper(x), args(borrowed))]
+        a: u8,
+    }
+
+    let mut x = Cursor::new(Vec::new());
+    Test { a: 1 }.write_args(&mut x, (&1_u8,)).unwrap();
+
+    assert_eq!(x.into_inner(), b"\x02");
+}
