@@ -454,6 +454,25 @@ fn gat_raw() {
 }
 
 #[test]
+fn gat_map() {
+    #[derive(BinRead)]
+    #[br(import(borrowed: &u8))]
+    struct Wrapper(#[br(calc = *borrowed)] u8);
+
+    #[derive(BinRead, Debug, PartialEq)]
+    #[br(little, import(borrowed: &u8))]
+    struct Test {
+        #[br(map = |x: Wrapper| x.0, args(borrowed))]
+        a: u8,
+    }
+
+    assert_eq!(
+        Test::read_args(&mut Cursor::new(b""), (&1_u8,)).unwrap(),
+        Test { a: 1 }
+    );
+}
+
+#[test]
 fn if_alternate() {
     #[derive(BinRead, Debug)]
     #[br(import{ try_read: bool })]
