@@ -547,7 +547,10 @@ fn get_err_context(
 ) -> TokenStream {
     let backtrace = if let Some(ErrContext::Context(expr)) = &field.err_context {
         quote_spanned! {field.ident.span()=>
-            #BACKTRACE_FRAME::Custom(Box::new(#expr) as _)
+            {
+                extern crate alloc;
+                #BACKTRACE_FRAME::Custom(alloc::boxed::Box::new(#expr) as _)
+            }
         }
     } else {
         #[cfg(feature = "verbose-backtrace")]
