@@ -333,7 +333,7 @@ impl Builder<'_> {
                             #( #satisfied_generics ),*
                         >
                     where
-                        #current_field_ty: Default,
+                        #current_field_ty: ::core::default::Default,
                     {
                         /// Builds the object.
                         #vis fn finalize(self) -> #name < #user_generic_args > {
