@@ -321,7 +321,7 @@ impl<'field> FieldGenerator<'field> {
             Map::Try(try_map) | Map::Repr(try_map) => {
                 let try_map = if matches!(self.field.map, Map::Repr(_)) {
                     quote! {
-                        <#try_map as core::convert::TryInto<_>>::try_into
+                        <#try_map as ::core::convert::TryInto<_>>::try_into
                     }
                 } else {
                     try_map.clone()

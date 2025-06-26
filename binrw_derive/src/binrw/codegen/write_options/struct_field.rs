@@ -333,7 +333,7 @@ fn args_ident(ident: &Ident) -> Ident {
 fn field_mapping(map: &Map) -> Option<TokenStream> {
     match map {
         Map::Try(map_fn) | Map::Map(map_fn) => Some(quote! { (#map_fn) }),
-        Map::Repr(ty) => Some(quote! { (<#ty as core::convert::TryFrom<_>>::try_from) }),
+        Map::Repr(ty) => Some(quote! { (<#ty as ::core::convert::TryFrom<_>>::try_from) }),
         Map::None => None,
     }
 }
