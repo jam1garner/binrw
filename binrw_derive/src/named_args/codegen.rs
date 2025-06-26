@@ -365,7 +365,9 @@ impl BuilderField {
         let name = &self.name;
         let ty = &self.ty;
         let ty = match self.kind {
-            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(Option<#ty>),
+            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => {
+                quote!(::core::option::Option<#ty>)
+            }
             BuilderFieldKind::Optional { .. } => quote!(#ty),
         };
         quote!(
