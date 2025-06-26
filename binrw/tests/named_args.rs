@@ -3,6 +3,10 @@ use binrw::NamedArgs;
 #[derive(Eq, PartialEq, Debug)]
 struct NotClone;
 
+// Non-standard struct named Option intentionally shadows std::option::Option from the prelude
+#[allow(dead_code)]
+struct Option;
+
 #[derive(NamedArgs)]
 struct Test<'a, T: Clone, const N: usize> {
     blah: u32,

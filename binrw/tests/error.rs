@@ -370,3 +370,44 @@ fn show_backtrace_2() {
         }
     );
 }
+
+#[test]
+fn try_map_with_shadowing_box() {
+    use binrw::{io::Cursor, BinRead};
+
+    // Non-standard struct named Box intentionally shadows std::boxed::Box from the prelude
+    #[allow(dead_code)]
+    struct Box;
+
+    #[allow(dead_code)]
+    #[derive(BinRead, Debug)]
+    struct Test {
+        #[br(try_map = |_: u8| Err("Error"))]
+        value: u8,
+    }
+
+    assert!(!Test::read_le(&mut Cursor::new(b"\0"))
+        .expect_err("accepted bad data")
+        .is_eof());
+}
+
+#[test]
+fn err_context_with_shadowing_box() {
+    use binrw::{io::Cursor, BinRead};
+
+    // Non-standard struct named Box intentionally shadows std::boxed::Box from the prelude
+    #[allow(dead_code)]
+    struct Box;
+
+    #[allow(dead_code)]
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        #[br(err_context(42))]
+        value: u8,
+    }
+
+    assert_eq!(
+        Test::read_le(&mut Cursor::new(b"\0")).unwrap(),
+        Test { value: 0 }
+    );
+}
