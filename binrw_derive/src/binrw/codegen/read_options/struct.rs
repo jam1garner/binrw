@@ -437,7 +437,7 @@ impl<'field> FieldGenerator<'field> {
 
     fn read_value(mut self) -> Self {
         self.out = match &self.field.field_mode {
-            FieldMode::Default => quote! { <_>::default() },
+            FieldMode::Default => quote! { ::core::default::Default::default() },
             FieldMode::Calc(calc) => quote! { #calc },
             FieldMode::TryCalc(calc) => get_try_calc(POS, &self.field.ty, calc),
             read_mode @ (FieldMode::Normal | FieldMode::Function(_)) => {
@@ -499,10 +499,10 @@ impl<'field> FieldGenerator<'field> {
         if let Some(cond) = &self.field.if_cond {
             let condition = &cond.condition;
             let consequent = self.out;
-            let alternate = cond
-                .alternate
-                .as_ref()
-                .map_or_else(|| Cow::Owned(quote! { <_>::default() }), Cow::Borrowed);
+            let alternate = cond.alternate.as_ref().map_or_else(
+                || Cow::Owned(quote! { ::core::default::Default::default() }),
+                Cow::Borrowed,
+            );
             self.out = quote! {
                 if #condition {
                     #consequent
