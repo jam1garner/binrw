@@ -66,9 +66,9 @@ impl Builder<'_> {
             });
 
             let derives = if self.are_all_fields_optional() {
-                quote!(#[derive(Clone, Default)])
+                quote!(#[derive(::core::clone::Clone, ::core::default::Default)])
             } else {
-                quote!(#[derive(Clone)])
+                quote!(#[derive(::core::clone::Clone)])
             };
             Some(quote!(
                 #derives
