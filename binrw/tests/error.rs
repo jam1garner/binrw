@@ -245,7 +245,7 @@ fn no_seek_data_enum() {
                     assert_eq!(m, "rewinding after a failure");
                     match e.downcast_ref::<binrw::Error>() {
                         Some(binrw::Error::AssertFail { pos, .. }) => assert_eq!(*pos, 0),
-                        e => panic!("unexpected error {:?}", e),
+                        e => panic!("unexpected error {e:?}"),
                     }
                 }
                 _ => panic!("unexpected error frame layout"),
@@ -283,7 +283,7 @@ fn no_seek_unit_enum() {
                     assert_eq!(m, "rewinding after a failure");
                     match e.downcast_ref::<binrw::Error>() {
                         Some(binrw::Error::NoVariantMatch { pos }) => assert_eq!(*pos, 0),
-                        e => panic!("unexpected error {:?}", e),
+                        e => panic!("unexpected error {e:?}"),
                     }
                 }
                 _ => panic!("unexpected error frame layout"),
@@ -296,8 +296,9 @@ fn no_seek_unit_enum() {
 #[test]
 #[allow(clippy::empty_line_after_doc_comments)]
 fn parse_backtrace_with_empty_comment_lines() {
+    #[allow(dead_code)]
     #[derive(binrw::BinRead)]
-    pub struct Test {
+    struct Test {
         /// Blank next line has no whitespace…
 
         /// …but it is part of the same span, and needs to not crash the
