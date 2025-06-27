@@ -359,6 +359,18 @@ fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
             #WRITE_ZEROES(#writer_var, (#padding) as u64)?;
         }
     });
+    let align_size_to = field.align_size_to.as_ref().map(|alignment| {
+        quote! {{
+            let align = (#alignment) as u64;
+            let after_pos = #SEEK_TRAIT::stream_position(#writer_var)?;
+            if let Some(size) = after_pos.checked_sub(#BEFORE_POS) {
+                let rem = size % align;
+                if rem != 0 {
+                    #WRITE_ZEROES(#writer_var, align - rem)?;
+                }
+            }
+        }}
+    });
     let align_after = field.align_after.as_ref().map(|alignment| {
         quote! {{
             let pos = #SEEK_TRAIT::stream_position(#writer_var)?;
@@ -378,6 +390,7 @@ fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     quote! {
         #pad_size_to
         #pad_after
+        #align_size_to
         #align_after
         #restore_position
     }
@@ -407,11 +420,15 @@ fn pad_before(writer_var: &TokenStream, field: &StructField) -> TokenStream {
             }
         }}
     });
-    let pad_size_to_before = field.pad_size_to.as_ref().map(|_| {
-        quote! {
-            let #BEFORE_POS = #SEEK_TRAIT::stream_position(#writer_var)?;
-        }
-    });
+    let pad_size_to_before = field
+        .pad_size_to
+        .as_ref()
+        .or(field.align_size_to.as_ref())
+        .map(|_| {
+            quote! {
+                let #BEFORE_POS = #SEEK_TRAIT::stream_position(#writer_var)?;
+            }
+        });
     let store_position = field.restore_position.map(|()| {
         quote! {
             let #SAVED_POSITION = #SEEK_TRAIT::stream_position(#writer_var)?;

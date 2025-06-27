@@ -9,6 +9,7 @@ macro_rules! define_keywords {
 define_keywords! {
     align_after,
     align_before,
+    align_size_to,
     args,
     args_raw,
     assert,

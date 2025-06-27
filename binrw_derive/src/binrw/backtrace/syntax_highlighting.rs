@@ -192,7 +192,8 @@ fn visit_expr_attributes(field: &StructField, visitor: &mut Visitor) {
         align_before,
         align_after,
         seek_before,
-        pad_size_to
+        pad_size_to,
+        align_size_to
     );
 
     if let Some(condition) = field.if_cond.clone() {

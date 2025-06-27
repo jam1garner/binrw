@@ -56,6 +56,8 @@ attr_struct! {
         pub(crate) seek_before: Option<TokenStream>,
         #[from(RW:PadSizeTo)]
         pub(crate) pad_size_to: Option<TokenStream>,
+        #[from(RW:AlignSizeTo)]
+        pub(crate) align_size_to: Option<TokenStream>,
         #[from(RO:Debug)] // TODO is this really RO?
         pub(crate) debug: Option<()>,
     }
@@ -128,6 +130,7 @@ impl StructField {
                 align_after,
                 seek_before,
                 pad_size_to,
+                align_size_to,
                 magic
             )
     }
@@ -239,6 +242,7 @@ impl FromField for StructField {
             align_after: <_>::default(),
             seek_before: <_>::default(),
             pad_size_to: <_>::default(),
+            align_size_to: <_>::default(),
             #[cfg(feature = "verbose-backtrace")]
             keyword_spans: <_>::default(),
             err_context: <_>::default(),
