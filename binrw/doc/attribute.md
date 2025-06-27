@@ -92,6 +92,7 @@ Glossary of directives in binrw attributes (`#[br]`, `#[bw]`, `#[brw]`).
 |-----|-----------|----------|------------
 | rw  | [`align_after`](#padding-and-alignment) | field | Aligns the <span class="br">reader</span><span class="bw">writer</span> to the Nth byte after a field.
 | rw  | [`align_before`](#padding-and-alignment) | field | Aligns the <span class="br">reader</span><span class="bw">writer</span> to the Nth byte before a field.
+| rw  | [`align_size_to`](#padding-and-alignment) | field | Ensures the <span class="br">reader</span><span class="bw">writer</span> is always advanced by a multiple of N bytes.
 | rw  | [`args`](#arguments) | field | Passes arguments to another binrw object.
 | rw  | [`args_raw`](#arguments) | field | Like `args`, but specifies a single variable containing the arguments.
 | rw  | [`assert`](#assert) | struct, field, non-unit enum, data variant | Asserts that a condition is true. Can be used multiple times.
@@ -2120,6 +2121,25 @@ at least 256 bytes for that string, [`NullString`](crate::NullString) will
 read the string and `pad_size_to(256)` will ensure the reader skips whatever
 padding, if any, remains. If the string is longer than 256 bytes, no padding
 will be skipped.
+
+---
+
+The `align_size_to` directive will ensure that the
+<span class="br">reader</span><span class="bw">writer</span> has advanced a multiple of the number of bytes given after the field has been
+<span class="br">read</span><span class="bw">written</span>:
+
+<div class="br">
+
+```text
+#[br(align_size_to = $size:expr)] or #[br(align_size_to($size:expr))]
+```
+</div>
+<div class="bw">
+
+```text
+#[bw(align_size_to = $size:expr)] or #[bw(align_size_to($size:expr))]
+```
+</div>
 
 Any <span class="brw">(earlier only, when reading)</span><span class="br">earlier</span>
 field or [import](#arguments) can be
