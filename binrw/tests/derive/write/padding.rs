@@ -25,12 +25,16 @@ fn padding_round_trip() {
 
         #[brw(pad_size_to = 0x6_u32)]
         z: u32,
+
+        #[brw(align_size_to = 0x3_u32)]
+        w: u32,
     }
 
     let data = &[
         /* pad_before: */ 0, 0, /* x */ 1, /* align: */ 0, 0, 0, 0, 0,
         /* align_before: (none)*/ /* y */ 2, /* pad_after: */ 0, 0, 0, /* z */ 0,
-        0xab, 0xcd, 0xef, /* pad_size_to */ 0, 0,
+        0xab, 0xcd, 0xef, /* pad_size_to */ 0, 0, /* w */ 0x25,
+        /* align_size_to */ 0, 0, 0, 0, 0,
     ];
     let test: Test = Cursor::new(data).read_be().unwrap();
 
@@ -53,12 +57,16 @@ fn padding_one_way() {
 
         #[brw(pad_size_to = 0x6_u32)]
         z: u32,
+
+        #[brw(align_size_to = 0x3_u32)]
+        w: u32,
     }
 
     let data = &[
         /* pad_before: */ 0, 0, /* x */ 1, /* align: */ 0, 0, 0, 0, 0,
         /* align_before: (none)*/ /* y */ 2, /* pad_after: */ 0, 0, 0, /* z */ 0xef,
-        0xcd, 0xab, 0, /* pad_size_to */ 0, 0,
+        0xcd, 0xab, 0, /* pad_size_to */ 0, 0, /* w */ 0x25, /* align_size_to */ 0,
+        0, 0, 0, 0,
     ];
 
     let mut x = Cursor::new(Vec::new());
@@ -67,6 +75,7 @@ fn padding_one_way() {
         x: 1,
         y: 2,
         z: 0xabcdef,
+        w: 0x25,
     }
     .write_options(&mut x, Endian::Little, ())
     .unwrap();

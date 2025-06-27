@@ -20,12 +20,14 @@ fn dbg() {
         last: u8,
         #[br(dbg)]
         terminator: u8,
+        #[br(dbg, align_size_to = 2)]
+        after: u8,
     }
 
     // 🥴
     if let Some("1") = option_env!("BINRW_IN_CHILD_PROC") {
         Test::read(&mut Cursor::new(
-            b"\0\0\xff\xff\0\0\0\x04\xff\xff\0\x0e\xff\xed\xff\xff\x42\0\0\0\x69",
+            b"\0\0\xff\xff\0\0\0\x04\xff\xff\0\x0e\xff\xed\xff\xff\x42\0\0\0\x69\x25\0",
         ))
         .unwrap();
     } else {
@@ -55,12 +57,15 @@ fn dbg() {
                     "[{file}:{offset_2} | offset 0x10] last = 0x42\n",
                     "[{file}:{offset_2} | pad_size_to 0x4]\n",
                     "[{file}:{offset_3} | offset 0x14] terminator = 0x69\n",
+                    "[{file}:{offset_4} | offset 0x15] after = 0x25\n",
+                    "[{file}:{offset_4} | align_size_to 0x2]\n",
                 ),
                 file = core::file!(),
                 offset_0 = if cfg!(nightly) { 16 } else { 11 },
                 offset_1 = if cfg!(nightly) { 18 } else { 11 },
                 offset_2 = if cfg!(nightly) { 20 } else { 11 },
                 offset_3 = if cfg!(nightly) { 22 } else { 11 },
+                offset_4 = if cfg!(nightly) { 24 } else { 11 },
             )
         );
     }
