@@ -42,7 +42,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
                 map::generate_try_map(
                     input,
                     name,
-                    &quote! { <#ty as core::convert::TryInto<_>>::try_into },
+                    &quote! { <#ty as ::core::convert::TryInto<_>>::try_into },
                 ),
                 true,
             ),

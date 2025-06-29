@@ -46,7 +46,7 @@ fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> Token
         quote! { #map_err? }
     });
     let map = if matches!(input.map(), Map::Repr(_)) {
-        quote! { <#map as core::convert::TryFrom<_>>::try_from }
+        quote! { <#map as ::core::convert::TryFrom<_>>::try_from }
     } else {
         map.clone()
     };

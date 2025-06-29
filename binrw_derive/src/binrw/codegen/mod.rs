@@ -277,9 +277,10 @@ fn get_endian(endian: &CondEndian) -> TokenStream {
 fn get_map_err(pos: IdentStr, span: Span) -> TokenStream {
     quote_spanned_any! { span=>
         .map_err(|e| {
+            extern crate alloc;
             #BIN_ERROR::Custom {
                 pos: #pos,
-                err: Box::new(e) as _,
+                err: alloc::boxed::Box::new(e) as _,
             }
         })
     }

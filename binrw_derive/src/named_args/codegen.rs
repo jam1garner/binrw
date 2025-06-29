@@ -66,9 +66,9 @@ impl Builder<'_> {
             });
 
             let derives = if self.are_all_fields_optional() {
-                quote!(#[derive(Clone, Default)])
+                quote!(#[derive(::core::clone::Clone, ::core::default::Default)])
             } else {
-                quote!(#[derive(Clone)])
+                quote!(#[derive(::core::clone::Clone)])
             };
             Some(quote!(
                 #derives
@@ -333,7 +333,7 @@ impl Builder<'_> {
                             #( #satisfied_generics ),*
                         >
                     where
-                        #current_field_ty: Default,
+                        #current_field_ty: ::core::default::Default,
                     {
                         /// Builds the object.
                         #vis fn finalize(self) -> #name < #user_generic_args > {
@@ -365,7 +365,9 @@ impl BuilderField {
         let name = &self.name;
         let ty = &self.ty;
         let ty = match self.kind {
-            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(Option<#ty>),
+            BuilderFieldKind::Required | BuilderFieldKind::TryOptional => {
+                quote!(::core::option::Option<#ty>)
+            }
             BuilderFieldKind::Optional { .. } => quote!(#ty),
         };
         quote!(
