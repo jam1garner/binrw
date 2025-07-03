@@ -680,6 +680,19 @@ fn pad_size_to() {
 }
 
 #[test]
+fn align_size_to() {
+    #[derive(BinRead, Debug, PartialEq)]
+    struct Test {
+        #[br(align_size_to = 3)]
+        a: u32,
+        b: u8,
+    }
+
+    let result = Test::read_le(&mut Cursor::new(b"\x01\0\0\0\0\0\x02")).unwrap();
+    assert_eq!(result, Test { a: 1, b: 2 });
+}
+
+#[test]
 fn parse_with_default_args() {
     #[derive(Clone)]
     struct Args(u8);

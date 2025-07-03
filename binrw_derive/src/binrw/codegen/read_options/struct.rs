@@ -237,6 +237,8 @@ impl<'field> FieldGenerator<'field> {
             let dbg_align_before = dbg_space("align_before", &at, self.field.align_before.as_ref());
             let dbg_pad_size_to = dbg_space("pad_size_to", &at, self.field.pad_size_to.as_ref());
             let dbg_pad_after = dbg_space("pad_after", &at, self.field.pad_after.as_ref());
+            let dbg_align_size_to =
+                dbg_space("align_size_to", &at, self.field.align_size_to.as_ref());
             let dbg_align_after = dbg_space("align_after", &at, self.field.align_after.as_ref());
 
             self.out = quote! {{
@@ -250,6 +252,7 @@ impl<'field> FieldGenerator<'field> {
                 );
                 #dbg_pad_size_to
                 #dbg_pad_after
+                #dbg_align_size_to
                 #dbg_align_after
                 #TEMP
             }};
@@ -620,6 +623,13 @@ fn generate_seek_after(reader_var: &TokenStream, field: &StructField) -> TokenSt
         .pad_after
         .as_ref()
         .map(|value| map_pad(reader_var, value));
+    let align_size_to = field.align_size_to.as_ref().map(|alignment| {
+        quote! {{
+            let align = (#alignment) as i64;
+            let size = (#SEEK_TRAIT::stream_position(#reader_var)? - #POS) as i64;
+            #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current((align - (size % align)) % align))?;
+        }}
+    });
     let align_after = field
         .align_after
         .as_ref()
@@ -628,6 +638,7 @@ fn generate_seek_after(reader_var: &TokenStream, field: &StructField) -> TokenSt
     quote! {
         #pad_size_to
         #pad_after
+        #align_size_to
         #align_after
     }
 }
@@ -646,11 +657,15 @@ fn generate_seek_before(reader_var: &TokenStream, field: &StructField) -> TokenS
         .align_before
         .as_ref()
         .map(|value| map_align(reader_var, value));
-    let pad_size_to_before = field.pad_size_to.as_ref().map(|_| {
-        quote! {
-            let #POS = #SEEK_TRAIT::stream_position(#reader_var)?;
-        }
-    });
+    let pad_size_to_before = field
+        .pad_size_to
+        .as_ref()
+        .or(field.align_size_to.as_ref())
+        .map(|_| {
+            quote! {
+                let #POS = #SEEK_TRAIT::stream_position(#reader_var)?;
+            }
+        });
 
     quote! {
         #seek_before

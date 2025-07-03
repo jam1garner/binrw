@@ -7,6 +7,7 @@ use syn::{Expr, FieldValue, Token};
 
 pub(super) type AlignAfter = MetaExpr<kw::align_after>;
 pub(super) type AlignBefore = MetaExpr<kw::align_before>;
+pub(super) type AlignSizeTo = MetaExpr<kw::align_size_to>;
 pub(super) type Args = MetaEnclosedList<kw::args, Expr, FieldValue>;
 pub(super) type ArgsRaw = MetaExpr<kw::args_raw>;
 pub(super) type AssertLike<Keyword> = MetaList<Keyword, Expr>;
