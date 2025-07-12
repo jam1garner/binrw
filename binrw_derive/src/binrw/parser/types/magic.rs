@@ -27,6 +27,7 @@ pub(crate) type Magic = Option<SpannedValue<Inner>>;
 pub(crate) struct Inner(Kind, TokenStream);
 
 impl Inner {
+    // TODO: There should not be codegen in the parser
     pub(crate) fn add_ref(&self) -> TokenStream {
         match &self.0 {
             Kind::ByteStr(_) => quote! { & },
@@ -34,6 +35,7 @@ impl Inner {
         }
     }
 
+    // TODO: There should not be codegen in the parser
     pub(crate) fn deref_value(&self) -> TokenStream {
         match self.0 {
             Kind::ByteStr(_) => {

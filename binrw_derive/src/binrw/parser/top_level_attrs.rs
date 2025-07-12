@@ -247,6 +247,7 @@ impl Struct {
             && self.fields.iter().all(StructField::has_no_attrs)
     }
 
+    // TODO: There should not be codegen in the parser
     pub(crate) fn fields_pattern(&self) -> TokenStream {
         let fields = self.iter_permanent_idents();
 

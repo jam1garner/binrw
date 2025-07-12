@@ -40,13 +40,13 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
             ));
         };
 
+        // TODO: There should not be codegen in the parser
         let consequent = match args.next() {
             Some(Expr::Lit(ExprLit {
                 lit: Lit::Str(message),
                 ..
             })) => Error::Message(quote! {
-                extern crate alloc;
-                alloc::format!(#message #(, #args)*)
+                binrw::__private::format!(#message #(, #args)*)
             }),
             Some(error) => {
                 super::assert_all_args_consumed(args, value.keyword_span())?;
@@ -55,8 +55,7 @@ impl<K: Parse + Spanned + Token> TryFrom<attrs::AssertLike<K>> for Assert {
             None => Error::Message({
                 let condition = condition.to_token_stream().to_string();
                 quote! {
-                    extern crate alloc;
-                    alloc::format!("assertion failed: `{}`", #condition)
+                    binrw::__private::format!("assertion failed: `{}`", #condition)
                 }
             }),
         };

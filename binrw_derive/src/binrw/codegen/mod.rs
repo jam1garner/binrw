@@ -14,8 +14,8 @@ use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use sanitization::{
     ARGS, ARGS_LIFETIME, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT,
-    BIN_ERROR, BIN_RESULT, ENDIAN_ENUM, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT, TEMP, WRITER,
-    WRITE_TRAIT,
+    BIN_ERROR, BIN_RESULT, BOX, ENDIAN_ENUM, FORMAT, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT,
+    TEMP, WRITER, WRITE_TRAIT,
 };
 use syn::{spanned::Spanned, DeriveInput, Ident, Type};
 
@@ -276,13 +276,7 @@ fn get_endian(endian: &CondEndian) -> TokenStream {
 
 fn get_map_err(pos: IdentStr, span: Span) -> TokenStream {
     quote_spanned_any! { span=>
-        .map_err(|e| {
-            extern crate alloc;
-            #BIN_ERROR::Custom {
-                pos: #pos,
-                err: alloc::boxed::Box::new(e) as _,
-            }
-        })
+        .map_err(|e| #BIN_ERROR::Custom { pos: #pos, err: #BOX::new(e) as _ })
     }
 }
 
@@ -325,7 +319,6 @@ fn directives_to_args(field: &StructField, stream: &TokenStream) -> TokenStream 
                     let #TEMP = #count;
                     #[allow(clippy::useless_conversion, clippy::unnecessary_fallible_conversions)]
                     <::core::primitive::usize as ::core::convert::TryFrom<_>>::try_from(#TEMP).map_err(|_| {
-                        extern crate alloc;
                         #BIN_ERROR::AssertFail {
                             pos: #SEEK_TRAIT::stream_position(#stream)
                                 .unwrap_or_default(),
@@ -334,7 +327,7 @@ fn directives_to_args(field: &StructField, stream: &TokenStream) -> TokenStream 
                             // additional confusing error complaining about
                             // Display not being implemented if someone tries
                             // using a bogus type with `count`
-                            message: alloc::format!("count {:?} out of range of usize", #TEMP)
+                            message: #FORMAT!("count {:?} out of range of usize", #TEMP)
                         }
                     })?
                 }

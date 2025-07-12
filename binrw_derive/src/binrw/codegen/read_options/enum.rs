@@ -3,9 +3,12 @@ use super::{
     PreludeGenerator,
 };
 use crate::binrw::{
-    codegen::sanitization::{
-        ALL_EOF, BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, NOT_ENOUGH_BYTES, OPT, POS, READER,
-        READ_METHOD, RESTORE_POSITION_VARIANT, TEMP, WITH_CONTEXT,
+    codegen::{
+        sanitization::{
+            ALL_EOF, BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, NOT_ENOUGH_BYTES, OPT, POS, READER,
+            READ_METHOD, RESTORE_POSITION_VARIANT, TEMP, VEC, WITH_CONTEXT,
+        },
+        FORMAT,
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };
@@ -61,10 +64,9 @@ fn generate_unit_enum_repr(
                 #BIN_ERROR::NoVariantMatch {
                     pos: #POS,
                 },
-                #BACKTRACE_FRAME::Message({
-                    extern crate alloc;
-                    ::core::convert::Into::into(alloc::format!("Unexpected value for enum: {:?}", #TEMP))
-                })
+                #BACKTRACE_FRAME::Message(
+                    ::core::convert::Into::into(#FORMAT!("Unexpected value for enum: {:?}", #TEMP))
+                )
             ))
         }
     }
@@ -160,8 +162,7 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
     let (create_error_basket, return_error) = if return_all_errors {
         (
             quote! {
-                extern crate alloc;
-                let mut #ERROR_BASKET: alloc::vec::Vec<(&'static str, #BIN_ERROR)> = alloc::vec::Vec::new();
+                let mut #ERROR_BASKET = #VEC::<(&'static str, #BIN_ERROR)>::new();
             },
             quote! {
                 ::core::result::Result::Err(#BIN_ERROR::EnumErrors {

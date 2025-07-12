@@ -1,6 +1,7 @@
 use super::{get_magic, PreludeGenerator};
 #[cfg(feature = "verbose-backtrace")]
 use crate::binrw::backtrace::BacktraceFrame;
+use crate::binrw::codegen::{BOX, FORMAT};
 use crate::binrw::parser::Assert;
 use crate::{
     binrw::{
@@ -547,10 +548,7 @@ fn get_err_context(
 ) -> TokenStream {
     let backtrace = if let Some(ErrContext::Context(expr)) = &field.err_context {
         quote_spanned! {field.ident.span()=>
-            {
-                extern crate alloc;
-                #BACKTRACE_FRAME::Custom(alloc::boxed::Box::new(#expr) as _)
-            }
+            #BACKTRACE_FRAME::Custom(#BOX::new(#expr) as _)
         }
     } else {
         #[cfg(feature = "verbose-backtrace")]
@@ -569,12 +567,7 @@ fn get_err_context(
             if exprs.is_empty() {
                 quote! { #fmt }
             } else {
-                quote! {
-                    {
-                        extern crate alloc;
-                        alloc::format!(#fmt, #(#exprs),*)
-                    }
-                }
+                quote! { #FORMAT!(#fmt, #(#exprs),*) }
             }
         } else {
             format!(

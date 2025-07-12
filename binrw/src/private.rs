@@ -4,7 +4,11 @@ use crate::{
     BinRead, BinResult, BinWrite, Endian, Error,
 };
 #[cfg(not(feature = "std"))]
-use alloc::{boxed::Box, string::String};
+use alloc::string::String;
+#[cfg(not(feature = "std"))]
+pub use alloc::{boxed::Box, format, vec::Vec};
+#[cfg(feature = "std")]
+pub use std::{boxed::Box, format, vec::Vec};
 
 pub use crate::named_args::{
     builder_helper, passthrough_helper, Needed, Optional, Satisfied, SatisfiedOrOptional,
