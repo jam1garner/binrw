@@ -236,7 +236,9 @@ impl Builder<'_> {
             let docs = format!("Sets `{field_name}` to the given value.");
 
             let field_result = match field.kind {
-                BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(Some(val)),
+                BuilderFieldKind::Required | BuilderFieldKind::TryOptional => {
+                    quote!(::core::option::Option::Some(val))
+                }
                 BuilderFieldKind::Optional { .. } => quote!(val),
             };
 
@@ -391,7 +393,7 @@ impl BuilderField {
         let name = &self.name;
         match self.kind {
             BuilderFieldKind::Required | BuilderFieldKind::TryOptional => quote!(
-                #name: None,
+                #name: ::core::option::Option::None,
             ),
             BuilderFieldKind::Optional { ref default } => quote!(
                 #name: #default,

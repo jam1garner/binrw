@@ -1,12 +1,9 @@
-use binrw::{
-    binread,
-    io::{Cursor, Seek, SeekFrom},
-    BinRead,
-};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn enum_assert() {
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(assert(b == 1))]
     enum Test {
         A {
@@ -20,17 +17,19 @@ fn enum_assert() {
         },
     }
 
-    assert_eq!(
-        Test::read_le(&mut Cursor::new(b"\xff\xff\x01")).unwrap(),
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\xff\xff\x01")).unwrap(),
         Test::B { a: -1, b: 1 }
     );
-    Test::read_le(&mut Cursor::new(b"\xff\xff\0")).expect_err("accepted bad data");
-    Test::read_le(&mut Cursor::new(b"\0\0\x01")).expect_err("accepted bad data");
+    <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\xff\xff\0"))
+        .expect_err("accepted bad data");
+    <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\0\0\x01"))
+        .expect_err("accepted bad data");
 }
 
 #[test]
 fn enum_assert_with_self() {
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(assert(self.verify()))]
     enum Test {
         A {
@@ -53,25 +52,27 @@ fn enum_assert_with_self() {
         }
 
         fn verify_only_b(&self) -> bool {
-            matches!(self, Test::B { .. })
+            t::matches!(self, Test::B { .. })
         }
     }
 
-    assert_eq!(
-        Test::read_le(&mut Cursor::new(b"\xff\xff\x01")).unwrap(),
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\xff\xff\x01")).unwrap(),
         Test::B { a: -1, b: 1 }
     );
-    Test::read_le(&mut Cursor::new(b"\xff\xff\0")).expect_err("accepted bad data");
-    Test::read_le(&mut Cursor::new(b"\0\0\x01")).expect_err("accepted bad data");
+    <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\xff\xff\0"))
+        .expect_err("accepted bad data");
+    <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\0\0\x01"))
+        .expect_err("accepted bad data");
 }
 
 #[test]
 fn enum_field_args() {
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(import(a: u8))]
     struct Foo(#[br(calc(a))] u8);
 
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(import(a: u8))]
     enum Test {
         A {
@@ -80,13 +81,14 @@ fn enum_field_args() {
         },
     }
 
-    let result = Test::read_le_args(&mut Cursor::new(b""), (42,)).unwrap();
-    assert_eq!(result, Test::A { field: Foo(42) });
+    let result =
+        <Test as binrw::BinRead>::read_le_args(&mut binrw::io::Cursor::new(b""), (42,)).unwrap();
+    t::assert_eq!(result, Test::A { field: Foo(42) });
 }
 
 #[test]
 fn enum_non_copy_args() {
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(import(a: NonCopyArg))]
     enum Test {
         A {
@@ -102,13 +104,15 @@ fn enum_non_copy_args() {
     #[derive(Clone)]
     struct NonCopyArg(u8);
 
-    let result = Test::read_le_args(&mut Cursor::new(b""), (NonCopyArg(1),)).unwrap();
-    assert_eq!(result, Test::A { a: 1 });
+    let result =
+        <Test as binrw::BinRead>::read_le_args(&mut binrw::io::Cursor::new(b""), (NonCopyArg(1),))
+            .unwrap();
+    t::assert_eq!(result, Test::A { a: 1 });
 }
 
 #[test]
 fn enum_calc_temp_field() {
-    #[binread]
+    #[binrw::binread]
     #[derive(Debug, Eq, PartialEq)]
     enum Test {
         #[br(magic(0u8))]
@@ -120,15 +124,15 @@ fn enum_calc_temp_field() {
         },
     }
 
-    let result = Test::read_le(&mut Cursor::new(b"\0\x04")).unwrap();
+    let result = <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\0\x04")).unwrap();
     // This also indirectly checks that `temp` is actually working since
     // compilation would fail if it weren’t due to the missing `a` property
-    assert_eq!(result, Test::Zero { b: 4 });
+    t::assert_eq!(result, Test::Zero { b: 4 });
 }
 
 #[test]
 fn enum_endianness() {
-    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[derive(binrw::BinRead, Debug, Eq, PartialEq)]
     #[br(big)]
     enum Test {
         #[br(magic(1u16))]
@@ -144,20 +148,23 @@ fn enum_endianness() {
         },
     }
 
-    assert_eq!(
-        Test::read(&mut Cursor::new(b"\0\x01")).unwrap(),
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\0\x01")).unwrap(),
         Test::OneBig
     );
-    let error = Test::read(&mut Cursor::new(b"\x01\0")).expect_err("accepted bad data");
-    assert!(matches!(error, binrw::Error::EnumErrors { .. }));
-    assert_eq!(
-        Test::read(&mut Cursor::new(b"\x02\0\x03\0")).unwrap(),
+    let error = <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\x01\0"))
+        .expect_err("accepted bad data");
+    t::assert!(t::matches!(error, binrw::Error::EnumErrors { .. }));
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\x02\0\x03\0")).unwrap(),
         Test::TwoLittle { a: 3 }
     );
-    let error = Test::read(&mut Cursor::new(b"\0\x02\x03\0")).expect_err("accepted bad data");
-    assert!(matches!(error, binrw::Error::EnumErrors { .. }));
-    assert_eq!(
-        Test::read(&mut Cursor::new(b"\0\x03\x01\x00\x02\x00")).unwrap(),
+    let error = <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\0\x02\x03\0"))
+        .expect_err("accepted bad data");
+    t::assert!(t::matches!(error, binrw::Error::EnumErrors { .. }));
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\0\x03\x01\x00\x02\x00"))
+            .unwrap(),
         Test::ThreeBig {
             a: 3,
             b: 0x100,
@@ -168,7 +175,7 @@ fn enum_endianness() {
 
 #[test]
 fn enum_magic() {
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(big, magic(0x1234u16))]
     enum Test {
         #[br(magic(0u8))]
@@ -179,13 +186,15 @@ fn enum_magic() {
         One { a: u16 },
     }
 
-    let result = Test::read(&mut Cursor::new(b"\x12\x34\x01\x02\x03")).unwrap();
-    assert_eq!(result, Test::One { a: 515 });
+    let result =
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\x12\x34\x01\x02\x03"))
+            .unwrap();
+    t::assert_eq!(result, Test::One { a: 515 });
 }
 
 #[test]
 fn enum_magic_holey() {
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(big, magic(0x12u8))]
     enum Test {
         Wrong(#[br(magic(0x01u8))] u16),
@@ -195,13 +204,15 @@ fn enum_magic_holey() {
         },
     }
 
-    let result = Test::read(&mut Cursor::new(b"\x12\x12\x01\x02\x03")).unwrap();
-    assert_eq!(result, Test::Right { a: 0x102 });
+    let result =
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\x12\x12\x01\x02\x03"))
+            .unwrap();
+    t::assert_eq!(result, Test::Right { a: 0x102 });
 }
 
 #[test]
 fn enum_pre_assert() {
-    #[derive(BinRead, Debug, PartialEq)]
+    #[derive(binrw::BinRead, Debug, PartialEq)]
     #[br(big, import(a: bool))]
     enum Test {
         #[br(pre_assert(a))]
@@ -209,19 +220,21 @@ fn enum_pre_assert() {
         B(u16),
     }
 
-    assert_eq!(
-        Test::read_args(&mut Cursor::new(b"\0\x01"), (true,)).unwrap(),
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read_args(&mut binrw::io::Cursor::new(b"\0\x01"), (true,))
+            .unwrap(),
         Test::A(1)
     );
-    assert_eq!(
-        Test::read_args(&mut Cursor::new(b"\0\x01"), (false,)).unwrap(),
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read_args(&mut binrw::io::Cursor::new(b"\0\x01"), (false,))
+            .unwrap(),
         Test::B(1)
     );
 }
 
 #[test]
 fn enum_return_all_errors() {
-    #[derive(BinRead, Debug)]
+    #[derive(binrw::BinRead, Debug)]
     #[br(big, return_all_errors)]
     enum Test {
         #[br(magic(0u16))]
@@ -230,51 +243,55 @@ fn enum_return_all_errors() {
         Two { _a: u16 },
     }
 
-    let error = Test::read(&mut Cursor::new("\0\x01")).expect_err("accepted bad data");
+    let error = <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new("\0\x01"))
+        .expect_err("accepted bad data");
 
     match error {
         binrw::Error::EnumErrors {
             pos,
             variant_errors,
         } => {
-            assert_eq!(pos, 0);
-            assert_eq!(variant_errors.len(), 2);
-            assert_eq!(variant_errors[0].0, "One");
+            t::assert_eq!(pos, 0);
+            t::assert_eq!(variant_errors.len(), 2);
+            t::assert_eq!(variant_errors[0].0, "One");
             if let binrw::Error::BadMagic { pos, found } = &variant_errors[0].1 {
-                assert_eq!(pos, &0);
-                assert_eq!(&format!("{found:?}"), "1");
+                t::assert_eq!(pos, &0);
+                t::assert_eq!(&t::format!("{found:?}"), "1");
             } else {
-                panic!("expected BadMagic; got {:?}", variant_errors[0].1);
+                t::panic!("expected BadMagic; got {:?}", variant_errors[0].1);
             }
-            assert_eq!(variant_errors[1].0, "Two");
-            assert!(matches!(
+            t::assert_eq!(variant_errors[1].0, "Two");
+            t::assert!(t::matches!(
                 variant_errors[1].1.root_cause(),
                 binrw::Error::Io(..)
             ));
         }
-        _ => panic!("wrong error type"),
+        _ => t::panic!("wrong error type"),
     }
 }
 
 #[test]
 fn enum_rewind_on_assert() {
     #[allow(dead_code)]
-    #[derive(BinRead, Debug)]
+    #[derive(binrw::BinRead, Debug)]
     #[br(assert(b == 1))]
     enum Test {
         A { a: u8, b: u8 },
         B { a: u16, b: u8 },
     }
 
-    let mut data = Cursor::new(b"\0\0\0\0");
-    let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.stream_position().unwrap());
+    let mut data = binrw::io::Cursor::new(b"\0\0\0\0");
+    let expected = binrw::io::Seek::seek(&mut data, binrw::io::SeekFrom::Start(1)).unwrap();
+    <Test as binrw::BinRead>::read_le(&mut data).expect_err("accepted bad data");
+    t::assert_eq!(
+        expected,
+        binrw::io::Seek::stream_position(&mut data).unwrap()
+    );
 }
 
 #[test]
 fn enum_rewind_on_eof() {
-    #[derive(BinRead, Debug)]
+    #[derive(binrw::BinRead, Debug)]
     enum Test {
         A {
             _a: u8,
@@ -284,30 +301,36 @@ fn enum_rewind_on_eof() {
         },
     }
 
-    let mut data = Cursor::new(b"\0\0\0");
-    let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.stream_position().unwrap());
+    let mut data = binrw::io::Cursor::new(b"\0\0\0");
+    let expected = binrw::io::Seek::seek(&mut data, binrw::io::SeekFrom::Start(1)).unwrap();
+    <Test as binrw::BinRead>::read_le(&mut data).expect_err("accepted bad data");
+    t::assert_eq!(
+        expected,
+        binrw::io::Seek::stream_position(&mut data).unwrap()
+    );
 }
 
 #[test]
 fn enum_rewind_on_variant_assert() {
     #[allow(dead_code)]
-    #[derive(BinRead, Debug)]
+    #[derive(binrw::BinRead, Debug)]
     enum Test {
         #[br(assert(b == 1))]
         A { a: u8, b: u8 },
     }
 
-    let mut data = Cursor::new(b"\0\0");
-    let expected = data.seek(SeekFrom::Start(1)).unwrap();
-    Test::read_le(&mut data).expect_err("accepted bad data");
-    assert_eq!(expected, data.stream_position().unwrap());
+    let mut data = binrw::io::Cursor::new(b"\0\0");
+    let expected = binrw::io::Seek::seek(&mut data, binrw::io::SeekFrom::Start(1)).unwrap();
+    <Test as binrw::BinRead>::read_le(&mut data).expect_err("accepted bad data");
+    t::assert_eq!(
+        expected,
+        binrw::io::Seek::stream_position(&mut data).unwrap()
+    );
 }
 
 #[test]
 fn enum_return_unexpected_error() {
-    #[derive(BinRead, Debug)]
+    #[derive(binrw::BinRead, Debug)]
     #[br(big, return_unexpected_error)]
     enum Test {
         #[br(magic(0u16))]
@@ -316,13 +339,14 @@ fn enum_return_unexpected_error() {
         Two { _a: u16 },
     }
 
-    let error = Test::read(&mut Cursor::new("\0\x01")).expect_err("accepted bad data");
-    assert!(matches!(error, binrw::Error::NoVariantMatch { .. }));
+    let error = <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new("\0\x01"))
+        .expect_err("accepted bad data");
+    t::assert!(t::matches!(error, binrw::Error::NoVariantMatch { .. }));
 }
 
 #[test]
 fn mixed_enum() {
-    #[derive(BinRead, Debug, Eq, PartialEq)]
+    #[derive(binrw::BinRead, Debug, Eq, PartialEq)]
     #[br(big)]
     enum Test {
         #[br(magic(0u8))]
@@ -331,12 +355,14 @@ fn mixed_enum() {
         Two { a: u16, b: u16 },
     }
 
-    assert!(matches!(
-        Test::read(&mut Cursor::new(b"\0")).unwrap(),
+    t::assert!(t::matches!(
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\0")).unwrap(),
         Test::Zero
     ));
-    let error = Test::read(&mut Cursor::new(b"\x01")).expect_err("accepted bad data");
-    assert!(matches!(error, binrw::Error::EnumErrors { .. }));
-    let result = Test::read(&mut Cursor::new(b"\x02\0\x03\0\x04")).unwrap();
-    assert_eq!(result, Test::Two { a: 3, b: 4 });
+    let error = <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\x01"))
+        .expect_err("accepted bad data");
+    t::assert!(t::matches!(error, binrw::Error::EnumErrors { .. }));
+    let result =
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\x02\0\x03\0\x04")).unwrap();
+    t::assert_eq!(result, Test::Two { a: 3, b: 4 });
 }

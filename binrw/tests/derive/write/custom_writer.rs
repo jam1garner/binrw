@@ -1,8 +1,9 @@
-use binrw::{io::Cursor, BinWrite, Endian};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn custom_writer() {
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     struct Test {
         x: u8,
 
@@ -13,56 +14,54 @@ fn custom_writer() {
     #[binrw::writer(writer)]
     fn custom_writer(_this: &u16) -> binrw::BinResult<()> {
         writer.write_all(b"abcd")?;
-        Ok(())
+        t::Ok(())
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    Test { x: 1, y: 2 }
-        .write_options(&mut x, Endian::Big, ())
-        .unwrap();
+    binrw::BinWrite::write_options(&Test { x: 1, y: 2 }, &mut x, binrw::Endian::Big, ()).unwrap();
 
-    assert_eq!(x.into_inner(), b"\x01abcd");
+    t::assert_eq!(x.into_inner(), b"\x01abcd");
 }
 
 #[test]
 fn write_with_fn_once_closure_args() {
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     #[bw(little)]
     struct Test {
         #[bw(args(1), write_with = |_, s, e, (a,): (u8,)| a.write_options(s, e, ()))]
         a: u8,
     }
 
-    let mut x = Cursor::new(Vec::new());
-    Test { a: 0 }.write(&mut x).unwrap();
-    assert_eq!(x.into_inner(), b"\x01");
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
+    binrw::BinWrite::write(&Test { a: 0 }, &mut x).unwrap();
+    t::assert_eq!(x.into_inner(), b"\x01");
 }
 
 #[binrw::writer(writer)]
-fn write_as_ref_str<S: AsRef<str>>(value: S) -> binrw::BinResult<()> {
+fn write_as_ref_str<S: t::AsRef<str>>(value: S) -> binrw::BinResult<()> {
     let bytes = value.as_ref().as_bytes();
     writer.write_all(bytes)?;
-    Ok(())
+    t::Ok(())
 }
 
 #[test]
 fn write_with_as_ref_str() {
     use binrw::prelude::*;
 
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     struct MyType {
         #[bw(write_with = write_as_ref_str)]
-        value: String,
+        value: t::String,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
     MyType {
-        value: "Hello, World!".to_string(),
+        value: t::ToString::to_string("Hello, World!"),
     }
     .write_le(&mut x)
     .unwrap();
-    assert_eq!(x.into_inner(), b"Hello, World!");
+    t::assert_eq!(x.into_inner(), b"Hello, World!");
 }
 
 #[test]
@@ -71,30 +70,30 @@ fn map_write_with_as_ref_str() {
 
     #[derive(BinWrite)]
     struct MyType {
-        #[bw(map = |x| x.to_string(), write_with = write_as_ref_str)]
+        #[bw(map = t::ToString::to_string, write_with = write_as_ref_str)]
         value: u32,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
     MyType { value: 42 }.write_le(&mut x).unwrap();
-    assert_eq!(x.into_inner(), b"42");
+    t::assert_eq!(x.into_inner(), b"42");
 }
 
 #[test]
 fn try_map_write_with_as_ref_str() {
     use binrw::prelude::*;
 
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     struct MyType<'a> {
         #[bw(try_map = |x| x.ok_or("Option was None"), write_with = write_as_ref_str)]
-        value: Option<&'a str>,
+        value: t::Option<&'a str>,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
     MyType {
-        value: Some("Hello, World!"),
+        value: t::Some("Hello, World!"),
     }
     .write_le(&mut x)
     .unwrap();
-    assert_eq!(x.into_inner(), b"Hello, World!");
+    t::assert_eq!(x.into_inner(), b"Hello, World!");
 }

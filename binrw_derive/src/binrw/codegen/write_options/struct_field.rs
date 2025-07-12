@@ -345,10 +345,10 @@ fn map_func_ident(ident: &Ident) -> Ident {
 fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     let pad_size_to = field.pad_size_to.as_ref().map(|size| {
         quote! {{
-            let pad_to_size = (#size) as u64;
+            let pad_to_size = (#size) as ::core::primitive::u64;
             let after_pos = #SEEK_TRAIT::stream_position(#writer_var)?;
-            if let Some(size) = after_pos.checked_sub(#BEFORE_POS) {
-                if let Some(padding) = pad_to_size.checked_sub(size) {
+            if let ::core::option::Option::Some(size) = after_pos.checked_sub(#BEFORE_POS) {
+                if let ::core::option::Option::Some(padding) = pad_to_size.checked_sub(size) {
                     #WRITE_ZEROES(#writer_var, padding)?;
                 }
             }
@@ -356,13 +356,13 @@ fn pad_after(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     });
     let pad_after = field.pad_after.as_ref().map(|padding| {
         quote! {
-            #WRITE_ZEROES(#writer_var, (#padding) as u64)?;
+            #WRITE_ZEROES(#writer_var, (#padding) as ::core::primitive::u64)?;
         }
     });
     let align_after = field.align_after.as_ref().map(|alignment| {
         quote! {{
             let pos = #SEEK_TRAIT::stream_position(#writer_var)?;
-            let align = ((#alignment) as u64);
+            let align = ((#alignment) as ::core::primitive::u64);
             let rem = pos % align;
             if rem != 0 {
                 #WRITE_ZEROES(#writer_var, align - rem)?;
@@ -394,13 +394,13 @@ fn pad_before(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     });
     let pad_before = field.pad_before.as_ref().map(|padding| {
         quote! {
-            #WRITE_ZEROES(#writer_var, (#padding) as u64)?;
+            #WRITE_ZEROES(#writer_var, (#padding) as ::core::primitive::u64)?;
         }
     });
     let align_before = field.align_before.as_ref().map(|alignment| {
         quote! {{
             let pos = #SEEK_TRAIT::stream_position(#writer_var)?;
-            let align = ((#alignment) as u64);
+            let align = ((#alignment) as ::core::primitive::u64);
             let rem = pos % align;
             if rem != 0 {
                 #WRITE_ZEROES(#writer_var, align - rem)?;

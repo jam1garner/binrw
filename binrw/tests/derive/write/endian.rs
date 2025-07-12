@@ -1,6 +1,7 @@
-use binrw::{io::Cursor, BinWrite};
+extern crate binrw;
+use super::t;
 
-#[derive(BinWrite)]
+#[derive(binrw::BinWrite)]
 struct TestEndian {
     x: u16,
 
@@ -16,23 +17,25 @@ struct TestEndian {
 
 #[test]
 fn write_endian() {
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    TestEndian {
-        x: 1,
-        y: 2,
-        z: 3,
-        not_z: 3,
-    }
-    .write_be(&mut x)
+    binrw::BinWrite::write_be(
+        &TestEndian {
+            x: 1,
+            y: 2,
+            z: 3,
+            not_z: 3,
+        },
+        &mut x,
+    )
     .unwrap();
 
-    assert_eq!(x.into_inner(), [0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0]);
+    t::assert_eq!(x.into_inner(), [0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0]);
 }
 
 #[test]
 fn top_level_endian() {
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     #[bw(is_big = true)]
     struct Test {
         #[bw(big)] // <-- will be ignored
@@ -41,27 +44,29 @@ fn top_level_endian() {
         big: TestInheritBig,
     }
 
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     #[bw(little)]
     struct TestLittle {
         x: u16,
         y: u32,
     }
 
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     struct TestInheritBig {
         x: u16,
         y: u32,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    Test {
-        little: TestLittle { x: 1, y: 2 },
-        big: TestInheritBig { x: 3, y: 4 },
-    }
-    .write(&mut x)
+    binrw::BinWrite::write(
+        &Test {
+            little: TestLittle { x: 1, y: 2 },
+            big: TestInheritBig { x: 3, y: 4 },
+        },
+        &mut x,
+    )
     .unwrap();
 
-    assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 4]);
+    t::assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 4]);
 }

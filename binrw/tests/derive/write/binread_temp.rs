@@ -1,29 +1,34 @@
-use binrw::{binrw, io::Cursor, BinWrite, Endian};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn binread_temp_applies() {
-    #[binrw]
-    #[bw(import { x: u32})]
+    #[binrw::binrw]
+    #[bw(import { x: u32 })]
     struct TestInner {
         #[br(ignore)]
         #[bw(calc = x)]
         x_copy: u32,
     }
 
-    #[binrw]
+    #[binrw::binrw]
     #[bw(big)]
     struct Test {
         #[bw(args { x: 1 })]
         inner: TestInner,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    Test {
-        inner: TestInner {},
-    }
-    .write_options(&mut x, Endian::Big, ())
+    binrw::BinWrite::write_options(
+        &Test {
+            inner: TestInner {},
+        },
+        &mut x,
+        binrw::Endian::Big,
+        (),
+    )
     .unwrap();
 
-    assert_eq!(x.into_inner(), [0, 0, 0, 1]);
+    t::assert_eq!(x.into_inner(), [0, 0, 0, 1]);
 }

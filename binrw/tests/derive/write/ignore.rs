@@ -1,19 +1,18 @@
-use binrw::{binwrite, io::Cursor, BinWrite, Endian};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn ignore_is_not_written() {
-    #[binwrite]
+    #[binrw::binwrite]
     struct Test {
         #[bw(ignore)]
         x: u32,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    Test { x: 1 }
-        .write_options(&mut x, Endian::Big, ())
-        .unwrap();
+    binrw::BinWrite::write_options(&Test { x: 1 }, &mut x, binrw::Endian::Big, ()).unwrap();
 
     // Since it's bw(ignore), nothing is written here.
-    assert_eq!(x.into_inner(), b"");
+    t::assert_eq!(x.into_inner(), b"");
 }

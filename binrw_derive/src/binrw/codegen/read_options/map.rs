@@ -36,7 +36,7 @@ pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStrea
                             #assertions
                         )*
 
-                        Ok(())
+                        ::core::result::Result::Ok(())
                     })().map(|_: ()| #THIS)
                 })
     }
@@ -74,7 +74,7 @@ pub(crate) fn generate_try_map(
                     #assertions
                 )*
 
-                Ok(())
+                ::core::result::Result::Ok(())
             })().map(|_: ()| #THIS)
         })
     }

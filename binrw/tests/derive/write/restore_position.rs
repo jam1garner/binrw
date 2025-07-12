@@ -1,23 +1,26 @@
-use binrw::{io::Cursor, BinWrite};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn restore_position_writing() {
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     struct Test {
         #[bw(restore_position)]
         x: u32,
         y: u8,
     }
 
-    let mut x = Vec::new();
+    let mut x = t::Vec::new();
     {
-        let mut x = Cursor::new(&mut x);
-        Test {
-            x: 0xffff_ffff,
-            y: 0,
-        }
-        .write_le(&mut x)
+        let mut x = binrw::io::Cursor::new(&mut x);
+        binrw::BinWrite::write_le(
+            &Test {
+                x: 0xffff_ffff,
+                y: 0,
+            },
+            &mut x,
+        )
         .unwrap();
     }
-    assert_eq!(x, b"\0\xff\xff\xff");
+    t::assert_eq!(x, b"\0\xff\xff\xff");
 }

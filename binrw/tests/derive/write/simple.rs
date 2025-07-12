@@ -1,6 +1,7 @@
-use binrw::{io::Cursor, BinRead, BinWrite, BinWriterExt, Endian};
+extern crate binrw;
+use super::t;
 
-#[derive(BinWrite)]
+#[derive(binrw::BinWrite)]
 struct Test {
     x: u8,
     y: u16,
@@ -9,18 +10,18 @@ struct Test {
 
 #[test]
 fn simple_write() {
-    let mut x = Cursor::new(Vec::new());
+    use binrw::BinWrite;
+
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
     Test { x: 1, y: 2, z: 3 }
-        .write_options(&mut x, Endian::Big, ())
+        .write_options(&mut x, binrw::Endian::Big, ())
         .unwrap();
 
-    assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 3]);
+    t::assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 3]);
 }
 
-use binrw::BinReaderExt;
-
-#[derive(BinRead, BinWrite, Debug, PartialEq)]
+#[derive(binrw::BinRead, binrw::BinWrite, Debug, PartialEq)]
 struct TestRoundTrip {
     x: u16,
 
@@ -34,7 +35,7 @@ struct TestRoundTrip {
     not_z: u32,
 }
 
-#[derive(BinRead, BinWrite, Debug, PartialEq)]
+#[derive(binrw::BinRead, binrw::BinWrite, Debug, PartialEq)]
 struct TestRoundTripConjugate {
     x: u16,
 
@@ -52,34 +53,34 @@ struct TestRoundTripConjugate {
 
 #[test]
 fn round_trip() {
+    use binrw::{BinReaderExt, BinWriterExt};
+
     let bytes = &[0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0];
-
-    let mut reader = Cursor::new(bytes);
-
+    let mut reader = binrw::io::Cursor::new(bytes);
     let test: TestRoundTrip = reader.read_be().unwrap();
-
-    let mut x = Cursor::new(Vec::new());
-
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
     x.write_be(&test).unwrap();
 
-    assert_eq!(x.into_inner(), bytes);
+    t::assert_eq!(x.into_inner(), bytes);
 }
 
 #[test]
 fn round_trip_2() {
+    use binrw::{BinReaderExt, BinWrite};
+
     let bytes = &[0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0];
-    let mut reader = Cursor::new(bytes);
+    let mut reader = binrw::io::Cursor::new(bytes);
     let test: TestRoundTrip = reader.read_be().unwrap();
 
     let bytes_conj = &[0, 1, 2, 0, 0, 0, 0, 3, 3, 0, 0, 0];
-    let mut reader_conj = Cursor::new(bytes_conj);
+    let mut reader_conj = binrw::io::Cursor::new(bytes_conj);
     let conj: TestRoundTripConjugate = reader_conj.read_be().unwrap();
 
-    let mut x = Cursor::new(Vec::new());
-    let mut y = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
+    let mut y = binrw::io::Cursor::new(t::Vec::new());
 
-    test.write_options(&mut x, Endian::Big, ()).unwrap();
-    conj.write_options(&mut y, Endian::Big, ()).unwrap();
+    test.write_options(&mut x, binrw::Endian::Big, ()).unwrap();
+    conj.write_options(&mut y, binrw::Endian::Big, ()).unwrap();
 
-    assert_eq!(x.into_inner() == bytes, y.into_inner() == bytes_conj);
+    t::assert_eq!(x.into_inner() == bytes, y.into_inner() == bytes_conj);
 }

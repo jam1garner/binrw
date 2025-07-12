@@ -36,7 +36,7 @@ pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenS
         let #POS = #SEEK_TRAIT::stream_position(#writer_var)?;
         #inner
 
-        Ok(())
+        ::core::result::Result::Ok(())
     }
 }
 

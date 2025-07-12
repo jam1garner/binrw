@@ -27,3 +27,11 @@ trybuild = "1.0.89"
 default = ["std", "verbose-backtrace"]
 std = []
 verbose-backtrace = ["binrw_derive/verbose-backtrace"]
+
+[[test]]
+name = "derive"
+path = "tests/derive/lib.rs"
+
+[[test]]
+name = "io"
+path = "tests/io/lib.rs"

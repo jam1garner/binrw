@@ -324,7 +324,7 @@ fn directives_to_args(field: &StructField, stream: &TokenStream) -> TokenStream 
                 count: {
                     let #TEMP = #count;
                     #[allow(clippy::useless_conversion, clippy::unnecessary_fallible_conversions)]
-                    usize::try_from(#TEMP).map_err(|_| {
+                    <::core::primitive::usize as ::core::convert::TryFrom<_>>::try_from(#TEMP).map_err(|_| {
                         extern crate alloc;
                         #BIN_ERROR::AssertFail {
                             pos: #SEEK_TRAIT::stream_position(#stream)

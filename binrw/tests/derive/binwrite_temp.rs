@@ -1,8 +1,9 @@
-use binrw::{binrw, io::Cursor, BinRead, BinWrite, Endian};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn binwrite_temp_applies() {
-    #[binrw]
+    #[binrw::binrw]
     #[derive(Debug, PartialEq)]
     #[br(big)]
     struct Test {
@@ -10,13 +11,14 @@ fn binwrite_temp_applies() {
         len: u32,
 
         #[br(count = len)]
-        vec: Vec<u8>,
+        vec: t::Vec<u8>,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap();
+    let result =
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\0\0\0\x05ABCDE")).unwrap();
     // This also indirectly checks that `temp` is actually working since
     // compilation would fail if it weren’t due to missing the `len` field
-    assert_eq!(
+    t::assert_eq!(
         result,
         Test {
             vec: b"ABCDE".to_vec()
@@ -26,7 +28,7 @@ fn binwrite_temp_applies() {
 
 #[test]
 fn binwrite_temp_with_ignore() {
-    #[binrw]
+    #[binrw::binrw]
     #[derive(Debug, PartialEq)]
     #[br(big)]
     struct Test {
@@ -35,21 +37,22 @@ fn binwrite_temp_with_ignore() {
         len: u32,
 
         #[br(count = len)]
-        vec: Vec<u8>,
+        vec: t::Vec<u8>,
     }
 
-    let result = Test::read(&mut Cursor::new(b"\0\0\0\x05ABCDE")).unwrap();
-    assert_eq!(
+    let result =
+        <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\0\0\0\x05ABCDE")).unwrap();
+    t::assert_eq!(
         result,
         Test {
             vec: b"ABCDE".to_vec()
         }
     );
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    result.write_options(&mut x, Endian::Big, ()).unwrap();
+    binrw::BinWrite::write_options(&result, &mut x, binrw::Endian::Big, ()).unwrap();
 
     // Since it's bw(ignore), the length isn't written here
-    assert_eq!(x.into_inner(), b"ABCDE");
+    t::assert_eq!(x.into_inner(), b"ABCDE");
 }

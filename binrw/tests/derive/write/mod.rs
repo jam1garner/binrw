@@ -1,3 +1,5 @@
+use super::t;
+
 mod args;
 mod assert;
 mod binread_temp;

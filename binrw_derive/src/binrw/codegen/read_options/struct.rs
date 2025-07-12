@@ -31,7 +31,7 @@ pub(super) fn generate_unit_struct(
     let return_type = get_return_type(variant_ident);
     quote! {
         #prelude
-        Ok(#return_type)
+        ::core::result::Result::Ok(#return_type)
     }
 }
 
@@ -134,7 +134,7 @@ impl<'input> StructGenerator<'input> {
 
         self.out = quote! {
             #head
-            Ok(#THIS)
+            ::core::result::Result::Ok(#THIS)
         };
 
         self
@@ -557,17 +557,17 @@ fn get_err_context(
         let code = {
             let code = BacktraceFrame::from_field(field).to_string();
             if code.is_empty() {
-                quote! { None }
+                quote! { ::core::option::Option::None }
             } else {
-                quote! { Some(#code) }
+                quote! { ::core::option::Option::Some(#code) }
             }
         };
         #[cfg(not(feature = "verbose-backtrace"))]
-        let code = quote!(None);
+        let code = quote!(::core::option::Option::None);
 
         let message = if let Some(ErrContext::Format(fmt, exprs)) = &field.err_context {
             if exprs.is_empty() {
-                quote! { (#fmt) }
+                quote! { #fmt }
             } else {
                 quote! {
                     {
@@ -587,7 +587,7 @@ fn get_err_context(
 
         quote_spanned! {field.ident.span()=>
             #BACKTRACE_FRAME::Full {
-                message: #message.into(),
+                message: ::core::convert::Into::into(#message),
                 line: ::core::line!(),
                 file: ::core::file!(),
                 code: #code,
@@ -612,8 +612,8 @@ fn get_prelude(input: &Input, name: Option<&Ident>) -> TokenStream {
 fn generate_seek_after(reader_var: &TokenStream, field: &StructField) -> TokenStream {
     let pad_size_to = field.pad_size_to.as_ref().map(|pad| {
         quote! {{
-            let pad = (#pad) as i64;
-            let size = (#SEEK_TRAIT::stream_position(#reader_var)? - #POS) as i64;
+            let pad = (#pad) as ::core::primitive::i64;
+            let size = (#SEEK_TRAIT::stream_position(#reader_var)? - #POS) as ::core::primitive::i64;
             if size < pad {
                 #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current(pad - size))?;
             }
@@ -694,15 +694,15 @@ fn make_field_vars(
 
 fn map_align(reader_var: &TokenStream, align: &TokenStream) -> TokenStream {
     quote! {{
-        let align = (#align) as i64;
-        let pos = #SEEK_TRAIT::stream_position(#reader_var)? as i64;
+        let align = (#align) as ::core::primitive::i64;
+        let pos = #SEEK_TRAIT::stream_position(#reader_var)? as ::core::primitive::i64;
         #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current((align - (pos % align)) % align))?;
     }}
 }
 
 fn map_pad(reader_var: &TokenStream, pad: &TokenStream) -> TokenStream {
     quote! {
-        #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current((#pad) as i64))?;
+        #SEEK_TRAIT::seek(#reader_var, #SEEK_FROM::Current((#pad) as ::core::primitive::i64))?;
     }
 }
 

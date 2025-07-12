@@ -65,8 +65,10 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
         let value = &magic.value;
 
         let kind = match &value {
-            Lit::ByteStr(bytes) => Kind::ByteStr(format!("[u8; {}]", bytes.value().len())),
-            Lit::Byte(_) => Kind::Numeric("u8".to_owned()),
+            Lit::ByteStr(bytes) => {
+                Kind::ByteStr(format!("[::core::primitive::u8; {}]", bytes.value().len()))
+            }
+            Lit::Byte(_) => Kind::Numeric("::core::primitive::u8".to_owned()),
             Lit::Int(i) => {
                 if i.suffix().is_empty() {
                     return Err(syn::Error::new(

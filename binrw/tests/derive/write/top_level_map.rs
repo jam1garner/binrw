@@ -1,8 +1,9 @@
-use binrw::{binrw, io::Cursor, BinReaderExt, BinWrite};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn round_trip_top_level_map() {
-    #[binrw]
+    #[binrw::binrw]
     #[br(map = Test::from_bytes)]
     #[bw(map = Test::to_bytes)]
     struct Test {
@@ -25,9 +26,9 @@ fn round_trip_top_level_map() {
 
     let data = b"\x01\0\0\0";
 
-    let test: Test = Cursor::new(data).read_be().unwrap();
-    let mut x = Cursor::new(Vec::new());
-    test.write(&mut x).unwrap();
+    let test = <Test as binrw::BinRead>::read_be(&mut binrw::io::Cursor::new(data)).unwrap();
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
+    binrw::BinWrite::write(&test, &mut x).unwrap();
 
-    assert_eq!(x.into_inner(), data);
+    t::assert_eq!(x.into_inner(), data);
 }

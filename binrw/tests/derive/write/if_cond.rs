@@ -1,8 +1,9 @@
-use binrw::{io::Cursor, BinWrite, Endian};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn if_cond() {
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     struct Test {
         x: u8,
         #[bw(if(*x > 1, 10))]
@@ -11,27 +12,18 @@ fn if_cond() {
         z: u32,
     }
 
-    let mut x = Cursor::new(Vec::new());
-
-    Test { x: 1, y: 2, z: 3 }
-        .write_options(&mut x, Endian::Big, ())
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
+    binrw::BinWrite::write_options(&Test { x: 1, y: 2, z: 3 }, &mut x, binrw::Endian::Big, ())
         .unwrap();
+    t::assert_eq!(&x.into_inner(), &[1, 0, 10]);
 
-    assert_eq!(&x.into_inner(), &[1, 0, 10]);
-
-    let mut x = Cursor::new(Vec::new());
-
-    Test { x: 2, y: 3, z: 4 }
-        .write_options(&mut x, Endian::Big, ())
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
+    binrw::BinWrite::write_options(&Test { x: 2, y: 3, z: 4 }, &mut x, binrw::Endian::Big, ())
         .unwrap();
+    t::assert_eq!(&x.into_inner(), &[2, 0, 3]);
 
-    assert_eq!(&x.into_inner(), &[2, 0, 3]);
-
-    let mut x = Cursor::new(Vec::new());
-
-    Test { x: 3, y: 4, z: 5 }
-        .write_options(&mut x, Endian::Big, ())
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
+    binrw::BinWrite::write_options(&Test { x: 3, y: 4, z: 5 }, &mut x, binrw::Endian::Big, ())
         .unwrap();
-
-    assert_eq!(&x.into_inner(), &[3, 0, 4, 0, 0, 0, 5]);
+    t::assert_eq!(&x.into_inner(), &[3, 0, 4, 0, 0, 0, 5]);
 }

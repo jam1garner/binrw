@@ -1,5 +1,5 @@
-use binrw::{binwrite, io::Cursor, BinWrite, Endian};
-use core::convert::Infallible;
+extern crate binrw;
+use super::t;
 
 macro_rules! test_calc_args {
     ($(($calc:ident, $calc_default:ident, $directive:ident $(, $ty_wrapper:ty)?)),* $(,)?) => {
@@ -7,45 +7,45 @@ macro_rules! test_calc_args {
         fn $calc() {
             struct ArgsNoDefault(u8);
 
-            #[binwrite]
+            #[binrw::binwrite]
             #[bw(import(args: ArgsNoDefault))]
             struct NeedsArgs(#[bw($directive = $($ty_wrapper)?(args.0))] u8);
 
-            #[binwrite]
+            #[binrw::binwrite]
             struct Test {
                 #[bw(args(ArgsNoDefault(1)), $directive = $($ty_wrapper)?(NeedsArgs()))]
                 v: NeedsArgs,
             }
 
-            let mut x = Cursor::new(Vec::new());
+            let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-            Test {}.write_le(&mut x).unwrap();
-            assert_eq!(x.into_inner(), [1]);
+            binrw::BinWrite::write_le(&Test {}, &mut x).unwrap();
+            t::assert_eq!(x.into_inner(), [1]);
         }
 
         #[test]
         fn $calc_default() {
             struct ArgsDefault(u8);
-            impl Default for ArgsDefault {
+            impl t::Default for ArgsDefault {
                 fn default() -> Self {
                     Self(1)
                 }
             }
 
-            #[binwrite]
+            #[binrw::binwrite]
             #[bw(import(args: ArgsDefault))]
             struct NeedsArgs(#[bw($directive = $($ty_wrapper)?(args.0))] u8);
 
-            #[binwrite]
+            #[binrw::binwrite]
             struct Test {
                 #[bw($directive = $($ty_wrapper)?(NeedsArgs()))]
                 v: NeedsArgs,
             }
 
-            let mut x = Cursor::new(Vec::new());
+            let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-            Test {}.write_le(&mut x).unwrap();
-            assert_eq!(x.into_inner(), [1]);
+            binrw::BinWrite::write_le(&mut Test {}, &mut x).unwrap();
+            t::assert_eq!(x.into_inner(), [1]);
         })*
     }
 }
@@ -56,35 +56,33 @@ test_calc_args!(
         try_calc_args,
         try_calc_args_default,
         try_calc,
-        Ok::<_, Infallible>
+        t::Ok::<_, ::core::convert::Infallible>
     )
 );
 
 #[test]
 fn calc_simple_write() {
-    #[binwrite]
+    #[binrw::binwrite]
     struct Test {
         x: u8,
 
-        #[bw(calc = Some(2))]
-        y: Option<u16>,
+        #[bw(calc = t::Some(2))]
+        y: t::Option<u16>,
 
         #[bw(calc = (*x as u32) + 2)]
         z: u32,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    Test { x: 1 }
-        .write_options(&mut x, Endian::Big, ())
-        .unwrap();
+    binrw::BinWrite::write_options(&Test { x: 1 }, &mut x, binrw::Endian::Big, ()).unwrap();
 
-    assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 3]);
+    t::assert_eq!(x.into_inner(), [1, 0, 2, 0, 0, 0, 3]);
 }
 
 #[test]
 fn calc_visibility() {
-    #[binwrite]
+    #[binrw::binwrite]
     struct Test {
         x: u8,
 
@@ -96,29 +94,30 @@ fn calc_visibility() {
         z: u16,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    Test { x: 1 }
-        .write_options(&mut x, Endian::Big, ())
-        .unwrap();
+    binrw::BinWrite::write_options(&Test { x: 1 }, &mut x, binrw::Endian::Big, ()).unwrap();
 
-    assert_eq!(x.into_inner(), [1, 0, 2, 0, 3]);
+    t::assert_eq!(x.into_inner(), [1, 0, 2, 0, 3]);
 }
 
 #[test]
 fn try_calc() {
-    #[binwrite]
+    #[binrw::binwrite]
     #[derive(Debug, PartialEq)]
     #[bw(big, import(v: u32))]
     struct Test {
-        #[bw(try_calc = <_>::try_from(v))]
+        #[bw(try_calc = ::core::convert::TryFrom::try_from(v))]
         a: u16,
     }
 
-    let mut x = Cursor::new(Vec::new());
-    Test {}.write_args(&mut x, (1,)).unwrap();
-    assert_eq!(x.into_inner(), b"\0\x01");
-    Test {}
-        .write_args(&mut Cursor::new(Vec::new()), (0x1_0000,))
-        .unwrap_err();
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
+    binrw::BinWrite::write_args(&Test {}, &mut x, (1,)).unwrap();
+    t::assert_eq!(x.into_inner(), b"\0\x01");
+    binrw::BinWrite::write_args(
+        &Test {},
+        &mut binrw::io::Cursor::new(t::Vec::new()),
+        (0x1_0000,),
+    )
+    .unwrap_err();
 }

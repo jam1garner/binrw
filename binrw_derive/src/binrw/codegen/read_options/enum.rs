@@ -49,7 +49,7 @@ fn generate_unit_enum_repr(
 
         quote! {
             if #TEMP == Self::#ident as #repr #(&& (#pre_assertions))* {
-                Ok(Self::#ident)
+                ::core::result::Result::Ok(Self::#ident)
             }
         }
     });
@@ -57,13 +57,13 @@ fn generate_unit_enum_repr(
     quote! {
         let #TEMP: #repr = #READ_METHOD(#reader_var, #OPT, ())?;
         #(#clauses else)* {
-            Err(#WITH_CONTEXT(
+            ::core::result::Result::Err(#WITH_CONTEXT(
                 #BIN_ERROR::NoVariantMatch {
                     pos: #POS,
                 },
                 #BACKTRACE_FRAME::Message({
                     extern crate alloc;
-                    alloc::format!("Unexpected value for enum: {:?}", #TEMP).into()
+                    ::core::convert::Into::into(alloc::format!("Unexpected value for enum: {:?}", #TEMP))
                 })
             ))
         }
@@ -111,16 +111,16 @@ fn generate_unit_enum_magic(reader_var: &TokenStream, variants: &[UnitEnumField]
                     quote! { #magic if true #(&& (#pre_assertions))* }
                 };
 
-                quote! { #condition => Ok(Self::#ident) }
+                quote! { #condition => ::core::result::Result::Ok(Self::#ident) }
             } else {
-                quote! { _ => Ok(Self::#ident) }
+                quote! { _ => ::core::result::Result::Ok(Self::#ident) }
             }
         });
 
         let body = quote! {
             match #amp #READ_METHOD(#reader_var, #OPT, ())? {
                 #(#matches,)*
-                _ => Err(#BIN_ERROR::NoVariantMatch { pos: #POS })
+                _ => ::core::result::Result::Err(#BIN_ERROR::NoVariantMatch { pos: #POS })
             }
         };
 
@@ -128,8 +128,8 @@ fn generate_unit_enum_magic(reader_var: &TokenStream, variants: &[UnitEnumField]
             match (|| {
                 #body
             })() {
-                v @ Ok(_) => return v,
-                Err(#TEMP) => {
+                v @ ::core::result::Result::Ok(_) => return v,
+                ::core::result::Result::Err(#TEMP) => {
                     #ALL_EOF &= #TEMP.is_eof();
                     #RESTORE_POSITION_VARIANT(#reader_var, #POS, #TEMP)?;
                 }
@@ -139,9 +139,9 @@ fn generate_unit_enum_magic(reader_var: &TokenStream, variants: &[UnitEnumField]
 
     let return_error = quote! {
         if #ALL_EOF {
-            Err(#NOT_ENOUGH_BYTES())
+            ::core::result::Result::Err(#NOT_ENOUGH_BYTES())
         } else {
-            Err(#BIN_ERROR::NoVariantMatch {
+            ::core::result::Result::Err(#BIN_ERROR::NoVariantMatch {
                 pos: #POS
             })
         }
@@ -164,7 +164,7 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
                 let mut #ERROR_BASKET: alloc::vec::Vec<(&'static str, #BIN_ERROR)> = alloc::vec::Vec::new();
             },
             quote! {
-                Err(#BIN_ERROR::EnumErrors {
+                ::core::result::Result::Err(#BIN_ERROR::EnumErrors {
                     pos: #POS,
                     variant_errors: #ERROR_BASKET
                 })
@@ -174,7 +174,7 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
         (
             TokenStream::new(),
             quote! {
-                Err(#BIN_ERROR::NoVariantMatch {
+                ::core::result::Result::Err(#BIN_ERROR::NoVariantMatch {
                     pos: #POS
                 })
             },
@@ -206,8 +206,8 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
             match (|| {
                 #body
             })() {
-                ok @ Ok(_) => return ok,
-                Err(error) => {
+                ok @ ::core::result::Result::Ok(_) => return ok,
+                ::core::result::Result::Err(error) => {
                     #RESTORE_POSITION_VARIANT(#reader_var, #POS, error).map(|#TEMP| {
                         #handle_error
                     })?;

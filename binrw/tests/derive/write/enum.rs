@@ -1,8 +1,9 @@
-use binrw::{io::Cursor, BinRead, BinReaderExt, BinWrite, Endian};
+extern crate binrw;
+use super::t;
 
 #[test]
 fn enum_round_trip() {
-    #[derive(BinRead, BinWrite)]
+    #[derive(binrw::BinRead, binrw::BinWrite)]
     #[brw(big)]
     enum Test {
         #[brw(magic = b"AAA")]
@@ -25,18 +26,18 @@ fn enum_round_trip() {
     }
 
     let data = b"AAA\x03\x02\x01\0\xFFBBB\xBB\xAA\0\0\0\x02CCC";
-    let test: [Test; 3] = Cursor::new(data).read_be().unwrap();
+    let test: [Test; 3] = binrw::BinReaderExt::read_be(&mut binrw::io::Cursor::new(data)).unwrap();
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    test.write_options(&mut x, Endian::Big, ()).unwrap();
+    binrw::BinWrite::write_options(&test, &mut x, binrw::Endian::Big, ()).unwrap();
 
-    assert_eq!(x.into_inner(), data);
+    t::assert_eq!(x.into_inner(), data);
 }
 
 #[test]
 fn enum_one_way() {
-    #[derive(BinWrite)]
+    #[derive(binrw::BinWrite)]
     #[brw(big)]
     enum Test {
         #[brw(magic = b"AAA")]
@@ -53,20 +54,24 @@ fn enum_one_way() {
         C,
     }
 
-    let mut x = Cursor::new(Vec::new());
+    let mut x = binrw::io::Cursor::new(t::Vec::new());
 
-    [
-        Test::B(0xAABB, 0x2),
-        Test::C,
-        Test::A {
-            x: 0x10203,
-            y: 0xFF,
-        },
-    ]
-    .write_options(&mut x, Endian::Big, ())
+    binrw::BinWrite::write_options(
+        &[
+            Test::B(0xAABB, 0x2),
+            Test::C,
+            Test::A {
+                x: 0x10203,
+                y: 0xFF,
+            },
+        ],
+        &mut x,
+        binrw::Endian::Big,
+        (),
+    )
     .unwrap();
 
-    assert_eq!(
+    t::assert_eq!(
         x.into_inner(),
         b"BBB\xBB\xAA\0\0\0\x02CCCAAA\x03\x02\x01\0\xFF"
     );
