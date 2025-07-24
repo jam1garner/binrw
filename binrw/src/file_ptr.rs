@@ -232,8 +232,8 @@ where
     /// # Errors
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
-    #[binrw::parser(reader, endian)]
-    pub fn parse<Args>(args: FilePtrArgs<Args>, ...) -> BinResult<Value>
+    #[binrw::parser(reader, endian, args_raw)]
+    pub fn parse<Args>(args: FilePtrArgs<Args>) -> BinResult<Value>
     where
         Ptr: for<'a> BinRead<Args<'a> = ()> + IntoSeekFrom,
         Value: for<'a> BinRead<Args<'a> = Args>,

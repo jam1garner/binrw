@@ -48,23 +48,23 @@ fn fn_helper_missing_object() -> BinResult<()> {
     Ok(())
 }
 
-#[parser]
-fn fn_helper_missing_args_reader(...) -> BinResult<()> {
+#[parser(args_raw)]
+fn fn_helper_missing_args_reader() -> BinResult<()> {
     Ok(())
 }
 
-#[parser]
-fn fn_helper_extra_args_reader(_arg0: (), _arg1: (), ...) -> BinResult<()> {
+#[parser(args_raw)]
+fn fn_helper_extra_args_reader(_arg0: (), _arg1: ()) -> BinResult<()> {
     Ok(())
 }
 
-#[writer]
-fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: (), ...) -> BinResult<()> {
+#[writer(args_raw)]
+fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: ()) -> BinResult<()> {
     Ok(())
 }
 
-#[writer]
-fn fn_helper_missing_args_writer(_obj: &(), ...) -> BinResult<()> {
+#[writer(args_raw)]
+fn fn_helper_missing_args_writer(_obj: &()) -> BinResult<()> {
     Ok(())
 }
 

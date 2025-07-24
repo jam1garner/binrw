@@ -155,6 +155,8 @@ pub use binrw_derive::NamedArgs;
 ///   stream to the function. If no variable name is given, `reader` is used.
 /// * `#[parser(endian)]` or `#[parser(endian: $ident)]`: Exposes the endianness
 ///   to the function. If no variable name is given, `endian` is used.
+/// * `#[parser(args_raw)]`: Passes [raw arguments](crate::docs::attribute#raw-arguments)
+///   to the function as a single parameter.
 ///
 /// Options are comma-separated.
 ///
@@ -194,13 +196,13 @@ pub use binrw_derive::NamedArgs;
 ///
 /// ## Raw arguments
 ///
-/// Use a *variadic* function signature with a single parameter. The name and
+/// Use the `args_raw` option with a single parameter. The name and
 /// type of the parameter will be used as the raw argument. For example:
 ///
 /// ```
 /// # struct ArgsType;
-/// #[binrw::parser]
-/// fn custom_parser(args: ArgsType, ...) -> binrw::BinResult<()> {
+/// #[binrw::parser(args_raw)]
+/// fn custom_parser(args: ArgsType) -> binrw::BinResult<()> {
 ///     Ok(())
 /// }
 /// # custom_parser(&mut binrw::io::Cursor::new(b""), binrw::Endian::Little, ArgsType).unwrap();
@@ -238,6 +240,8 @@ pub use binrw_derive::parser;
 ///   stream to the function. If no variable name is given, `writer` is used.
 /// * `#[writer(endian)]` or `#[writer(endian: $ident)]`: Exposes the endianness
 ///   to the function. If no variable name is given, `endian` is used.
+/// * `#[writer(args_raw)]`: Passes [raw arguments](crate::docs::attribute#raw-arguments)
+///   to the function as a single parameter.
 ///
 /// Options are comma-separated.
 ///
@@ -283,14 +287,14 @@ pub use binrw_derive::parser;
 ///
 /// ## Raw arguments
 ///
-/// Use a *variadic* function signature with a second parameter. The name and
+/// Use the `args_raw` option with a single parameter. The name and
 /// type of the second parameter will be used as the raw argument. For example:
 ///
 /// ```
 /// # struct Object;
 /// # struct ArgsType;
-/// #[binrw::writer]
-/// fn custom_writer(obj: &Object, args: ArgsType, ...) -> binrw::BinResult<()> {
+/// #[binrw::writer(args_raw)]
+/// fn custom_writer(obj: &Object, args: ArgsType) -> binrw::BinResult<()> {
 ///     Ok(())
 /// }
 /// # custom_writer(&Object, &mut binrw::io::Cursor::new(vec![]), binrw::Endian::Little, ArgsType).unwrap();

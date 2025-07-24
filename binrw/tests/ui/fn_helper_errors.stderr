@@ -12,13 +12,13 @@ error: expected `:`
 8 | #[parser(reader = invalid)]
   |                 ^
 
-error: expected `reader` or `endian`
+error: expected one of: `reader`, `endian`, `args_raw`
   --> tests/ui/fn_helper_errors.rs:13:10
    |
 13 | #[parser(invalid)]
    |          ^^^^^^^
 
-error: expected `writer` or `endian`
+error: expected one of: `writer`, `endian`, `args_raw`
   --> tests/ui/fn_helper_errors.rs:18:10
    |
 18 | #[writer(invalid)]
@@ -55,25 +55,29 @@ error: missing required value parameter
    |    ^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: missing raw arguments parameter
-  --> tests/ui/fn_helper_errors.rs:52:34
+  --> tests/ui/fn_helper_errors.rs:51:1
    |
-52 | fn fn_helper_missing_args_reader(...) -> BinResult<()> {
-   |                                  ^^^
+51 | #[parser(args_raw)]
+   | ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `parser` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: unexpected extra parameter after raw arguments
   --> tests/ui/fn_helper_errors.rs:57:43
    |
-57 | fn fn_helper_extra_args_reader(_arg0: (), _arg1: (), ...) -> BinResult<()> {
+57 | fn fn_helper_extra_args_reader(_arg0: (), _arg1: ()) -> BinResult<()> {
    |                                           ^^^^^^^^^
 
 error: unexpected extra parameter after raw arguments
   --> tests/ui/fn_helper_errors.rs:62:55
    |
-62 | fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: (), ...) -> BinResult<()> {
+62 | fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: ()) -> BinResult<()> {
    |                                                       ^^^^^^^^^
 
 error: missing raw arguments parameter
-  --> tests/ui/fn_helper_errors.rs:67:45
+  --> tests/ui/fn_helper_errors.rs:66:1
    |
-67 | fn fn_helper_missing_args_writer(_obj: &(), ...) -> BinResult<()> {
-   |                                             ^^^
+66 | #[writer(args_raw)]
+   | ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `writer` (in Nightly builds, run with -Z macro-backtrace for more info)
