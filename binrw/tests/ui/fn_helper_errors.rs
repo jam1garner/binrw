@@ -49,22 +49,22 @@ fn fn_helper_missing_object() -> BinResult<()> {
 }
 
 #[parser]
-fn fn_helper_missing_args_reader(...) -> BinResult<()> {
+fn fn_helper_missing_args_reader(_: ...) -> BinResult<()> {
     Ok(())
 }
 
 #[parser]
-fn fn_helper_extra_args_reader(_arg0: (), _arg1: (), ...) -> BinResult<()> {
+fn fn_helper_extra_args_reader(_arg0: (), _arg1: (), _: ...) -> BinResult<()> {
     Ok(())
 }
 
 #[writer]
-fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: (), ...) -> BinResult<()> {
+fn fn_helper_extra_args_writer(_arg0: &(), _arg1: (), _arg2: (), _: ...) -> BinResult<()> {
     Ok(())
 }
 
 #[writer]
-fn fn_helper_missing_args_writer(_obj: &(), ...) -> BinResult<()> {
+fn fn_helper_missing_args_writer(_obj: &(), _: ...) -> BinResult<()> {
     Ok(())
 }
 

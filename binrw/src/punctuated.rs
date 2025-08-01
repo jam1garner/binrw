@@ -77,7 +77,7 @@ where
     /// # assert_eq!(y.x.separators, vec![0, 1]);
     /// ```
     #[crate::parser(reader, endian)]
-    pub fn separated<'a>(args: VecArgs<T::Args<'a>>, ...) -> BinResult<Self>
+    pub fn separated<'a>(args: VecArgs<T::Args<'a>>, _: ...) -> BinResult<Self>
     where
         T::Args<'a>: Clone,
     {
@@ -103,7 +103,7 @@ where
     ///
     /// If reading fails, an [`Error`](crate::Error) variant will be returned.
     #[crate::parser(reader, endian)]
-    pub fn separated_trailing<'a>(args: VecArgs<T::Args<'a>>, ...) -> BinResult<Self>
+    pub fn separated_trailing<'a>(args: VecArgs<T::Args<'a>>, _: ...) -> BinResult<Self>
     where
         T::Args<'a>: Clone,
     {

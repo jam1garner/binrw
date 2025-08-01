@@ -287,18 +287,18 @@ mod tests {
     );
 
     try_error!(read fn_helper_missing_args_reader: "missing raw arguments"
-        [] (...)
+        [] (_: ...)
     );
 
     try_error!(read fn_helper_extra_args_reader: "unexpected extra parameter"
-        [] (arg0: (), arg1: (), ...)
+        [] (arg0: (), arg1: (), _: ...)
     );
 
     try_error!(write fn_helper_extra_args_writer: "unexpected extra parameter"
-        [] (arg0: &(), arg1: (), arg2: (), ...)
+        [] (arg0: &(), arg1: (), arg2: (), _: ...)
     );
 
     try_error!(write fn_helper_missing_args_writer: "missing raw arguments"
-        [] (obj: &(), ...)
+        [] (obj: &(), _: ...)
     );
 }

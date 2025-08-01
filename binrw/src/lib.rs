@@ -200,7 +200,7 @@ pub use binrw_derive::NamedArgs;
 /// ```
 /// # struct ArgsType;
 /// #[binrw::parser]
-/// fn custom_parser(args: ArgsType, ...) -> binrw::BinResult<()> {
+/// fn custom_parser(args: ArgsType, _: ...) -> binrw::BinResult<()> {
 ///     Ok(())
 /// }
 /// # custom_parser(&mut binrw::io::Cursor::new(b""), binrw::Endian::Little, ArgsType).unwrap();
@@ -290,7 +290,7 @@ pub use binrw_derive::parser;
 /// # struct Object;
 /// # struct ArgsType;
 /// #[binrw::writer]
-/// fn custom_writer(obj: &Object, args: ArgsType, ...) -> binrw::BinResult<()> {
+/// fn custom_writer(obj: &Object, args: ArgsType, _: ...) -> binrw::BinResult<()> {
 ///     Ok(())
 /// }
 /// # custom_writer(&Object, &mut binrw::io::Cursor::new(vec![]), binrw::Endian::Little, ArgsType).unwrap();
