@@ -43,10 +43,13 @@ error[E0308]: mismatched types
 5 |       #[br(parse_with = until_eof::<Vec<u8>, _, _, _>, map = String::from_utf8_lossy)]
   |  ____________________________________________________________^
 6 | |     a: String,
-  | |     ^- ------ expected due to this
-  | |     ||
-  | |_____|help: try using a conversion method: `.to_string()`
+  | |     ^  ------ expected due to this
+  | |_____|
   |       expected `String`, found `Cow<'_, str>`
   |
   = note: expected struct `String`
                found enum `Cow<'_, str>`
+help: try using a conversion method
+  |
+6 |     a.to_string(): String,
+  |      ++++++++++++
