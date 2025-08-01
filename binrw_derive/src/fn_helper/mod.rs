@@ -52,7 +52,9 @@ fn generate<const WRITE: bool>(
         parse_quote!(#STREAM_T: #stream_trait + #SEEK_TRAIT)
     });
 
-    let mut args = core::mem::take(&mut func.sig.inputs).into_iter();
+    let mut args = core::mem::take(&mut func.sig.inputs)
+        .into_iter()
+        .filter(is_not_variadic);
     let mut args_pat = Punctuated::<_, Token![,]>::new();
     let mut args_ty = Punctuated::<_, Token![,]>::new();
 
@@ -113,6 +115,11 @@ fn generate<const WRITE: bool>(
     }
 
     PartialResult::Ok(func)
+}
+
+fn is_not_variadic(arg: &FnArg) -> bool {
+    !matches!(arg, FnArg::Typed(syn::PatType { ty, .. })
+        if matches!(ty.as_ref(), syn::Type::Verbatim(..)))
 }
 
 ident_str! {
@@ -287,18 +294,18 @@ mod tests {
     );
 
     try_error!(read fn_helper_missing_args_reader: "missing raw arguments"
-        [] (...)
+        [] (_: ...)
     );
 
     try_error!(read fn_helper_extra_args_reader: "unexpected extra parameter"
-        [] (arg0: (), arg1: (), ...)
+        [] (arg0: (), arg1: (), _: ...)
     );
 
     try_error!(write fn_helper_extra_args_writer: "unexpected extra parameter"
-        [] (arg0: &(), arg1: (), arg2: (), ...)
+        [] (arg0: &(), arg1: (), arg2: (), _: ...)
     );
 
     try_error!(write fn_helper_missing_args_writer: "missing raw arguments"
-        [] (obj: &(), ...)
+        [] (obj: &(), _: ...)
     );
 }
