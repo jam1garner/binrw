@@ -143,7 +143,7 @@ impl<'input> PreludeGenerator<'input> {
                 #head
                 let #POS = #SEEK_TRAIT::stream_position(#reader_var)?;
             };
-        };
+        }
 
         self
     }
