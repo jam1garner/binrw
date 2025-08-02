@@ -55,10 +55,10 @@ error: missing required value parameter
    |    ^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: missing raw arguments parameter
-  --> tests/ui/fn_helper_errors.rs:52:34
+  --> tests/ui/fn_helper_errors.rs:52:37
    |
 52 | fn fn_helper_missing_args_reader(_: ...) -> BinResult<()> {
-   |                                  ^^^^^^
+   |                                     ^^^
 
 error: unexpected extra parameter after raw arguments
   --> tests/ui/fn_helper_errors.rs:57:43
@@ -73,7 +73,7 @@ error: unexpected extra parameter after raw arguments
    |                                                       ^^^^^^^^^
 
 error: missing raw arguments parameter
-  --> tests/ui/fn_helper_errors.rs:67:45
+  --> tests/ui/fn_helper_errors.rs:67:48
    |
 67 | fn fn_helper_missing_args_writer(_obj: &(), _: ...) -> BinResult<()> {
-   |                                             ^^^^^^
+   |                                                ^^^

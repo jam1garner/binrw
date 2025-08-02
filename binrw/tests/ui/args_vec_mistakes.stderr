@@ -1,17 +1,17 @@
 error[E0277]: the trait bound `VecArgs<()>: MissingArgsDirective` is not satisfied
  --> tests/ui/args_vec_mistakes.rs:7:20
   |
-7 | struct MissingArgs(Vec<u8>);
-  |                    ^^^^^^^ the trait `Default` is not implemented for `VecArgs<()>`, which is required by `VecArgs<()>: MissingArgsDirective`
-  |
-  = note: required for `VecArgs<()>` to implement `MissingArgsDirective`
+ 7 | struct MissingArgs(Vec<u8>);
+   |                    ^^^^^^^ the trait `Default` is not implemented for `VecArgs<()>`
+   |
+   = note: required for `VecArgs<()>` to implement `MissingArgsDirective`
 note: required by a bound in `Required::args`
- --> src/private.rs
-  |
-  | pub trait Required: MissingArgsDirective {
-  |                     ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Required::args`
-  |     fn args() -> Self;
-  |        ---- required by a bound in this associated function
+  --> src/private.rs
+   |
+   | pub trait Required: MissingArgsDirective {
+   |                     ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Required::args`
+   |     fn args() -> Self;
+   |        ---- required by a bound in this associated function
 
 error[E0308]: mismatched types
   --> tests/ui/args_vec_mistakes.rs:10:23
@@ -43,7 +43,7 @@ error[E0277]: the trait bound `usize: TryFrom<Option<{integer}>>` is not satisfi
   --> tests/ui/args_vec_mistakes.rs:22:36
    |
 22 | struct WrongCountType(#[br(count = Some(1))] Vec<u8>);
-   |                                    ^^^^^^^ the trait `From<Option<{integer}>>` is not implemented for `usize`, which is required by `usize: TryFrom<Option<{integer}>>`
+   |                                    ^^^^^^^ the trait `From<Option<{integer}>>` is not implemented for `usize`
    |
    = help: the following other types implement trait `From<T>`:
              `usize` implements `From<bool>`
@@ -54,8 +54,8 @@ error[E0277]: the trait bound `usize: TryFrom<Option<{integer}>>` is not satisfi
    = note: required for `usize` to implement `TryFrom<Option<{integer}>>`
 
 error[E0599]: the method `finalize` exists for struct `binrw::binread::impls::VecArgsBuilder<(NoDefault,), Satisfied, Needed>`, but its trait bounds were not satisfied
-  --> tests/ui/args_vec_mistakes.rs:25:42
-   |
+ --> tests/ui/args_vec_mistakes.rs:25:42
+  |
  4 | struct NoDefault;
    | ---------------- doesn't satisfy `NoDefault: Default`
 ...
@@ -82,7 +82,7 @@ error[E0277]: the trait bound `VecArgs<()>: Required` is not satisfied
   --> tests/ui/args_vec_mistakes.rs:28:5
    |
 28 |     Vec::<u8>::read(&mut binrw::io::Cursor::new(b"")).unwrap();
-   |     ^^^^^^^^^ the trait `Default` is not implemented for `VecArgs<()>`, which is required by `VecArgs<()>: Required`
+   |     ^^^^^^^^^ the trait `Default` is not implemented for `VecArgs<()>`
    |
    = note: required for `VecArgs<()>` to implement `Required`
 note: required by a bound in `binrw::BinRead::read`
