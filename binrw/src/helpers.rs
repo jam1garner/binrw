@@ -669,6 +669,72 @@ where
     }
 }
 
+/// Creates a parser that builds a collection until at least N bytes are consumed.
+/// Useful when parsing binary formats where collection size is represented in bytes
+/// (instead of element count).
+///
+/// # Examples
+///
+/// Reading a TLV-like structure:
+///
+/// ```
+/// # use binrw::{BinRead, helpers::count_bytes, io::Cursor, BinReaderExt};
+/// #[derive(BinRead)]
+/// #[derive(Debug, PartialEq)]
+/// enum Entry {
+///     #[br(magic(0u8))] U8(u8),
+///     #[br(magic(1u8))] U16(u16),
+/// }
+///
+/// #[derive(BinRead)]
+/// struct CountBytes {
+///     data_size_in_bytes: u8,
+///     #[br(parse_with = count_bytes(data_size_in_bytes.into()))]
+///     data: Vec<Entry>,
+///     footer: u8,
+/// }
+///
+/// # let mut x = Cursor::new(b"\x05\x00\xaa\x01\x00\xbb\xcc");
+/// # let x: CountBytes = x.read_be().unwrap();
+/// # assert_eq!(x.data, &[Entry::U8(0xaa), Entry::U16(0xbb)]);
+/// # assert_eq!(x.footer, 0xcc);
+/// ```
+pub fn count_bytes<'a, Ret, T, Arg, Reader>(
+    n: u64,
+) -> impl Fn(&mut Reader, Endian, Arg) -> BinResult<Ret>
+where
+    Ret: FromIterator<T> + 'static,
+    T: BinRead<Args<'a> = Arg>,
+    Arg: Clone,
+    Reader: Read + Seek,
+{
+    move |reader, endian, args| {
+        let mut last = n == 0;
+        let start_position = reader.stream_position()?;
+
+        from_fn(|| {
+            if last {
+                None
+            } else {
+                match T::read_options(reader, endian, args.clone()) {
+                    Ok(value) => match reader.stream_position() {
+                        Ok(current_position) => {
+                            if current_position - start_position >= n {
+                                last = true;
+                            }
+                            Some(Ok(value))
+                        }
+                        Err(err) => Some(Err(crate::Error::Io(err))),
+                    },
+                    err => Some(err),
+                }
+            }
+        })
+        .fuse()
+        .collect()
+    }
+}
+
 /// Reads a 24-bit unsigned integer.
 ///
 /// # Errors
