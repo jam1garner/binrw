@@ -1,4 +1,4 @@
-error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `repr`, `map_stream`, `magic`, `args`, `args_raw`, `calc`, `try_calc`, `default`, `ignore`, `parse_with`, `count`, `offset`, `if`, `restore_position`, `try`, `temp`, `assert`, `err_context`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`, `dbg`
+error: expected one of: `big`, `little`, `is_big`, `is_little`, `map`, `try_map`, `repr`, `map_stream`, `magic`, `args`, `args_raw`, `calc`, `try_calc`, `default`, `ignore`, `parse_with`, `count`, `offset`, `if`, `restore_position`, `try`, `temp`, `assert`, `err_context`, `pad_before`, `pad_after`, `align_before`, `align_after`, `seek_before`, `pad_size_to`, `dbg`, `bound`
  --> tests/ui/invalid_keyword_struct_field.rs:5:10
   |
 5 |     #[br(invalid_struct_field_keyword)]

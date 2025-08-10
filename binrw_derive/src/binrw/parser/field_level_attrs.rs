@@ -1,7 +1,7 @@
 use super::{
     attr_struct,
     top_level_attrs::StructAttr,
-    types::{Assert, CondEndian, Condition, ErrContext, FieldMode, Magic, Map, PassedArgs},
+    types::{Assert, Bound, CondEndian, Condition, ErrContext, FieldMode, Magic, Map, PassedArgs},
     FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
 };
 use crate::{binrw::Options, combine_error};
@@ -58,6 +58,8 @@ attr_struct! {
         pub(crate) pad_size_to: Option<TokenStream>,
         #[from(RO:Debug)] // TODO is this really RO?
         pub(crate) debug: Option<()>,
+        #[from(RW:Bound)]
+        pub(crate) bound: Bound,
     }
 }
 
@@ -99,7 +101,7 @@ impl StructField {
         self.count.is_some() || self.offset.is_some()
     }
 
-    /// Returns true if the only field-level attributes are asserts
+    /// Returns true if the only field-level attributes are asserts and bounds
     pub(crate) fn has_no_attrs(&self) -> bool {
         macro_rules! all_fields_none {
             ($($field:ident),*) => {
@@ -243,6 +245,7 @@ impl FromField for StructField {
             keyword_spans: <_>::default(),
             err_context: <_>::default(),
             debug: <_>::default(),
+            bound: <_>::default(),
         };
 
         let result = if options.write {

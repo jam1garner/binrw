@@ -3,9 +3,12 @@ mod read_options;
 pub(crate) mod sanitization;
 mod write_options;
 
+use std::collections::HashSet;
+
 use crate::{
     binrw::parser::{
-        Assert, AssertionError, CondEndian, Imports, Input, ParseResult, PassedArgs, StructField,
+        Assert, AssertionError, CondEndian, Imports, Input, ParseResult, PassedArgs, Struct,
+        StructField,
     },
     named_args::{arg_type_name, derive_from_imports},
     util::{quote_spanned_any, IdentStr},
@@ -17,7 +20,9 @@ use sanitization::{
     BIN_ERROR, BIN_RESULT, BOX, ENDIAN_ENUM, FORMAT, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT,
     TEMP, WRITER, WRITE_TRAIT,
 };
-use syn::{spanned::Spanned, DeriveInput, Ident, Type};
+use syn::{parse_quote, spanned::Spanned, DeriveInput, Ident, Type};
+
+use super::parser::{Enum, EnumVariant, FieldMode};
 
 pub(crate) fn generate_impl<const WRITE: bool>(
     derive_input: &DeriveInput,
@@ -164,23 +169,26 @@ fn generate_trait_impl<const WRITE: bool>(
         )
     };
 
-    let fn_impl = match binrw_input {
-        ParseResult::Ok(binrw_input) => {
+    let (fn_impl, generics) = match binrw_input {
+        ParseResult::Ok(binrw_input) => (
             if WRITE {
                 write_options::generate(binrw_input, derive_input)
             } else {
                 read_options::generate(binrw_input, derive_input)
-            }
-        }
+            },
+            get_generics::<WRITE>(binrw_input, &derive_input.generics),
+        ),
         // If there is a parsing error, an impl for the trait still needs to be
         // generated to avoid misleading errors at all call sites that use the
         // trait, so emit the trait and just stick the errors inside the generated
         // function
-        ParseResult::Partial(_, error) | ParseResult::Err(error) => error.to_compile_error(),
+        ParseResult::Partial(_, error) | ParseResult::Err(error) => {
+            (error.to_compile_error(), derive_input.generics.clone())
+        }
     };
 
     let name = &derive_input.ident;
-    let (impl_generics, ty_generics, where_clause) = derive_input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let args_lifetime = get_args_lifetime(Span::call_site());
     quote! {
@@ -195,6 +203,270 @@ fn generate_trait_impl<const WRITE: bool>(
             }
         }
     }
+}
+
+fn get_generics<const WRITE: bool>(binrw_input: &Input, generics: &syn::Generics) -> syn::Generics {
+    let mut generics = generics.clone();
+
+    match binrw_input {
+        Input::Struct(s) => add_explicit_struct_predicates(s, &mut generics),
+        Input::Enum(e) => add_explicit_enum_predicates(e, &mut generics),
+        Input::UnitStruct(_) | Input::UnitOnlyEnum(_) => {}
+    }
+
+    if binrw_input.bound().is_none() {
+        add_implicit_predicates::<WRITE>(binrw_input, &mut generics);
+    }
+
+    generics
+}
+
+fn add_explicit_struct_predicates(s: &Struct, generics: &mut syn::Generics) {
+    if let Some(bound) = &s.bound {
+        generics
+            .make_where_clause()
+            .predicates
+            .extend(bound.predicates().iter().cloned());
+    }
+
+    for f in &s.fields {
+        if let Some(bound) = &f.bound {
+            generics
+                .make_where_clause()
+                .predicates
+                .extend(bound.predicates().iter().cloned());
+        }
+    }
+}
+
+fn add_explicit_enum_predicates(e: &Enum, generics: &mut syn::Generics) {
+    if let Some(bound) = &e.bound {
+        generics
+            .make_where_clause()
+            .predicates
+            .extend(bound.predicates().iter().cloned());
+    }
+
+    for variant in &e.variants {
+        match variant {
+            EnumVariant::Variant { options, .. } => {
+                add_explicit_struct_predicates(options, generics);
+            }
+            EnumVariant::Unit(_) => {}
+        }
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn add_implicit_predicates<const WRITE: bool>(binrw_input: &Input, generics: &mut syn::Generics) {
+    // AST visitor adapted from serde
+    // https://github.com/serde-rs/serde/blob/b9de3658ad9ca7850c496e0f990d5241b943eefb/serde_derive/src/bound.rs#L91
+    struct FindTyParams<'ast> {
+        all_type_params: HashSet<syn::Ident>,
+        relevant_type_params: HashSet<syn::Ident>,
+        associated_type_usage: Vec<&'ast syn::TypePath>,
+    }
+
+    pub fn ungroup(mut ty: &Type) -> &Type {
+        while let Type::Group(group) = ty {
+            ty = &group.elem;
+        }
+        ty
+    }
+
+    impl<'ast> FindTyParams<'ast> {
+        fn new(generics: &syn::Generics) -> Self {
+            Self {
+                all_type_params: generics
+                    .type_params()
+                    .map(|param| param.ident.clone())
+                    .collect(),
+                relevant_type_params: HashSet::new(),
+                associated_type_usage: Vec::new(),
+            }
+        }
+
+        fn visit_field(&mut self, field: &'ast syn::Field) {
+            if let syn::Type::Path(ty) = ungroup(&field.ty) {
+                if let Some(syn::punctuated::Pair::Punctuated(t, _)) =
+                    ty.path.segments.pairs().next()
+                {
+                    if self.all_type_params.contains(&t.ident) {
+                        self.associated_type_usage.push(ty);
+                    }
+                }
+            }
+            self.visit_type(&field.ty);
+        }
+
+        fn visit_path(&mut self, path: &'ast syn::Path) {
+            if let Some(seg) = path.segments.last() {
+                // We know PhantomData<T> will always impl BinRead/BinWrite so
+                // we don't count this T as a relevant type param.
+                if seg.ident == "PhantomData" {
+                    return;
+                }
+            }
+            if path.leading_colon.is_none() && path.segments.len() == 1 {
+                let id = &path.segments[0].ident;
+                if self.all_type_params.contains(id) {
+                    self.relevant_type_params.insert(id.clone());
+                }
+            }
+            for segment in &path.segments {
+                self.visit_path_segment(segment);
+            }
+        }
+
+        fn visit_type(&mut self, ty: &'ast syn::Type) {
+            match ty {
+                syn::Type::Array(ty) => self.visit_type(&ty.elem),
+                syn::Type::BareFn(ty) => {
+                    for arg in &ty.inputs {
+                        self.visit_type(&arg.ty);
+                    }
+                    self.visit_return_type(&ty.output);
+                }
+                syn::Type::Group(ty) => self.visit_type(&ty.elem),
+                syn::Type::ImplTrait(ty) => {
+                    for bound in &ty.bounds {
+                        self.visit_type_param_bound(bound);
+                    }
+                }
+                syn::Type::Paren(ty) => self.visit_type(&ty.elem),
+                syn::Type::Path(ty) => {
+                    if let Some(qself) = &ty.qself {
+                        self.visit_type(&qself.ty);
+                    }
+                    self.visit_path(&ty.path);
+                }
+                syn::Type::Ptr(ty) => self.visit_type(&ty.elem),
+                syn::Type::Reference(ty) => self.visit_type(&ty.elem),
+                syn::Type::Slice(ty) => self.visit_type(&ty.elem),
+                syn::Type::TraitObject(ty) => {
+                    for bound in &ty.bounds {
+                        self.visit_type_param_bound(bound);
+                    }
+                }
+                syn::Type::Tuple(ty) => {
+                    for elem in &ty.elems {
+                        self.visit_type(elem);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        fn visit_path_segment(&mut self, segment: &'ast syn::PathSegment) {
+            self.visit_path_arguments(&segment.arguments);
+        }
+
+        fn visit_path_arguments(&mut self, arguments: &'ast syn::PathArguments) {
+            match arguments {
+                syn::PathArguments::None => {}
+                syn::PathArguments::AngleBracketed(arguments) => {
+                    for arg in &arguments.args {
+                        match arg {
+                            syn::GenericArgument::Type(arg) => self.visit_type(arg),
+                            syn::GenericArgument::AssocType(arg) => self.visit_type(&arg.ty),
+                            _ => {}
+                        }
+                    }
+                }
+                syn::PathArguments::Parenthesized(arguments) => {
+                    for argument in &arguments.inputs {
+                        self.visit_type(argument);
+                    }
+                    self.visit_return_type(&arguments.output);
+                }
+            }
+        }
+
+        fn visit_return_type(&mut self, return_type: &'ast syn::ReturnType) {
+            match return_type {
+                syn::ReturnType::Default => {}
+                syn::ReturnType::Type(_, output) => self.visit_type(output),
+            }
+        }
+
+        fn visit_type_param_bound(&mut self, bound: &'ast syn::TypeParamBound) {
+            if let syn::TypeParamBound::Trait(bound) = bound {
+                self.visit_path(&bound.path);
+            }
+        }
+    }
+
+    let mut visitor = FindTyParams::new(generics);
+
+    let should_visit = if WRITE {
+        |s: &Struct, f: &StructField| {
+            !matches!(&f.field_mode, FieldMode::Function(_))
+                && f.bound.is_none()
+                && s.bound.is_none()
+        }
+    } else {
+        |s: &Struct, f: &StructField| {
+            matches!(&f.field_mode, FieldMode::Normal)
+                && f.map.is_none()
+                && s.map.is_none()
+                && f.bound.is_none()
+                && s.bound.is_none()
+        }
+    };
+
+    match binrw_input {
+        Input::Struct(s) => {
+            for field in s.fields.iter().filter(|f| should_visit(s, f)) {
+                visitor.visit_field(&field.field);
+            }
+        }
+        Input::Enum(e) => {
+            for variant in &e.variants {
+                match variant {
+                    EnumVariant::Variant { options, .. } => {
+                        let relevant_fields =
+                            options.fields.iter().filter(|f| should_visit(options, f));
+                        for field in relevant_fields {
+                            visitor.visit_field(&field.field);
+                        }
+                    }
+                    EnumVariant::Unit(_) => {}
+                }
+            }
+        }
+        Input::UnitStruct(_) | Input::UnitOnlyEnum(_) => {}
+    }
+
+    let relevant_type_params = visitor.relevant_type_params;
+    let associated_type_usage = visitor.associated_type_usage;
+    let type_params = generics.type_params().cloned().collect::<Vec<_>>();
+
+    generics.make_where_clause().predicates.extend(
+        type_params
+            .into_iter()
+            .map(|param| param.ident.clone())
+            .filter(|ident| relevant_type_params.contains(ident))
+            .map(|ident| syn::TypePath {
+                qself: None,
+                path: ident.into(),
+            })
+            .chain(associated_type_usage.into_iter().cloned())
+            .flat_map(|bounded_ty| {
+                let args_lifetime = get_args_lifetime(Span::call_site());
+
+                let binrw_bound = if WRITE { BINWRITE_TRAIT } else { BINREAD_TRAIT };
+
+                let where_predicates: syn::punctuated::Punctuated<
+                    syn::WherePredicate,
+                    syn::Token![,],
+                > = parse_quote! {
+                    for<#args_lifetime> #bounded_ty: #binrw_bound + #args_lifetime,
+                    for<#args_lifetime> #bounded_ty::Args<#args_lifetime>: ::core::default::Default,
+                };
+
+                where_predicates
+            }),
+    );
 }
 
 fn get_args_lifetime(span: proc_macro2::Span) -> syn::Lifetime {

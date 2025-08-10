@@ -1,6 +1,6 @@
 use super::{
     attr_struct,
-    types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
+    types::{Assert, Bound, CondEndian, EnumErrorMode, Imports, Magic, Map},
     EnumVariant, FromInput, ParseResult, StructField, TrySet, UnitEnumField,
 };
 use crate::binrw::Options;
@@ -175,6 +175,14 @@ impl Input {
         }
     }
 
+    pub(crate) fn bound(&self) -> &Bound {
+        match self {
+            Input::Struct(s) | Input::UnitStruct(s) => &s.bound,
+            Input::Enum(e) => &e.bound,
+            Input::UnitOnlyEnum(_) => &None,
+        }
+    }
+
     pub(crate) fn stream_ident(&self) -> Option<&Ident> {
         match self {
             Input::Struct(s) | Input::UnitStruct(s) => s.stream_ident.as_ref(),
@@ -217,6 +225,8 @@ attr_struct! {
         pub(crate) assertions: Vec<Assert>,
         #[from(RO:PreAssert)]
         pub(crate) pre_assertions: Vec<Assert>,
+        #[from(RW:Bound)]
+        pub(crate) bound: Bound,
         pub(crate) fields: Vec<StructField>,
         pub(crate) for_write: bool,
     }
@@ -327,6 +337,8 @@ attr_struct! {
         pub(crate) pre_assertions: Vec<Assert>,
         #[from(RO:ReturnAllErrors, RO:ReturnUnexpectedError)]
         pub(crate) error_mode: EnumErrorMode,
+        #[from(RW:Bound)]
+        pub(crate) bound: Bound,
         pub(crate) variants: Vec<EnumVariant>,
     }
 }
