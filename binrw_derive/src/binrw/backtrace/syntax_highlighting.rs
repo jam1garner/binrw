@@ -87,8 +87,10 @@ impl SyntaxInfo {
 
         let line = self.lines.entry(start.line()).or_default();
 
-        assert_eq!(start.line(), end.line());
-        line.highlights.push((start.column()..end.column(), color));
+        // syntax highlighting for multi-line spans isn't supported yet (sorry)
+        if start.line() == end.line() {
+            line.highlights.push((start.column()..end.column(), color));
+        }
     }
 }
 
