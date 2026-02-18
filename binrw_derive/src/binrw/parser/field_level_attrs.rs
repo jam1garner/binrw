@@ -145,16 +145,17 @@ impl StructField {
     fn validate(&self, options: Options) -> syn::Result<()> {
         let mut all_errors = None::<syn::Error>;
 
-        if self.do_try.is_some() && self.generated_value() {
-            //TODO: join with span of read mode somehow
-            let span = self.do_try.as_ref().unwrap().span();
-            combine_error(
-                &mut all_errors,
-                syn::Error::new(
-                    span,
-                    "`try` is incompatible with `default`, `calc`, and `try_calc`",
-                ),
-            );
+        if self.generated_value() {
+            if let Some(do_try) = &self.do_try {
+                //TODO: join with span of read mode somehow
+                combine_error(
+                    &mut all_errors,
+                    syn::Error::new(
+                        do_try.span(),
+                        "`try` is incompatible with `default`, `calc`, and `try_calc`",
+                    ),
+                );
+            }
         }
 
         if !options.write

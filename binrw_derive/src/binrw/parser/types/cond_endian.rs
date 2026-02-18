@@ -32,17 +32,12 @@ impl ToTokens for Endian {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub(crate) enum CondEndian {
+    #[default]
     Inherited,
     Fixed(Endian),
     Cond(Endian, TokenStream),
-}
-
-impl Default for CondEndian {
-    fn default() -> Self {
-        Self::Inherited
-    }
 }
 
 impl From<attrs::Big> for CondEndian {

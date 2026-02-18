@@ -84,6 +84,12 @@ impl Error {
         }
     }
 
+    /// Creates a new I/O error with [`ErrorKind::Other`].
+    #[must_use]
+    pub fn other<A>(error: A) -> Self {
+        Self::new(ErrorKind::Other, error)
+    }
+
     /// Returns the corresponding [`ErrorKind`] for this error.
     #[must_use]
     pub fn kind(&self) -> ErrorKind {

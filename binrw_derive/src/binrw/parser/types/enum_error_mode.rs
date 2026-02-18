@@ -3,17 +3,12 @@ use crate::{
     meta_types::KeywordToken,
 };
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub(crate) enum EnumErrorMode {
+    #[default]
     Default,
     ReturnAllErrors,
     ReturnUnexpectedError,
-}
-
-impl Default for EnumErrorMode {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 
 impl From<attrs::ReturnAllErrors> for EnumErrorMode {

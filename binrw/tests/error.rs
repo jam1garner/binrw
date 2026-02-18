@@ -82,17 +82,8 @@ fn display() {
     assert!(err.contains("0x42"));
     assert!(err.contains("57005"));
 
-    let err = format!(
-        "{}",
-        Error::Io(binrw::io::Error::new(binrw::io::ErrorKind::Other, "Oops"))
-    );
-    assert_eq!(
-        err,
-        format!(
-            "{}",
-            binrw::io::Error::new(binrw::io::ErrorKind::Other, "Oops")
-        )
-    );
+    let err = format!("{}", Error::Io(binrw::io::Error::other("Oops")));
+    assert_eq!(err, format!("{}", binrw::io::Error::other("Oops")));
     #[cfg(feature = "std")]
     assert!(err.contains("Oops"));
     #[cfg(not(feature = "std"))]
