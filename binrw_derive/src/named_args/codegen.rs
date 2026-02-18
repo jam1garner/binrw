@@ -227,11 +227,16 @@ impl Builder<'_> {
                 }
             });
 
-            let field_names = {
-                let names = self.fields.iter().map(|field| &field.name);
-                quote! { #( #names, )* }
-            };
             let field_name = &field.name;
+            let destructured_fields = self.fields.iter().map(|field| {
+                let name = &field.name;
+                if name == field_name {
+                    quote!(#name: _)
+                } else {
+                    quote!(#name)
+                }
+            });
+            let rebuilt_fields = self.fields.iter().map(|field| &field.name);
             let ty = &field.ty;
             let docs = format!("Sets `{field_name}` to the given value.");
 
@@ -253,14 +258,14 @@ impl Builder<'_> {
                         self, val: #ty
                     ) -> #builder_name < #user_generic_args #( #resulting_generics ),* > {
                         let #builder_name {
-                            #field_names
+                            #( #destructured_fields, )*
                             ..
                         } = self;
 
                         let #field_name = #field_result;
 
                         #builder_name {
-                            #field_names
+                            #( #rebuilt_fields, )*
                             __bind_generics: ::core::marker::PhantomData
                         }
                     }
