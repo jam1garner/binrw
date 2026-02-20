@@ -64,6 +64,8 @@ pub enum ErrorKind {
     TimedOut,
     /// An error returned when an operation could not be completed because a
     /// call to [`write`] returned [`Ok(0)`].
+    ///
+    /// [`Ok(0)`]: core::result::Result::Ok
     WriteZero,
     /// This operation was interrupted.
     Interrupted,
