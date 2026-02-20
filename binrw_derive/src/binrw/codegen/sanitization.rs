@@ -1,5 +1,5 @@
 //! Utilities for helping sanitize macro
-use crate::util::{from_crate, ident_str};
+use crate::util::{from_crate, ident_str, IdentStr};
 use proc_macro2::Ident;
 use quote::format_ident;
 
@@ -34,11 +34,6 @@ ident_str! {
     pub(crate) ENDIAN_ENUM = from_crate!(Endian);
     pub(crate) READ_METHOD = from_read_trait!(read_options);
     pub(crate) WRITE_METHOD = from_write_trait!(write_options);
-    pub(crate) READER = "__binrw_generated_var_reader";
-    pub(crate) WRITER = "__binrw_generated_var_writer";
-    pub(crate) OPT = "__binrw_generated_var_endian";
-    pub(crate) ARGS = "__binrw_generated_var_arguments";
-    pub(crate) SAVED_POSITION = "__binrw_generated_saved_position";
     pub(crate) NOT_ENOUGH_BYTES = from_crate!(__private::not_enough_bytes);
     pub(crate) ASSERT_MAGIC = from_crate!(__private::magic);
     pub(crate) ASSERT = from_crate!(__private::assert);
@@ -68,19 +63,28 @@ ident_str! {
     pub(crate) WRITE_MAGIC = from_crate!(meta::WriteMagic);
     pub(crate) WITH_CONTEXT = from_crate!(error::ContextExt::with_context);
     pub(crate) BACKTRACE_FRAME = from_crate!(error::BacktraceFrame);
-    pub(crate) TEMP = "__binrw_temp";
-    pub(crate) THIS = "__binrw_this";
-    pub(crate) POS = "__binrw_generated_position_temp";
-    pub(crate) ERROR_BASKET = "__binrw_generated_error_basket";
-    pub(crate) READ_FUNCTION = "__binrw_generated_read_function";
-    pub(crate) WRITE_FUNCTION = "__binrw_generated_write_function";
-    pub(crate) BEFORE_POS = "__binrw_generated_before_pos";
-    pub(crate) ALL_EOF = "__binrw_generated_all_eof";
     pub(crate) BOX = from_crate!(__private::Box);
     pub(crate) DBG_EPRINTLN = from_crate!(__private::eprintln);
     pub(crate) FORMAT = from_crate!(__private::format);
     pub(crate) VEC = from_crate!(__private::Vec);
 }
+
+pub(crate) const READER: IdentStr = IdentStr::new_hygienic("__binrw_generated_var_reader");
+pub(crate) const WRITER: IdentStr = IdentStr::new_hygienic("__binrw_generated_var_writer");
+pub(crate) const OPT: IdentStr = IdentStr::new_hygienic("__binrw_generated_var_endian");
+pub(crate) const ARGS: IdentStr = IdentStr::new_hygienic("__binrw_generated_var_arguments");
+pub(crate) const SAVED_POSITION: IdentStr =
+    IdentStr::new_hygienic("__binrw_generated_saved_position");
+pub(crate) const TEMP: IdentStr = IdentStr::new_hygienic("__binrw_temp");
+pub(crate) const THIS: IdentStr = IdentStr::new_hygienic("__binrw_this");
+pub(crate) const POS: IdentStr = IdentStr::new_hygienic("__binrw_generated_position_temp");
+pub(crate) const ERROR_BASKET: IdentStr = IdentStr::new_hygienic("__binrw_generated_error_basket");
+pub(crate) const READ_FUNCTION: IdentStr =
+    IdentStr::new_hygienic("__binrw_generated_read_function");
+pub(crate) const WRITE_FUNCTION: IdentStr =
+    IdentStr::new_hygienic("__binrw_generated_write_function");
+pub(crate) const BEFORE_POS: IdentStr = IdentStr::new_hygienic("__binrw_generated_before_pos");
+pub(crate) const ALL_EOF: IdentStr = IdentStr::new_hygienic("__binrw_generated_all_eof");
 
 pub(crate) fn make_ident(ident: &Ident, kind: &str) -> Ident {
     format_ident!("__binrw_generated_{}_{}", kind, ident)

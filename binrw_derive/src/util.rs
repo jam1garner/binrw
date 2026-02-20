@@ -36,20 +36,44 @@ impl<T: ToTokens> ToSpannedTokens for &T {
 /// A string wrapper that converts the str to a $path `TokenStream`, allowing
 /// for constant-time idents that can be shared across threads
 #[derive(Clone, Copy)]
-pub(crate) struct IdentStr(&'static str);
+pub(crate) struct IdentStr {
+    str: &'static str,
+    generated_hygienic_ident: bool,
+}
 
 impl IdentStr {
     #[cfg_attr(coverage_nightly, coverage(off))] // const-only function
     pub(crate) const fn new(str: &'static str) -> Self {
-        IdentStr(str)
+        IdentStr {
+            str,
+            generated_hygienic_ident: false,
+        }
+    }
+
+    #[cfg_attr(coverage_nightly, coverage(off))] // const-only function
+    pub(crate) const fn new_hygienic(str: &'static str) -> Self {
+        IdentStr {
+            str,
+            generated_hygienic_ident: true,
+        }
     }
 
     pub(crate) fn iter(&self, span: Span) -> impl Iterator<Item = Ident> + '_ {
-        self.0.split("::").map(move |ident| Ident::new(ident, span))
+        self.str
+            .split("::")
+            .map(move |ident| Ident::new(ident, span))
     }
 
     pub(crate) fn to_ident(self, span: Span) -> Ident {
-        Ident::new(self.0, span)
+        Ident::new(self.str, self.hygienic_span(span))
+    }
+
+    fn hygienic_span(&self, span: Span) -> Span {
+        if self.generated_hygienic_ident {
+            Span::call_site()
+        } else {
+            span
+        }
     }
 }
 
@@ -61,6 +85,7 @@ impl ToTokens for IdentStr {
 
 impl ToSpannedTokens for IdentStr {
     fn to_spanned_tokens(&self, tokens: &mut TokenStream, span: Span) {
+        let span = self.hygienic_span(span);
         tokens.append_separated(self.iter(span), quote::quote_spanned!(span=> ::));
     }
 }
