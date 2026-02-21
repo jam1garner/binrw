@@ -9,7 +9,7 @@ error[E0271]: expected `from_utf8_lossy` to return `String`, but it returns `Cow
   |
   = note: expected struct `String`
                found enum `Cow<'_, str>`
-note: required by a bound in `coerce_fn`
+note: required by a bound in `binrw::__private::coerce_fn`
  --> src/private.rs
   |
   | pub fn coerce_fn<R, T, F>(f: F) -> F

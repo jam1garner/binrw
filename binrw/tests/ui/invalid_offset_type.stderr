@@ -13,6 +13,6 @@ note: method defined here
   |     pub offset: u64,
   |         ^^^^^^
 help: you can convert a `u8` to a `u64`
-    |
-6   |     #[br(offset = a.into())]
-    |                    +++++++
+  |
+6 |     #[br(offset = a.into())]
+  |                    +++++++

@@ -5,8 +5,8 @@ error[E0277]: the trait bound `NoDefault: Default` is not satisfied
    |        ^^^ the trait `Default` is not implemented for `NoDefault`
    |
    = note: required for `(NoDefault,)` to implement `Default`
-   = note: required for `(NoDefault,)` to implement `MissingArgsDirective`
-note: required by a bound in `Required::args`
+   = note: required for `(NoDefault,)` to implement `binrw::__private::MissingArgsDirective`
+note: required by a bound in `binrw::__private::Required::args`
   --> src/private.rs
    |
    | pub trait Required: MissingArgsDirective {
@@ -15,6 +15,6 @@ note: required by a bound in `Required::args`
    |        ---- required by a bound in this associated function
 help: consider annotating `NoDefault` with `#[derive(Default)]`
    |
-4  + #[derive(Default)]
-5  | struct NoDefault;
+ 4 + #[derive(Default)]
+ 5 | struct NoDefault;
    |
