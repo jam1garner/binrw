@@ -1,10 +1,10 @@
 mod impls;
 
 use crate::{
-    io::{Read, Seek},
-    BinResult, Endian,
     __private::Required,
+    io::{Read, Seek},
     meta::ReadEndian,
+    BinResult, Endian,
 };
 pub use impls::VecArgs;
 
