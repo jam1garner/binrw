@@ -75,7 +75,7 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
                 if i.suffix().is_empty() {
                     return Err(syn::Error::new(
                         value.span(),
-                        format!("expected explicit type suffix for integer literal\ne.g {i}u64",),
+                        format!("expected explicit type suffix for integer literal\ne.g {i}u64"),
                     ));
                 }
                 Kind::Numeric(i.suffix().to_owned())

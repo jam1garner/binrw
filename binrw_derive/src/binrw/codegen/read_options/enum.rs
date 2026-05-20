@@ -232,7 +232,7 @@ fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
         EnumVariant::Variant { ident, options } => StructGenerator::new(&input, options)
             .read_fields(
                 None,
-                Some(&format!("{}::{}", en.ident.as_ref().unwrap(), &ident)),
+                Some(&format!("{}::{}", en.ident.as_ref().unwrap(), ident)),
             )
             .initialize_value_with_assertions(Some(ident), &en.assertions)
             .return_value()
