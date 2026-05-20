@@ -5,19 +5,14 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub(crate) enum FieldMode {
+    #[default]
     Normal,
     Default,
     Calc(TokenStream),
     TryCalc(TokenStream),
     Function(TokenStream),
-}
-
-impl Default for FieldMode {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 impl From<attrs::Ignore> for FieldMode {
