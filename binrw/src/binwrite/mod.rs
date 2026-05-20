@@ -1,9 +1,9 @@
 mod impls;
 
 use crate::{
+    __private::Required,
     io::{Seek, Write},
     BinResult, Endian,
-    __private::Required,
 };
 
 /// The `BinWrite` trait serialises objects and writes them to streams.
