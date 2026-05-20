@@ -332,7 +332,7 @@ pub mod prelude {
     //! use binrw::prelude::*;
     //! ```
 
-    pub use crate::{
-        binread, binrw, binwrite, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt,
-    };
+    pub use crate::{binread, binwrite, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt};
+    pub extern crate self as binrw;
+    pub use binrw_derive::binrw;
 }
