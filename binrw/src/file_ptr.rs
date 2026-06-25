@@ -336,7 +336,7 @@ where
         let relative_to = args.offset;
         let before = reader.stream_position()?;
         reader.seek(SeekFrom::Start(relative_to))?;
-        reader.seek(ptr.into_seek_from())?;
+        reader.seek(ptr.into_seek_from()?)?;
         let value = parser(reader, endian, args.inner);
         reader.seek(SeekFrom::Start(before))?;
         value
@@ -528,7 +528,7 @@ where
                 // 2. Seeks that change the position when it does not need
                 //    to change may unnecessarily flush a buffered reader
                 //    cache.
-                match ptr.into_seek_from() {
+                match ptr.into_seek_from()? {
                     seek @ SeekFrom::Current(offset) => {
                         if let Some(new_pos) = base_pos.checked_add_signed(offset) {
                             if new_pos != reader.stream_position()? {
@@ -552,15 +552,26 @@ where
 /// A trait to convert from an integer into [`SeekFrom::Current`].
 pub trait IntoSeekFrom: Copy {
     /// Converts the value.
-    fn into_seek_from(self) -> SeekFrom;
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be represented as an [`i64`]
+    /// (e.g. a `u64`/`u128` offset larger than [`i64::MAX`] read from input).
+    fn into_seek_from(self) -> BinResult<SeekFrom>;
 }
 
 macro_rules! impl_into_seek_from {
     ($($t:ty),*) => {
         $(
             impl IntoSeekFrom for $t {
-                fn into_seek_from(self) -> SeekFrom {
-                    SeekFrom::Current(TryInto::try_into(self).unwrap())
+                fn into_seek_from(self) -> BinResult<SeekFrom> {
+                    let offset = TryInto::try_into(self).map_err(|_| {
+                        crate::Error::Io(crate::io::Error::new(
+                            crate::io::ErrorKind::InvalidInput,
+                            "file pointer offset out of range for `SeekFrom::Current`",
+                        ))
+                    })?;
+                    Ok(SeekFrom::Current(offset))
                 }
             }
         )*
@@ -573,7 +584,7 @@ macro_rules! impl_into_seek_from_for_non_zero {
     ($($t:ty),*) => {
         $(
             impl IntoSeekFrom for $t {
-                fn into_seek_from(self) -> SeekFrom {
+                fn into_seek_from(self) -> BinResult<SeekFrom> {
                     self.get().into_seek_from()
                 }
             }
