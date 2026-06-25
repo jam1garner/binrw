@@ -64,7 +64,7 @@ impl<T: Seek> TakeSeek<T> {
             .stream_position()
             .expect("cannot get position for `set_limit`");
         self.pos = pos;
-        self.end = pos + limit;
+        self.end = pos.saturating_add(limit);
     }
 }
 
@@ -118,6 +118,10 @@ impl<T: Seek> Seek for TakeSeek<T> {
 pub trait TakeSeekExt {
     /// Creates an adapter which will read at most `limit` bytes from the
     /// wrapped stream.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the inner stream returns an error from `stream_position`.
     fn take_seek(self, limit: u64) -> TakeSeek<Self>
     where
         Self: Sized;
@@ -135,7 +139,7 @@ impl<T: Read + Seek> TakeSeekExt for T {
         TakeSeek {
             inner: self,
             pos,
-            end: pos + limit,
+            end: pos.saturating_add(limit),
         }
     }
 }

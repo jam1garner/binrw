@@ -81,8 +81,11 @@ where
     where
         T::Args<'a>: Clone,
     {
-        let mut data = Vec::with_capacity(args.count);
-        let mut separators = Vec::with_capacity(args.count.max(1) - 1);
+        // Note: capacity is intentionally not pre-reserved from `args.count`
+        // because the count comes from untrusted input and a malicious value
+        // could trigger a huge allocation before any element is read.
+        let mut data = Vec::new();
+        let mut separators = Vec::new();
 
         for i in 0..args.count {
             data.push(T::read_options(reader, endian, args.inner.clone())?);
@@ -107,8 +110,11 @@ where
     where
         T::Args<'a>: Clone,
     {
-        let mut data = Vec::with_capacity(args.count);
-        let mut separators = Vec::with_capacity(args.count);
+        // Note: capacity is intentionally not pre-reserved from `args.count`
+        // because the count comes from untrusted input and a malicious value
+        // could trigger a huge allocation before any element is read.
+        let mut data = Vec::new();
+        let mut separators = Vec::new();
 
         for _ in 0..args.count {
             data.push(T::read_options(reader, endian, args.inner.clone())?);
