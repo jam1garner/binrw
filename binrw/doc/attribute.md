@@ -1996,6 +1996,13 @@ parsing started.
 binrw includes directives for common forms of
 [data structure alignment](https://en.wikipedia.org/wiki/Data_structure_alignment#Data_structure_padding).
 
+When reading, `pad_before`, `pad_after`, `align_before`, `align_after`, and
+`pad_size_to` advance the reader by seeking over bytes. When writing, they write
+zeroes to advance the writer and therefore overwrite any existing bytes in the
+padded region. To leave existing bytes untouched, use
+[`seek_before`](#padding-and-alignment) with an appropriate
+[`SeekFrom`](crate::io::SeekFrom) value instead.
+
 The `pad_before` and `pad_after` directives skip a specific number of bytes
 either before or after
 <span class="br">reading</span><span class="bw">writing</span> a field,
