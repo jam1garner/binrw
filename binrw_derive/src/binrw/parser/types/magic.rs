@@ -1,7 +1,7 @@
 use super::SpannedValue;
 use crate::{binrw::parser::attrs, meta_types::KeywordToken};
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::Lit;
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord)]
@@ -95,7 +95,7 @@ impl TryFrom<attrs::Magic> for SpannedValue<Inner> {
                 return Err(syn::Error::new(
                     value.span(),
                     "expected byte string, byte, float, or int",
-                ))
+                ));
             }
             _ => return Err(syn::Error::new(value.span(), "unexpected literal")),
         };

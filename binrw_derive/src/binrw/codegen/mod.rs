@@ -8,16 +8,16 @@ use crate::{
         Assert, AssertionError, CondEndian, Imports, Input, ParseResult, PassedArgs, StructField,
     },
     named_args::{arg_type_name, derive_from_imports},
-    util::{quote_spanned_any, IdentStr},
+    util::{IdentStr, quote_spanned_any},
 };
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{ToTokens, quote, quote_spanned};
 use sanitization::{
-    ARGS, ARGS_LIFETIME, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BINREAD_TRAIT, BINWRITE_TRAIT,
-    BIN_ERROR, BIN_RESULT, BOX, ENDIAN_ENUM, FORMAT, OPT, POS, READER, READ_TRAIT, SEEK_TRAIT,
-    TEMP, WRITER, WRITE_TRAIT,
+    ARGS, ARGS_LIFETIME, ARGS_MACRO, ASSERT, ASSERT_ERROR_FN, BIN_ERROR, BIN_RESULT, BINREAD_TRAIT,
+    BINWRITE_TRAIT, BOX, ENDIAN_ENUM, FORMAT, OPT, POS, READ_TRAIT, READER, SEEK_TRAIT, TEMP,
+    WRITE_TRAIT, WRITER,
 };
-use syn::{spanned::Spanned, DeriveInput, Ident, Type};
+use syn::{DeriveInput, Ident, Type, spanned::Spanned};
 
 pub(crate) fn generate_impl<const WRITE: bool>(
     derive_input: &DeriveInput,

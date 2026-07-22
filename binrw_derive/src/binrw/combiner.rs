@@ -1,14 +1,14 @@
 use crate::{
     binrw::{
+        Options,
         codegen::generate_impl,
         parser::{Enum, EnumVariant, Input, ParseResult, Struct, StructField},
-        Options,
     },
     combine_error,
 };
 use quote::quote;
 use std::collections::HashSet;
-use syn::{spanned::Spanned, DeriveInput};
+use syn::{DeriveInput, spanned::Spanned};
 
 pub(crate) fn derive(mut derive_input: DeriveInput) -> proc_macro2::TokenStream {
     let mut binread_input = Input::from_input(

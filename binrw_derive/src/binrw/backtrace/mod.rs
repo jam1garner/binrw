@@ -5,7 +5,7 @@ use core::fmt::{self, Display, Formatter};
 use owo_colors::OwoColorize;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
-use syntax_highlighting::{conditional_bold, CondOwo, SyntaxInfo};
+use syntax_highlighting::{CondOwo, SyntaxInfo, conditional_bold};
 
 pub(crate) struct BacktraceFrame {
     span: Span,

@@ -16,11 +16,11 @@ use crate::{
     },
     util::quote_spanned_any,
 };
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
 use r#enum::{generate_data_enum, generate_unit_enum};
+use proc_macro2::TokenStream;
+use quote::{ToTokens, quote};
 use r#struct::{generate_struct, generate_unit_struct};
-use syn::{spanned::Spanned, Ident};
+use syn::{Ident, spanned::Spanned};
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);

@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 #[test]
 fn dbg() {
-    use binrw::{io::Cursor, BinRead};
+    use binrw::{BinRead, io::Cursor};
 
     #[allow(dead_code)]
     #[derive(BinRead, Debug)]

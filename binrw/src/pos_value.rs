@@ -1,6 +1,6 @@
 use crate::{
-    io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
+    io::{Read, Seek, Write},
 };
 use core::fmt;
 

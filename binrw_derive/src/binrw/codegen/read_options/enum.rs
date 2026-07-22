@@ -1,14 +1,14 @@
 use super::{
-    r#struct::{generate_unit_struct, StructGenerator},
     PreludeGenerator,
+    r#struct::{StructGenerator, generate_unit_struct},
 };
 use crate::binrw::{
     codegen::{
-        sanitization::{
-            ALL_EOF, BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, NOT_ENOUGH_BYTES, OPT, POS, READER,
-            READ_METHOD, RESTORE_POSITION_VARIANT, TEMP, VEC, WITH_CONTEXT,
-        },
         FORMAT,
+        sanitization::{
+            ALL_EOF, BACKTRACE_FRAME, BIN_ERROR, ERROR_BASKET, NOT_ENOUGH_BYTES, OPT, POS,
+            READ_METHOD, READER, RESTORE_POSITION_VARIANT, TEMP, VEC, WITH_CONTEXT,
+        },
     },
     parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };

@@ -8,7 +8,7 @@ mod types;
 
 use crate::meta_types::MetaAttrList;
 use crate::{
-    binrw::{is_binread_attr, is_binwrite_attr, Options},
+    binrw::{Options, is_binread_attr, is_binwrite_attr},
     combine_error,
 };
 pub(crate) use field_level_attrs::{EnumVariant, StructField, UnitEnumField};

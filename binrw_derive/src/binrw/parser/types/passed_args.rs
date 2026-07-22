@@ -1,6 +1,6 @@
 use super::SpannedValue;
 use crate::{
-    binrw::parser::{attrs, TrySet},
+    binrw::parser::{TrySet, attrs},
     meta_types::{Enclosure, KeywordToken},
 };
 use proc_macro2::{Span, TokenStream};

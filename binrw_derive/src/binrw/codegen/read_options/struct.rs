@@ -1,4 +1,4 @@
-use super::{get_magic, PreludeGenerator};
+use super::{PreludeGenerator, get_magic};
 #[cfg(feature = "verbose-backtrace")]
 use crate::binrw::backtrace::BacktraceFrame;
 use crate::binrw::codegen::{BOX, FORMAT};
@@ -8,10 +8,10 @@ use crate::{
         codegen::{
             get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
-                make_ident, ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT, COERCE_FN,
-                DBG_EPRINTLN, MAP_ARGS_TYPE_HINT, MAP_READER_TYPE_HINT, OPT, PARSE_FN_TYPE_HINT,
-                POS, READER, READ_FUNCTION, READ_METHOD, REQUIRED_ARG_TRAIT, SAVED_POSITION,
-                SEEK_FROM, SEEK_TRAIT, TEMP, THIS, WITH_CONTEXT,
+                ARGS_TYPE_HINT, BACKTRACE_FRAME, BINREAD_TRAIT, COERCE_FN, DBG_EPRINTLN,
+                MAP_ARGS_TYPE_HINT, MAP_READER_TYPE_HINT, OPT, PARSE_FN_TYPE_HINT, POS,
+                READ_FUNCTION, READ_METHOD, READER, REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM,
+                SEEK_TRAIT, TEMP, THIS, WITH_CONTEXT, make_ident,
             },
         },
         parser::{ErrContext, FieldMode, Input, Map, Struct, StructField},
@@ -20,8 +20,8 @@ use crate::{
 };
 use alloc::borrow::Cow;
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned, ToTokens};
-use syn::{spanned::Spanned, Ident};
+use quote::{ToTokens, quote, quote_spanned};
+use syn::{Ident, spanned::Spanned};
 
 pub(super) fn generate_unit_struct(
     input: &Input,

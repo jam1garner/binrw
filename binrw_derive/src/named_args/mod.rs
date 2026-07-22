@@ -5,9 +5,9 @@ use codegen::{Builder, BuilderField, BuilderFieldKind};
 use proc_macro2::{Span, TokenStream};
 use quote::format_ident;
 use syn::{
+    DeriveInput, Expr, Ident, Token, Visibility,
     parse::{Parse, ParseStream},
     spanned::Spanned,
-    DeriveInput, Expr, Ident, Token, Visibility,
 };
 
 pub(crate) fn arg_type_name(ty_name: &Ident, is_write: bool) -> Ident {
@@ -98,7 +98,7 @@ fn from_input(input: DeriveInput) -> syn::Result<TokenStream> {
                             return Err(syn::Error::new(
                                 field.span(),
                                 "tuple structs are not supported",
-                            ))
+                            ));
                         }
                     },
                     ty: field.ty.clone(),

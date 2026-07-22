@@ -1,12 +1,11 @@
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use syn::{
-    braced, parenthesized,
+    Expr, Ident, Lit, Token, Type, braced, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     spanned::Spanned,
     token::{self, Token},
-    Expr, Ident, Lit, Token, Type,
 };
 
 pub(crate) trait KeywordToken {

@@ -39,14 +39,12 @@ impl<T, E: core::fmt::Debug> PartialResult<T, E> {
     pub(crate) fn unwrap(self) -> T {
         match self {
             PartialResult::Ok(value) => value,
-            PartialResult::Partial(_, error) => panic!(
-                "called `PartialResult::unwrap()` on a `Partial` value: {:?}",
-                &error
-            ),
-            PartialResult::Err(error) => panic!(
-                "called `PartialResult::unwrap()` on an `Err` value: {:?}",
-                &error
-            ),
+            PartialResult::Partial(_, error) => {
+                panic!("called `PartialResult::unwrap()` on a `Partial` value: {error:?}")
+            }
+            PartialResult::Err(error) => {
+                panic!("called `PartialResult::unwrap()` on an `Err` value: {error:?}")
+            }
         }
     }
 

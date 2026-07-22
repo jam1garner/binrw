@@ -1,6 +1,6 @@
 #[test]
 fn null_wide_strings() {
-    use binrw::{io::Cursor, BinReaderExt, NullWideString};
+    use binrw::{BinReaderExt, NullWideString, io::Cursor};
 
     assert_eq!(
         Cursor::new(b"w\0i\0d\0e\0 \0s\0t\0r\0i\0n\0g\0s\0\0\0")
@@ -56,7 +56,7 @@ fn null_wide_strings() {
 
 #[test]
 fn null_strings() {
-    use binrw::{io::Cursor, BinReaderExt, NullString};
+    use binrw::{BinReaderExt, NullString, io::Cursor};
 
     let mut null_separated_strings =
         Cursor::new(b"null terminated strings? in my system's language?\0no thanks\0");
@@ -125,7 +125,7 @@ fn null_strings() {
 
 #[test]
 fn null_string_round_trip() {
-    use binrw::{io::Cursor, BinReaderExt, BinWriterExt, NullString};
+    use binrw::{BinReaderExt, BinWriterExt, NullString, io::Cursor};
 
     let data = "test test test";
     let s = NullString::from(data);
@@ -140,7 +140,7 @@ fn null_string_round_trip() {
 
 #[test]
 fn null_wide_string_round_trip() {
-    use binrw::{io::Cursor, BinReaderExt, BinWriterExt, NullWideString};
+    use binrw::{BinReaderExt, BinWriterExt, NullWideString, io::Cursor};
 
     let data = "test test test";
     let s = NullWideString::from(data);

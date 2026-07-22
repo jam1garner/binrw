@@ -12,11 +12,7 @@ fn round_trip_top_level_map() {
 
     impl Test {
         fn to_bytes(&self) -> [u8; 4] {
-            if self.x {
-                [1, 0, 0, 0]
-            } else {
-                [0; 4]
-            }
+            if self.x { [1, 0, 0, 0] } else { [0; 4] }
         }
 
         fn from_bytes(bytes: [u8; 4]) -> Self {

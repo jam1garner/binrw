@@ -2,7 +2,7 @@ use crate::{
     binrw::{
         codegen::{
             get_assertions, get_destructured_imports, get_endian,
-            sanitization::{ARGS, MAP_WRITER_TYPE_HINT, OPT, WRITER, WRITE_METHOD},
+            sanitization::{ARGS, MAP_WRITER_TYPE_HINT, OPT, WRITE_METHOD, WRITER},
         },
         parser::{CondEndian, Input, Magic},
     },

@@ -1,7 +1,7 @@
 use crate::{
+    BinRead, BinResult, BinWrite, Endian, Error,
     error::{Backtrace, BacktraceFrame, CustomError},
     io::{self, Read, Seek, SeekFrom, Write},
-    BinRead, BinResult, BinWrite, Endian, Error,
 };
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
@@ -11,7 +11,7 @@ pub use alloc::{boxed::Box, format, vec::Vec};
 pub use std::{boxed::Box, format, vec::Vec};
 
 pub use crate::named_args::{
-    builder_helper, passthrough_helper, Needed, Optional, Satisfied, SatisfiedOrOptional,
+    Needed, Optional, Satisfied, SatisfiedOrOptional, builder_helper, passthrough_helper,
 };
 
 // This is some nonsense to improve the diagnostic output for types that require

@@ -2,8 +2,8 @@
 
 use crate::{
     __private::not_enough_bytes,
-    io::{Read, Seek},
     BinRead, BinResult, Endian,
+    io::{Read, Seek},
 };
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;

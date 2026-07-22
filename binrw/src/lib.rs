@@ -44,7 +44,7 @@ pub use {
     binwrite::*,
     endian::Endian,
     error::Error,
-    file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
+    file_ptr::{FilePtr, FilePtr8, FilePtr16, FilePtr32, FilePtr64, FilePtr128},
     named_args::NamedArgs,
     pos_value::PosValue,
     strings::{NullString, NullWideString},
@@ -336,7 +336,7 @@ pub mod prelude {
     //! use binrw::prelude::*;
     //! ```
 
-    pub use crate::{binread, binwrite, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt};
+    pub use crate::{BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, binread, binwrite};
     pub extern crate self as binrw;
     pub use binrw_derive::binrw;
 }

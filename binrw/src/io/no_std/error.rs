@@ -63,7 +63,7 @@ pub enum ErrorKind {
     /// The I/O operation's timeout expired, causing it to be canceled.
     TimedOut,
     /// An error returned when an operation could not be completed because a
-    /// call to [`write`] returned [`Ok(0)`].
+    /// call to [`write`] returned `Ok(0)`.
     WriteZero,
     /// This operation was interrupted.
     Interrupted,
@@ -89,6 +89,14 @@ impl Error {
     pub fn kind(&self) -> ErrorKind {
         match self.repr {
             Repr::Simple(kind) => kind,
+        }
+    }
+
+    /// Creates a new I/O error from an arbitrary error payload.
+    #[must_use]
+    pub fn other<A>(_: A) -> Self {
+        Self {
+            repr: Repr::Simple(ErrorKind::Other),
         }
     }
 }

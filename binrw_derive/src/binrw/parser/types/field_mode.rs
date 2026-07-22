@@ -1,5 +1,5 @@
 use crate::{
-    binrw::parser::{attrs, TrySet},
+    binrw::parser::{TrySet, attrs},
     meta_types::KeywordToken,
 };
 use proc_macro2::TokenStream;

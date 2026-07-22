@@ -2,7 +2,7 @@
 
 mod backtrace;
 
-use crate::{io, BinResult};
+use crate::{BinResult, io};
 use alloc::borrow::Cow;
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String, vec, vec::Vec};

@@ -3,9 +3,9 @@ use crate::{
     meta_types::KeywordToken,
 };
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::fold::Fold;
-use syn::{parse::Parse, spanned::Spanned, token::Token, Expr, ExprLit, Lit};
+use syn::{Expr, ExprLit, Lit, parse::Parse, spanned::Spanned, token::Token};
 
 #[derive(Debug, Clone)]
 pub(crate) enum Error {

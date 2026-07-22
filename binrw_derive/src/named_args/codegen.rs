@@ -3,7 +3,7 @@ use crate::{
     util::{from_crate, ident_str},
 };
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{GenericArgument, GenericParam, Ident, Type, Visibility};
 
 ident_str! {

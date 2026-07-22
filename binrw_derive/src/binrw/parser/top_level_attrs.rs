@@ -1,12 +1,11 @@
 use super::{
-    attr_struct,
+    EnumVariant, FromInput, ParseResult, StructField, TrySet, UnitEnumField, attr_struct,
     types::{Assert, CondEndian, EnumErrorMode, Imports, Magic, Map},
-    EnumVariant, FromInput, ParseResult, StructField, TrySet, UnitEnumField,
 };
 use crate::binrw::Options;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::{spanned::Spanned, Ident};
+use syn::{Ident, spanned::Spanned};
 
 /// The parsed representation of binrw attributes on a data structure.
 pub(crate) enum Input {
@@ -253,11 +252,11 @@ impl Struct {
 
         if self.is_tuple() {
             quote::quote! {
-                (#(ref #fields),*)
+                (#(#fields),*)
             }
         } else {
             quote::quote! {
-                { #(ref #fields),* }
+                { #(#fields),* }
             }
         }
     }
@@ -340,13 +339,13 @@ impl<const WRITE: bool> FromInput<EnumAttr<WRITE>> for Enum {
     }
 
     fn validate(&self, _: Options) -> syn::Result<()> {
-        if self.map.is_some() {
-            if let Some(variant) = self.variants.iter().find(|variant| !variant.has_no_attrs()) {
-                return Err(syn::Error::new(
-                    variant.ident().span(),
-                    "cannot use attributes on variants inside an enum with an enum-level `map`",
-                ));
-            }
+        if self.map.is_some()
+            && let Some(variant) = self.variants.iter().find(|variant| !variant.has_no_attrs())
+        {
+            return Err(syn::Error::new(
+                variant.ident().span(),
+                "cannot use attributes on variants inside an enum with an enum-level `map`",
+            ));
         }
         Ok(())
     }
@@ -401,9 +400,15 @@ impl<const WRITE: bool> FromInput<UnitEnumAttr<WRITE>> for UnitOnlyEnum {
         if self.map.as_repr().is_some() || self.is_magic_enum() {
             Ok(())
         } else if options.write {
-            Err(syn::Error::new(proc_macro2::Span::call_site(), "BinWrite on unit-like enums requires either `#[bw(repr = ...)]` on the enum or `#[bw(magic = ...)]` on at least one variant"))
+            Err(syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "BinWrite on unit-like enums requires either `#[bw(repr = ...)]` on the enum or `#[bw(magic = ...)]` on at least one variant",
+            ))
         } else {
-            Err(syn::Error::new(proc_macro2::Span::call_site(), "BinRead on unit-like enums requires either `#[br(repr = ...)]` on the enum or `#[br(magic = ...)]` on at least one variant"))
+            Err(syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "BinRead on unit-like enums requires either `#[br(repr = ...)]` on the enum or `#[br(magic = ...)]` on at least one variant",
+            ))
         }
     }
 }

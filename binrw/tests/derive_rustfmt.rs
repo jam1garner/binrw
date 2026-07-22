@@ -3,7 +3,7 @@
 // <https://github.com/rust-lang/rust/issues/106518>
 #[test]
 fn named_args_trailing_commas() {
-    use binrw::{io::Cursor, BinRead};
+    use binrw::{BinRead, io::Cursor};
 
     #[rustfmt::skip]
     #[derive(BinRead, Debug, PartialEq)]

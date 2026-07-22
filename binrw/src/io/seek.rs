@@ -1,6 +1,6 @@
 //! Wrapper type that provides a fake [`Seek`](crate::io::Seek) implementation.
 
-use super::{Error, ErrorKind, SeekFrom};
+use super::{Error, SeekFrom};
 #[cfg(not(feature = "std"))]
 use alloc::{string::String, vec::Vec};
 
@@ -45,7 +45,7 @@ impl<T> super::Seek for NoSeek<T> {
             SeekFrom::Start(n) if self.pos == n => Ok(n),
             SeekFrom::Current(0) => Ok(self.pos),
             // https://github.com/rust-lang/rust/issues/86442
-            _ => Err(Error::new(ErrorKind::Other, "seek on unseekable file")),
+            _ => Err(Error::other("seek on unseekable file")),
         }
     }
 

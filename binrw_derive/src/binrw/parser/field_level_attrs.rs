@@ -1,8 +1,7 @@
 use super::{
-    attr_struct,
+    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet, attr_struct,
     top_level_attrs::StructAttr,
     types::{Assert, CondEndian, Condition, ErrContext, FieldMode, Magic, Map, PassedArgs},
-    FromAttrs, FromField, FromInput, ParseResult, SpannedValue, Struct, TrySet,
 };
 use crate::{binrw::Options, combine_error};
 use proc_macro2::TokenStream;
@@ -145,18 +144,18 @@ impl StructField {
     fn validate(&self, options: Options) -> syn::Result<()> {
         let mut all_errors = None::<syn::Error>;
 
-        if let Some(do_try) = &self.do_try {
-            if self.generated_value() {
-                //TODO: join with span of read mode somehow
-                let span = do_try.span();
-                combine_error(
-                    &mut all_errors,
-                    syn::Error::new(
-                        span,
-                        "`try` is incompatible with `default`, `calc`, and `try_calc`",
-                    ),
-                );
-            }
+        if let Some(do_try) = &self.do_try
+            && self.generated_value()
+        {
+            //TODO: join with span of read mode somehow
+            let span = do_try.span();
+            combine_error(
+                &mut all_errors,
+                syn::Error::new(
+                    span,
+                    "`try` is incompatible with `default`, `calc`, and `try_calc`",
+                ),
+            );
         }
 
         if !options.write
@@ -194,10 +193,15 @@ impl StructField {
                 (self.offset.is_some(), "offset"),
             ] {
                 if used {
-                    combine_error(&mut all_errors, syn::Error::new(
-                        span,
-                        format!("`{name}` can only be used with named args; did you mean `args {{ inner: {repr} }}`?")
-                    ));
+                    combine_error(
+                        &mut all_errors,
+                        syn::Error::new(
+                            span,
+                            format!(
+                                "`{name}` can only be used with named args; did you mean `args {{ inner: {repr} }}`?"
+                            ),
+                        ),
+                    );
                 }
             }
         }

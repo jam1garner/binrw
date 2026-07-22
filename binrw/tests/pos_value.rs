@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use alloc::format;
-use binrw::{io::Cursor, BinRead, BinReaderExt, BinWrite, PosValue};
+use binrw::{BinRead, BinReaderExt, BinWrite, PosValue, io::Cursor};
 
 #[test]
 fn pos_value() {

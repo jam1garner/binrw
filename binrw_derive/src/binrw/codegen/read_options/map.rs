@@ -2,13 +2,13 @@ use super::PreludeGenerator;
 use crate::binrw::{
     codegen::{
         get_assertions, get_map_err,
-        sanitization::{ARGS, OPT, POS, READER, READ_METHOD, THIS},
+        sanitization::{ARGS, OPT, POS, READ_METHOD, READER, THIS},
     },
     parser::Input,
 };
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, Ident};
+use syn::{Ident, spanned::Spanned};
 
 pub(crate) fn generate_map(input: &Input, name: Option<&Ident>, map: &TokenStream) -> TokenStream {
     let prelude = PreludeGenerator::new(input)
@@ -87,11 +87,11 @@ fn destructure_ref(input: &Input) -> Option<TokenStream> {
 
             if input.is_tuple() {
                 Some(quote! {
-                    let Self ( #( ref #fields ),* ) = &#THIS;
+                    let Self ( #( #fields ),* ) = &#THIS;
                 })
             } else {
                 Some(quote! {
-                    let Self { #( ref #fields ),* } = &#THIS;
+                    let Self { #( #fields ),* } = &#THIS;
                 })
             }
         }

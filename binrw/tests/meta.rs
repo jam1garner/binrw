@@ -1,8 +1,8 @@
 #[test]
 fn read_endian() {
     use binrw::{
-        meta::{EndianKind, ReadEndian},
         BinRead, Endian,
+        meta::{EndianKind, ReadEndian},
     };
 
     #[allow(dead_code)]
@@ -33,8 +33,8 @@ fn read_endian() {
 #[test]
 fn write_endian() {
     use binrw::{
-        meta::{EndianKind, WriteEndian},
         BinWrite, Endian,
+        meta::{EndianKind, WriteEndian},
     };
 
     #[derive(BinWrite)]

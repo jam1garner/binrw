@@ -3,12 +3,12 @@ use crate::{
         codegen::{
             get_assertions, get_endian, get_map_err, get_passed_args, get_try_calc,
             sanitization::{
-                make_ident, BEFORE_POS, BINWRITE_TRAIT, MAP_WRITER_TYPE_HINT, POS,
-                REQUIRED_ARG_TRAIT, SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, WRITE_ARGS_TYPE_HINT,
+                BEFORE_POS, BINWRITE_TRAIT, MAP_WRITER_TYPE_HINT, POS, REQUIRED_ARG_TRAIT,
+                SAVED_POSITION, SEEK_FROM, SEEK_TRAIT, WRITE_ARGS_TYPE_HINT,
                 WRITE_FN_MAP_OUTPUT_TYPE_HINT, WRITE_FN_TRY_MAP_OUTPUT_TYPE_HINT,
                 WRITE_FN_TYPE_HINT, WRITE_FUNCTION, WRITE_MAP_ARGS_TYPE_HINT,
                 WRITE_MAP_INPUT_TYPE_HINT, WRITE_METHOD, WRITE_TRY_MAP_ARGS_TYPE_HINT,
-                WRITE_ZEROES,
+                WRITE_ZEROES, make_ident,
             },
         },
         parser::{FieldMode, Map, StructField},
@@ -18,8 +18,8 @@ use crate::{
 use alloc::borrow::Cow;
 use core::ops::Not;
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned, ToTokens};
-use syn::{spanned::Spanned, Ident};
+use quote::{ToTokens, quote, quote_spanned};
+use syn::{Ident, spanned::Spanned};
 
 pub(crate) fn write_field(writer_var: &TokenStream, field: &StructField) -> TokenStream {
     StructFieldGenerator::new(field, writer_var)
@@ -227,16 +227,16 @@ impl<'a> StructFieldGenerator<'a> {
     }
 
     fn wrap_condition(mut self) -> Self {
-        if let Some(cond) = &self.field.if_cond {
-            if cond.alternate.is_none() {
-                let condition = &cond.condition;
-                let consequent = self.out;
-                self.out = quote! {
-                    if #condition {
-                        #consequent
-                    }
-                };
-            }
+        if let Some(cond) = &self.field.if_cond
+            && cond.alternate.is_none()
+        {
+            let condition = &cond.condition;
+            let consequent = self.out;
+            self.out = quote! {
+                if #condition {
+                    #consequent
+                }
+            };
         }
 
         self

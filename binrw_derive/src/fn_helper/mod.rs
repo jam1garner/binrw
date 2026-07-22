@@ -4,13 +4,13 @@ use crate::{
     util::{from_crate, ident_str},
 };
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{
+    Error, FnArg, Ident, ItemFn, Pat, Token,
     parse::{Parse, ParseStream},
     parse_macro_input, parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
-    Error, FnArg, Ident, ItemFn, Pat, Token,
 };
 
 #[cfg_attr(coverage_nightly, coverage(off))]

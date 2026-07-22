@@ -20,7 +20,7 @@ struct SingleArg {
 #[test]
 fn single_arg() {
     use super::t::*;
-    use binrw::{io::Cursor, BinRead, BinWrite};
+    use binrw::{BinRead, BinWrite, io::Cursor};
 
     let result = SingleArg::read_le(&mut Cursor::new(b"")).unwrap();
     assert_eq!(result.field, 0x42);

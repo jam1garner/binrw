@@ -2,9 +2,9 @@ mod impls;
 
 use crate::{
     __private::Required,
+    BinResult, Endian,
     io::{Read, Seek},
     meta::ReadEndian,
-    BinResult, Endian,
 };
 pub use impls::VecArgs;
 

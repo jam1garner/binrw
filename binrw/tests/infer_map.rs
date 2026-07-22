@@ -1,4 +1,4 @@
-use binrw::{binread, BinReaderExt};
+use binrw::{BinReaderExt, binread};
 
 #[binread]
 #[derive(Debug, Eq, PartialEq)]

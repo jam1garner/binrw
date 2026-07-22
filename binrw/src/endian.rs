@@ -1,9 +1,9 @@
 //! Type definitions for byte order handling.
 
 use crate::BinResult;
+pub use Endian::{Big as BE, Little as LE};
 #[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
-pub use Endian::{Big as BE, Little as LE};
 
 /// Defines the order of bytes in a multi-byte type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

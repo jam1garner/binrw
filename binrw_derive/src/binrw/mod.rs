@@ -9,7 +9,7 @@ pub(crate) use combiner::derive as binrw_derive;
 use parser::{Input, ParseResult};
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{DeriveInput, parse_macro_input};
 
 /// Input handling options.
 #[derive(Clone, Copy)]

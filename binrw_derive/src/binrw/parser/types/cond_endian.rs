@@ -1,12 +1,12 @@
 use crate::{
     binrw::{
         codegen::sanitization::ENDIAN_ENUM,
-        parser::{attrs, TrySet},
+        parser::{TrySet, attrs},
     },
     meta_types::KeywordToken,
 };
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt, quote};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Endian {

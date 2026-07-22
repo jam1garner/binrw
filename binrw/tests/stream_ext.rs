@@ -1,4 +1,4 @@
-use binrw::{binwrite, BinReaderExt, BinWriterExt, VecArgs};
+use binrw::{BinReaderExt, BinWriterExt, VecArgs, binwrite};
 
 #[test]
 #[allow(non_snake_case)]

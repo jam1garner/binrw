@@ -1,4 +1,4 @@
-use binrw::{io::Cursor, BinRead};
+use binrw::{BinRead, io::Cursor};
 
 #[test]
 fn boxed() {
@@ -6,9 +6,11 @@ fn boxed() {
         Box::<u8>::read(&mut Cursor::new(b"\x03")).unwrap(),
         Box::new(3_u8)
     );
-    assert!(Box::<(u8, u8)>::read(&mut Cursor::new(b"\x03"))
-        .unwrap_err()
-        .is_eof());
+    assert!(
+        Box::<(u8, u8)>::read(&mut Cursor::new(b"\x03"))
+            .unwrap_err()
+            .is_eof()
+    );
 }
 
 #[test]

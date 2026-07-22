@@ -99,7 +99,7 @@ impl<T: Seek> Seek for TakeSeek<T> {
                         return Err(super::Error::new(
                             super::ErrorKind::InvalidInput,
                             "invalid seek to a negative or overflowing position",
-                        ))
+                        ));
                     }
                 }
             }

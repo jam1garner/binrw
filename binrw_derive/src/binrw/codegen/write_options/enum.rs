@@ -1,6 +1,6 @@
 use super::{prelude::PreludeGenerator, r#struct::StructGenerator};
 use crate::binrw::{
-    codegen::sanitization::{OPT, WRITER, WRITE_METHOD},
+    codegen::sanitization::{OPT, WRITE_METHOD, WRITER},
     parser::{Enum, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
 };
 use proc_macro2::{Ident, TokenStream};

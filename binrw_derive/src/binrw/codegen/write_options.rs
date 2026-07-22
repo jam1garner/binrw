@@ -5,14 +5,14 @@ mod struct_field;
 
 use super::get_map_err;
 use crate::binrw::{
-    codegen::sanitization::{OPT, POS, SEEK_TRAIT, WRITER, WRITE_METHOD},
+    codegen::sanitization::{OPT, POS, SEEK_TRAIT, WRITE_METHOD, WRITER},
     parser::{Input, Map},
 };
+use r#enum::{generate_data_enum, generate_unit_enum};
 use proc_macro2::TokenStream;
 use quote::quote;
-use r#enum::{generate_data_enum, generate_unit_enum};
 use r#struct::generate_struct;
-use syn::{spanned::Spanned, Ident};
+use syn::{Ident, spanned::Spanned};
 
 pub(crate) fn generate(input: &Input, derive_input: &syn::DeriveInput) -> TokenStream {
     let name = Some(&derive_input.ident);

@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use alloc::format;
-use binrw::{io::Cursor, punctuated::Punctuated, BinRead, BinReaderExt};
+use binrw::{BinRead, BinReaderExt, io::Cursor, punctuated::Punctuated};
 
 #[derive(BinRead, Clone, Copy, Debug)]
 #[br(magic = 1u8)]

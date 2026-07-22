@@ -1,9 +1,9 @@
 //! Type definitions for string readers.
 
 use crate::{
-    alloc::string::{FromUtf16Error, FromUtf8Error},
-    io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
+    alloc::string::{FromUtf8Error, FromUtf16Error},
+    io::{Read, Seek, Write},
 };
 #[cfg(not(feature = "std"))]
 use alloc::{string::String, vec, vec::Vec};

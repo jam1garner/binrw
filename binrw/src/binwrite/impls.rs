@@ -1,6 +1,6 @@
 use crate::{
-    io::{Seek, Write},
     BinResult, BinWrite, Endian,
+    io::{Seek, Write},
 };
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
@@ -8,8 +8,8 @@ use core::{
     any::Any,
     marker::PhantomData,
     num::{
-        NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
-        NonZeroU32, NonZeroU64, NonZeroU8,
+        NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroU8, NonZeroU16,
+        NonZeroU32, NonZeroU64, NonZeroU128,
     },
 };
 

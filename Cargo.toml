@@ -13,10 +13,10 @@ authors = [
     "roblabla <robinlambertz+dev@gmail.com>"
 ]
 documentation = "https://docs.rs/binrw"
-edition = "2021"
+edition = "2024"
 homepage = "https://binrw.rs"
 license = "MIT"
 publish = false # Use `release.sh`
 repository = "https://github.com/jam1garner/binrw"
-rust-version = "1.70"
+rust-version = "1.88" # Update .github/workflows/main.yml too
 version = "0.16.0-pre"

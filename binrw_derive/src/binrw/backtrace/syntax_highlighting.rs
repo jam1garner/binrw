@@ -6,16 +6,16 @@ use core::{
     fmt::{Display, Formatter},
     ops::Range,
 };
-use owo_colors::{styles::BoldDisplay, XtermColors};
+use owo_colors::{XtermColors, styles::BoldDisplay};
 use proc_macro2::Span;
 use quote::ToTokens;
 use std::collections::HashMap;
 use syn::{
+    Lit,
     parse::Parse,
     punctuated::Punctuated,
     spanned::Spanned,
-    visit::{self, visit_type, Visit},
-    Lit,
+    visit::{self, Visit, visit_type},
 };
 
 #[derive(Default)]
