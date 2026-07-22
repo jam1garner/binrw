@@ -12,11 +12,6 @@ impl<T> SpannedValue<T> {
         Self { value, span }
     }
 
-    #[cfg(feature = "verbose-backtrace")]
-    pub(crate) fn into_value(self) -> T {
-        self.value
-    }
-
     pub(crate) fn span(&self) -> Span {
         self.span
     }

@@ -53,11 +53,6 @@ impl Inner {
     pub(crate) fn match_value(&self) -> &TokenStream {
         &self.1
     }
-
-    #[cfg(feature = "verbose-backtrace")]
-    pub(crate) fn into_match_value(self) -> TokenStream {
-        self.1
-    }
 }
 
 impl TryFrom<attrs::Magic> for SpannedValue<Inner> {

@@ -7,8 +7,17 @@
    ┆ 0: [1m[1mError: failed to fill whole buffer[22m
    ┆           [1mWhile parsing field '_items' in InnerMostStruct[22m[22m
    ┆     at binrw/tests/error/backtrace.rs:9
+   ┆  ┄──╮
+   ┆   8 |  #[[38;5;197mbr[39m([38;5;197mcount[39m = len)]
+   ┆[1m   9 ⎬  [0m[1m_items[0m[1m:[0m [1m[38;5;197mVec[39m[0m[1m<[0m[1m[38;5;197mu32[39m[0m[1m>[0m
+   ┆  ┄──╯
    ┆ 1: [1mWhile parsing field 'inner' in MiddleEnum::OnlyOption[22m
    ┆     at binrw/tests/error/backtrace.rs:18
+   ┆  ┄───╮
+   ┆   16 |  #[[38;5;197mbr[39m([38;5;197mbig[39m)]
+   ┆   17 |  #[[38;5;197mbr[39m([38;5;197massert[39m(inner.len == [38;5;135m3[39m))]
+   ┆[1m   18 ⎬  [0m[1minner[0m[1m:[0m [1mInnerMostStruct[0m
+   ┆  ┄───╯
    ┆
    ╰─────────────────────────────────────────────────────────┄
    ╭───────────────────────┄ OtherOption ┄────────────────────┄
@@ -16,12 +25,23 @@
    ┆ 0: [1m[1mError: failed to fill whole buffer[22m
    ┆           [1mWhile parsing field 'self_1' in MiddleEnum::OtherOption[22m[22m
    ┆     at binrw/tests/error/backtrace.rs:13
+   ┆  ┄───╮
+   ┆[1m   21 ⎬  [0m[1m[38;5;197mu32[39m[0m
+   ┆  ┄───╯
    ┆
    ╰──────────────────────────────────────────────────────────┄[22m
     ...[1mWhile parsing field '_middle' in MiddleStruct[22m[22m
      at binrw/tests/error/backtrace.rs:27
+  ┄───╮
+   26 |  #[[38;5;197mbr[39m([38;5;197mlittle[39m)]
+[1m   27 ⎬  [0m[1m_middle[0m[1m:[0m [1mMiddleEnum[0m
+  ┄───╯
  1: [1mWhile parsing field '_middle' in OutermostStruct[22m
      at binrw/tests/error/backtrace.rs:33
+  ┄───╮
+   32 |  #[[38;5;197mbr[39m([38;5;197mlittle[39m)]
+[1m   33 ⎬  [0m[1m_middle[0m[1m:[0m [1mMiddleStruct[0m
+  ┄───╯
 
  ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸
 

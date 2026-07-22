@@ -245,8 +245,6 @@ impl FromField for StructField {
             align_after: <_>::default(),
             seek_before: <_>::default(),
             pad_size_to: <_>::default(),
-            #[cfg(feature = "verbose-backtrace")]
-            keyword_spans: <_>::default(),
             err_context: <_>::default(),
             debug: <_>::default(),
         };
@@ -306,8 +304,6 @@ impl FromField for UnitEnumField {
             ident: field.ident.clone(),
             magic: <_>::default(),
             pre_assertions: <_>::default(),
-            #[cfg(feature = "verbose-backtrace")]
-            keyword_spans: <_>::default(),
         };
 
         if options.write {

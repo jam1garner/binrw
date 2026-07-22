@@ -1,6 +1,6 @@
 use super::{PreludeGenerator, get_magic};
 #[cfg(feature = "verbose-backtrace")]
-use crate::binrw::backtrace::BacktraceFrame;
+use crate::binrw::backtrace::source_text;
 use crate::binrw::codegen::{BOX, FORMAT};
 use crate::binrw::parser::Assert;
 use crate::{
@@ -195,19 +195,6 @@ impl<'field> FieldGenerator<'field> {
     }
 
     fn wrap_debug(mut self) -> Self {
-        // Unwrapping the proc-macro2 Span is undesirable but necessary until its API
-        // is updated to allow retrieving line/column again. Using a separate function
-        // to unwrap just to make it clearer what needs to be undone later.
-        // <https://github.com/dtolnay/proc-macro2/pull/383>
-        #[cfg(all(feature = "verbose-backtrace", nightly, proc_macro))]
-        fn start_line(span: proc_macro2::Span) -> usize {
-            span.unwrap().start().line()
-        }
-        #[cfg(not(all(feature = "verbose-backtrace", nightly, proc_macro)))]
-        fn start_line(_: proc_macro2::Span) -> usize {
-            0
-        }
-
         if self.field.debug.is_some() {
             fn dbg_space(
                 name: &'static str,
@@ -227,7 +214,7 @@ impl<'field> FieldGenerator<'field> {
             let head = self.out;
             let reader_var = &self.outer_reader_var;
             let ident = &self.field.ident;
-            let start_line = start_line(ident.span());
+            let start_line = ident.span().start().line;
             let at = if start_line == 0 {
                 quote!(::core::line!())
             } else {
@@ -553,7 +540,7 @@ fn get_err_context(
     } else {
         #[cfg(feature = "verbose-backtrace")]
         let code = {
-            let code = BacktraceFrame::from_field(field).to_string();
+            let code = source_text(field).unwrap();
             if code.is_empty() {
                 quote! { ::core::option::Option::None }
             } else {

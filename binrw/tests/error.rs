@@ -320,11 +320,7 @@ fn show_backtrace() {
     assert_eq!(
         err,
         if cfg!(feature = "verbose-backtrace") {
-            Cow::Borrowed(if cfg!(nightly) {
-                include_str!("./error/backtrace_verbose_nightly.stderr")
-            } else {
-                include_str!("./error/backtrace_verbose.stderr")
-            })
+            Cow::Borrowed(include_str!("./error/backtrace_verbose.stderr"))
         } else {
             let bt = include_str!("./error/backtrace.stderr");
             if cfg!(feature = "std") {
@@ -352,11 +348,7 @@ fn show_backtrace_2() {
     assert_eq!(
         err,
         if cfg!(feature = "verbose-backtrace") {
-            Cow::Borrowed(if cfg!(nightly) {
-                include_str!("./error/backtrace_2_verbose_nightly.stderr")
-            } else {
-                include_str!("./error/backtrace_2_verbose.stderr")
-            })
+            Cow::Borrowed(include_str!("./error/backtrace_2_verbose.stderr"))
         } else {
             let bt = include_str!("./error/backtrace_2.stderr");
             if cfg!(feature = "std") {

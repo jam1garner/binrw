@@ -81,20 +81,13 @@ macro_rules! attr_struct {
                 $(#[doc = $field_doc])*
                 $field_vis $field: $field_ty,
             )+
-
-            #[cfg(feature = "verbose-backtrace")]
-            pub(crate) keyword_spans: Vec<proc_macro2::Span>,
         }
 
         impl<const WRITE: bool> $crate::binrw::parser::FromAttrs<$attr_ty<WRITE>> for $ident {
             fn try_set_attr(&mut self, attr: $attr_ty<WRITE>) -> ::syn::Result<()> {
-                #[cfg(feature = "verbose-backtrace")]
-                use crate::meta_types::KeywordToken;
                 match attr {
                     $($(
                         $($attr_ty::$field_attr_id(value) => {
-                            #[cfg(feature = "verbose-backtrace")]
-                            self.keyword_spans.push(value.keyword_span());
                             value.into_inner().try_set(&mut self.$field)
                         },)+
                     )?)+
