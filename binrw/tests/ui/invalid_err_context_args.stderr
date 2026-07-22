@@ -6,6 +6,11 @@ error: multiple unused formatting arguments
   |                      |      |
   |                      |      argument never used
   |                      multiple missing formatting specifiers
+  |
+help: format specifiers use curly braces, consider adding 2 format specifiers
+  |
+5 |     #[br(err_context("too{}{}", "many", "arguments"))]
+  |                          ++++
 
 error: err_context requires a value but none were given
   --> tests/ui/invalid_err_context_args.rs:11:10
