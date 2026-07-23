@@ -7,8 +7,9 @@ use quote::ToTokens;
 
 // Lint: Makes code less clear
 #[allow(clippy::enum_variant_names)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub(crate) enum Map {
+    #[default]
     None,
     Map(TokenStream),
     Try(TokenStream),
@@ -33,12 +34,6 @@ impl Map {
 
     pub(crate) fn is_try(&self) -> bool {
         matches!(self, Self::Try(_) | Self::Repr(_))
-    }
-}
-
-impl Default for Map {
-    fn default() -> Self {
-        Self::None
     }
 }
 

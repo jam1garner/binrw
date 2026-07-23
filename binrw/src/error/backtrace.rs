@@ -302,7 +302,7 @@ mod tests {
                 assert_eq!(line2, *l2);
                 assert_eq!(last.to_string(), ERR3);
             } else {
-                panic!("Backtrace incorrect: {:?}", &backtrace.frames)
+                panic!("Backtrace incorrect: {:?}", backtrace.frames)
             }
         } else {
             panic!("Not a backtrace")
