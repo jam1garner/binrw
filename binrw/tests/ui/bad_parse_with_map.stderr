@@ -9,7 +9,7 @@ error[E0271]: expected `from_utf8_lossy` to return `String`, but it returns `Cow
   |
   = note: expected struct `String`
                found enum `Cow<'_, str>`
-note: required by a bound in `coerce_fn`
+note: required by a bound in `binrw::__private::coerce_fn`
  --> src/private.rs
   |
   | pub fn coerce_fn<R, T, F>(f: F) -> F
@@ -27,11 +27,6 @@ error[E0308]: `?` operator has incompatible types
   = note: `?` operator cannot convert from `Vec<u8>` to `&[u8]`
   = note: expected reference `&[u8]`
                 found struct `Vec<u8>`
-note: return type inferred to be `&[u8]` here
- --> tests/ui/bad_parse_with_map.rs:5:23
-  |
-5 |     #[br(parse_with = until_eof::<Vec<u8>, _, _, _>, map = String::from_utf8_lossy)]
-  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 help: consider borrowing here
   |
 5 |     #[br(parse_with = &until_eof::<Vec<u8>, _, _, _>, map = String::from_utf8_lossy)]
