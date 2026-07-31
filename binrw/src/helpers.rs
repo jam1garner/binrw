@@ -604,7 +604,10 @@ where
             // Otherwise, performance would be identical and it could be
             // deleted.
             if let Some(bytes) = <dyn core::any::Any>::downcast_mut::<Vec<u8>>(&mut container) {
-                bytes.reserve_exact(n);
+                // Note: capacity is intentionally not pre-reserved from `n`
+                // because the count comes from the input stream and a
+                // malicious value could trigger a huge allocation or an
+                // overflow panic before any byte is read.
                 let byte_count = reader
                     .take(n.try_into().map_err(|_| not_enough_bytes())?)
                     .read_to_end(bytes)?;

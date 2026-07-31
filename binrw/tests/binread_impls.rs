@@ -127,3 +127,67 @@ fn count_with_correctness() {
         vec![0, 0xffffff]
     );
 }
+
+#[test]
+fn count_huge_count_is_a_graceful_error() {
+    #[derive(BinRead, Debug)]
+    #[br(big)]
+    struct Bytes {
+        len: u64,
+        #[br(count = len)]
+        data: Vec<u8>,
+    }
+
+    // A count of u64::MAX used to panic in Vec::reserve_exact before any
+    // byte was read; it must now be a normal parse error.
+    assert!(
+        Bytes::read(&mut Cursor::new([0xff; 8]))
+            .expect_err("huge count should not panic")
+            .is_eof()
+    );
+
+    // The integer fast path was already safe for the same count.
+    #[derive(BinRead, Debug)]
+    #[br(big)]
+    struct Ints {
+        len: u64,
+        #[br(count = len)]
+        data: Vec<u32>,
+    }
+    assert!(
+        Ints::read(&mut Cursor::new([0xff; 8]))
+            .expect_err("huge count should not panic")
+            .is_eof()
+    );
+
+    // A count larger than the remaining input must also fail gracefully.
+    assert!(
+        Bytes::read(&mut Cursor::new(&[0, 0, 0, 0, 0, 0, 0, 5, 1, 2, 3][..]))
+            .expect_err("short input should not panic")
+            .is_eof()
+    );
+
+    // Valid and boundary reads are unchanged.
+    let parsed = Bytes::read(&mut Cursor::new(&[0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3][..])).unwrap();
+    assert_eq!(parsed.len, 3);
+    assert_eq!(parsed.data, vec![1, 2, 3]);
+    assert_eq!(
+        Bytes::read(&mut Cursor::new(&[0; 8][..])).unwrap().data,
+        Vec::<u8>::new()
+    );
+    let ints = Ints::read(&mut Cursor::new(
+        &[0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2][..],
+    ))
+    .unwrap();
+    assert_eq!(ints.len, 2);
+    assert_eq!(ints.data, vec![1, 2]);
+
+    // A legitimate large read still succeeds in one piece.
+    let payload = vec![0xabu8; 1 << 20];
+    let mut wire = Vec::with_capacity(8 + payload.len());
+    wire.extend_from_slice(&(1_u64 << 20).to_be_bytes());
+    wire.extend_from_slice(&payload);
+    let parsed = Bytes::read(&mut Cursor::new(&wire)).unwrap();
+    assert_eq!(parsed.len, 1 << 20);
+    assert_eq!(parsed.data.len(), 1 << 20);
+}
