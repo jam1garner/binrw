@@ -19,7 +19,7 @@ either = "1.0.0"
 owo-colors = { version = "4.0.0", optional = true }
 proc-macro2 = { version = "1.0.100", features = ["span-locations"] }
 quote = "1.0.0"
-syn = { version = "2", features = ["extra-traits", "fold", "full", "visit"] }
+syn = { version = "3", features = ["extra-traits", "fold", "full", "visit"] }
 
 [dev-dependencies]
 runtime-macros = "1.1.0"

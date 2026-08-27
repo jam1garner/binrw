@@ -143,6 +143,7 @@ impl Builder<'_> {
     fn user_generic_args(&self) -> TokenStream {
         let args = self.generics.iter().map(|generic| match generic {
             GenericParam::Type(ty) => GenericArgument::Type(Type::Path(syn::TypePath {
+                attrs: Vec::new(),
                 qself: None,
                 path: ty.ident.clone().into(),
             })),
