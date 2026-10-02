@@ -366,3 +366,28 @@ fn mixed_enum() {
         <Test as binrw::BinRead>::read(&mut binrw::io::Cursor::new(b"\x02\0\x03\0\x04")).unwrap();
     t::assert_eq!(result, Test::Two { a: 3, b: 4 });
 }
+
+// See https://github.com/jam1garner/binrw/issues/370
+#[test]
+fn enum_named_stream_with_count() {
+    #[binrw::binread]
+    #[derive(Debug, PartialEq)]
+    #[br(stream = s)]
+    enum Test {
+        #[br(magic = 0u8)]
+        A {
+            #[br(count = 1)]
+            a: t::Vec<u8>,
+        },
+        #[br(magic = 1u8)]
+        B {
+            #[br(count = 2)]
+            b: t::Vec<u8>,
+        },
+    }
+
+    t::assert_eq!(
+        <Test as binrw::BinRead>::read_le(&mut binrw::io::Cursor::new(b"\x01\x02\x03")).unwrap(),
+        Test::B { b: t::vec![2, 3] }
+    );
+}
