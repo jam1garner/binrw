@@ -10,7 +10,7 @@ use crate::binrw::{
             READ_METHOD, READER, RESTORE_POSITION_VARIANT, TEMP, VEC, WITH_CONTEXT,
         },
     },
-    parser::{Enum, EnumErrorMode, EnumVariant, Input, UnitEnumField, UnitOnlyEnum},
+    parser::{Enum, EnumErrorMode, EnumVariant, Input, Struct, UnitEnumField, UnitOnlyEnum},
 };
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -226,7 +226,13 @@ pub(super) fn generate_data_enum(input: &Input, name: Option<&Ident>, en: &Enum)
 }
 
 fn generate_variant_impl(en: &Enum, variant: &EnumVariant) -> TokenStream {
-    let input = Input::Struct(variant.clone().into());
+    let mut variant_input: Struct = variant.clone().into();
+    // Variants read from the same stream as the enum, so they must use the
+    // enum's stream identifier instead of the original (moved) reader.
+    if variant_input.stream_ident.is_none() {
+        variant_input.stream_ident.clone_from(&en.stream_ident);
+    }
+    let input = Input::Struct(variant_input);
 
     match variant {
         EnumVariant::Variant { ident, options } => StructGenerator::new(&input, options)
