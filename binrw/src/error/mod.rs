@@ -257,13 +257,29 @@ impl Error {
     }
 
     /// Check if the [root cause][`Self::root_cause`] of this error is an [`Error::Io`] and an
-    /// [`io::ErrorKind::UnexpectedEof`].
+    /// [`io::ErrorKind::UnexpectedEof`]. In case of an [`Error::EnumError`], this function checks
+    /// whether all enum variants failed to match due to an EOF error.
     #[must_use]
     pub fn is_eof(&self) -> bool {
         match self {
             Error::Io(err) if err.kind() == io::ErrorKind::UnexpectedEof => true,
             Error::EnumErrors { variant_errors, .. } => {
                 variant_errors.iter().all(|(_, err)| err.is_eof())
+            }
+            Error::Backtrace(bt) => bt.error.is_eof(),
+            _ => false,
+        }
+    }
+
+    /// Check if the [root cause][`Self::root_cause`] of this error is an [`Error::Io`] and an
+    /// [`io::ErrorKind::UnexpectedEof`]. In case of an [`Error::EnumError`], this function checks
+    /// whether at least one of the enum variants failed to match due to an EOF error.
+    #[must_use]
+    pub fn is_eof_any(&self) -> bool {
+        match self {
+            Error::Io(err) if err.kind() == io::ErrorKind::UnexpectedEof => true,
+            Error::EnumErrors { variant_errors, .. } => {
+                variant_errors.iter().any(|(_, err)| err.is_eof())
             }
             Error::Backtrace(bt) => bt.error.is_eof(),
             _ => false,
